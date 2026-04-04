@@ -118,6 +118,10 @@ export const router = createBrowserRouter([
         path: 'admin/audit', 
         element: <RoleGuard allowed={['super_admin']}><AdminAuditPage /></RoleGuard> 
       },
+      {
+        path: 'admin/lti',
+        element: <RoleGuard allowed={['super_admin']}><LtiPlataformasPage /></RoleGuard>
+      },
     ],
   },
   { path: '/login', element: <LoginPage /> },

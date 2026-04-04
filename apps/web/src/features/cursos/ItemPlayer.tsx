@@ -3,6 +3,8 @@ import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Spinner } from '@/components/ui';
 import { cursosApi } from '@/lib/api/cursos';
+import { aiApi } from '@/lib/api/ai';
+import { QuizPlayer } from '@/features/ai/QuizPlayer';
 import type { ItemModulo } from '@pdc/shared';
 
 function ExternalLink({ url, label }: { url: string; label: string }) {
@@ -54,7 +56,7 @@ function renderItem(item: ItemModulo): ReactElement {
     case 'iframe':
       return <iframe src={url} className="h-[70vh] w-full rounded-lg border-0" title="Conteúdo" />;
     case 'quiz':
-      return <ExternalLink url={url} label="Abrir Quiz" />;
+      return null as unknown as ReactElement;
     case 'tarefa':
       return <ExternalLink url={url} label="Abrir Tarefa" />;
   }
@@ -100,6 +102,7 @@ export function ItemPlayer() {
   }
 
   const item = curso.modulos?.flatMap((m) => m.itens).find((i) => i.id === itemId);
+  const moduloId = curso.modulos?.find((m) => m.itens.some((i) => i.id === itemId))?.id;
   if (!item) {
     return <p className="py-12 text-center text-error">Item não encontrado.</p>;
   }
@@ -110,7 +113,13 @@ export function ItemPlayer() {
     <div className="max-w-3xl">
       <h1 className="mb-1 text-xl font-bold text-text-primary">{item.titulo}</h1>
       <p className="mb-6 text-xs uppercase tracking-wider text-text-muted">{item.tipo}</p>
-      <div className="mb-8">{renderItem(item)}</div>
+      <div className="mb-8">
+        {item.tipo === 'quiz' ? (
+          <QuizSection cursoId={cursoId} moduloId={moduloId ?? ''} />
+        ) : (
+          renderItem(item)
+        )}
+      </div>
       <Button
         onClick={() => marcarMutation.mutate()}
         isLoading={marcarMutation.isPending}
@@ -121,4 +130,17 @@ export function ItemPlayer() {
       </Button>
     </div>
   );
+}
+
+function QuizSection({ cursoId, moduloId }: { cursoId: string; moduloId: string }) {
+  const { data: perguntas, isLoading, isError } = useQuery({
+    queryKey: ['quiz', cursoId, moduloId],
+    queryFn: () => aiApi.quiz(cursoId, moduloId),
+  });
+
+  if (isLoading) return <div className="flex justify-center py-8"><Spinner size="lg" /></div>;
+  if (isError || !perguntas?.length) {
+    return <p className="text-center text-text-muted py-8">Não foi possível gerar o quiz.</p>;
+  }
+  return <QuizPlayer perguntas={perguntas} />;
 }

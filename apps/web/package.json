@@ -33,10 +33,12 @@
     "@tanstack/react-query": "^5.56.0",
     "@tanstack/react-query-devtools": "^5.56.0",
     "clsx": "^2.1.1",
+    "deep-chat-react": "^2.4.2",
     "motion": "^11.11.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
+    "socket.io-client": "^4.7.0",
     "tailwind-merge": "^3.5.0",
     "zod": "^3.23.0"
   },

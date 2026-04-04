@@ -58,14 +58,19 @@ app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOStri
 // ─── Servidor ─────────────────────────────────────────────────────────────────
 const port = Number(process.env.PORT ?? 3001);
 
-serve(
+const server = serve(
   {
     fetch: app.fetch,
     port,
   },
-  () => {
-    console.warn(`BFF running on http://localhost:${port.toString()}`);
+  (info) => {
+    console.warn(`BFF running on http://localhost:${info.port.toString()}`);
   }
 );
+
+socketService.init(server);
+
+// Inicializar base de conhecimento da Tina
+tinaService.indexarKnowledge().catch(err => console.error('Falha ao indexar Tina:', err));
 
 export type AppType = typeof app;

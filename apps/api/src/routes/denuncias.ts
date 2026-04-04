@@ -89,7 +89,7 @@ denunciaRoutes.put(
     const id = c.req.param('id');
     const body = c.req.valid('json');
     try {
-      const data = await strapiPut<unknown>(`/denuncias/${id ?? ''}`, {
+      const data = await strapiPut<unknown>(`/denuncias/${id}`, {
         data: {
           estado: 'resolvida',
           accao: body.accao,
@@ -97,16 +97,13 @@ denunciaRoutes.put(
         }
       });
 
-      await strapiPost('/audit-logs', {
-        data: {
-          userId: c.get('user').id,
-          accao: 'denuncia_resolver',
-          ip: c.req.header('x-forwarded-for') || c.req.remoteAddress || 'unknown',
-          timestamp: new Date().toISOString(),
-          recurso: 'denuncia',
-          recursoId: id,
-        }
-      });
+      await strapiPost('/audit-logs', { 
+        userId: c.get('user').id, 
+        accao: 'denuncia_resolver', 
+        recurso: `/denuncias/${id}`, 
+        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown', 
+        timestamp: new Date().toISOString() 
+      }).catch(() => {});
 
       return c.json(data);
     } catch (err) {

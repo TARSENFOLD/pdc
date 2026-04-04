@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { SidebarContent } from './Sidebar';
+import { TinaChat } from '@/features/tina/TinaChat';
+import { useNotificacoes } from '@/lib/realtime/useNotificacoes';
 
 const SIDEBAR_WIDTH = 240;
 
@@ -9,6 +11,8 @@ export function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
   const reduced = useReducedMotion();
+
+  useNotificacoes();
 
   // Close drawer on route change
   useEffect(() => {
@@ -90,6 +94,8 @@ export function AppLayout() {
           <Outlet />
         </div>
       </main>
+
+      <TinaChat />
     </div>
   );
 }

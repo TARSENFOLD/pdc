@@ -32,7 +32,7 @@ ltiRoutes.get('/jwks', async (c) => {
 
 // POST /lti/login
 ltiRoutes.post('/login', zValidator('form', loginSchema), async (c) => {
-  const { iss, login_hint, target_link_uri, lti_message_hint } = c.req.valid('form');
+  const { iss, login_hint, lti_message_hint } = c.req.valid('form');
 
   // Buscar plataforma no Strapi
   const res = await strapiGet<{ data: Array<{ id: string; attributes: LtiPlataforma }> }>('/lti-plataformas', {
@@ -44,7 +44,7 @@ ltiRoutes.post('/login', zValidator('form', loginSchema), async (c) => {
     return c.json({ error: 'Plataforma LTI não encontrada ou inativa' }, 401);
   }
 
-  const plataforma = res.data[0].attributes;
+  const plataforma = res.data[0]!.attributes;
   const state = Math.random().toString(36).substring(2);
   const nonce = await ltiService.generateNonce(state);
 
@@ -73,8 +73,9 @@ ltiRoutes.post('/launch', zValidator('form', launchSchema), async (c) => {
   // 1. Validar Nonce/State decodificando o payload primeiro
   const parts = id_token.split('.');
   if (parts.length !== 3) return c.json({ error: 'Token inválido' }, 400);
-  
-  const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString()) as { nonce: string; iss: string };
+  const encoded = parts[1];
+  if (!encoded) return c.json({ error: 'Token inválido' }, 400);
+  const payload = JSON.parse(Buffer.from(encoded, 'base64').toString()) as { nonce: string; iss: string };
   
   const isValidNonce = await ltiService.validateNonce(payload.nonce, state);
   if (!isValidNonce) return c.json({ error: 'Nonce inválido ou expirado' }, 403);
@@ -84,7 +85,7 @@ ltiRoutes.post('/launch', zValidator('form', launchSchema), async (c) => {
     'filters[issuer][$eq]': payload.iss,
   });
   if (!res.data?.[0]) return c.json({ error: 'Plataforma não encontrada' }, 401);
-  const plataforma = { id: res.data[0].id, ...res.data[0].attributes };
+  const plataforma: LtiPlataforma = { ...res.data[0].attributes, id: res.data[0]!.id };
 
   // 3. Validar Assinatura do JWT
   const claims = await ltiService.validateLaunchJwt(id_token, plataforma);

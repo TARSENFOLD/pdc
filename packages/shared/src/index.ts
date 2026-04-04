@@ -434,6 +434,13 @@ export const ResolverDenunciaPayloadSchema = z.object({
 
 export type ResolverDenunciaPayload = z.infer<typeof ResolverDenunciaPayloadSchema>;
 
+export const DenunciaListParamsSchema = PaginationParamsSchema.extend({
+  estado: DenunciaEstadoSchema.optional(),
+  tipo: z.string().optional(),
+});
+
+export type DenunciaListParams = z.infer<typeof DenunciaListParamsSchema>;
+
 // ─── Auditoria ────────────────────────────────────────────────────────────────
 
 export const AuditLogSchema = z.object({
@@ -447,6 +454,20 @@ export const AuditLogSchema = z.object({
 });
 
 export type AuditLog = z.infer<typeof AuditLogSchema>;
+
+export const AuditLogParamsSchema = PaginationParamsSchema.extend({
+  userId: z.string().optional(),
+  accao: z.string().optional(),
+});
+
+export type AuditLogParams = z.infer<typeof AuditLogParamsSchema>;
+
+export const AdminUtilizadoresParamsSchema = PaginationParamsSchema.extend({
+  role: RoleSchema.optional(),
+  search: z.string().optional(),
+});
+
+export type AdminUtilizadoresParams = z.infer<typeof AdminUtilizadoresParamsSchema>;
 
 // ─── Admin Stats ──────────────────────────────────────────────────────────────
 
@@ -526,3 +547,43 @@ export const LtiScoreSchema = z.object({
 });
 
 export type LtiScore = z.infer<typeof LtiScoreSchema>;
+
+// ─── AI / Chat ────────────────────────────────────────────────────────────────
+
+export const ChatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string(),
+});
+
+export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+
+export const ChatPayloadSchema = z.object({
+  message: z.string().min(1),
+  cursoId: z.string().optional(),
+  moduloId: z.string().optional(),
+  stream: z.boolean().optional(),
+});
+
+export type ChatPayload = z.infer<typeof ChatPayloadSchema>;
+
+export const QuizPerguntaSchema = z.object({
+  id: z.string(),
+  pergunta: z.string(),
+  opcoes: z.array(z.string()).length(4),
+  respostaCorreta: z.number().int().min(0).max(3),
+  explicacao: z.string(),
+});
+
+export type QuizPergunta = z.infer<typeof QuizPerguntaSchema>;
+
+// ─── Realtime / Notificações ──────────────────────────────────────────────────
+
+export const NotificacaoRealtimeSchema = z.object({
+  id: z.string(),
+  titulo: z.string(),
+  corpo: z.string(),
+  tipo: z.enum(['info', 'sucesso', 'aviso', 'erro']),
+  timestamp: z.string().datetime(),
+});
+
+export type NotificacaoRealtime = z.infer<typeof NotificacaoRealtimeSchema>;

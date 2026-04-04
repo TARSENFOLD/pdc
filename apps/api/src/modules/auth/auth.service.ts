@@ -123,6 +123,41 @@ export const authService = {
     return this.mapStrapiUser(data);
   },
 
+  async findOrCreateUser(email: string, nome: string): Promise<User> {
+    // 1. Tentar buscar por email
+    const resSearch = await fetch(`${STRAPI_URL}/api/users?filters[email][$eq]=${email}&populate=role`, {
+      headers: { Authorization: `Bearer ${STRAPI_API_TOKEN}` },
+    });
+    const users = (await resSearch.json()) as StrapiUser[];
+    if (users.length > 0) {
+      return this.mapStrapiUser(users[0]!);
+    }
+
+    // 2. Se não existir, criar (registo social sem password)
+    const resCreate = await fetch(`${STRAPI_URL}/api/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+      },
+      body: JSON.stringify({
+        email,
+        username: email,
+        nome,
+        confirmed: true,
+        role: 1, // Assumindo que 1 é o ID da role 'aluno' no Strapi
+      }),
+    });
+
+    if (!resCreate.ok) {
+      const error = (await resCreate.json()) as { error?: { message?: string } };
+      throw new Error(error.error?.message || 'Failed to create social user');
+    }
+    const newUser = (await resCreate.json()) as StrapiUser;
+    // Precisamos de repopular a role se o POST /users não retornar a role populada
+    return this.getUserById(newUser.id.toString());
+  },
+
   mapStrapiUser(u: StrapiUser): User {
     return {
       id: u.id.toString(),

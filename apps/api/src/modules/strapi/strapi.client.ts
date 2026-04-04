@@ -49,6 +49,17 @@ export async function strapiPut<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function strapiDelete<T>(path: string): Promise<T> {
+  const res = await fetch(`${STRAPI_URL}/api${path}`, {
+    method: 'DELETE',
+    headers: buildHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error(`Strapi DELETE ${path} falhou: ${res.status.toString()}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 // Para endpoints que não usam o wrapper { data: ... } (ex: Strapi Users plugin)
 export async function strapiPutRaw<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${STRAPI_URL}/api${path}`, {

@@ -12,7 +12,7 @@ export const ltiNrps = {
       throw new Error(`Falha ao obter memberships LTI NRPS: ${res.status.toString()} - ${error}`);
     }
 
-    const data = await res.json();
-    return data.members || [];
+    const data = await res.json() as { members?: unknown[] };
+    return data.members ?? [];
   },
 };

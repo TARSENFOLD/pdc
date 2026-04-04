@@ -1,19 +1,39 @@
-import { apiClient } from './http.js';
-import type { User, Role, AdminStats, AuditLog } from '@pdc/shared';
+import { http } from './http.js';
+import type { 
+  User, 
+  Role, 
+  AdminStats, 
+  AuditLog, 
+  AdminUtilizadoresParams, 
+  AuditLogParams, 
+  Pagination 
+} from '@pdc/shared';
 
 export const adminApi = {
-  getUtilizadores: (params: { page?: number; pageSize?: number }) =>
-    apiClient.get<{ data: User[]; pagination: any }>('/admin/utilizadores', { params }),
+  getUtilizadores: (params: AdminUtilizadoresParams) => {
+    const q = new URLSearchParams();
+    if (params.page) q.set('page', params.page.toString());
+    if (params.pageSize) q.set('pageSize', params.pageSize.toString());
+    if (params.search) q.set('search', params.search);
+    if (params.role) q.set('role', params.role);
+    return http.get<{ data: User[]; pagination: Pagination }>(`/admin/utilizadores?${q.toString()}`);
+  },
 
   updateRole: (id: string, role: Role) =>
-    apiClient.put(`/admin/utilizadores/${id}/role`, { role }),
+    http.put(`/admin/utilizadores/${id}/role`, { role }),
 
   suspender: (id: string) =>
-    apiClient.put(`/admin/utilizadores/${id}/suspender`),
+    http.put(`/admin/utilizadores/${id}/suspender`, undefined),
 
   getStats: () =>
-    apiClient.get<AdminStats>('/admin/stats'),
+    http.get<AdminStats>('/admin/stats'),
 
-  getAudit: (params: { page?: number; pageSize?: number }) =>
-    apiClient.get<{ data: AuditLog[]; pagination: any }>('/admin/audit', { params }),
+  getAudit: (params: AuditLogParams) => {
+    const q = new URLSearchParams();
+    if (params.page) q.set('page', params.page.toString());
+    if (params.pageSize) q.set('pageSize', params.pageSize.toString());
+    if (params.userId) q.set('userId', params.userId);
+    if (params.accao) q.set('accao', params.accao);
+    return http.get<{ data: AuditLog[]; pagination: Pagination }>(`/admin/audit?${q.toString()}`);
+  },
 };

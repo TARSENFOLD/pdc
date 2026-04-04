@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
-import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { strapiGet, strapiPost, strapiPutRaw } from '../modules/strapi/strapi.client.js';
 import { RoleSchema } from '@pdc/shared';
 
 type Vars = { Variables: AuthVariables };
@@ -48,18 +48,15 @@ adminRoutes.put(
     const id = c.req.param('id');
     const { role } = c.req.valid('json');
     try {
-      const data = await strapiPut<unknown>(`/users/${id ?? ''}`, { role });
+      const data = await strapiPutRaw<unknown>(`/users/${id}`, { role });
       
-      await strapiPost('/audit-logs', {
-        data: {
-          userId: c.get('user').id,
-          accao: 'admin_alterar_role',
-          ip: c.req.header('x-forwarded-for') || c.req.remoteAddress || 'unknown',
-          timestamp: new Date().toISOString(),
-          recurso: 'utilizador',
-          recursoId: id,
-        }
-      });
+      await strapiPost('/audit-logs', { 
+        userId: c.get('user').id, 
+        accao: 'admin_alterar_role', 
+        recurso: `/users/${id}`, 
+        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown', 
+        timestamp: new Date().toISOString() 
+      }).catch(() => {});
       
       return c.json(data);
     } catch (err) {
@@ -75,7 +72,7 @@ adminRoutes.put(
   async (c) => {
     const id = c.req.param('id');
     try {
-      const data = await strapiPut<unknown>(`/users/${id ?? ''}`, {
+      const data = await strapiPutRaw<unknown>(`/users/${id ?? ''}`, {
         bloqueado: true,
         suspendidoEm: new Date().toISOString(),
       });

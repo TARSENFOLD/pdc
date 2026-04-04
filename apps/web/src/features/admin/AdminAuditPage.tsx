@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin';
-import { Spinner, Tabela, Pagination, Avatar } from '@/components/ui';
+import { Spinner, Table, Pagination, Avatar } from '@/components/ui';
+import type { AuditLog } from '@pdc/shared';
 
 export function AdminAuditPage() {
   const [page, setPage] = useState(1);
@@ -14,48 +15,61 @@ export function AdminAuditPage() {
   const columns = [
     { 
       header: 'Utilizador', 
-      accessor: 'userId' as const,
-      cell: (v: string, row: any) => (
+      accessor: (log: AuditLog) => (
         <div className="flex items-center gap-2">
-          <Avatar name={v} size="xs" />
-          <span className="text-xs font-mono">{v.substring(0, 8)}…</span>
+          <Avatar name={log.userId} size="sm" className="h-6 w-6" />
+          <span className="text-xs font-mono text-text-secondary">{log.userId.substring(0, 8)}…</span>
         </div>
       )
     },
-    { header: 'Ação', accessor: 'accao' as const },
     { 
-      header: 'Recurso', 
-      accessor: 'recurso' as const,
-      cell: (v: string, row: any) => (
-        <span className="text-xs text-text-muted">
-          {v} {row.recursoId && `(#${row.recursoId.substring(0, 8)})`}
-        </span>
+      header: 'Ação', 
+      accessor: (log: AuditLog) => (
+        <span className="font-medium text-xs">{log.accao.replace(/_/g, ' ')}</span>
       )
     },
-    { header: 'IP', accessor: 'ip' as const, cell: (v: string) => <span className="text-xs text-text-muted font-mono">{v}</span> },
-    { header: 'Data', accessor: 'timestamp' as const, cell: (v: string) => new Date(v).toLocaleString() },
+    { 
+      header: 'Recurso', 
+      accessor: (log: AuditLog) => (
+        <div className="flex flex-col">
+          <span className="text-xs text-text-primary">{log.recurso}</span>
+          {log.recursoId && <span className="text-[10px] text-text-secondary font-mono">#{log.recursoId.substring(0, 8)}</span>}
+        </div>
+      )
+    },
+    { 
+      header: 'IP', 
+      accessor: (log: AuditLog) => (
+        <span className="text-xs text-text-secondary font-mono">{log.ip}</span>
+      )
+    },
+    { 
+      header: 'Data/Hora', 
+      accessor: (log: AuditLog) => (
+        <span className="text-xs text-text-secondary">{new Date(log.timestamp).toLocaleString()}</span>
+      )
+    },
   ];
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-text-primary mb-6">Logs de Auditoria</h1>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-text-primary">Registos de Auditoria</h1>
 
       {isLoading ? (
         <div className="flex justify-center py-20">
           <Spinner size="lg" />
         </div>
       ) : (
-        <>
-          <Tabela columns={columns} data={data?.data ?? []} />
-          {data?.pagination?.pageCount > 1 && (
+        <div className="space-y-6">
+          <Table columns={columns} data={data?.data ?? []} />
+          {data?.pagination && data.pagination.pageCount > 1 && (
             <Pagination 
               page={page} 
               pageCount={data.pagination.pageCount} 
               onPageChange={setPage} 
-              className="mt-6" 
             />
           )}
-        </>
+        </div>
       )}
     </div>
   );

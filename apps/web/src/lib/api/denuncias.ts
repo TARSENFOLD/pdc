@@ -1,16 +1,28 @@
-import { apiClient } from './http.js';
-import type { Denuncia, DenunciaListParams } from '@pdc/shared';
+import { http } from './http.js';
+import type { 
+  Denuncia, 
+  DenunciaListParams, 
+  Pagination, 
+  CriarDenunciaPayload, 
+  ResolverDenunciaPayload 
+} from '@pdc/shared';
 
 export const denunciasApi = {
-  list: (params: DenunciaListParams) =>
-    apiClient.get<{ data: Denuncia[]; pagination: any }>('/denuncias', { params }),
+  list: (params: DenunciaListParams) => {
+    const q = new URLSearchParams();
+    if (params.page) q.set('page', params.page.toString());
+    if (params.pageSize) q.set('pageSize', params.pageSize.toString());
+    if (params.estado) q.set('estado', params.estado);
+    if (params.tipo) q.set('tipo', params.tipo);
+    return http.get<{ data: Denuncia[]; pagination: Pagination }>(`/denuncias?${q.toString()}`);
+  },
 
   getById: (id: string) =>
-    apiClient.get<{ data: Denuncia }> (`/denuncias/${id}`),
+    http.get<{ data: Denuncia }>(`/denuncias/${id}`),
 
-  resolver: (id: string, body: { accao: 'remover' | 'avisar' | 'ignorar'; nota: string }) =>
-    apiClient.put(`/denuncias/${id}/resolver`, body),
+  resolver: (id: string, body: ResolverDenunciaPayload) =>
+    http.put(`/denuncias/${id}/resolver`, body),
 
-  criar: (body: { conteudoId: string; conteudoTipo: string; motivo: string }) =>
-    apiClient.post('/denuncias', body),
+  criar: (body: CriarDenunciaPayload) =>
+    http.post('/denuncias', body),
 };

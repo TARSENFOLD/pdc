@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin';
 import { Card, Spinner } from '@/components/ui';
+import { Link } from 'react-router-dom';
 
 export function AdminDashboard() {
   const { data: stats, isLoading } = useQuery({
@@ -18,7 +19,7 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-text-primary">Painel Admin</h1>
+      <h1 className="text-2xl font-bold text-text-primary">Painel de Administração</h1>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-6 bg-surface-raised border-border">
@@ -40,14 +41,27 @@ export function AdminDashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Ações Rápidas" className="p-6">
+        <Card className="p-6">
+          <h2 className="font-semibold text-text-primary mb-4">Ações Rápidas</h2>
           <div className="flex flex-wrap gap-3">
-            <button className="h-9 rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5">
+            <Link 
+              to="/app/admin/utilizadores"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors"
+            >
               Gerir Utilizadores
-            </button>
-            <button className="h-9 rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5">
+            </Link>
+            <Link 
+              to="/app/admin/audit"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors"
+            >
               Ver Auditoria
-            </button>
+            </Link>
+            <Link 
+              to="/app/admin/stats"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors"
+            >
+              Estatísticas Detalhadas
+            </Link>
           </div>
         </Card>
       </div>

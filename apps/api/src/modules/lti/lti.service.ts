@@ -74,7 +74,7 @@ export const ltiService = {
         'filters[email][$eq]': email,
       });
       if (users && users.length > 0) {
-        return users[0];
+        return users[0]!;
       }
       throw err;
     }
