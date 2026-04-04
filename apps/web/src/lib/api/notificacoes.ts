@@ -7,7 +7,7 @@ export const notificacoesApi = {
     if (params?.page) searchParams.set('page', params.page.toString());
     if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
     
-    return http.get<{ data: Notificacao[], pagination: any }>(`/notificacoes?${searchParams.toString()}`);
+    return http.get<{ data: Notificacao[], pagination: { page: number; pageSize: number; pageCount: number; total: number } }>(`/notificacoes?${searchParams.toString()}`);
   },
 
   marcarLida: (id: string) => 

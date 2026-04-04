@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import { telemetriaService } from '../../lib/telemetria/telemetria.service';
 import { Card, Button, Badge } from '../../components/ui';
+import type { Simulacao } from '@pdc/shared';
 
 interface Props {
-  simulacao: any;
+  simulacao: Simulacao;
 }
 
 export const Tipo1Player = ({ simulacao }: Props) => {
@@ -21,7 +22,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
   const [videoStarted, setVideoStarted] = useState(false);
 
   useEffect(() => {
-    telemetriaService.registarEvento('simulacao.iniciada', { 
+    void telemetriaService.registarEvento('simulacao.iniciada', { 
       simulacaoId: simulacao.id, 
       tentativaId, 
       tipo: 1 
@@ -30,7 +31,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
 
   const handleStartVideo = () => {
     setVideoStarted(true);
-    telemetriaService.registarEvento('video.assistido', { 
+    void telemetriaService.registarEvento('video.assistido', { 
       simulacaoId: simulacao.id, 
       estado: 'iniciado' 
     });
@@ -39,7 +40,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
   const handleCheck = (item: keyof typeof checklist) => {
     const newVal = !checklist[item];
     setChecklist(prev => ({ ...prev, [item]: newVal }));
-    telemetriaService.registarEvento('checklist.item_marcado', { 
+    void telemetriaService.registarEvento('checklist.item_marcado', { 
       item, 
       valor: newVal, 
       simulacaoId: simulacao.id 
@@ -54,7 +55,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
         score,
         metadata: { checklist, tipo: 1 }
       });
-      telemetriaService.registarEvento('simulacao.concluida', { 
+      void telemetriaService.registarEvento('simulacao.concluida', { 
         tentativaId, 
         score, 
         tipo: 1 
@@ -85,7 +86,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
               <div className="text-center space-y-4">
                 <div className="animate-pulse text-6xl">🎬</div>
                 <p className="text-lg text-slate-400">A reproduzir conteúdo da simulação...</p>
-                <Button variant="outline" size="sm" onClick={() => setVideoStarted(false)}>Reiniciar</Button>
+                <Button variant="secondary" size="sm" onClick={() => { setVideoStarted(false); }}>Reiniciar</Button>
               </div>
             </div>
           )}
@@ -119,7 +120,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
                     type="checkbox" 
                     className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500"
                     checked={checklist[item]} 
-                    onChange={() => handleCheck(item)}
+                    onChange={() => { handleCheck(item); }}
                   />
                   <span className={`text-sm font-medium capitalize ${checklist[item] ? 'text-green-800' : 'text-slate-700'}`}>
                     {item} da situação
@@ -137,14 +138,14 @@ export const Tipo1Player = ({ simulacao }: Props) => {
             <div className="space-y-4">
               <div className="flex justify-between text-sm font-medium">
                 <span className="text-slate-500">Nível de confiança</span>
-                <Badge variant="secondary" className="text-orange-700 bg-orange-50">{score}/10</Badge>
+                <Badge variant="outline" className="text-orange-700 bg-orange-50">{score}/10</Badge>
               </div>
               <input 
                 type="range" 
                 min="0" 
                 max="10" 
                 value={score} 
-                onChange={(e) => setScore(Number(e.target.value))}
+                onChange={(e) => { setScore(Number(e.target.value)); }}
                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
               />
               <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
@@ -155,7 +156,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
           </div>
 
           <Button 
-            onClick={handleSubmit} 
+            onClick={() => { void handleSubmit(); }} 
             className="w-full py-6 text-lg font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100"
             disabled={!Object.values(checklist).some(v => v)}
           >

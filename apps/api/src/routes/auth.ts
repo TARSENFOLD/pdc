@@ -4,7 +4,14 @@ import { z } from 'zod';
 import { setCookie, deleteCookie, getCookie } from 'hono/cookie';
 import { authService } from '../modules/auth/auth.service.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import { rateLimit } from '../middleware/rateLimit.js';
+import { rateLimit, rateLimitRegisto } from '../middleware/rateLimit.js';
+import { Redis } from '@upstash/redis';
+import { randomUUID } from 'node:crypto';
+import {
+  RegistoEstudantePayloadSchema,
+  RegistoMentorPayloadSchema,
+  RegistoInstituicaoPayloadSchema,
+} from '@pdc/shared';
 
 export const authRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -20,6 +27,13 @@ const registerSchema = z.object({
 });
 
 const isProd = process.env.NODE_ENV === 'production';
+
+const redis = process.env.UPSTASH_REDIS_REST_URL
+  ? new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN ?? '',
+    })
+  : null;
 
 function setAuthCookies(
   c: Context<{ Variables: AuthVariables }>,
@@ -134,9 +148,9 @@ authRoutes.get('/google', async (c) => {
 authRoutes.get('/google/callback', async (c) => {
   const { code, state } = c.req.query();
   if (redis) {
-    const exists = await redis.get(`oauth_state:${state}`);
+    const exists = await redis.get(`oauth_state:${state ?? ''}`);
     if (!exists) return c.json({ error: 'Invalid state' }, 400);
-    await redis.del(`oauth_state:${state}`);
+    await redis.del(`oauth_state:${state ?? ''}`);
   }
 
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -185,9 +199,9 @@ authRoutes.get('/linkedin', async (c) => {
 authRoutes.get('/linkedin/callback', async (c) => {
   const { code, state } = c.req.query();
   if (redis) {
-    const exists = await redis.get(`oauth_state:${state}`);
+    const exists = await redis.get(`oauth_state:${state ?? ''}`);
     if (!exists) return c.json({ error: 'Invalid state' }, 400);
-    await redis.del(`oauth_state:${state}`);
+    await redis.del(`oauth_state:${state ?? ''}`);
   }
 
   const tokenRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
@@ -215,3 +229,75 @@ authRoutes.get('/linkedin/callback', async (c) => {
 
   return c.redirect(`${process.env.OAUTH_REDIRECT_BASE_URL || 'http://localhost:3000'}/app/dashboard`);
 });
+
+// ─── Registo por Tipo ─────────────────────────────────────────────────────────
+
+authRoutes.use('/register/estudante', rateLimitRegisto);
+authRoutes.use('/register/mentor', rateLimitRegisto);
+authRoutes.use('/register/instituicao', rateLimitRegisto);
+
+authRoutes.post(
+  '/register/estudante',
+  zValidator('json', RegistoEstudantePayloadSchema),
+  async (c) => {
+    const { email, password, nome, areaInteresse, nivelEnsino } = c.req.valid('json');
+    try {
+      const user = await authService.registerWithRole(email, password, nome, 'aluno', {
+        areaInteresse,
+        nivelEnsino,
+      });
+      const { accessToken, refreshToken } = await authService.generateTokens(user);
+      await authService.saveRefreshToken(user.id, refreshToken);
+      setAuthCookies(c, accessToken, refreshToken);
+      return c.json(user);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      return c.json({ error: message }, 400);
+    }
+  },
+);
+
+authRoutes.post(
+  '/register/mentor',
+  zValidator('json', RegistoMentorPayloadSchema),
+  async (c) => {
+    const { email, password, nome, areaEspecialidade, documentos } = c.req.valid('json');
+    try {
+      const user = await authService.registerWithRole(email, password, nome, 'mentor', {
+        areaEspecialidade,
+        documentos: documentos ?? [],
+        aprovado: false,
+      });
+      const { accessToken, refreshToken } = await authService.generateTokens(user);
+      await authService.saveRefreshToken(user.id, refreshToken);
+      setAuthCookies(c, accessToken, refreshToken);
+      return c.json(user);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      return c.json({ error: message }, 400);
+    }
+  },
+);
+
+authRoutes.post(
+  '/register/instituicao',
+  zValidator('json', RegistoInstituicaoPayloadSchema),
+  async (c) => {
+    const { nomeInstituicao, email, password, regiao, tipo, documentos } = c.req.valid('json');
+    try {
+      const user = await authService.registerWithRole(email, password, nomeInstituicao, 'instituicao', {
+        regiao,
+        tipo,
+        documentos: documentos ?? [],
+        aprovado: false,
+      });
+      const { accessToken, refreshToken } = await authService.generateTokens(user);
+      await authService.saveRefreshToken(user.id, refreshToken);
+      setAuthCookies(c, accessToken, refreshToken);
+      return c.json(user);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      return c.json({ error: message }, 400);
+    }
+  },
+);

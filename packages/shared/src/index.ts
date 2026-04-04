@@ -587,3 +587,302 @@ export const NotificacaoRealtimeSchema = z.object({
 });
 
 export type NotificacaoRealtime = z.infer<typeof NotificacaoRealtimeSchema>;
+
+// ─── Catálogo Público ─────────────────────────────────────────────────────────
+
+export const CursoPublicoSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  titulo: z.string(),
+  descricao: z.string(),
+  capaUrl: z.string().url().optional(),
+  area: z.string().optional(),
+  nivel: z.string().optional(),
+  idioma: z.string().optional(),
+  gratuito: z.boolean().optional(),
+  totalHoras: z.number(),
+  autorNome: z.string().optional(),
+});
+
+export type CursoPublico = z.infer<typeof CursoPublicoSchema>;
+
+export const SimulacaoPublicaSchema = z.object({
+  id: z.string(),
+  slug: z.string().optional(),
+  titulo: z.string(),
+  descricao: z.string(),
+  capaUrl: z.string().url().optional(),
+  area: z.string().optional(),
+  tipo: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  nivel: z.string().optional(),
+});
+
+export type SimulacaoPublica = z.infer<typeof SimulacaoPublicaSchema>;
+
+export const ExperienciaPublicaSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  titulo: z.string(),
+  descricao: z.string(),
+  capaUrl: z.string().url().optional(),
+  area: z.string().optional(),
+  nivel: z.string().optional(),
+  instituicaoNome: z.string().optional(),
+  dataInicio: z.string().datetime().optional(),
+});
+
+export type ExperienciaPublica = z.infer<typeof ExperienciaPublicaSchema>;
+
+export const MentorPublicoSchema = z.object({
+  id: z.string(),
+  nome: z.string(),
+  avatarUrl: z.string().url().optional(),
+  bio: z.string().optional(),
+  areaEspecialidade: z.string().optional(),
+  disponivel: z.boolean().optional(),
+});
+
+export type MentorPublico = z.infer<typeof MentorPublicoSchema>;
+
+export const InstituicaoPublicaSchema = z.object({
+  id: z.string(),
+  slug: z.string().optional(),
+  nome: z.string(),
+  descricao: z.string().optional(),
+  logoUrl: z.string().url().optional(),
+  tipo: z.string().optional(),
+  regiao: z.string().optional(),
+});
+
+export type InstituicaoPublica = z.infer<typeof InstituicaoPublicaSchema>;
+
+export const PerfilPublicoBasicoSchema = z.object({
+  id: z.string(),
+  nome: z.string(),
+  avatarUrl: z.string().url().optional(),
+  bio: z.string().optional(),
+  role: RoleSchema,
+});
+
+export type PerfilPublicoBasico = z.infer<typeof PerfilPublicoBasicoSchema>;
+
+export const ExplorarResultadoSchema = z.object({
+  tipo: z.enum(['curso', 'simulacao', 'experiencia', 'mentor', 'instituicao']),
+  id: z.string(),
+  slug: z.string().optional(),
+  titulo: z.string(),
+  descricao: z.string().optional(),
+  capaUrl: z.string().url().optional(),
+  area: z.string().optional(),
+});
+
+export type ExplorarResultado = z.infer<typeof ExplorarResultadoSchema>;
+
+// ─── Registo por Tipo ─────────────────────────────────────────────────────────
+
+export const RegistoEstudantePayloadSchema = z.object({
+  nome: z.string().min(2).max(100),
+  email: z.string().email(),
+  password: z.string().min(8),
+  areaInteresse: z.string().min(1).max(100),
+  nivelEnsino: z.string().min(1).max(100),
+});
+
+export type RegistoEstudantePayload = z.infer<typeof RegistoEstudantePayloadSchema>;
+
+export const RegistoMentorPayloadSchema = z.object({
+  nome: z.string().min(2).max(100),
+  email: z.string().email(),
+  password: z.string().min(8),
+  areaEspecialidade: z.string().min(1).max(100),
+  documentos: z.array(z.string().url()).optional(),
+});
+
+export type RegistoMentorPayload = z.infer<typeof RegistoMentorPayloadSchema>;
+
+export const RegistoInstituicaoPayloadSchema = z.object({
+  nomeInstituicao: z.string().min(2).max(200),
+  email: z.string().email(),
+  password: z.string().min(8),
+  regiao: z.string().min(1).max(100),
+  tipo: z.string().min(1).max(100),
+  documentos: z.array(z.string().url()).optional(),
+});
+
+export type RegistoInstituicaoPayload = z.infer<typeof RegistoInstituicaoPayloadSchema>;
+
+// ─── Catálogo: Meta de Paginação ──────────────────────────────────────────────
+
+export const CatalogoMetaSchema = z.object({
+  page: z.number().int().min(1),
+  pageSize: z.number().int().min(1).max(100),
+  total: z.number().int().min(0),
+  pageCount: z.number().int().min(0),
+});
+
+export type CatalogoMeta = z.infer<typeof CatalogoMetaSchema>;
+
+// ─── Interações Transversais (Likes, Bookmarks, Ratings, Comments) ────────────
+
+export const InteractionTargetTypeSchema = z.enum([
+  'curso',
+  'simulacao',
+  'experiencia',
+  'projeto',
+  'mentor',
+]);
+
+export type InteractionTargetType = z.infer<typeof InteractionTargetTypeSchema>;
+
+// Likes
+export const LikeSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  targetType: InteractionTargetTypeSchema,
+  targetId: z.string(),
+  createdAt: z.string().datetime(),
+});
+
+export type Like = z.infer<typeof LikeSchema>;
+
+export const LikeStatusSchema = z.object({
+  liked: z.boolean(),
+  count: z.number().int().min(0),
+});
+
+export type LikeStatus = z.infer<typeof LikeStatusSchema>;
+
+export const ToggleLikePayloadSchema = z.object({
+  targetType: InteractionTargetTypeSchema,
+  targetId: z.string(),
+});
+
+export type ToggleLikePayload = z.infer<typeof ToggleLikePayloadSchema>;
+
+// Bookmarks
+export const BookmarkSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  targetType: InteractionTargetTypeSchema,
+  targetId: z.string(),
+  createdAt: z.string().datetime(),
+});
+
+export type Bookmark = z.infer<typeof BookmarkSchema>;
+
+export const BookmarkStatusSchema = z.object({
+  bookmarked: z.boolean(),
+});
+
+export type BookmarkStatus = z.infer<typeof BookmarkStatusSchema>;
+
+export const ToggleBookmarkPayloadSchema = z.object({
+  targetType: InteractionTargetTypeSchema,
+  targetId: z.string(),
+});
+
+export type ToggleBookmarkPayload = z.infer<typeof ToggleBookmarkPayloadSchema>;
+
+// Ratings
+export const RatingSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  targetType: InteractionTargetTypeSchema,
+  targetId: z.string(),
+  valor: z.number().int().min(1).max(5),
+  createdAt: z.string().datetime(),
+});
+
+export type Rating = z.infer<typeof RatingSchema>;
+
+export const RatingStatsSchema = z.object({
+  media: z.number().min(0).max(5),
+  total: z.number().int().min(0),
+  userRating: z.number().int().min(1).max(5).nullable(),
+});
+
+export type RatingStats = z.infer<typeof RatingStatsSchema>;
+
+export const CreateRatingPayloadSchema = z.object({
+  targetType: InteractionTargetTypeSchema,
+  targetId: z.string(),
+  valor: z.number().int().min(1).max(5),
+});
+
+export type CreateRatingPayload = z.infer<typeof CreateRatingPayloadSchema>;
+
+// Comments
+export const CommentSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  targetType: InteractionTargetTypeSchema,
+  targetId: z.string(),
+  conteudo: z.string(),
+  estado: z.enum(['pendente', 'aprovado', 'rejeitado']),
+  createdAt: z.string(),
+});
+
+export type Comment = z.infer<typeof CommentSchema>;
+
+export const CreateCommentPayloadSchema = z.object({
+  targetType: InteractionTargetTypeSchema,
+  targetId: z.string(),
+  conteudo: z.string().min(1).max(2000),
+});
+
+export type CreateCommentPayload = z.infer<typeof CreateCommentPayloadSchema>;
+
+// ─── Feed ─────────────────────────────────────────────────────────────────────
+
+export const FeedItemTipoSchema = z.enum(['curso', 'simulacao', 'experiencia', 'projeto']);
+export type FeedItemTipo = z.infer<typeof FeedItemTipoSchema>;
+
+export const FeedItemStatsSchema = z.object({
+  likes: z.number().int().min(0),
+  ratingMedia: z.number().min(0).max(5),
+  ratingTotal: z.number().int().min(0),
+  completionRate: z.number().min(0).max(1).optional(),
+});
+export type FeedItemStats = z.infer<typeof FeedItemStatsSchema>;
+
+export const FeedItemSchema = z.object({
+  tipo: FeedItemTipoSchema,
+  id: z.string(),
+  slug: z.string().optional(),
+  titulo: z.string(),
+  descricao: z.string(),
+  capaUrl: z.string().url().optional(),
+  area: z.string().optional(),
+  autorNome: z.string().optional(),
+  autorId: z.string().optional(),
+  score: z.number(),
+  recencyScore: z.number(),
+  stats: FeedItemStatsSchema,
+  publicadoEm: z.string().datetime(),
+});
+export type FeedItem = z.infer<typeof FeedItemSchema>;
+
+export const FeedWeightsSchema = z.object({
+  engagement: z.number().min(0).max(1),
+  completion: z.number().min(0).max(1),
+  rating: z.number().min(0).max(1),
+  recency: z.number().min(0).max(1),
+  reputation: z.number().min(0).max(1),
+  affinity: z.number().min(0).max(1),
+  time: z.number().min(0).max(1),
+});
+export type FeedWeights = z.infer<typeof FeedWeightsSchema>;
+
+export const FeedResponseSchema = z.object({
+  data: z.array(FeedItemSchema),
+  meta: z.object({
+    page: z.number().int().min(1),
+    pageSize: z.number().int().min(1),
+    hasMore: z.boolean(),
+  }),
+});
+export type FeedResponse = z.infer<typeof FeedResponseSchema>;
+
+export const UpdateFeedWeightsPayloadSchema = FeedWeightsSchema;
+export type UpdateFeedWeightsPayload = z.infer<typeof UpdateFeedWeightsPayloadSchema>;
+

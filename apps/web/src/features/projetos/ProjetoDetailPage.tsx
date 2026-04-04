@@ -1,8 +1,9 @@
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projetosApi } from '@/lib/api/projetos';
+import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { Spinner, Badge, Button } from '@/components/ui';
+import { Spinner, Badge, Button, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
 import { DenunciarButton } from '@/components/ui/DenunciarButton';
 
 export function ProjetoDetailPage() {
@@ -22,6 +23,25 @@ export function ProjetoDetailPage() {
       void qc.invalidateQueries({ queryKey: ['projetos'] });
     },
   });
+
+  const { data: likeStatus } = useQuery({
+    queryKey: ['projeto', id, 'likes'],
+    queryFn: () => likeApi.getStatus('projeto', id ?? ''),
+    enabled: !!id,
+  });
+
+  const { data: ratingStats } = useQuery({
+    queryKey: ['projeto', id, 'ratings'],
+    queryFn: () => ratingsApi.getStats('projeto', id ?? ''),
+    enabled: !!id,
+  });
+
+  const { data: bookmarks } = useQuery({
+    queryKey: ['bookmarks'],
+    queryFn: () => bookmarkApi.list(),
+  });
+  const isBookmarked = bookmarks?.data.some(b => b.targetType === 'projeto' && b.targetId === id) ?? false;
+
 
   if (!id) return <Navigate to="/projetos" replace />;
 
@@ -47,7 +67,15 @@ export function ProjetoDetailPage() {
       ) : null}
 
       <div className="mb-4 flex items-start justify-between gap-4">
-        <h1 className="text-2xl font-bold text-text-primary">{projeto.titulo}</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary mb-2">{projeto.titulo}</h1>
+          <div className="flex items-center gap-2">
+            <RatingStars targetType="projeto" targetId={id} stats={ratingStats} />
+            <div className="w-px h-6 bg-border mx-2"></div>
+            <LikeButton targetType="projeto" targetId={id} initialCount={likeStatus?.count} initialLiked={likeStatus?.liked} />
+            <BookmarkButton targetType="projeto" targetId={id} initialBookmarked={isBookmarked} />
+          </div>
+        </div>
         <div className="flex shrink-0 items-center gap-2">
           {!isOwner && <DenunciarButton conteudoId={projeto.id} conteudoTipo="projeto" />}
           {isOwner && (
@@ -75,7 +103,7 @@ export function ProjetoDetailPage() {
         </div>
       </div>
 
-      {projeto.tags && projeto.tags.length > 0 && (
+      {projeto.tags.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
           {projeto.tags.map((tag) => (
             <Badge key={tag} variant="outline">{tag}</Badge>

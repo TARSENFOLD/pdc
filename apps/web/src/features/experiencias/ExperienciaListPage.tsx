@@ -30,7 +30,7 @@ export function ExperienciaListPage() {
   });
 
   const experiencias = data?.data ?? [];
-  const pageCount: number = data?.pagination?.pageCount ?? 1;
+  const pageCount = data?.pagination.pageCount ?? 1;
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">

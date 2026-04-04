@@ -12,7 +12,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = location.state?.from?.pathname || '/dashboard';
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/dashboard';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,8 +22,9 @@ export default function LoginPage() {
     try {
       await login({ email, password });
       navigate(from, { replace: true });
-    } catch (err: any) {
-      setError(err.body?.error || 'Erro ao iniciar sessão. Verifique as suas credenciais.');
+    } catch (err: unknown) {
+      const body = err instanceof Error && 'body' in err ? (err as { body?: Record<string, string> }).body : undefined;
+      setError(body?.error ?? 'Erro ao iniciar sessão. Verifique as suas credenciais.');
     } finally {
       setIsLoading(false);
     }
@@ -37,7 +38,7 @@ export default function LoginPage() {
           <p className="text-gray-400">Inicie sessão para continuar no PDC</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
           {error && (
             <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500 border border-red-500/20">
               {error}
@@ -52,7 +53,7 @@ export default function LoginPage() {
               className="w-full rounded-lg bg-[#1a1a1a] border border-white/10 p-3 text-white focus:border-[#f59e0b] focus:outline-none transition-colors"
               placeholder="seu@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); }}
             />
           </div>
 
@@ -69,7 +70,7 @@ export default function LoginPage() {
               className="w-full rounded-lg bg-[#1a1a1a] border border-white/10 p-3 text-white focus:border-[#f59e0b] focus:outline-none transition-colors"
               placeholder="••••••••"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); }}
             />
           </div>
 

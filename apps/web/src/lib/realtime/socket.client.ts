@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 
-const URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+const URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001';
 
 const socket: Socket = io(URL, {
   withCredentials: true,
@@ -15,14 +15,14 @@ export function disconnect() {
   if (socket.connected) socket.disconnect();
 }
 
-export function on<T>(event: string, handler: (data: T) => void) {
+export function on(event: string, handler: (data: unknown) => void) {
   socket.on(event, handler as (...args: unknown[]) => void);
 }
 
-export function off<T>(event: string, handler: (data: T) => void) {
+export function off(event: string, handler: (data: unknown) => void) {
   socket.off(event, handler as (...args: unknown[]) => void);
 }
 
-export function emit<T>(event: string, data?: T) {
+export function emit(event: string, data?: unknown) {
   socket.emit(event, data);
 }

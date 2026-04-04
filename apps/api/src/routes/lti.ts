@@ -40,11 +40,13 @@ ltiRoutes.post('/login', zValidator('form', loginSchema), async (c) => {
     'filters[ativo][$eq]': 'true',
   });
 
-  if (!res.data || res.data.length === 0) {
+  if (res.data.length === 0) {
     return c.json({ error: 'Plataforma LTI não encontrada ou inativa' }, 401);
   }
 
-  const plataforma = res.data[0]!.attributes;
+  const firstPlatform = res.data[0];
+  if (!firstPlatform) return c.json({ error: 'Plataforma LTI não encontrada' }, 401);
+  const plataforma = firstPlatform.attributes;
   const state = Math.random().toString(36).substring(2);
   const nonce = await ltiService.generateNonce(state);
 
@@ -84,8 +86,8 @@ ltiRoutes.post('/launch', zValidator('form', launchSchema), async (c) => {
   const res = await strapiGet<{ data: Array<{ id: string; attributes: LtiPlataforma }> }>('/lti-plataformas', {
     'filters[issuer][$eq]': payload.iss,
   });
-  if (!res.data?.[0]) return c.json({ error: 'Plataforma não encontrada' }, 401);
-  const plataforma: LtiPlataforma = { ...res.data[0].attributes, id: res.data[0]!.id };
+  if (!res.data[0]) return c.json({ error: 'Plataforma não encontrada' }, 401);
+  const plataforma: LtiPlataforma = { ...res.data[0].attributes, id: res.data[0].id };
 
   // 3. Validar Assinatura do JWT
   const claims = await ltiService.validateLaunchJwt(id_token, plataforma);

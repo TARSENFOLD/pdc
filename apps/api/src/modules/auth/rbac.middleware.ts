@@ -6,7 +6,7 @@ export function checkRole(allowedRoles: Role[]) {
   return async (c: Context<{ Variables: AuthVariables }>, next: Next) => {
     const user = c.get('user');
 
-    if (!user || !allowedRoles.includes(user.role)) {
+    if (!allowedRoles.includes(user.role)) {
       return c.json({ error: 'Forbidden — Insufficient permissions' }, 403);
     }
 

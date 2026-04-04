@@ -21,7 +21,7 @@ export function AdminUtilizadoresPage() {
     mutationFn: ({ id, role }: { id: string; role: Role }) => adminApi.updateRole(id, role),
     onSuccess: () => {
       toast({ title: 'Role atualizada', description: 'A permissão do utilizador foi alterada.' });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       setIsRoleModalOpen(false);
       setSelectedUser(null);
     },
@@ -34,7 +34,7 @@ export function AdminUtilizadoresPage() {
     mutationFn: (id: string) => adminApi.suspender(id),
     onSuccess: () => {
       toast({ title: 'Utilizador suspenso', description: 'O acesso do utilizador foi bloqueado.' });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     },
     onError: () => {
       toast({ title: 'Erro', description: 'Não foi possível suspender o utilizador.' });
@@ -46,7 +46,11 @@ export function AdminUtilizadoresPage() {
       header: 'Utilizador', 
       accessor: (u: User) => (
         <div className="flex items-center gap-3">
-          <Avatar name={u.nome} src={u.avatarUrl} size="sm" />
+          <Avatar 
+            fallback={u.nome.substring(0, 2).toUpperCase()} 
+            {...(u.avatarUrl ? { src: u.avatarUrl } : {})} 
+            size="sm" 
+          />
           <div className="min-w-0">
             <p className="text-sm font-medium text-text-primary truncate">{u.nome}</p>
             <p className="text-xs text-text-secondary truncate">{u.email}</p>
@@ -57,7 +61,7 @@ export function AdminUtilizadoresPage() {
     { 
       header: 'Role', 
       accessor: (u: User) => (
-        <Badge variant={u.role as any}>{u.role.replace('_', ' ')}</Badge>
+        <Badge variant={u.role}>{u.role.replace('_', ' ')}</Badge>
       )
     },
     {
@@ -139,7 +143,7 @@ export function AdminUtilizadoresPage() {
         </div>
 
         <ModalFooter>
-          <Button variant="ghost" onClick={() => setIsRoleModalOpen(false)}>Cancelar</Button>
+          <Button variant="ghost" onClick={() => { setIsRoleModalOpen(false); }}>Cancelar</Button>
         </ModalFooter>
       </Modal>
     </div>

@@ -12,7 +12,7 @@ const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN || '';
 const redis = process.env.UPSTASH_REDIS_REST_URL
   ? new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN ?? '',
     })
   : null;
 
@@ -114,6 +114,27 @@ export const authService = {
     return this.mapStrapiUser(data.user);
   },
 
+  async registerWithRole(
+    email: string,
+    password: string,
+    nome: string,
+    role: Role,
+    extra: Record<string, unknown>,
+  ): Promise<User> {
+    const res = await fetch(`${STRAPI_URL}/api/auth/local/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, username: email, nome, role, ...extra }),
+    });
+
+    if (!res.ok) {
+      const error = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+      throw new Error(error.error?.message || 'Registration failed');
+    }
+    const data = (await res.json()) as { user: StrapiUser };
+    return this.mapStrapiUser(data.user);
+  },
+
   async getUserById(id: string): Promise<User> {
     const res = await fetch(`${STRAPI_URL}/api/users/${id}?populate=role`, {
       headers: { Authorization: `Bearer ${STRAPI_API_TOKEN}` },
@@ -129,8 +150,9 @@ export const authService = {
       headers: { Authorization: `Bearer ${STRAPI_API_TOKEN}` },
     });
     const users = (await resSearch.json()) as StrapiUser[];
-    if (users.length > 0) {
-      return this.mapStrapiUser(users[0]!);
+    const firstUser = users[0];
+    if (firstUser) {
+      return this.mapStrapiUser(firstUser);
     }
 
     // 2. Se não existir, criar (registo social sem password)
@@ -162,11 +184,11 @@ export const authService = {
     return {
       id: u.id.toString(),
       email: u.email,
-      nome: u.nome || u.username,
-      role: (u.role?.name?.toLowerCase() as Role) || 'aluno',
-      avatarUrl: u.avatar?.url || undefined,
-      createdAt: u.createdAt || new Date().toISOString(),
-      updatedAt: u.updatedAt || new Date().toISOString(),
+      nome: u.nome ?? u.username,
+      role: (u.role?.name.toLowerCase() ?? 'aluno') as Role,
+      avatarUrl: u.avatar?.url,
+      createdAt: u.createdAt ?? new Date().toISOString(),
+      updatedAt: u.updatedAt ?? new Date().toISOString(),
     };
   },
 };

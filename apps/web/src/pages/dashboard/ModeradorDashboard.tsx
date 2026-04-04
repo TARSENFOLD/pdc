@@ -60,7 +60,7 @@ export function ModeradorDashboard() {
           <div className="space-y-4">
             <div className="flex justify-between border-b border-border pb-2">
               <span className="text-sm text-text-secondary">Pendentes</span>
-              <span className="font-bold text-error">{data?.pagination?.total ?? 0}</span>
+              <span className="font-bold text-error">{data?.pagination.total ?? 0}</span>
             </div>
             <div className="flex justify-between border-b border-border pb-2">
               <span className="text-sm text-text-secondary">Resolvidas (hoje)</span>

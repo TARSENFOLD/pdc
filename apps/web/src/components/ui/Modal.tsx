@@ -9,11 +9,10 @@ export interface ModalProps extends ComponentPropsWithoutRef<typeof DialogPrimit
   children: ReactNode;
 }
 
-const Modal = ({ children, open, onOpenChange, ...props }: ModalProps) => {
+const Modal = ({ children, open, ...props }: ModalProps) => {
   return (
     <DialogPrimitive.Root
       {...(open !== undefined ? { open } : {})}
-      {...(onOpenChange !== undefined ? { onOpenChange } : {})}
       {...props}
     >
       <AnimatePresence>

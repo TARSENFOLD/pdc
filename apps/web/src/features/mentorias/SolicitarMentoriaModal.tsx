@@ -47,14 +47,14 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
           ) : (
             <select
               value={mentorId}
-              onChange={(e) => setMentorId(e.target.value)}
+              onChange={(e) => { setMentorId(e.target.value); }}
               required
               className="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber"
             >
               <option value="">Selecionar mentor…</option>
               {mentores.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.nomeCompleto ?? m.username}
+                  {m.nome}
                 </option>
               ))}
             </select>
@@ -65,7 +65,7 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
           <label className="mb-1 block text-xs font-medium text-text-secondary">Mensagem</label>
           <textarea
             value={mensagem}
-            onChange={(e) => setMensagem(e.target.value)}
+            onChange={(e) => { setMensagem(e.target.value); }}
             required
             minLength={10}
             maxLength={500}

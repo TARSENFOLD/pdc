@@ -6,7 +6,7 @@ import type { LtiLaunchClaims, LtiPlataforma, User } from '@pdc/shared';
 const redis = process.env['UPSTASH_REDIS_REST_URL']
   ? new Redis({
       url: process.env['UPSTASH_REDIS_REST_URL'],
-      token: process.env['UPSTASH_REDIS_REST_TOKEN']!,
+      token: process.env['UPSTASH_REDIS_REST_TOKEN'] ?? '',
     })
   : null;
 
@@ -73,8 +73,9 @@ export const ltiService = {
       const users = await strapiGet<User[]>('/users', {
         'filters[email][$eq]': email,
       });
-      if (users && users.length > 0) {
-        return users[0]!;
+      if (users.length > 0) {
+        const firstUser = users[0];
+        if (firstUser) return firstUser;
       }
       throw err;
     }

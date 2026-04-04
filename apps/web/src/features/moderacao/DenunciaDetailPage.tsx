@@ -21,15 +21,15 @@ export function DenunciaDetailPage() {
 
   const { data: denuncia, isLoading } = useQuery({
     queryKey: ['denuncias', id],
-    queryFn: () => denunciasApi.getById(id!).then(res => res.data as unknown as DenunciaComDetalhes),
+    queryFn: () => denunciasApi.getById(id ?? '').then(res => res.data as unknown as DenunciaComDetalhes),
     enabled: !!id,
   });
 
   const resolveMutation = useMutation({
-    mutationFn: () => denunciasApi.resolver(id!, { accao, nota }),
+    mutationFn: () => denunciasApi.resolver(id ?? '', { accao, nota }),
     onSuccess: () => {
       toast({ title: 'Denúncia resolvida', description: 'A ação foi aplicada com sucesso.' });
-      queryClient.invalidateQueries({ queryKey: ['denuncias'] });
+      void queryClient.invalidateQueries({ queryKey: ['denuncias'] });
       navigate('/app/moderacao/denuncias');
     },
     onError: () => {
@@ -67,7 +67,11 @@ export function DenunciaDetailPage() {
           <h2 className="font-semibold text-lg text-text-primary">Denunciante</h2>
           {denuncia.denunciante ? (
             <div className="flex items-center gap-3">
-              <Avatar name={denuncia.denunciante.nome} src={denuncia.denunciante.avatarUrl} size="md" />
+              <Avatar 
+                fallback={denuncia.denunciante.nome.substring(0, 2).toUpperCase()} 
+                {...(denuncia.denunciante.avatarUrl ? { src: denuncia.denunciante.avatarUrl } : {})} 
+                size="md" 
+              />
               <div className="min-w-0">
                 <p className="text-sm font-medium text-text-primary truncate">{denuncia.denunciante.nome}</p>
                 <p className="text-xs text-text-secondary truncate">{denuncia.denunciante.email}</p>
@@ -87,7 +91,7 @@ export function DenunciaDetailPage() {
               <label className="text-sm font-medium text-text-secondary">Ação a tomar</label>
               <select
                 value={accao}
-                onChange={(e) => setAccao(e.target.value as DenunciaAccao)}
+                onChange={(e) => { setAccao(e.target.value as DenunciaAccao); }}
                 className="w-full max-w-xs rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber"
               >
                 <option value="remover">Remover conteúdo</option>
@@ -99,7 +103,7 @@ export function DenunciaDetailPage() {
               <label className="text-sm font-medium text-text-secondary">Nota de resolução</label>
               <textarea
                 value={nota}
-                onChange={(e) => setNota(e.target.value)}
+                onChange={(e) => { setNota(e.target.value); }}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber min-h-[100px]"
                 placeholder="Descreva o motivo desta decisão…"
               />
@@ -108,7 +112,7 @@ export function DenunciaDetailPage() {
               <Button 
                 variant="primary"
                 isLoading={resolveMutation.isPending} 
-                onClick={() => resolveMutation.mutate()}
+                onClick={() => { resolveMutation.mutate(); }}
                 disabled={!nota.trim()}
               >
                 Concluir Resolução

@@ -3,7 +3,7 @@
  * Todos os pedidos incluem cookies httpOnly automaticamente.
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+const BASE_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001';
 
 export class ApiError extends Error {
   constructor(
@@ -22,13 +22,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...init?.headers,
+      ...(init?.headers as Record<string, string> | undefined),
     },
   });
 
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
-    throw new ApiError(response.status, `HTTP ${response.status}: ${path}`, body);
+    throw new ApiError(response.status, `HTTP ${String(response.status)}: ${path}`, body);
   }
 
   return response.json() as Promise<T>;

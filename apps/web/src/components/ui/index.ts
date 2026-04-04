@@ -9,3 +9,6 @@ export * from './Toast';
 export * from './Tabs';
 export * from './Table';
 export * from './Pagination';
+export * from './LikeButton';
+export * from './BookmarkButton';
+export * from './RatingStars';

@@ -7,7 +7,7 @@ export const mensagensApi = {
     if (params?.page) searchParams.set('page', params.page.toString());
     if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
     
-    return http.get<{ data: Conversa[], pagination: any }>(`/mensagens/conversas?${searchParams.toString()}`);
+    return http.get<{ data: Conversa[], pagination: { page: number; pageSize: number; pageCount: number; total: number } }>(`/mensagens/conversas?${searchParams.toString()}`);
   },
 
   getMensagens: (conversaId: string, params?: PaginationParams) => {
@@ -15,7 +15,7 @@ export const mensagensApi = {
     if (params?.page) searchParams.set('page', params.page.toString());
     if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
     
-    return http.get<{ data: Mensagem[], pagination: any }>(`/mensagens/conversas/${conversaId}?${searchParams.toString()}`);
+    return http.get<{ data: Mensagem[], pagination: { page: number; pageSize: number; pageCount: number; total: number } }>(`/mensagens/conversas/${conversaId}?${searchParams.toString()}`);
   },
 
   enviar: (conversaId: string, conteudo: string) => 

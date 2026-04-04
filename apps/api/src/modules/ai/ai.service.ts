@@ -12,7 +12,7 @@ export const aiService = {
   async buildContexto(alunoId: string): Promise<string> {
     const perfil = await vocacionalService.calcularPerfil(alunoId);
     
-    const tentativasRes = await strapiGet<{ data: Array<{ id: number; attributes: any }> }>('/tentativas', {
+    const tentativasRes = await strapiGet<{ data: Array<{ id: number; attributes: Record<string, unknown> }> }>('/tentativas', {
       'filters[alunoId][$eq]': alunoId,
       'filters[dataFim][$notNull]': 'true',
       'populate': 'simulacao',
@@ -25,12 +25,12 @@ export const aiService = {
 
     const sims = tentativasRes.data.map(t => {
       const sim = t.attributes['simulacao'] as { data: { attributes: { titulo: string } } } | undefined;
-      return sim?.data?.attributes?.titulo;
+      return sim?.data.attributes.titulo;
     }).filter(Boolean).join(', ');
 
     const cursos = inscricoesRes.data.map(i => {
       const curso = i.attributes['curso'] as { data: { attributes: { titulo: string } } } | undefined;
-      return curso?.data?.attributes?.titulo;
+      return curso?.data.attributes.titulo;
     }).filter(Boolean).join(', ');
 
     return `Perfil Vocacional: Score Global ${perfil.scoreGlobal.toString()}, Aptidão ${perfil.aptidao.toString()}, Dedicação ${perfil.dedicacao.toString()}. Simulações concluídas: ${sims || 'Nenhuma'}. Cursos inscritos: ${cursos || 'Nenhum'}.`;
@@ -46,7 +46,7 @@ export const aiService = {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => { controller.abort(); }, 10000);
 
       const res = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
         method: 'POST',
@@ -65,7 +65,7 @@ export const aiService = {
       clearTimeout(timeoutId);
 
       if (!res.ok || res.status >= 500) {
-        return this.fallbackOllama(fullMessages, stream);
+        return await this.fallbackOllama(fullMessages, stream);
       }
 
       return res;
@@ -76,7 +76,7 @@ export const aiService = {
   },
 
   async fallbackOllama(messages: ChatMessage[], stream: boolean): Promise<Response> {
-    return fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+    return await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

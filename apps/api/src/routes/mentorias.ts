@@ -65,7 +65,7 @@ mentoriaRoutes.post(
 mentoriaRoutes.put('/:id/aceitar', checkRole(['mentor']), async (c) => {
   const id = c.req.param('id');
   try {
-    return c.json(await strapiPut<unknown>(`/mentorias/${id}`, { estado: 'aceite' }));
+    return c.json(await strapiPut<unknown>(`/mentorias/${id ?? ''}`, { estado: 'aceite' }));
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
   }

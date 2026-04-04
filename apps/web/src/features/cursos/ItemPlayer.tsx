@@ -84,7 +84,7 @@ export function ItemPlayer() {
     mutationFn: () => cursosApi.updateProgresso(cursoId ?? '', itemId ?? '', true),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['cursos', cursoId ?? '', 'progresso'] });
-      navigate(`/app/cursos/${cursoId}`);
+      navigate(`/app/cursos/${cursoId ?? ''}`);
     },
   });
 
@@ -121,7 +121,7 @@ export function ItemPlayer() {
         )}
       </div>
       <Button
-        onClick={() => marcarMutation.mutate()}
+        onClick={() => { marcarMutation.mutate(); }}
         isLoading={marcarMutation.isPending}
         disabled={concluido}
         variant={concluido ? 'secondary' : 'primary'}

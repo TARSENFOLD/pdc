@@ -1,8 +1,9 @@
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { Button, Spinner, Badge } from '@/components/ui';
+import { Button, Spinner, Badge, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
 import { cursosApi } from '@/lib/api/cursos';
+import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
 import type { ProgressoItem } from '@pdc/shared';
 
 export function CursoDetailPage() {
@@ -28,6 +29,25 @@ export function CursoDetailPage() {
       void qc.invalidateQueries({ queryKey: ['cursos', id ?? '', 'progresso'] });
     },
   });
+
+  const { data: likeStatus } = useQuery({
+    queryKey: ['curso', id, 'likes'],
+    queryFn: () => likeApi.getStatus('curso', id ?? ''),
+    enabled: !!id,
+  });
+
+  const { data: ratingStats } = useQuery({
+    queryKey: ['curso', id, 'ratings'],
+    queryFn: () => ratingsApi.getStats('curso', id ?? ''),
+    enabled: !!id,
+  });
+
+  const { data: bookmarks } = useQuery({
+    queryKey: ['bookmarks'],
+    queryFn: () => bookmarkApi.list(),
+  });
+  const isBookmarked = bookmarks?.data.some(b => b.targetType === 'curso' && b.targetId === id) ?? false;
+
 
   if (!id) return <Navigate to="/app/cursos" replace />;
 
@@ -70,7 +90,15 @@ export function CursoDetailPage() {
         >
           {isEnrolled ? 'Inscrito' : 'Inscrever-se'}
         </Button>
+
+        <div className="ml-auto flex items-center gap-2">
+          <RatingStars targetType="curso" targetId={id} stats={ratingStats} />
+          <div className="w-px h-6 bg-border mx-2"></div>
+          <LikeButton targetType="curso" targetId={id} initialCount={likeStatus?.count} initialLiked={likeStatus?.liked} />
+          <BookmarkButton targetType="curso" targetId={id} initialBookmarked={isBookmarked} />
+        </div>
       </div>
+
 
       <Tabs defaultValue="visao">
         <TabsList>

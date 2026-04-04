@@ -10,9 +10,9 @@ export const SimulacaoListPage = () => {
 
   useEffect(() => {
     simulacoesApi.list()
-      .then(res => setSimulacoes(res.data))
-      .catch(err => console.error('Erro ao carregar simulações:', err))
-      .finally(() => setLoading(false));
+      .then(res => { setSimulacoes(res.data); })
+      .catch((err: unknown) => { console.error('Erro ao carregar simulações:', err); })
+      .finally(() => { setLoading(false); });
   }, []);
 
   if (loading) return <div className="flex justify-center p-12"><Spinner /></div>;

@@ -7,7 +7,7 @@ export const experienciasApi = {
     if (params?.page) searchParams.set('page', params.page.toString());
     if (params?.pageSize) searchParams.set('pageSize', params.pageSize.toString());
     
-    return http.get<{ data: Experiencia[], pagination: any }>(`/experiencias?${searchParams.toString()}`);
+    return http.get<{ data: Experiencia[], pagination: { page: number; pageSize: number; pageCount: number; total: number } }>(`/experiencias?${searchParams.toString()}`);
   },
 
   getById: (id: string) => 

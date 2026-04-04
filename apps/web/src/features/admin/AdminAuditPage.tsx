@@ -17,7 +17,7 @@ export function AdminAuditPage() {
       header: 'Utilizador', 
       accessor: (log: AuditLog) => (
         <div className="flex items-center gap-2">
-          <Avatar name={log.userId} size="sm" className="h-6 w-6" />
+          <Avatar fallback={log.userId.substring(0, 2).toUpperCase()} size="sm" className="h-6 w-6" />
           <span className="text-xs font-mono text-text-secondary">{log.userId.substring(0, 8)}…</span>
         </div>
       )

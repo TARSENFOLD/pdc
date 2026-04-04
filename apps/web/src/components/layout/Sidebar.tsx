@@ -21,17 +21,15 @@ const ALL_ROLES: Role[] = [
 ];
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard',    to: '/app/dashboard',    icon: '◈', roles: ALL_ROLES },
-  { label: 'Simulações',   to: '/app/simulations',  icon: '⬡', roles: ['aluno', 'comite_cientifico', 'super_admin'] },
-  { label: 'Cursos',       to: '/app/courses',      icon: '📚', roles: ['aluno', 'mentor', 'instituicao', 'comite_cientifico', 'super_admin'] },
-  { label: 'Experiências', to: '/app/experiences',  icon: '🏛️', roles: ['aluno', 'instituicao', 'comite_cientifico', 'super_admin'] },
-  { label: 'Mentorias',    to: '/app/mentors',      icon: '👨‍🏫', roles: ['aluno', 'mentor', 'super_admin'] },
-  { label: 'Programas',    to: '/app/programs',     icon: '📋', roles: ['aluno', 'instituicao', 'comite_cientifico', 'super_admin'] },
-  { label: 'Projetos',     to: '/app/projects',     icon: '🗂️', roles: ['aluno', 'mentor', 'comite_cientifico', 'super_admin'] },
+  { label: 'Dashboard',    to: '/app',              icon: '◈', roles: ALL_ROLES },
   { label: 'Feed',         to: '/app/feed',         icon: '◉', roles: ALL_ROLES },
-  { label: 'Moderação',    to: '/app/moderation',   icon: '🛡️', roles: ['moderador', 'comite_cientifico', 'super_admin'] },
-  { label: 'Admin',        to: '/app/admin',        icon: '⚙️', roles: ['super_admin'] },
-  { label: 'Perfil',       to: '/app/profile',      icon: '👤', roles: ALL_ROLES },
+  { label: 'Simulações',   to: '/app/simulacoes',   icon: '⬡', roles: ['aluno', 'comite_cientifico', 'super_admin'] },
+  { label: 'Cursos',       to: '/app/cursos',       icon: '📚', roles: ['aluno', 'mentor', 'instituicao', 'comite_cientifico', 'super_admin'] },
+  { label: 'Mentorias',    to: '/app/mentorias',    icon: '👨‍🏫', roles: ['aluno', 'mentor', 'super_admin'] },
+  { label: 'Conquistas',   to: '/app/conquistas',   icon: '🏆', roles: ['aluno', 'super_admin'] },
+  { label: 'Moderação',    to: '/app/moderacao/denuncias', icon: '🛡️', roles: ['moderador', 'comite_cientifico', 'super_admin'] },
+  { label: 'Admin',        to: '/app/admin/stats',  icon: '⚙️', roles: ['super_admin'] },
+  { label: 'Perfil',       to: '/app/perfil',       icon: '👤', roles: ALL_ROLES },
 ];
 
 // ─── Role label ───────────────────────────────────────────────────────────────

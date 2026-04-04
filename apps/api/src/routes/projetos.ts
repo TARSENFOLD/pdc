@@ -93,13 +93,13 @@ projetoRoutes.delete('/:id', verifyJwt, async (c) => {
   const projetoId = c.req.param('id');
   const { id: userId, role } = c.get('user');
   try {
-    const proj = await strapiGet<{ data: { attributes: { alunoId: string } } }>(`/projetos/${projetoId}`);
+    const proj = await strapiGet<{ data: { attributes: { alunoId: string } } }>(`/projetos/${projetoId ?? ''}`);
     const ehDono = proj.data.attributes.alunoId === userId;
     const ehModerador = role === 'moderador' || role === 'super_admin';
     if (!ehDono && !ehModerador) return c.json({ error: 'Forbidden' }, 403);
     // Strapi v4 delete
     const res = await fetch(
-      `${process.env['STRAPI_URL'] ?? 'http://localhost:1337'}/api/projetos/${projetoId}`,
+      `${process.env['STRAPI_URL'] ?? 'http://localhost:1337'}/api/projetos/${projetoId ?? ''}`,
       {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${process.env['STRAPI_API_TOKEN'] ?? ''}` },

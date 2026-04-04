@@ -1,7 +1,8 @@
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { experienciasApi } from '@/lib/api/experiencias';
-import { Spinner, Badge } from '@/components/ui';
+import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
+import { Spinner, Badge, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
 
 export function ExperienciaDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -11,6 +12,25 @@ export function ExperienciaDetailPage() {
     queryFn: () => experienciasApi.getById(id ?? ''),
     enabled: !!id,
   });
+
+  const { data: likeStatus } = useQuery({
+    queryKey: ['experiencia', id, 'likes'],
+    queryFn: () => likeApi.getStatus('experiencia', id ?? ''),
+    enabled: !!id,
+  });
+
+  const { data: ratingStats } = useQuery({
+    queryKey: ['experiencia', id, 'ratings'],
+    queryFn: () => ratingsApi.getStats('experiencia', id ?? ''),
+    enabled: !!id,
+  });
+
+  const { data: bookmarks } = useQuery({
+    queryKey: ['bookmarks'],
+    queryFn: () => bookmarkApi.list(),
+  });
+  const isBookmarked = bookmarks?.data.some(b => b.targetType === 'experiencia' && b.targetId === id) ?? false;
+
 
   if (!id) return <Navigate to="/experiencias" replace />;
 
@@ -55,7 +75,15 @@ export function ExperienciaDetailPage() {
           <div className="mb-8 mt-4 h-64 w-full rounded-2xl bg-surface-raised" />
         )}
 
-        <h1 className="mb-3 text-3xl font-bold text-text-primary">{exp.titulo}</h1>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
+          <h1 className="text-3xl font-bold text-text-primary">{exp.titulo}</h1>
+          <div className="flex items-center gap-2 shrink-0">
+            <RatingStars targetType="experiencia" targetId={id} stats={ratingStats} />
+            <div className="w-px h-6 bg-border mx-2"></div>
+            <LikeButton targetType="experiencia" targetId={id} initialCount={likeStatus?.count} initialLiked={likeStatus?.liked} />
+            <BookmarkButton targetType="experiencia" targetId={id} initialBookmarked={isBookmarked} />
+          </div>
+        </div>
 
         <div className="mb-6 flex flex-wrap gap-2">
           <Badge variant="info">Início: {inicio}</Badge>

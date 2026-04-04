@@ -31,7 +31,7 @@ export function ProjetoFormPage() {
       setDescricao(projeto.descricao);
       setRepoUrl(projeto.repoUrl ?? '');
       setDemoUrl(projeto.demoUrl ?? '');
-      setTagsInput(projeto.tags?.join(', ') ?? '');
+      setTagsInput(projeto.tags.join(', '));
       setImagemUrl(projeto.imagemUrl ?? '');
     }
   }, [projeto]);
@@ -66,7 +66,7 @@ export function ProjetoFormPage() {
     setUploading(true);
     try {
       const result = await mediaApi.upload(file);
-      setImagemUrl(result.publicUrl);
+      setImagemUrl(result.url);
     } finally {
       setUploading(false);
     }
@@ -94,14 +94,14 @@ export function ProjetoFormPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="mb-1 block text-xs font-medium text-text-secondary">Título *</label>
-          <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} required minLength={3} maxLength={120} />
+          <Input value={titulo} onChange={(e) => { setTitulo(e.target.value); }} required minLength={3} maxLength={120} />
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium text-text-secondary">Descrição *</label>
           <textarea
             value={descricao}
-            onChange={(e) => setDescricao(e.target.value)}
+            onChange={(e) => { setDescricao(e.target.value); }}
             required
             minLength={10}
             maxLength={2000}
@@ -112,17 +112,17 @@ export function ProjetoFormPage() {
 
         <div>
           <label className="mb-1 block text-xs font-medium text-text-secondary">Tags (separadas por vírgula)</label>
-          <Input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="ex: react, typescript, api" />
+          <Input value={tagsInput} onChange={(e) => { setTagsInput(e.target.value); }} placeholder="ex: react, typescript, api" />
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium text-text-secondary">Repositório</label>
-          <Input type="url" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="https://github.com/…" />
+          <Input type="url" value={repoUrl} onChange={(e) => { setRepoUrl(e.target.value); }} placeholder="https://github.com/…" />
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium text-text-secondary">Demo</label>
-          <Input type="url" value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)} placeholder="https://…" />
+          <Input type="url" value={demoUrl} onChange={(e) => { setDemoUrl(e.target.value); }} placeholder="https://…" />
         </div>
 
         <div>
@@ -130,7 +130,7 @@ export function ProjetoFormPage() {
           {imagemUrl && (
             <img src={imagemUrl} alt="capa" className="mb-2 h-32 w-full rounded-md object-cover" />
           )}
-          <input type="file" accept="image/*" onChange={handleImageUpload} className="text-sm text-text-secondary" disabled={uploading} />
+          <input type="file" accept="image/*" onChange={(e) => { void handleImageUpload(e); }} className="text-sm text-text-secondary" disabled={uploading} />
           {uploading && <p className="mt-1 text-xs text-text-muted">A carregar…</p>}
         </div>
 
@@ -139,7 +139,7 @@ export function ProjetoFormPage() {
         )}
 
         <div className="flex justify-end gap-3 pt-2">
-          <Button type="button" variant="secondary" onClick={() => navigate(-1)}>
+          <Button type="button" variant="secondary" onClick={() => { navigate(-1); }}>
             Cancelar
           </Button>
           <Button type="submit" isLoading={mutation.isPending}>

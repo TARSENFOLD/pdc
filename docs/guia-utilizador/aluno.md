@@ -6,12 +6,31 @@ Bem-vindo ao PDC v2. Este guia explica como tirar partido de todas as funcionali
 
 ### 1. Criar conta
 
-1. Acede a `[dominio-pdc]/register`
-2. Preenche nome completo, email e senha (mín. 8 caracteres)
-3. Confirma o email via link enviado pela plataforma
+1. Acede a `[dominio-pdc]/criar-conta`
+2. Escolhe o tipo de conta: **Estudante**, Mentor ou Instituição
+3. Para estudante: preenche nome, email, senha, área de interesse e nível de ensino
 4. Após confirmação, és redirecionado para o teu dashboard
 
-### 2. Completar o perfil
+### 2. Explorar a Plataforma
+
+Antes de criar conta, podes explorar a oferta pública:
+
+- **Explorar** (`/explorar`) — pesquisa global com filtros por tipo e área
+- **Cursos** (`/cursos`) — catálogo de cursos com filtros por área, nível e gratuidade
+- **Simulações** (`/simulacoes`) — lista de simulações por área, tipo e nível
+- **Mentores** (`/mentores`) — lista de mentores disponíveis, filtrável por área
+- **Instituições** (`/instituicoes`) — instituições registadas, filtrável por tipo e região
+- **Perfis** (`/perfil/:id`) — perfil público de qualquer utilizador
+
+### 3. Descoberta Social
+
+Na página **Explorar**, encontras uma secção "Pessoas que podes seguir" com sugestões de mentores e colegas. Podes:
+
+- Navegar perfis públicos de mentores e ver a sua especialidade
+- Ver projectos públicos — alguns marcados como **Aberto para colaboração**
+- Usar os CTAs nos cards (Conectar, Ver curso, Experimentar) para navegar directamente
+
+### 4. Completar o perfil
 
 Antes de usares as funcionalidades principais, completa o teu perfil:
 

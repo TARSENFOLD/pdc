@@ -20,8 +20,9 @@ export default function RegisterPage() {
     try {
       await register({ nome, email, password });
       navigate('/dashboard', { replace: true });
-    } catch (err: any) {
-      setError(err.body?.error || 'Erro ao criar conta. Tente novamente.');
+    } catch (err: unknown) {
+      const body = err instanceof Error && 'body' in err ? (err as { body?: Record<string, string> }).body : undefined;
+      setError(body?.error ?? 'Erro ao criar conta. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -35,7 +36,7 @@ export default function RegisterPage() {
           <p className="text-gray-400">Junte-se ao Por Dentro do Curso</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
           {error && (
             <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500 border border-red-500/20">
               {error}
@@ -50,7 +51,7 @@ export default function RegisterPage() {
               className="w-full rounded-lg bg-[#1a1a1a] border border-white/10 p-3 text-white focus:border-[#f59e0b] focus:outline-none transition-colors"
               placeholder="Seu nome"
               value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              onChange={(e) => { setNome(e.target.value); }}
             />
           </div>
 
@@ -62,7 +63,7 @@ export default function RegisterPage() {
               className="w-full rounded-lg bg-[#1a1a1a] border border-white/10 p-3 text-white focus:border-[#f59e0b] focus:outline-none transition-colors"
               placeholder="seu@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); }}
             />
           </div>
 
@@ -74,7 +75,7 @@ export default function RegisterPage() {
               className="w-full rounded-lg bg-[#1a1a1a] border border-white/10 p-3 text-white focus:border-[#f59e0b] focus:outline-none transition-colors"
               placeholder="Mínimo 8 caracteres"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); }}
             />
           </div>
 

@@ -8,7 +8,7 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env['JWT_SECRET'] || 'change-me-in-production-min-32-chars'
 );
 
-let io: Server;
+let io: Server | undefined;
 
 export const socketService = {
   init(httpServer: HttpServer): void {
@@ -19,20 +19,21 @@ export const socketService = {
       },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     io.use(async (socket, next) => {
       const cookieHeader = socket.handshake.headers.cookie;
-      if (!cookieHeader) return next(new Error('Unauthorized'));
+      if (!cookieHeader) { next(new Error('Unauthorized')); return; }
 
       const token = cookieHeader
         .split(';')
         .find((c) => c.trim().startsWith('access_token='))
         ?.split('=')[1];
 
-      if (!token) return next(new Error('Unauthorized'));
+      if (!token) { next(new Error('Unauthorized')); return; }
 
       try {
         const { payload } = await jwtVerify(token, JWT_SECRET);
-        socket.data.userId = payload.sub as string;
+        (socket.data as Record<string, unknown>).userId = payload.sub as string;
         next();
       } catch {
         next(new Error('Unauthorized'));
@@ -40,8 +41,8 @@ export const socketService = {
     });
 
     io.on('connection', (socket) => {
-      const userId = socket.data.userId as string;
-      socket.join(`user:${userId}`);
+      const userId = (socket.data as Record<string, unknown>).userId as string;
+      void socket.join(`user:${userId}`);
 
       socket.on('mensagem:enviar', async (payload: { destinatarioId: string; conteudo: string }) => {
         try {

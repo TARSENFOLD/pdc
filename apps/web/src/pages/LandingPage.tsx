@@ -1,6 +1,8 @@
 import { useReducedMotion } from 'motion/react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
+import { MicroDesafio } from '../features/landing/MicroDesafio';
+import { CarrosselInstituicoes } from '../features/landing/CarrosselInstituicoes';
 
 // ─── Animation helpers ────────────────────────────────────────────────────────
 
@@ -108,6 +110,9 @@ function Hero() {
           Ver como funciona
         </a>
       </motion.div>
+
+      {/* Micro Desafio Vocacional */}
+      <MicroDesafio />
 
       {/* Stats */}
       <motion.div
@@ -404,6 +409,7 @@ export function LandingPage() {
       <Navbar />
       <main>
         <Hero />
+        <CarrosselInstituicoes />
         <Problema />
         <ComoFunciona />
         <Features />

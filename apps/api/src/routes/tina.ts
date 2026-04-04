@@ -7,6 +7,7 @@ import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.j
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { tinaService } from '../modules/tina/tina.service.js';
 import { ChatPayloadSchema } from '@pdc/shared';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'change-me-in-production-min-32-chars'
@@ -35,7 +36,7 @@ tinaRoutes.post('/chat', zValidator('json', ChatPayloadSchema), async (c) => {
 
   if (!res.ok) {
     const errorData = await res.json() as { error: string };
-    return c.json(errorData, res.status as any);
+    return c.json(errorData, res.status as ContentfulStatusCode);
   }
 
   if (stream) {
@@ -43,15 +44,16 @@ tinaRoutes.post('/chat', zValidator('json', ChatPayloadSchema), async (c) => {
       const reader = res.body?.getReader();
       if (!reader) return;
       const decoder = new TextDecoder();
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       while (true) {
-        const { done, value } = await reader.read();
+        const { done, value } = await reader.read() as { done: boolean; value: Uint8Array | undefined };
         if (done) break;
         await sseStream.writeSSE({ data: decoder.decode(value) });
       }
     });
   }
 
-  const data = await res.json() as unknown;
+  const data = await res.json() as Record<string, unknown>;
   return c.json(data);
 });
 
@@ -62,7 +64,7 @@ tinaRoutes.post('/indexar', verifyJwt, checkRole(['super_admin']), async (c) => 
 });
 
 // GET /tina/stats
-tinaRoutes.get('/stats', verifyJwt, checkRole(['super_admin']), async (c) => {
+tinaRoutes.get('/stats', verifyJwt, checkRole(['super_admin']), (c) => {
   // Stats básicas (placeholder)
   return c.json({
     status: 'active',

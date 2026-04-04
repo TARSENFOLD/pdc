@@ -10,9 +10,9 @@ export const RelatorioVocacional = () => {
 
   useEffect(() => {
     http.get<IRelatorioVocacional>('/vocacional/perfil')
-      .then(res => setData(res))
-      .catch(err => console.error('Erro ao carregar perfil vocacional:', err))
-      .finally(() => setLoading(false));
+      .then(res => { setData(res); })
+      .catch((err: unknown) => { console.error('Erro ao carregar perfil vocacional:', err); })
+      .finally(() => { setLoading(false); });
   }, []);
 
   if (loading) return <div className="flex justify-center p-20"><Spinner /></div>;
@@ -25,7 +25,7 @@ export const RelatorioVocacional = () => {
         Realiza as simulações práticas para que possamos analisar as tuas competências e sugerir o melhor caminho.
       </p>
       <Link to="/app/simulacoes">
-        <Button size="lg" className="bg-blue-600 hover:bg-blue-700">Explorar Simulações Agora</Button>
+        <Button size="lg" variant="primary">Explorar Simulações Agora</Button>
       </Link>
     </div>
   );
@@ -73,7 +73,7 @@ export const RelatorioVocacional = () => {
                   <div className="w-full bg-slate-100 h-4 rounded-full overflow-hidden p-1">
                     <div 
                       className={`${dim.color} h-full rounded-full transition-all duration-1000 delay-300 ease-out shadow-sm`} 
-                      style={{ width: `${dim.value * 10}%` }} 
+                      style={{ width: `${String(dim.value * 10)}%` }} 
                     />
                   </div>
                 </div>
@@ -119,7 +119,7 @@ export const RelatorioVocacional = () => {
                   {rec.motivo}
                 </p>
                 <Link to={`/app/cursos/${rec.cursoId}`}>
-                  <Button variant={index === 0 ? 'default' : 'outline'} className="w-full font-bold">
+                  <Button variant={index === 0 ? 'primary' : 'secondary'} className="w-full font-bold">
                     Ver Programa do Curso
                   </Button>
                 </Link>
@@ -131,7 +131,7 @@ export const RelatorioVocacional = () => {
             <p className="text-blue-700 font-bold text-sm mb-2">Queres mais precisão?</p>
             <p className="text-blue-600/70 text-xs mb-4">Quanto mais simulações fizeres, melhor será o teu perfil.</p>
             <Link to="/app/simulacoes">
-              <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-100">
+              <Button size="sm" variant="secondary">
                 Fazer nova simulação
               </Button>
             </Link>

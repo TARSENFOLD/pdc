@@ -30,12 +30,12 @@ function MentoriaRow({ mentoria, onAction }: { mentoria: Mentoria; onAction: (id
         <Badge variant={estadoVariant[mentoria.estado] ?? 'outline'}>{mentoria.estado}</Badge>
         {isMentor && mentoria.estado === 'pendente' && (
           <>
-            <Button size="sm" onClick={() => onAction(mentoria.id, 'aceitar')}>Aceitar</Button>
-            <Button size="sm" variant="danger" onClick={() => onAction(mentoria.id, 'recusar')}>Recusar</Button>
+            <Button size="sm" onClick={() => { onAction(mentoria.id, 'aceitar'); }}>Aceitar</Button>
+            <Button size="sm" variant="danger" onClick={() => { onAction(mentoria.id, 'recusar'); }}>Recusar</Button>
           </>
         )}
         {mentoria.estado === 'aceite' && (
-          <Button size="sm" variant="secondary" onClick={() => onAction(mentoria.id, 'concluir')}>Concluir</Button>
+          <Button size="sm" variant="secondary" onClick={() => { onAction(mentoria.id, 'concluir'); }}>Concluir</Button>
         )}
       </div>
     </div>
@@ -80,7 +80,7 @@ export function MentoriaListPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-text-primary">Mentorias</h1>
         {user?.role === 'aluno' && (
-          <Button size="sm" onClick={() => setModalOpen(true)}>
+          <Button size="sm" onClick={() => { setModalOpen(true); }}>
             Solicitar Mentoria
           </Button>
         )}
@@ -102,7 +102,7 @@ export function MentoriaListPage() {
         </div>
       )}
 
-      <SolicitarMentoriaModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <SolicitarMentoriaModal open={modalOpen} onClose={() => { setModalOpen(false); }} />
     </div>
   );
 }

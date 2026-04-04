@@ -3,8 +3,8 @@ import { Ratelimit } from '@upstash/ratelimit';
 
 const redis = process.env['UPSTASH_REDIS_REST_URL']
   ? new Redis({
-      url: process.env['UPSTASH_REDIS_REST_URL']!,
-      token: process.env['UPSTASH_REDIS_REST_TOKEN']!,
+      url: process.env['UPSTASH_REDIS_REST_URL'],
+      token: process.env['UPSTASH_REDIS_REST_TOKEN'] ?? '',
     })
   : null;
 
@@ -27,8 +27,9 @@ export async function verificarLimite(userId: string | null, ip: string): Promis
   if (!gRes.success) return { permitido: false, restantes: 0, resetEm: gRes.reset };
 
   if (userId) {
-    const hRes = await userHourLimit!.limit(userId);
-    const mRes = await userMinLimit!.limit(userId);
+    if (!userHourLimit || !userMinLimit) return { permitido: true, restantes: 999, resetEm: 0 };
+    const hRes = await userHourLimit.limit(userId);
+    const mRes = await userMinLimit.limit(userId);
     const success = hRes.success && mRes.success;
     return { 
       permitido: success, 
@@ -36,7 +37,8 @@ export async function verificarLimite(userId: string | null, ip: string): Promis
       resetEm: Math.max(hRes.reset, mRes.reset) 
     };
   } else {
-    const aRes = await anonLimit!.limit(ip);
+    if (!anonLimit) return { permitido: true, restantes: 999, resetEm: 0 };
+    const aRes = await anonLimit.limit(ip);
     return { permitido: aRes.success, restantes: aRes.remaining, resetEm: aRes.reset };
   }
 }

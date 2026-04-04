@@ -17,7 +17,7 @@ const Pagination = ({ page, pageCount, onPageChange, className }: PaginationProp
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => onPageChange(page - 1)}
+        onClick={() => { onPageChange(page - 1); }}
         disabled={!canPreviousPage}
         className="h-8 w-8 p-0"
       >
@@ -43,7 +43,7 @@ const Pagination = ({ page, pageCount, onPageChange, className }: PaginationProp
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => onPageChange(page + 1)}
+        onClick={() => { onPageChange(page + 1); }}
         disabled={!canNextPage}
         className="h-8 w-8 p-0"
       >

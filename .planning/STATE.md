@@ -8,19 +8,19 @@ Ver: `.planning/PROJECT.md` (actualizado: Abril 2026)
 
 **Core value:** O estudante faz uma escolha de carreira baseada em evidência real do seu próprio comportamento — não em suposições.
 
-**Current focus:** Fase 4C — Projetos, Vínculos e Conquistas
+**Current focus:** M3 — Auth Completo (Google OAuth + OTP 2FA)
 
 ## Current Status
 
 ```
 Fase 0 — Fundação          [x] COMPLETA
-Fase 1 — Auth Segura       [x] COMPLETA
+Fase 1 — Auth Segura       [~] PARCIAL (JWT+RBAC ✅; OAuth+2FA ❌)
 Fase 2 — Design System     [x] COMPLETA
 Fase 3 — API Layer         [x] COMPLETA
-Fase 4 — Core do Produto   [~] EM PROGRESSO (4A + 4B concluídos; 4C em curso)
-Fase 5 — LTI 1.3           [ ] NÃO INICIADA
-Fase 6 — Moderação/Admin   [ ] NÃO INICIADA
-Fase 7 — IA e Realtime     [ ] NÃO INICIADA
+Fase 4 — Core do Produto   [~] PARCIAL (Sim Tipo 1+2, Cursos, Experiências, Projetos, Mentorias, Conquistas, Feed ✅; Sim Tipo 3, Programas, Conquistas auto ❌)
+Fase 5 — LTI 1.3           [x] COMPLETA
+Fase 6 — Moderação/Admin   [x] COMPLETA
+Fase 7 — IA e Realtime     [x] COMPLETA
 ```
 
 **Repositório:** `pdc-v2/` — criado em Abril 2026
@@ -35,14 +35,20 @@ Fase 7 — IA e Realtime     [ ] NÃO INICIADA
 - [x] Fase 3 — 7 módulos API frontend, 6 rotas BFF, strapi.client.ts, r2.service.ts
 - [x] Fase 4A — Simulações Tipo 1 e 2, telemetria com idempotência Redis, perfil vocacional, relatório
 - [x] Fase 4B — Cursos (list/detail/player), Experiências (list/detail), PerfilPage
-- [~] Fase 4C — Projetos, Vínculos, Conquistas (em curso)
+- [x] Fase 4C — Projetos (CRUD, 4 modos, ACL), Vínculos (pedido/aprovação/rejeição), Conquistas (listagem, badges)
+- [x] Fase 4D — Feed e Algoritmo de Ranking (M2)
+- [x] Fase 4E — Features Transversais: Likes, Bookmarks, Ratings, Comments (M1)
+- [x] Fase 5 — LTI 1.3 Provider (OIDC, AGS, NRPS, JWKS, admin CRUD, frontend)
+- [x] Fase 6 — Moderação (denúncias, painel admin, audit trail, CSP/CORS)
+- [x] Fase 7 — IA e Realtime (DeepSeek streaming, RAG, quiz gen, Socket.IO, TutorChat, QuizPlayer)
 
 ## Próximos passos
 
-- [ ] Concluir Fase 4C (Projetos, Vínculos, Conquistas)
-- [ ] Fase 5 — LTI 1.3 Provider
-- [ ] Fase 6 — Moderação, Admin e Segurança
-- [ ] Fase 7 — IA e Realtime
+- [ ] M3 — Auth Completo (Google OAuth + OTP 2FA)
+- [ ] M4 — Completar Core Produto (Programas, Sim Tipo 3, Conquistas automáticas)
+- [ ] M5 — Páginas Públicas e SEO
+- [ ] M6 — Telemetria Completa
+- [ ] M7 — Qualidade e Produção
 
 ## Decisions Log
 

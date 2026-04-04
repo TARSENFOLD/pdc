@@ -29,7 +29,7 @@ export function PerfilPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const initialized = useRef(false);
 
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [form, setForm] = useState(EMPTY_FORM);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -64,7 +64,7 @@ export function PerfilPage() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['perfis', 'me'] });
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setTimeout(() => { setSaveSuccess(false); }, 3000);
     },
   });
 
@@ -110,7 +110,7 @@ export function PerfilPage() {
           {currentAvatar ? (
             <img src={currentAvatar} alt="Avatar" className="h-full w-full object-cover" />
           ) : (
-            (perfil?.nome?.[0] ?? '?').toUpperCase()
+            (perfil?.nome[0] ?? '?').toUpperCase()
           )}
         </div>
         <div>

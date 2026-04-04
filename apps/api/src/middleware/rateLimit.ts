@@ -1,13 +1,6 @@
 import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
+import { redis } from '../lib/redis.js';
 import type { Context, Next } from 'hono';
-
-const redis = process.env.UPSTASH_REDIS_REST_URL
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    })
-  : null;
 
 const ratelimit = redis
   ? new Ratelimit({
@@ -21,11 +14,40 @@ const ratelimit = redis
 export async function rateLimit(c: Context, next: Next) {
   if (!ratelimit) {
     console.warn('Upstash Redis not configured, rate limiting skipped');
-    return await next();
+    await next(); return;
   }
 
   const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
   const { success, limit, reset, remaining } = await ratelimit.limit(ip);
+
+  c.header('X-RateLimit-Limit', limit.toString());
+  c.header('X-RateLimit-Remaining', remaining.toString());
+  c.header('X-RateLimit-Reset', reset.toString());
+
+  if (!success) {
+    return c.json({ error: 'Too many requests' }, 429);
+  }
+
+  await next();
+}
+
+const ratelimitRegisto = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(3, '1 h'),
+      analytics: true,
+      prefix: 'ratelimit:registo',
+    })
+  : null;
+
+export async function rateLimitRegisto(c: Context, next: Next) {
+  if (!ratelimitRegisto) {
+    console.warn('Upstash Redis not configured, rate limiting skipped');
+    await next(); return;
+  }
+
+  const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
+  const { success, limit, reset, remaining } = await ratelimitRegisto.limit(ip);
 
   c.header('X-RateLimit-Limit', limit.toString());
   c.header('X-RateLimit-Remaining', remaining.toString());

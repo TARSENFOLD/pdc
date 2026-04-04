@@ -26,6 +26,7 @@ Detalhes sobre os endpoints da API e do BFF.
 
 - [API de Autenticação](api/auth.md)
 - [API de Simulações](api/simulacoes.md)
+- [API de Catálogo Público](api/catalogo.md)
 
 ## Decisões de Arquitetura (ADRs)
 

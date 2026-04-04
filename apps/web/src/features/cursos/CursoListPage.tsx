@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { cursosApi } from '@/lib/api/cursos';
 import { Spinner, Card, Pagination, Badge } from '@/components/ui';
-import type { Curso, Pagination as PaginationType } from '@pdc/shared';
+import type { Curso } from '@pdc/shared';
 
 function CursoCard({ curso }: { curso: Curso }) {
   return (
@@ -44,8 +44,7 @@ export function CursoListPage() {
   }
 
   const cursos = data?.data ?? [];
-  const pagination = data?.pagination as PaginationType;
-  const pageCount = pagination?.pageCount ?? 1;
+  const pageCount = data?.pagination.pageCount ?? 1;
 
   return (
     <div>

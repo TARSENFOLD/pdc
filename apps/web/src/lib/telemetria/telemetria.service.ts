@@ -6,7 +6,11 @@ export type TelemetriaTipo =
   | 'video.assistido' 
   | 'checklist.item_marcado' 
   | 'iframe.sessao' 
-  | 'curso.item_concluido';
+  | 'curso.item_concluido'
+  | 'landing_hero_started'
+  | 'landing_hero_area_detected'
+  | 'landing_hero_verdict_generated'
+  | 'landing_hero_verdict_failed';
 
 export interface TelemetriaEvento {
   eventId: string;

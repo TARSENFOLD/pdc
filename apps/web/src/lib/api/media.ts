@@ -1,6 +1,6 @@
 import type { UploadResult } from '@pdc/shared';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+const BASE_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001';
 
 export const mediaApi = {
   upload: async (file: File): Promise<UploadResult> => {
@@ -19,6 +19,6 @@ export const mediaApi = {
       throw new Error(`Upload failed: ${response.statusText}`);
     }
 
-    return response.json();
+    return response.json() as Promise<UploadResult>;
   },
 };

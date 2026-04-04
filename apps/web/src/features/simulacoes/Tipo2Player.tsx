@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import { telemetriaService } from '../../lib/telemetria/telemetria.service';
-import { Card, Button, Spinner, Badge } from '../../components/ui';
+import { Card, Button, Spinner } from '../../components/ui';
+import type { Simulacao } from '@pdc/shared';
 
 interface Props {
-  simulacao: any;
+  simulacao: Simulacao;
 }
 
 export const Tipo2Player = ({ simulacao }: Props) => {
@@ -16,24 +17,25 @@ export const Tipo2Player = ({ simulacao }: Props) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setInterval(() => setSeconds(s => s + 1), 1000);
-    telemetriaService.registarEvento('iframe.sessao', { 
+    const timer = setInterval(() => { setSeconds(s => s + 1); }, 1000);
+    void telemetriaService.registarEvento('iframe.sessao', { 
       estado: 'iniciada', 
       simulacaoId: simulacao.id 
     });
     
     // Simular carregamento do iframe
-    const timeout = setTimeout(() => setLoading(false), 1500);
+    const timeout = setTimeout(() => { setLoading(false); }, 1500);
 
     return () => {
       clearInterval(timer);
       clearTimeout(timeout);
-      telemetriaService.registarEvento('iframe.sessao', { 
+      void telemetriaService.registarEvento('iframe.sessao', { 
         estado: 'finalizada', 
         duracao: seconds, 
         simulacaoId: simulacao.id 
       });
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [simulacao.id]);
 
   const handleConcluir = async () => {
@@ -44,7 +46,7 @@ export const Tipo2Player = ({ simulacao }: Props) => {
         score: 10,
         metadata: { duracaoSegundos: seconds, tipo: 2 }
       });
-      telemetriaService.registarEvento('simulacao.concluida', { 
+      void telemetriaService.registarEvento('simulacao.concluida', { 
         tentativaId, 
         duracao: seconds, 
         tipo: 2 
@@ -80,7 +82,7 @@ export const Tipo2Player = ({ simulacao }: Props) => {
         </div>
         
         <Button 
-          onClick={handleConcluir} 
+          onClick={() => { void handleConcluir(); }} 
           className="bg-green-600 hover:bg-green-700 shadow-lg shadow-green-100 px-8 py-6 text-lg font-bold"
         >
           Finalizar Experiência
@@ -95,10 +97,10 @@ export const Tipo2Player = ({ simulacao }: Props) => {
           </div>
         )}
         <iframe 
-          src={simulacao.metadata?.url || 'https://www.wikipedia.org'} // Placeholder seguro
+          src={simulacao.capaUrl ?? 'https://www.wikipedia.org'}
           className="w-full h-full border-0"
           title="Ambiente Virtual de Simulação"
-          onLoad={() => setLoading(false)}
+          onLoad={() => { setLoading(false); }}
         />
       </Card>
       

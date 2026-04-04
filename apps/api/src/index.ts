@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server';
+import type { Server } from 'node:http';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
@@ -18,7 +19,15 @@ import { conquistaRoutes } from './routes/conquistas.js';
 import { denunciaRoutes } from './routes/denuncias.js';
 import { adminRoutes } from './routes/admin.js';
 import { ltiRoutes } from './routes/lti.js';
+import { catalogoRoutes } from './routes/catalogo.js';
+import { feedRoutes } from './routes/feed.js';
 import { securityMiddleware } from './middleware/security.js';
+import { socketService } from './modules/realtime/socket.service.js';
+import { tinaService } from './modules/tina/tina.service.js';
+
+import { interactionRoutes } from './routes/interactions.js';
+import { ratingsRoutes } from './routes/ratings.js';
+import { commentsRoutes } from './routes/comments.js';
 
 const app = new Hono();
 
@@ -52,6 +61,11 @@ app.route('/conquistas', conquistaRoutes);
 app.route('/denuncias', denunciaRoutes);
 app.route('/admin', adminRoutes);
 app.route('/lti', ltiRoutes);
+app.route('/catalogo', catalogoRoutes);
+app.route('/feed', feedRoutes);
+app.route('/interactions', interactionRoutes);
+app.route('/ratings', ratingsRoutes);
+app.route('/comments', commentsRoutes);
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
@@ -68,9 +82,9 @@ const server = serve(
   }
 );
 
-socketService.init(server);
+socketService.init(server as Server);
 
 // Inicializar base de conhecimento da Tina
-tinaService.indexarKnowledge().catch(err => console.error('Falha ao indexar Tina:', err));
+tinaService.indexarKnowledge().catch((err: unknown) => { console.error('Falha ao indexar Tina:', err); });
 
 export type AppType = typeof app;

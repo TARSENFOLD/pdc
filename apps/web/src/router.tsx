@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, RouteObject } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
@@ -26,6 +26,7 @@ import { SimulacaoListPage } from '@/features/simulacoes/SimulacaoListPage';
 import { SimulacaoDetailPage } from '@/features/simulacoes/SimulacaoDetailPage';
 import { SimulacaoPlayerPage } from '@/features/simulacoes/SimulacaoPlayerPage';
 import { RelatorioVocacional } from '@/features/simulacoes/RelatorioVocacional';
+import FeedPage from '@/features/feed/FeedPage';
 
 import { DenunciaListPage } from '@/features/moderacao/DenunciaListPage';
 import { DenunciaDetailPage } from '@/features/moderacao/DenunciaDetailPage';
@@ -33,6 +34,21 @@ import { AdminUtilizadoresPage } from '@/features/admin/AdminUtilizadoresPage';
 import { AdminStatsPage } from '@/features/admin/AdminStatsPage';
 import { AdminAuditPage } from '@/features/admin/AdminAuditPage';
 import LtiPlataformasPage from '@/features/admin/LtiPlataformasPage';
+
+import { ExplorarPage } from '@/features/catalogo/ExplorarPage';
+import { CursosCatalogoPage } from '@/features/catalogo/CursosCatalogoPage';
+import { CursoPublicoDetailPage } from '@/features/catalogo/CursoPublicoDetailPage';
+import { SimulacoesCatalogoPage } from '@/features/catalogo/SimulacoesCatalogoPage';
+import { SimulacaoPublicoDetailPage } from '@/features/catalogo/SimulacaoPublicoDetailPage';
+import { MentoresCatalogoPage } from '@/features/catalogo/MentoresCatalogoPage';
+import { MentorPublicoPerfilPage } from '@/features/catalogo/MentorPublicoPerfilPage';
+import { InstituicoesCatalogoPage } from '@/features/catalogo/InstituicoesCatalogoPage';
+import { InstituicaoPublicoPerfilPage } from '@/features/catalogo/InstituicaoPublicoPerfilPage';
+import { PerfilPublicoPage } from '@/features/catalogo/PerfilPublicoPage';
+import { EscolhaTipoContaPage } from '@/features/auth/EscolhaTipoContaPage';
+import { RegistoEstudantePage } from '@/features/auth/RegistoEstudantePage';
+import { RegistoMentorPage } from '@/features/auth/RegistoMentorPage';
+import { RegistoInstituicaoPage } from '@/features/auth/RegistoInstituicaoPage';
 
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Role } from '@pdc/shared';
@@ -80,6 +96,7 @@ export const router = createBrowserRouter([
       { path: 'dashboard/moderador', element: <ModeradorDashboard /> },
       { path: 'dashboard/admin', element: <AdminDashboard /> },
       
+      { path: 'feed', element: <FeedPage /> },
       { path: 'cursos', element: <CursoListPage /> },
       { path: 'cursos/:id', element: <CursoDetailPage /> },
       { path: 'cursos/:cursoId/itens/:itemId', element: <ItemPlayer /> },
@@ -131,5 +148,19 @@ export const router = createBrowserRouter([
   { path: '/projetos/:id', element: <ProjetoDetailPage /> },
   { path: '/experiencias', element: <ExperienciaListPage /> },
   { path: '/experiencias/:id', element: <ExperienciaDetailPage /> },
+  { path: '/explorar', element: <ExplorarPage /> },
+  { path: '/cursos', element: <CursosCatalogoPage /> },
+  { path: '/cursos/:slug', element: <CursoPublicoDetailPage /> },
+  { path: '/simulacoes', element: <SimulacoesCatalogoPage /> },
+  { path: '/simulacoes/:slug', element: <SimulacaoPublicoDetailPage /> },
+  { path: '/mentores', element: <MentoresCatalogoPage /> },
+  { path: '/mentores/:id', element: <MentorPublicoPerfilPage /> },
+  { path: '/instituicoes', element: <InstituicoesCatalogoPage /> },
+  { path: '/instituicoes/:slug', element: <InstituicaoPublicoPerfilPage /> },
+  { path: '/perfil/:id', element: <PerfilPublicoPage /> },
+  { path: '/criar-conta', element: <EscolhaTipoContaPage /> },
+  { path: '/criar-conta/estudante', element: <RegistoEstudantePage /> },
+  { path: '/criar-conta/mentor', element: <RegistoMentorPage /> },
+  { path: '/criar-conta/instituicao', element: <RegistoInstituicaoPage /> },
   { path: '*', element: <NotFoundPage /> },
 ]);

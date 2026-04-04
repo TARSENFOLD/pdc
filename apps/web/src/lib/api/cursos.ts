@@ -10,7 +10,7 @@ export const cursosApi = {
     if (filters?.categoria) params.set('categoria', filters.categoria);
     if (filters?.autorId) params.set('autorId', filters.autorId);
     
-    return http.get<{ data: Curso[], pagination: any }>(`/cursos?${params.toString()}`);
+    return http.get<{ data: Curso[], pagination: { page: number; pageSize: number; pageCount: number; total: number } }>(`/cursos?${params.toString()}`);
   },
 
   getById: (id: string) => 

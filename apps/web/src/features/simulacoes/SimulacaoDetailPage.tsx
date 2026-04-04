@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { simulacoesApi } from '../../lib/api/simulacoes';
+import { likeApi, bookmarkApi, ratingsApi } from '../../lib/api/interactions';
 import type { Simulacao } from '@pdc/shared';
-import { Card, Button, Spinner, Badge } from '../../components/ui';
+import { Card, Button, Spinner, Badge, LikeButton, BookmarkButton, RatingStars } from '../../components/ui';
 
 export const SimulacaoDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,11 +15,30 @@ export const SimulacaoDetailPage = () => {
   useEffect(() => {
     if (id) {
       simulacoesApi.getById(id)
-        .then(res => setSimulacao(res))
-        .catch(err => console.error('Erro ao carregar simulação:', err))
-        .finally(() => setLoading(false));
+        .then(res => { setSimulacao(res); })
+        .catch((err: unknown) => { console.error('Erro ao carregar simulação:', err); })
+        .finally(() => { setLoading(false); });
     }
   }, [id]);
+
+  const { data: likeStatus } = useQuery({
+    queryKey: ['simulacao', id, 'likes'],
+    queryFn: () => likeApi.getStatus('simulacao', id ?? ''),
+    enabled: !!id,
+  });
+
+  const { data: ratingStats } = useQuery({
+    queryKey: ['simulacao', id, 'ratings'],
+    queryFn: () => ratingsApi.getStats('simulacao', id ?? ''),
+    enabled: !!id,
+  });
+
+  const { data: bookmarks } = useQuery({
+    queryKey: ['bookmarks'],
+    queryFn: () => bookmarkApi.list(),
+  });
+  const isBookmarked = bookmarks?.data.some(b => b.targetType === 'simulacao' && b.targetId === id) ?? false;
+
 
   const handleIniciar = async () => {
     if (!id) return;
@@ -34,7 +55,7 @@ export const SimulacaoDetailPage = () => {
     <div className="text-center py-20">
       <p className="text-gray-500 mb-4">Simulação não encontrada.</p>
       <Link to="/app/simulacoes">
-        <Button variant="outline">Voltar para lista</Button>
+        <Button variant="secondary">Voltar para lista</Button>
       </Link>
     </div>
   );
@@ -56,7 +77,16 @@ export const SimulacaoDetailPage = () => {
               <Badge variant="outline" className="px-3 py-1">Simulação Experimental</Badge>
               <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">Tipo {simulacao.tipo}</Badge>
             </div>
-            <h1 className="text-4xl font-black tracking-tight">{simulacao.titulo}</h1>
+            
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <h1 className="text-4xl font-black tracking-tight">{simulacao.titulo}</h1>
+              <div className="flex items-center gap-2 shrink-0">
+                <RatingStars targetType="simulacao" targetId={id ?? ''} stats={ratingStats} />
+                <div className="w-px h-6 bg-border mx-2"></div>
+                <LikeButton targetType="simulacao" targetId={id ?? ''} initialCount={likeStatus?.count} initialLiked={likeStatus?.liked} />
+                <BookmarkButton targetType="simulacao" targetId={id ?? ''} initialBookmarked={isBookmarked} />
+              </div>
+            </div>
             <div className="prose prose-blue max-w-none">
               <p className="text-xl text-gray-600 leading-relaxed">{simulacao.descricao}</p>
             </div>
@@ -105,7 +135,7 @@ export const SimulacaoDetailPage = () => {
                 <span className="font-bold text-green-600">+100 XP</span>
               </div>
               
-              <Button onClick={handleIniciar} className="w-full py-6 text-lg font-bold shadow-lg shadow-blue-200">
+              <Button onClick={() => { void handleIniciar(); }} className="w-full py-6 text-lg font-bold shadow-lg shadow-blue-200">
                 Começar Agora
               </Button>
             </div>

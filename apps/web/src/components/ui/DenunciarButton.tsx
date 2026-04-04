@@ -43,7 +43,7 @@ export function DenunciarButton({ conteudoId, conteudoTipo }: Props) {
       <Button 
         variant="danger" 
         size="sm" 
-        onClick={() => setOpen(true)}
+        onClick={() => { setOpen(true); }}
         className="text-xs"
       >
         Denunciar
@@ -57,12 +57,12 @@ export function DenunciarButton({ conteudoId, conteudoTipo }: Props) {
           </ModalDescription>
         </ModalHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4 py-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-text-secondary">Motivo</label>
             <select
               value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
+              onChange={(e) => { setMotivo(e.target.value); }}
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber"
             >
               <option value="spam">Spam</option>
@@ -76,7 +76,7 @@ export function DenunciarButton({ conteudoId, conteudoTipo }: Props) {
             <label className="text-sm font-medium text-text-secondary">Descrição (opcional)</label>
             <textarea
               value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
+              onChange={(e) => { setDescricao(e.target.value); }}
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber min-h-[100px]"
               placeholder="Explique o problema em detalhe…"
             />
@@ -86,7 +86,7 @@ export function DenunciarButton({ conteudoId, conteudoTipo }: Props) {
             <Button 
               variant="ghost" 
               type="button" 
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); }}
             >
               Cancelar
             </Button>

@@ -12,7 +12,7 @@ export default function DashboardPage() {
             <p className="text-gray-400 text-sm">Bem-vindo, {user?.nome}</p>
           </div>
           <button
-            onClick={() => logout()}
+            onClick={() => { void logout(); }}
             className="rounded-lg bg-white/5 px-4 py-2 text-sm font-medium hover:bg-white/10 transition-colors border border-white/10"
           >
             Sair

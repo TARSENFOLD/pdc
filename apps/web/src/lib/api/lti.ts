@@ -9,7 +9,7 @@ interface StrapiLtiPlataforma {
 export const ltiApi = {
   getPlataformas: () => 
     http.get<{ data: StrapiLtiPlataforma[] }>('/admin/lti-plataformas').then(res => 
-      res.data.map((p) => ({ id: p.id, ...p.attributes }))
+      res.data.map((p) => ({ ...p.attributes, id: p.id }))
     ),
 
   createPlataforma: (body: CreateLtiPlataformaPayload) =>

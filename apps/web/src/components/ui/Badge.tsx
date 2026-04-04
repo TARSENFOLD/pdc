@@ -12,7 +12,9 @@ export type BadgeVariant =
   | 'mentor'
   | 'aluno'
   | 'instituicao'
-  | 'moderador';
+  | 'moderador'
+  | 'comite_cientifico'
+  | 'super_admin';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: BadgeVariant;
@@ -32,6 +34,8 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       aluno: 'bg-role-aluno/10 text-role-aluno border-role-aluno/20',
       instituicao: 'bg-role-instituicao/10 text-role-instituicao border-role-instituicao/20',
       moderador: 'bg-role-moderador/10 text-role-moderador border-role-moderador/20',
+      comite_cientifico: 'bg-info/10 text-info border-info/20',
+      super_admin: 'bg-error/10 text-error border-error/20',
     };
 
     return (

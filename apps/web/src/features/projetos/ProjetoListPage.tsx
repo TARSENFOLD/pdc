@@ -7,6 +7,7 @@ import { Spinner, Card, Pagination, Badge } from '@/components/ui';
 import type { Projeto } from '@pdc/shared';
 
 function ProjetoCard({ projeto }: { projeto: Projeto }) {
+  const abierto = !!projeto.repoUrl;
   return (
     <Link to={`/projetos/${projeto.id}`}>
       <Card interactive className="overflow-hidden">
@@ -16,15 +17,23 @@ function ProjetoCard({ projeto }: { projeto: Projeto }) {
           <div className="h-36 w-full bg-surface-raised" />
         )}
         <div className="p-4">
+          <div className="mb-2 flex items-center gap-2">
+            <Badge variant={abierto ? 'success' : 'outline'}>
+              {abierto ? 'Aberto para colaboração' : 'Apenas exposição'}
+            </Badge>
+          </div>
           <h3 className="font-semibold text-text-primary line-clamp-1">{projeto.titulo}</h3>
           <p className="mt-1 text-xs text-text-muted line-clamp-2">{projeto.descricao}</p>
-          {projeto.tags && projeto.tags.length > 0 && (
+          {projeto.tags.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1">
               {projeto.tags.slice(0, 3).map((tag) => (
                 <Badge key={tag} variant="outline">{tag}</Badge>
               ))}
             </div>
           )}
+          <div className="mt-3 text-right">
+            <span className="text-xs font-medium text-amber">{abierto ? 'Conectar →' : 'Ver projecto →'}</span>
+          </div>
         </div>
       </Card>
     </Link>
@@ -50,7 +59,7 @@ export function ProjetoListPage() {
   }
 
   const projetos = data?.data ?? [];
-  const pageCount: number = data?.pagination?.pageCount ?? 1;
+  const pageCount = data?.pagination.pageCount ?? 1;
 
   return (
     <div>
@@ -60,7 +69,7 @@ export function ProjetoListPage() {
           <form onSubmit={handleSearch} className="flex gap-2">
             <input
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              onChange={(e) => { setInputValue(e.target.value); }}
               placeholder="Filtrar por tag…"
               className="h-9 rounded-md border border-border bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-amber"
             />
