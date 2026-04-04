@@ -1,0 +1,41 @@
+services:
+  # ─── PostgreSQL 16 ─────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: pdc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pdc_strapi
+      POSTGRES_USER: pdc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pdc_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pdc-postgres-data:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pdc -d pdc_strapi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis (compatível com Upstash para dev local) ──────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: pdc-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - pdc-redis-data:/data:Z
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pdc-postgres-data:
+    driver: local
+  pdc-redis-data:
+    driver: local

@@ -1,0 +1,124 @@
+import type { ReactElement } from 'react';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Button, Spinner } from '@/components/ui';
+import { cursosApi } from '@/lib/api/cursos';
+import type { ItemModulo } from '@pdc/shared';
+
+function ExternalLink({ url, label }: { url: string; label: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex h-10 items-center rounded-md bg-amber px-6 text-sm font-semibold text-background hover:bg-amber-hover"
+    >
+      {label} →
+    </a>
+  );
+}
+
+function VideoPlayer({ src }: { src: string }) {
+  const isYoutube = src.includes('youtube.com') || src.includes('youtu.be');
+  if (isYoutube) {
+    const videoId = new URL(src).searchParams.get('v') ?? src.split('/').at(-1) ?? '';
+    return (
+      <iframe
+        src={`https://www.youtube.com/embed/${videoId}`}
+        className="h-full w-full rounded-lg"
+        allowFullScreen
+        title="Vídeo"
+      />
+    );
+  }
+  return <video src={src} controls className="h-full w-full rounded-lg" />;
+}
+
+function renderItem(item: ItemModulo): ReactElement {
+  const url = item.conteudo ?? '';
+  switch (item.tipo) {
+    case 'video':
+      return (
+        <div className="aspect-video w-full overflow-hidden rounded-lg">
+          <VideoPlayer src={url} />
+        </div>
+      );
+    case 'pdf':
+      return <iframe src={url} className="h-[70vh] w-full rounded-lg border-0" title="PDF" />;
+    case 'texto':
+      return (
+        <div className="rounded-lg border border-border bg-surface-raised p-6 text-text-secondary leading-relaxed whitespace-pre-wrap">
+          {item.conteudo}
+        </div>
+      );
+    case 'iframe':
+      return <iframe src={url} className="h-[70vh] w-full rounded-lg border-0" title="Conteúdo" />;
+    case 'quiz':
+      return <ExternalLink url={url} label="Abrir Quiz" />;
+    case 'tarefa':
+      return <ExternalLink url={url} label="Abrir Tarefa" />;
+  }
+}
+
+export function ItemPlayer() {
+  const { cursoId, itemId } = useParams<{ cursoId: string; itemId: string }>();
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+
+  const { data: curso, isLoading } = useQuery({
+    queryKey: ['cursos', cursoId ?? ''],
+    queryFn: () => cursosApi.getById(cursoId ?? ''),
+    enabled: !!cursoId,
+  });
+
+  const { data: progresso = [] } = useQuery({
+    queryKey: ['cursos', cursoId ?? '', 'progresso'],
+    queryFn: () => cursosApi.getProgresso(cursoId ?? ''),
+    enabled: !!cursoId,
+    retry: false,
+  });
+
+  const marcarMutation = useMutation({
+    mutationFn: () => cursosApi.updateProgresso(cursoId ?? '', itemId ?? '', true),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['cursos', cursoId ?? '', 'progresso'] });
+      navigate(`/app/cursos/${cursoId}`);
+    },
+  });
+
+  if (!cursoId || !itemId) return <Navigate to="/app/cursos" replace />;
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+  if (!curso) {
+    return <p className="py-12 text-center text-error">Curso não encontrado.</p>;
+  }
+
+  const item = curso.modulos?.flatMap((m) => m.itens).find((i) => i.id === itemId);
+  if (!item) {
+    return <p className="py-12 text-center text-error">Item não encontrado.</p>;
+  }
+
+  const concluido = progresso.some((p) => p.itemId === itemId && p.concluido);
+
+  return (
+    <div className="max-w-3xl">
+      <h1 className="mb-1 text-xl font-bold text-text-primary">{item.titulo}</h1>
+      <p className="mb-6 text-xs uppercase tracking-wider text-text-muted">{item.tipo}</p>
+      <div className="mb-8">{renderItem(item)}</div>
+      <Button
+        onClick={() => marcarMutation.mutate()}
+        isLoading={marcarMutation.isPending}
+        disabled={concluido}
+        variant={concluido ? 'secondary' : 'primary'}
+      >
+        {concluido ? '✓ Concluído' : 'Marcar como concluído'}
+      </Button>
+    </div>
+  );
+}

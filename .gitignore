@@ -1,0 +1,49 @@
+# Dependências
+node_modules/
+dist/
+build/
+.cache/
+.turbo/
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editores
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+apps/web/dist/
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+
+# Docker
+.docker/
+
+# Strapi
+infra/strapi/.tmp/
+infra/strapi/.cache/
+infra/strapi/dist/
+infra/strapi/exports/
+infra/strapi/public/uploads/

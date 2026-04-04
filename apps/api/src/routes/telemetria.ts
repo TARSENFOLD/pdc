@@ -1,0 +1,61 @@
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
+import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
+import { Redis } from '@upstash/redis';
+import { strapiPost } from '../modules/strapi/strapi.client.js';
+
+const redis = process.env.UPSTASH_REDIS_REST_URL
+  ? new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    })
+  : null;
+
+const TelemetriaSchema = z.object({
+  eventId: z.string().uuid(),
+  tipo: z.string(),
+  payload: z.unknown(),
+  timestamp: z.string(),
+});
+
+type Vars = { Variables: AuthVariables };
+export const telemetriaRoutes = new Hono<Vars>();
+
+telemetriaRoutes.use('*', verifyJwt);
+
+telemetriaRoutes.post('/', zValidator('json', TelemetriaSchema), async (c) => {
+  const user = c.get('user');
+  const body = c.req.valid('json');
+  
+  const redisKey = `telemetria:event:${body.eventId}`;
+  
+  if (redis) {
+    const exists = await redis.get(redisKey);
+    if (exists) {
+      return c.json({ ok: true, duplicado: true });
+    }
+  }
+
+  try {
+    // Guardar no Strapi (assumindo coleção 'telemetrias')
+    await strapiPost('/telemetrias', {
+      eventId: body.eventId,
+      tipo: body.tipo,
+      payload: body.payload,
+      timestamp: body.timestamp,
+      user: user.id,
+    });
+
+    // Marcar no Redis com TTL 24h para idempotência
+    if (redis) {
+      await redis.set(redisKey, 'true', { ex: 24 * 60 * 60 });
+    }
+
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error('Erro ao processar telemetria:', err);
+    const message = err instanceof Error ? err.message : 'Erro interno';
+    return c.json({ error: message }, 500);
+  }
+});

@@ -1,0 +1,116 @@
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
+import { checkRole } from '../modules/auth/rbac.middleware.js';
+import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+
+type Vars = { Variables: AuthVariables };
+
+const createSchema = z.object({
+  conteudoId: z.string().min(1),
+  conteudoTipo: z.string().min(1),
+  motivo: z.string().min(10).max(1000),
+});
+
+const listQuerySchema = z.object({
+  estado: z.enum(['pendente', 'em_analise', 'resolvida']).optional(),
+  tipo: z.string().optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+const resolverSchema = z.object({
+  accao: z.enum(['remover', 'avisar', 'ignorar']),
+  nota: z.string().min(1).max(500),
+});
+
+export const denunciaRoutes = new Hono<Vars>();
+
+denunciaRoutes.use('*', verifyJwt);
+
+// POST /denuncias — qualquer utilizador autenticado pode denunciar
+denunciaRoutes.post('/', zValidator('json', createSchema), async (c) => {
+  const { id: denuncianteId } = c.get('user');
+  const body = c.req.valid('json');
+  try {
+    const data = await strapiPost<unknown>('/denuncias', {
+      data: {
+        ...body,
+        denuncianteId,
+        estado: 'pendente',
+        criadaEm: new Date().toISOString(),
+      }
+    });
+    return c.json(data, 201);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+  }
+});
+
+// GET /denuncias — moderadores e super_admin
+denunciaRoutes.get(
+  '/',
+  checkRole(['moderador', 'super_admin']),
+  zValidator('query', listQuerySchema),
+  async (c) => {
+    const q = c.req.valid('query');
+    const params: Record<string, string> = { populate: 'denunciante' };
+    if (q.estado !== undefined) params['filters[estado][$eq]'] = q.estado;
+    if (q.tipo !== undefined) params['filters[conteudoTipo][$eq]'] = q.tipo;
+    if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
+    if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
+    try {
+      return c.json(await strapiGet<unknown>('/denuncias', params));
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    }
+  }
+);
+
+// GET /denuncias/:id — moderadores e super_admin
+denunciaRoutes.get('/:id', checkRole(['moderador', 'super_admin']), async (c) => {
+  const id = c.req.param('id');
+  try {
+    return c.json(
+      await strapiGet<unknown>(`/denuncias/${id ?? ''}`, { populate: 'denunciante' })
+    );
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+  }
+});
+
+// PUT /denuncias/:id/resolver — moderadores e super_admin
+denunciaRoutes.put(
+  '/:id/resolver',
+  checkRole(['moderador', 'super_admin']),
+  zValidator('json', resolverSchema),
+  async (c) => {
+    const id = c.req.param('id');
+    const body = c.req.valid('json');
+    try {
+      const data = await strapiPut<unknown>(`/denuncias/${id ?? ''}`, {
+        data: {
+          estado: 'resolvida',
+          accao: body.accao,
+          nota: body.nota,
+        }
+      });
+
+      await strapiPost('/audit-logs', {
+        data: {
+          userId: c.get('user').id,
+          accao: 'denuncia_resolver',
+          ip: c.req.header('x-forwarded-for') || c.req.remoteAddress || 'unknown',
+          timestamp: new Date().toISOString(),
+          recurso: 'denuncia',
+          recursoId: id,
+        }
+      });
+
+      return c.json(data);
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    }
+  }
+);
