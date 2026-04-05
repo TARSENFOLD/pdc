@@ -8,13 +8,13 @@ Ver: `.planning/PROJECT.md` (actualizado: Abril 2026)
 
 **Core value:** O estudante faz uma escolha de carreira baseada em evidência real do seu próprio comportamento — não em suposições.
 
-**Current focus:** M3 — Auth Completo (Google OAuth + OTP 2FA)
+**Current focus:** Ondas de Role — Onda 1 (Sidebar + fixes) e Onda 2 (Mentor + Instituição) em execução
 
 ## Current Status
 
 ```
 Fase 0 — Fundação          [x] COMPLETA
-Fase 1 — Auth Segura       [~] PARCIAL (JWT+RBAC ✅; OAuth+2FA ❌)
+Fase 1 — Auth Segura       [x] COMPLETA (JWT+RBAC ✅; OAuth+2FA ✅)
 Fase 2 — Design System     [x] COMPLETA
 Fase 3 — API Layer         [x] COMPLETA
 Fase 4 — Core do Produto   [~] PARCIAL (Sim Tipo 1+2, Cursos, Experiências, Projetos, Mentorias, Conquistas, Feed ✅; Sim Tipo 3, Programas, Conquistas auto ❌)
@@ -25,12 +25,12 @@ Fase 7 — IA e Realtime     [x] COMPLETA
 
 **Repositório:** `pdc-v2/` — criado em Abril 2026
 **Branch activa:** main
-**Último commit:** 03074074 — Fase 0: monorepo foundation
+**Último commit:** (M3 - Auth Google + OTP 2FA adicionados)
 
 ## O que foi feito
 
 - [x] Fase 0 — Monorepo, tooling, CI/CD, Docker Compose
-- [x] Fase 1 — Auth JWT (httpOnly cookies), RBAC, rate limiting, páginas de auth
+- [x] Fase 1 — Auth JWT (httpOnly cookies), RBAC, rate limiting, páginas de auth, Google Auth, OTP 2FA
 - [x] Fase 2 — Design system (tokens Tailwind v4), 11 componentes ui/, AppLayout, Sidebar, 5 dashboards, LandingPage
 - [x] Fase 3 — 7 módulos API frontend, 6 rotas BFF, strapi.client.ts, r2.service.ts
 - [x] Fase 4A — Simulações Tipo 1 e 2, telemetria com idempotência Redis, perfil vocacional, relatório
@@ -41,14 +41,20 @@ Fase 7 — IA e Realtime     [x] COMPLETA
 - [x] Fase 5 — LTI 1.3 Provider (OIDC, AGS, NRPS, JWKS, admin CRUD, frontend)
 - [x] Fase 6 — Moderação (denúncias, painel admin, audit trail, CSP/CORS)
 - [x] Fase 7 — IA e Realtime (DeepSeek streaming, RAG, quiz gen, Socket.IO, TutorChat, QuizPlayer)
+- [~] Onda 1 — Sidebar sub-menus, Comité fix, Dashboards com dados reais (em execução)
+- [~] Onda 2A — Zona Mentor completa (em execução)
+- [~] Onda 2B — Zona Instituição completa (em execução)
 
 ## Próximos passos
 
-- [ ] M3 — Auth Completo (Google OAuth + OTP 2FA)
+- [x] M3 — Auth Completo (Google OAuth + OTP 2FA)
 - [ ] M4 — Completar Core Produto (Programas, Sim Tipo 3, Conquistas automáticas)
 - [ ] M5 — Páginas Públicas e SEO
 - [ ] M6 — Telemetria Completa
 - [ ] M7 — Qualidade e Produção
+- [ ] Onda 3A — Zona Estudante (Meus Cursos, Progresso, Certificados, Ranking, Guardados)
+- [ ] Onda 3B — Fluxo Editorial + Vínculos + Mensagens
+- [ ] Onda 4 — Admin completo + Comité + Zona Estudante restante
 
 ## Decisions Log
 

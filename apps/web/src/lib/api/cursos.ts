@@ -1,5 +1,13 @@
 import { http } from './http';
-import type { Curso, CursoFilters, Inscricao, ProgressoItem } from '@pdc/shared';
+import type { 
+  Curso, 
+  CursoFilters, 
+  Inscricao, 
+  ProgressoItem, 
+  CriarCursoPayload, 
+  CursoMeu, 
+  Pagination 
+} from '@pdc/shared';
 
 export const cursosApi = {
   list: (filters?: CursoFilters) => {
@@ -10,7 +18,7 @@ export const cursosApi = {
     if (filters?.categoria) params.set('categoria', filters.categoria);
     if (filters?.autorId) params.set('autorId', filters.autorId);
     
-    return http.get<{ data: Curso[], pagination: { page: number; pageSize: number; pageCount: number; total: number } }>(`/cursos?${params.toString()}`);
+    return http.get<{ data: Curso[], pagination: Pagination }>(`/cursos?${params.toString()}`);
   },
 
   getById: (id: string) => 
@@ -18,6 +26,15 @@ export const cursosApi = {
 
   getBySlug: (slug: string) => 
     http.get<Curso>(`/cursos/slug/${slug}`),
+
+  getMeus: (page?: number) =>
+    http.get<{ data: CursoMeu[], pagination: Pagination }>(`/cursos/meus?page=${page ?? 1}`),
+
+  criar: (payload: CriarCursoPayload) =>
+    http.post<CursoMeu>('/cursos', payload),
+
+  editar: (id: string, payload: Partial<CriarCursoPayload>) =>
+    http.put<CursoMeu>(`/cursos/${id}`, payload),
 
   inscrever: (cursoId: string) => 
     http.post<Inscricao>(`/cursos/${cursoId}/inscrever`, {}),
@@ -27,4 +44,7 @@ export const cursosApi = {
 
   updateProgresso: (cursoId: string, itemId: string, concluido: boolean) => 
     http.patch<ProgressoItem>(`/cursos/${cursoId}/progresso/${itemId}`, { concluido }),
+
+  getMinhasInscricoes: () =>
+    http.get<{ data: Inscricao[] }>('/cursos/me/inscricoes'),
 };

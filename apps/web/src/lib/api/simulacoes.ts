@@ -5,7 +5,9 @@ import type {
   Tentativa, 
   IniciarTentativaPayload, 
   ConcluirTentativaPayload,
-  Pagination
+  Pagination,
+  CriarSimulacaoPayload,
+  SimulacaoMinha
 } from '@pdc/shared';
 
 export const simulacoesApi = {
@@ -22,11 +24,20 @@ export const simulacoesApi = {
   getById: (id: string) => 
     http.get<Simulacao>(`/simulacoes/${id}`),
 
+  getMinhas: (page?: number) =>
+    http.get<{ data: SimulacaoMinha[], pagination: Pagination }>(`/simulacoes/minhas?page=${page ?? 1}`),
+
+  criar: (payload: CriarSimulacaoPayload) =>
+    http.post<SimulacaoMinha>('/simulacoes', payload),
+
+  editar: (id: string, payload: Partial<CriarSimulacaoPayload>) =>
+    http.put<SimulacaoMinha>(`/simulacoes/${id}`, payload),
+
   iniciarTentativa: (payload: IniciarTentativaPayload) => 
-    http.post<Tentativa>(`/simulacoes/${payload.simulacaoId}/tentativas`, payload),
+    http.post<Tentativa>(`/simulacoes/tentativas`, payload),
 
   concluirTentativa: (payload: ConcluirTentativaPayload) => 
-    http.put<Tentativa>(`/simulacoes/tentativas/${payload.tentativaId}/concluir`, payload),
+    http.put<Tentativa>(`/simulacoes/tentativas/${payload.tentativaId}`, payload),
 
   getMinhasTentativas: (simulacaoId: string) => 
     http.get<Tentativa[]>(`/simulacoes/${simulacaoId}/minhas-tentativas`),

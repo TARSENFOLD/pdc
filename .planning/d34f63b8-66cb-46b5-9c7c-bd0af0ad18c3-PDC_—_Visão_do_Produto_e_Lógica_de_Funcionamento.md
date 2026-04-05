@@ -16,7 +16,7 @@ type: spec
 
 Em Angola (e em muitos mercados emergentes), a escolha de curso universitário é uma aposta, não uma decisão informada. O resultado:
 
-- Até 60% de evasão no primeiro ano em algumas instituições
+- Altos níveis evasão no primeiro ano em algumas instituições
 - Famílias perdem dinheiro em cursos abandonados
 - Instituições perdem receita e reputação
 - O país perde talentos que poderiam impulsionar o desenvolvimento

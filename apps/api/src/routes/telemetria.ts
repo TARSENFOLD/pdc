@@ -2,15 +2,8 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import { Redis } from '@upstash/redis';
+import { redis } from '../lib/redis.js';
 import { strapiPost } from '../modules/strapi/strapi.client.js';
-
-const redis = process.env.UPSTASH_REDIS_REST_URL
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN ?? '',
-    })
-  : null;
 
 const TelemetriaSchema = z.object({
   eventId: z.string().uuid(),

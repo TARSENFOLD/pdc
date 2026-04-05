@@ -55,9 +55,15 @@ export const UpdatePerfilPayloadSchema = z.object({
   linkedinUrl: z.string().url().optional().or(z.literal('')),
   githubUrl: z.string().url().optional().or(z.literal('')),
   websiteUrl: z.string().url().optional().or(z.literal('')),
+  avatarUrl: z.string().url().optional().or(z.literal('')),
 });
 
 export type UpdatePerfilPayload = z.infer<typeof UpdatePerfilPayloadSchema>;
+
+// ─── Editorial ────────────────────────────────────────────────────────────────
+
+export const EstadoEditorialSchema = z.enum(['draft', 'review', 'published', 'rejected']);
+export type EstadoEditorial = z.infer<typeof EstadoEditorialSchema>;
 
 // ─── Cursos ───────────────────────────────────────────────────────────────────
 
@@ -97,6 +103,42 @@ export const CursoSchema = z.object({
 
 export type Curso = z.infer<typeof CursoSchema>;
 
+export const CriarCursoPayloadSchema = z.object({
+  titulo: z.string().min(3).max(120),
+  descricao: z.string().min(10).max(2000),
+  area: z.string().min(2).max(100),
+  nivel: z.string().min(2).max(100),
+  capaUrl: z.string().url().optional(),
+  preco: z.number().min(0).optional(),
+  visibilidade: z.enum(['publico', 'privado']).optional(),
+});
+
+export type CriarCursoPayload = z.infer<typeof CriarCursoPayloadSchema>;
+
+export const CursoMeuSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  titulo: z.string(),
+  descricao: z.string(),
+  capaUrl: z.string().url().optional(),
+  area: z.string().optional(),
+  nivel: z.string().optional(),
+  idioma: z.string().optional(),
+  gratuito: z.boolean().optional(),
+  totalHoras: z.number(),
+  autorNome: z.string().optional(),
+  estado: EstadoEditorialSchema,
+  autorId: z.string(),
+  inscritosCount: z.number().optional(),
+});
+
+
+
+
+
+
+export type CursoMeu = z.infer<typeof CursoMeuSchema>;
+
 export const InscricaoSchema = z.object({
   id: z.string(),
   cursoId: z.string(),
@@ -127,9 +169,40 @@ export const SimulacaoSchema = z.object({
   tipo: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   capaUrl: z.string().url().optional(),
   createdAt: z.string().datetime(),
+  iframeUrl: z.string().url().optional(),
 });
 
 export type Simulacao = z.infer<typeof SimulacaoSchema>;
+
+export const CriarSimulacaoPayloadSchema = z.object({
+  titulo: z.string().min(3).max(120),
+  descricao: z.string().min(10).max(2000),
+  area: z.string().min(2).max(100),
+  tipo: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  capaUrl: z.string().url().optional(),
+  iframeUrl: z.string().url().optional(),
+});
+
+export type CriarSimulacaoPayload = z.infer<typeof CriarSimulacaoPayloadSchema>;
+
+export const SimulacaoMinhaSchema = z.object({
+  id: z.string(),
+  slug: z.string().optional(),
+  titulo: z.string(),
+  descricao: z.string(),
+  capaUrl: z.string().url().optional(),
+  area: z.string().optional(),
+  tipo: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  nivel: z.string().optional(),
+  estado: EstadoEditorialSchema,
+  autorId: z.string(),
+});
+
+
+
+
+
+export type SimulacaoMinha = z.infer<typeof SimulacaoMinhaSchema>;
 
 export const TentativaSchema = z.object({
   id: z.string(),
@@ -173,6 +246,104 @@ export const ExperienciaSchema = z.object({
 });
 
 export type Experiencia = z.infer<typeof ExperienciaSchema>;
+
+export const ModalidadeSchema = z.enum(['presencial', 'remoto', 'hibrido']);
+export type Modalidade = z.infer<typeof ModalidadeSchema>;
+
+export const CriarExperienciaPayloadSchema = z.object({
+  titulo: z.string().min(3).max(200),
+  descricao: z.string().min(10),
+  area: z.string().min(2).max(100),
+  vagas: z.number().int().min(1).optional(),
+  dataInicio: z.string().datetime().optional(),
+  dataFim: z.string().datetime().optional(),
+  localizacao: z.string().max(200).optional(),
+  modalidade: ModalidadeSchema,
+});
+
+export type CriarExperienciaPayload = z.infer<typeof CriarExperienciaPayloadSchema>;
+
+export const ExperienciaMinhaSchema = ExperienciaSchema.extend({
+  estado: EstadoEditorialSchema,
+  area: z.string().optional(),
+  vagas: z.number().optional(),
+  modalidade: ModalidadeSchema.optional(),
+  inscricoesCount: z.number().optional(),
+});
+
+export type ExperienciaMinha = z.infer<typeof ExperienciaMinhaSchema>;
+
+// ─── Programas ────────────────────────────────────────────────────────────────
+
+export const ProgramaTipoSchema = z.enum(['standard', 'shadowapro', 'eduvisit']);
+export type ProgramaTipo = z.infer<typeof ProgramaTipoSchema>;
+
+export const ProgramaSchema = z.object({
+  id: z.string(),
+  titulo: z.string(),
+  descricao: z.string(),
+  area: z.string().optional(),
+  tipo: ProgramaTipoSchema,
+  vagas: z.number().optional(),
+  dataInicio: z.string().datetime().optional(),
+  dataFim: z.string().datetime().optional(),
+  estado: EstadoEditorialSchema,
+  autorId: z.string(),
+  profissionalShadow: z.string().optional(),
+  areaShadowing: z.string().optional(),
+  visitaUrl: z.string().url().optional(),
+  localizacaoFisica: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type Programa = z.infer<typeof ProgramaSchema>;
+
+export const CriarProgramaPayloadSchema = z.object({
+  titulo: z.string().min(3).max(200),
+  descricao: z.string().min(10),
+  area: z.string().min(2).max(100),
+  tipo: ProgramaTipoSchema,
+  vagas: z.number().int().min(1).optional(),
+  dataInicio: z.string().datetime().optional(),
+  dataFim: z.string().datetime().optional(),
+  profissionalShadow: z.string().max(200).optional(),
+  areaShadowing: z.string().max(200).optional(),
+  visitaUrl: z.string().url().optional(),
+  localizacaoFisica: z.string().max(300).optional(),
+});
+
+export type CriarProgramaPayload = z.infer<typeof CriarProgramaPayloadSchema>;
+
+// ─── Propostas ────────────────────────────────────────────────────────────────
+
+export const PropostaEstadoSchema = z.enum(['pendente', 'aceite', 'recusada']);
+export type PropostaEstado = z.infer<typeof PropostaEstadoSchema>;
+
+export const PropostaTipoSchema = z.enum(['experiencia', 'programa', 'bolsa']);
+export type PropostaTipo = z.infer<typeof PropostaTipoSchema>;
+
+export const PropostaSchema = z.object({
+  id: z.string(),
+  instituicaoId: z.string(),
+  estudanteId: z.string(),
+  mensagem: z.string(),
+  tipo: PropostaTipoSchema,
+  estado: PropostaEstadoSchema,
+  estudanteNome: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type Proposta = z.infer<typeof PropostaSchema>;
+
+export const CriarPropostaPayloadSchema = z.object({
+  estudanteId: z.string().min(1),
+  mensagem: z.string().min(10).max(1000),
+  tipo: PropostaTipoSchema,
+});
+
+export type CriarPropostaPayload = z.infer<typeof CriarPropostaPayloadSchema>;
 
 // ─── Notificações ─────────────────────────────────────────────────────────────
 
@@ -885,4 +1056,104 @@ export type FeedResponse = z.infer<typeof FeedResponseSchema>;
 
 export const UpdateFeedWeightsPayloadSchema = FeedWeightsSchema;
 export type UpdateFeedWeightsPayload = z.infer<typeof UpdateFeedWeightsPayloadSchema>;
+
+// ─── Dashboard Stats ─────────────────────────────────────────────────────────
+
+export const AlunoStatsSchema = z.object({
+  simulacoesConcluidas: z.number(),
+  cursosEmProgresso: z.number(),
+  conquistasTotal: z.number(),
+});
+
+export type AlunoStats = z.infer<typeof AlunoStatsSchema>;
+
+export const MentorStatsSchema = z.object({
+  mentoriasActivas: z.number(),
+  alunosOrientados: z.number(),
+  avaliacoesPendentes: z.number(),
+});
+
+export type MentorStats = z.infer<typeof MentorStatsSchema>;
+
+export const InstituicaoStatsSchema = z.object({
+  experienciasPublicadas: z.number(),
+  inscricoesTotais: z.number(),
+  programasActivos: z.number(),
+  taxaPresenca: z.number().optional(),
+  avaliacaoMedia: z.number().optional(),
+  estudantesVinculados: z.number().optional(),
+});
+
+export type InstituicaoStats = z.infer<typeof InstituicaoStatsSchema>;
+
+// ─── Vínculos (Connections) ───────────────────────────────────────────────
+
+export const VinculoEstadoSchema = z.enum(['pending', 'connected', 'declined']);
+export type VinculoEstado = z.infer<typeof VinculoEstadoSchema>;
+
+export const VinculoTipoSchema = z.enum([
+  'student-student',
+  'student-mentor',
+  'student-institution',
+  'mentor-institution',
+]);
+export type VinculoTipo = z.infer<typeof VinculoTipoSchema>;
+
+export const VinculoSchema = z.object({
+  id: z.string(),
+  senderId: z.string(),
+  receiverId: z.string(),
+  estado: VinculoEstadoSchema,
+  connectionType: VinculoTipoSchema,
+  criadoEm: z.string().datetime(),
+});
+
+export type Vinculo = z.infer<typeof VinculoSchema>;
+
+export const VinculoStatusSchema = z.object({
+  estado: VinculoEstadoSchema.nullable(),
+  vinculoId: z.string().nullable(),
+  isSender: z.boolean(),
+});
+
+export type VinculoStatus = z.infer<typeof VinculoStatusSchema>;
+
+export const VinculoComPerfilSchema = VinculoSchema.extend({
+  senderPerfil: PerfilPublicoBasicoSchema,
+  receiverPerfil: PerfilPublicoBasicoSchema,
+});
+
+export type VinculoComPerfil = z.infer<typeof VinculoComPerfilSchema>;
+
+export const CriarVinculoPayloadSchema = z.object({
+  receiverId: z.string().min(1),
+  connectionType: VinculoTipoSchema,
+});
+
+export type CriarVinculoPayload = z.infer<typeof CriarVinculoPayloadSchema>;
+
+export const AceitarRejeitarVinculoPayloadSchema = z.object({
+  acao: z.enum(['aceitar', 'rejeitar']),
+});
+
+export type AceitarRejeitarVinculoPayload = z.infer<typeof AceitarRejeitarVinculoPayloadSchema>;
+
+// ─── Mentorias ────────────────────────────────────────────────────────────────
+
+export const MentoriaTipoSchema = z.enum([
+  'orientacao_vocacional',
+  'acompanhamento_curso',
+  'revisao_projeto',
+]);
+export type MentoriaTipo = z.infer<typeof MentoriaTipoSchema>;
+
+export const SolicitarMentoriaPayloadV2Schema = z.object({
+  mentorId: z.string().min(1),
+  mensagem: z.string().min(10).max(500),
+  tipo: MentoriaTipoSchema,
+  preco: z.number().min(0).default(0),
+  cursoId: z.string().optional(),
+  projetoId: z.string().optional(),
+});
+export type SolicitarMentoriaPayloadV2 = z.infer<typeof SolicitarMentoriaPayloadV2Schema>;
 

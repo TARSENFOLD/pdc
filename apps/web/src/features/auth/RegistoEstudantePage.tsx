@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { authApi } from '@/lib/api/auth';
+import { authApi, type LoginResponse } from '@/lib/api/auth';
 import { Button, Input } from '@/components/ui';
 import type { RegistoEstudantePayload } from '@pdc/shared';
 
@@ -17,7 +17,10 @@ export function RegistoEstudantePage() {
 
   const mutation = useMutation({
     mutationFn: (payload: RegistoEstudantePayload) => authApi.registarEstudante(payload),
-    onSuccess: () => { navigate('/app', { replace: true }); },
+    onSuccess: (result: LoginResponse) => { 
+      // result.canal is 'email'
+      navigate('/verificar', { state: { canal: result.canal, from: '/app/dashboard' }, replace: true }); 
+    },
     onError: (err: Error & { body?: { error?: string } }) => {
       setError(err.body?.error ?? 'Erro ao criar conta.');
     },

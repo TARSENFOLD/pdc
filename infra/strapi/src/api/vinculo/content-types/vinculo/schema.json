@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "vinculos",
+  "info": {
+    "singularName": "vinculo",
+    "pluralName": "vinculos",
+    "displayName": "Vínculo"
+  },
+  "attributes": {
+    "senderId": {
+      "type": "string",
+      "required": true
+    },
+    "receiverId": {
+      "type": "string",
+      "required": true
+    },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["pending", "connected", "declined"],
+      "default": "pending",
+      "required": true
+    },
+    "connectionType": {
+      "type": "enumeration",
+      "enum": ["student-student", "student-mentor", "student-institution", "mentor-institution"],
+      "required": true
+    },
+    "criadoEm": {
+      "type": "datetime"
+    },
+    "atualizadoEm": {
+      "type": "datetime"
+    }
+  }
+}

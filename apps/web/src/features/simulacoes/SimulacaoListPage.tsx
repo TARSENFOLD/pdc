@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import type { Simulacao } from '@pdc/shared';
-import { Card, Button, Spinner, Badge } from '../../components/ui';
+import { Card, Button, Badge, Spinner } from '../../components/ui';
 
 export const SimulacaoListPage = () => {
   const [simulacoes, setSimulacoes] = useState<Simulacao[]>([]);
@@ -15,7 +15,7 @@ export const SimulacaoListPage = () => {
       .finally(() => { setLoading(false); });
   }, []);
 
-  if (loading) return <div className="flex justify-center p-12"><Spinner /></div>;
+  if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">

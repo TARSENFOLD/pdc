@@ -1,0 +1,58 @@
+{
+  "kind": "collectionType",
+  "collectionName": "mentorias",
+  "info": {
+    "singularName": "mentoria",
+    "pluralName": "mentorias",
+    "displayName": "Mentoria"
+  },
+  "attributes": {
+    "alunoId": {
+      "type": "string",
+      "required": true
+    },
+    "mentorId": {
+      "type": "string",
+      "required": true
+    },
+    "mensagem": {
+      "type": "text",
+      "required": true
+    },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["pendente", "aceite", "recusada", "concluida"],
+      "default": "pendente",
+      "required": true
+    },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["orientacao_vocacional", "acompanhamento_curso", "revisao_projeto"],
+      "required": true,
+      "default": "orientacao_vocacional"
+    },
+    "preco": {
+      "type": "decimal",
+      "default": 0
+    },
+    "comissaoPDC": {
+      "type": "decimal",
+      "default": 0
+    },
+    "cursoId": {
+      "type": "string"
+    },
+    "projetoId": {
+      "type": "string"
+    },
+    "mentorNome": {
+      "type": "string"
+    },
+    "alunoNome": {
+      "type": "string"
+    },
+    "motivo": {
+      "type": "text"
+    }
+  }
+}

@@ -47,3 +47,5 @@ infra/strapi/.cache/
 infra/strapi/dist/
 infra/strapi/exports/
 infra/strapi/public/uploads/
+
+*.timestamp-*.mjs

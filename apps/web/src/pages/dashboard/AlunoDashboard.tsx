@@ -1,4 +1,7 @@
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { perfisApi } from '@/lib/api/perfis';
+import { Spinner } from '@/components/ui';
 
 interface StatCardProps {
   label: string;
@@ -27,6 +30,19 @@ function StatCard({ label, value, icon, description }: StatCardProps) {
 export function AlunoDashboard() {
   const { user } = useAuth();
 
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['perfil', 'me', 'stats'],
+    queryFn: () => perfisApi.getMyStats(),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-8">
@@ -37,7 +53,7 @@ export function AlunoDashboard() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Simulações concluídas"
-          value={0}
+          value={stats?.simulacoesConcluidas ?? '—'}
           icon="🧪"
           description="Completa simulações para construir o teu perfil"
         />
@@ -49,7 +65,7 @@ export function AlunoDashboard() {
         />
         <StatCard
           label="Cursos em progresso"
-          value={0}
+          value={stats?.cursosEmProgresso ?? '—'}
           icon="📚"
           description="Explora o catálogo de cursos"
         />

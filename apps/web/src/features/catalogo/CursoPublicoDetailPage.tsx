@@ -37,14 +37,11 @@ export function CursoPublicoDetailPage() {
         </div>
 
         <div className="mt-8 rounded-xl border border-border bg-surface p-6">
-          <h2 className="text-lg font-semibold text-text-primary">Módulos do curso</h2>
-          <ul className="mt-3 space-y-2 text-sm text-text-secondary">
-            <li className="flex items-center gap-2"><span className="text-amber">▶</span> Introdução à área de {curso.area ?? 'estudo'}</li>
-            <li className="flex items-center gap-2"><span className="text-amber">▶</span> Fundamentos teóricos</li>
-            <li className="flex items-center gap-2"><span className="text-amber">▶</span> Prática aplicada</li>
-            <li className="flex items-center gap-2"><span className="text-text-muted">🔒</span> Avaliação final</li>
-          </ul>
-          <p className="mt-4 text-xs text-text-muted">Inscreve-te para desbloquear todos os módulos e avaliações.</p>
+          <h2 className="text-lg font-semibold text-text-primary">Conteúdo do curso</h2>
+          <p className="mt-3 text-sm text-text-secondary">
+            {curso.totalHoras ? `${String(curso.totalHoras)} horas de conteúdo estruturado.` : 'Conteúdo estruturado em módulos.'}
+          </p>
+          <p className="mt-2 text-xs text-text-muted">Inscreve-te para aceder ao programa completo.</p>
         </div>
 
         <div className="mt-8 flex flex-col gap-4 sm:flex-row">

@@ -13,7 +13,12 @@ const estadoVariant: Record<string, 'warning' | 'success' | 'error' | 'outline'>
   concluida: 'outline',
 };
 
-function MentoriaRow({ mentoria, onAction }: { mentoria: Mentoria; onAction: (id: string, action: 'aceitar' | 'recusar' | 'concluir') => void; }) {
+interface MentoriaExibicao extends Mentoria {
+  mentorNome?: string;
+  alunoNome?: string;
+}
+
+function MentoriaRow({ mentoria, onAction }: { mentoria: MentoriaExibicao; onAction: (id: string, action: 'aceitar' | 'recusar' | 'concluir') => void; }) {
   const { user } = useAuth();
   const isMentor = user?.role === 'mentor';
   const isAluno = user?.role === 'aluno';
@@ -23,7 +28,7 @@ function MentoriaRow({ mentoria, onAction }: { mentoria: Mentoria; onAction: (id
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-text-primary">{mentoria.mensagem}</p>
         <p className="mt-0.5 text-xs text-text-muted">
-          {isAluno ? `Mentor: ${mentoria.mentorId}` : `Aluno: ${mentoria.alunoId}`}
+          {isAluno ? `Mentor: ${mentoria.mentorNome ?? mentoria.mentorId}` : `Aluno: ${mentoria.alunoNome ?? mentoria.alunoId}`}
         </p>
       </div>
       <div className="ml-4 flex shrink-0 items-center gap-2">

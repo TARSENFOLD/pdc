@@ -68,7 +68,7 @@ export function ProjetoDetailPage() {
 
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary mb-2">{projeto.titulo}</h1>
+          <h1 className="text-4xl font-bold text-text-primary font-display">{projeto.titulo}</h1>
           <div className="flex items-center gap-2">
             <RatingStars targetType="projeto" targetId={id} stats={ratingStats} />
             <div className="w-px h-6 bg-border mx-2"></div>
@@ -134,11 +134,6 @@ export function ProjetoDetailPage() {
             Demo
           </a>
         )}
-      </div>
-      
-      {/* Integrate DenunciarButton here */}
-      <div className="mt-8 flex justify-end">
-        <DenunciarButton conteudoId={projeto.id} conteudoTipo="projeto" />
       </div>
     </div>
   );

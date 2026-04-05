@@ -80,7 +80,7 @@ export function ProjetoListPage() {
               Filtrar
             </button>
           </form>
-          {user?.role === 'aluno' && (
+          {(['aluno', 'mentor', 'instituicao'] as string[]).includes(user?.role ?? '') && (
             <Link
               to="/app/projetos/novo"
               className="inline-flex h-8 items-center rounded-md bg-amber px-3 text-xs font-semibold text-background hover:bg-amber-hover"

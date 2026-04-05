@@ -1,24 +1,18 @@
-import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import { Tipo1Player } from './Tipo1Player';
 import { Tipo2Player } from './Tipo2Player';
 import { Spinner, Button } from '../../components/ui';
-import type { Simulacao } from '@pdc/shared';
 
 export const SimulacaoPlayerPage = () => {
   const { id } = useParams<{ id: string }>();
-  const [simulacao, setSimulacao] = useState<Simulacao | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (id) {
-      simulacoesApi.getById(id)
-        .then(res => { setSimulacao(res); })
-        .catch((err: unknown) => { console.error('Erro ao carregar simulação:', err); })
-        .finally(() => { setLoading(false); });
-    }
-  }, [id]);
+  const { data: simulacao, isLoading: loading } = useQuery({
+    queryKey: ['simulacao', id],
+    queryFn: () => simulacoesApi.getById(id ?? ''),
+    enabled: !!id,
+  });
 
   if (loading) return <div className="flex justify-center p-20"><Spinner /></div>;
   if (!simulacao) return (

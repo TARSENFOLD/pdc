@@ -1,4 +1,7 @@
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { mentoriasApi } from '@/lib/api/mentorias';
+import { Spinner } from '@/components/ui';
 
 interface StatCardProps {
   label: string;
@@ -27,6 +30,19 @@ function StatCard({ label, value, icon, description }: StatCardProps) {
 export function MentorDashboard() {
   const { user } = useAuth();
 
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['mentorias', 'stats'],
+    queryFn: () => mentoriasApi.getStats(),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-8">
@@ -37,19 +53,19 @@ export function MentorDashboard() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Mentorias activas"
-          value={0}
+          value={stats?.mentoriasActivas ?? '—'}
           icon="👨‍🏫"
           description="Conexões de mentoria em curso"
         />
         <StatCard
           label="Alunos orientados"
-          value={0}
+          value={stats?.alunosOrientados ?? '—'}
           icon="🎓"
           description="Total de alunos que já orientaste"
         />
         <StatCard
           label="Avaliações pendentes"
-          value={0}
+          value={stats?.avaliacoesPendentes ?? '—'}
           icon="📝"
           description="Submissões à espera de feedback"
         />

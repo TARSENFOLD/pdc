@@ -21,6 +21,8 @@ import { adminRoutes } from './routes/admin.js';
 import { ltiRoutes } from './routes/lti.js';
 import { catalogoRoutes } from './routes/catalogo.js';
 import { feedRoutes } from './routes/feed.js';
+import { programasRoutes } from './routes/programas.js';
+import { propostasRoutes } from './routes/propostas.js';
 import { securityMiddleware } from './middleware/security.js';
 import { socketService } from './modules/realtime/socket.service.js';
 import { tinaService } from './modules/tina/tina.service.js';
@@ -28,6 +30,9 @@ import { tinaService } from './modules/tina/tina.service.js';
 import { interactionRoutes } from './routes/interactions.js';
 import { ratingsRoutes } from './routes/ratings.js';
 import { commentsRoutes } from './routes/comments.js';
+import { moderacaoRoutes } from './routes/moderacao.js';
+import { vinculoRoutes } from './routes/vinculos.js';
+import { mensagensRoutes } from './routes/mensagens.js';
 
 const app = new Hono();
 
@@ -63,9 +68,14 @@ app.route('/admin', adminRoutes);
 app.route('/lti', ltiRoutes);
 app.route('/catalogo', catalogoRoutes);
 app.route('/feed', feedRoutes);
+app.route('/programas', programasRoutes);
+app.route('/propostas', propostasRoutes);
 app.route('/interactions', interactionRoutes);
 app.route('/ratings', ratingsRoutes);
 app.route('/comments', commentsRoutes);
+app.route('/moderacao', moderacaoRoutes);
+app.route('/vinculos', vinculoRoutes);
+app.route('/mensagens', mensagensRoutes);
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 

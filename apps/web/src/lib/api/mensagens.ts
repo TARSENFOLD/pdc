@@ -21,6 +21,9 @@ export const mensagensApi = {
   enviar: (conversaId: string, conteudo: string) => 
     http.post<Mensagem>(`/mensagens/conversas/${conversaId}`, { conteudo }),
 
-  marcarLida: (mensagemId: string) => 
+  marcarLida: (mensagemId: string) =>
     http.patch<Mensagem>(`/mensagens/${mensagemId}/lida`, { lida: true }),
+
+  criarConversa: (destinatarioId: string) =>
+    http.post<Conversa>('/mensagens/conversas', { destinatarioId }),
 };

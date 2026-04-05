@@ -79,7 +79,7 @@ export const vocacionalService = {
     return cursos.map(curso => ({
       cursoId: curso.id,
       titulo: curso.titulo,
-      matchPercentagem: Math.floor(Math.random() * 15) + 80, // Match simulado entre 80-95%
+      matchPercentagem: Math.min(99, Math.round(70 + (perfil.scoreGlobal * 3))),
       motivo: `Com base no seu excelente desempenho em simulações e score global de ${String(perfil.scoreGlobal)}.`,
     }));
   }

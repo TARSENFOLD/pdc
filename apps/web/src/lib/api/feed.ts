@@ -1,14 +1,16 @@
 import { http } from './http';
-import type { FeedResponse, FeedItem } from '@pdc/shared';
+import type { FeedResponse, FeedWeights, UpdateFeedWeightsPayload } from '@pdc/shared';
 
 export const feedApi = {
-  getFeed: async (page = 1, pageSize = 10) => {
-    const res = await http.get<FeedResponse>(`/feed?page=${String(page)}&pageSize=${String(pageSize)}`);
-    return res;
-  },
+  getTrending: (page = 1, limit = 20) =>
+    http.get<FeedResponse>(`/feed/trending?page=${String(page)}&limit=${String(limit)}`),
 
-  getTrending: async () => {
-    const res = await http.get<{ data: FeedItem[] }>('/feed/trending');
-    return res.data;
-  },
+  getGeral: (page = 1, limit = 20) =>
+    http.get<FeedResponse>(`/feed/geral?page=${String(page)}&limit=${String(limit)}`),
+
+  getWeights: (tipo: 'geral' | 'trending') =>
+    http.get<FeedWeights>(`/feed/weights/${tipo}`),
+
+  updateWeights: (tipo: 'geral' | 'trending', payload: UpdateFeedWeightsPayload) =>
+    http.put<{ success: boolean }>(`/feed/weights/${tipo}`, payload),
 };

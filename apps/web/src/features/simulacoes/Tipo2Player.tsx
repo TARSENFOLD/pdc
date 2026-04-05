@@ -90,18 +90,26 @@ export const Tipo2Player = ({ simulacao }: Props) => {
       </div>
 
       <Card className="h-[700px] overflow-hidden border-4 border-slate-100 relative shadow-2xl rounded-2xl">
-        {loading && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-50">
-            <Spinner />
-            <p className="mt-4 text-slate-500 font-medium animate-pulse">A estabelecer ligação segura com o ambiente virtual...</p>
+        {simulacao.iframeUrl ? (
+          <>
+            {loading && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-50">
+                <Spinner />
+                <p className="mt-4 text-slate-500 font-medium animate-pulse">A estabelecer ligação segura com o ambiente virtual...</p>
+              </div>
+            )}
+            <iframe 
+              src={simulacao.iframeUrl}
+              className="w-full h-full border-0"
+              title="Ambiente Virtual de Simulação"
+              onLoad={() => { setLoading(false); }}
+            />
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-slate-500 font-medium">URL do laboratório não configurada para esta simulação.</p>
           </div>
         )}
-        <iframe 
-          src={simulacao.capaUrl ?? 'https://www.wikipedia.org'}
-          className="w-full h-full border-0"
-          title="Ambiente Virtual de Simulação"
-          onLoad={() => { setLoading(false); }}
-        />
       </Card>
       
       <div className="flex items-center justify-center gap-4 text-slate-400 text-xs font-medium">

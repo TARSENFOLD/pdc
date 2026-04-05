@@ -1,0 +1,45 @@
+{
+  "kind": "collectionType",
+  "collectionName": "cursos",
+  "info": {
+    "singularName": "curso",
+    "pluralName": "cursos",
+    "displayName": "Curso"
+  },
+  "attributes": {
+    "titulo": {
+      "type": "string",
+      "required": true
+    },
+    "descricao": {
+      "type": "text"
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "titulo"
+    },
+    "capaUrl": {
+      "type": "string"
+    },
+    "area": {
+      "type": "string"
+    },
+    "autorNome": {
+      "type": "string"
+    },
+    "autorId": {
+      "type": "string"
+    },
+    "visibilidade": {
+      "type": "enumeration",
+      "enum": ["publico", "privado"],
+      "default": "publico"
+    },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["draft", "review", "approved", "published", "archived"],
+      "default": "draft",
+      "required": true
+    }
+  }
+}

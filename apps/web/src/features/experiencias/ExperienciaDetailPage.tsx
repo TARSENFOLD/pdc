@@ -76,7 +76,7 @@ export function ExperienciaDetailPage() {
         )}
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
-          <h1 className="text-3xl font-bold text-text-primary">{exp.titulo}</h1>
+          <h1 className="text-3xl font-bold text-text-primary font-display">{exp.titulo}</h1>
           <div className="flex items-center gap-2 shrink-0">
             <RatingStars targetType="experiencia" targetId={id} stats={ratingStats} />
             <div className="w-px h-6 bg-border mx-2"></div>

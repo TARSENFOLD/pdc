@@ -171,6 +171,23 @@
 
 ---
 
+## Ondas de Role (Zonas por Perfil)
+
+**Contexto:** As Fases 0–7 implementaram a infra e features transversais.
+As Ondas implementam as zonas específicas por role (páginas, menus, fluxos).
+
+| Onda | Conteúdo | Agente | Estado |
+|---|---|---|---|
+| Pré-requisito | Schema Strapi: campo `estado` em cursos/simulações/experiências + content-type `vinculo` | Copilot | [~] |
+| Onda 1 | Sidebar sub-menus colapsáveis + Comité fix + Dashboards com dados reais | Copilot | [~] |
+| Onda 2A | Zona Mentor: Dashboard KPIs + Criar Curso + Criar Simulação + Upload + Alunos + Mentorados + Analytics | Gemini CLI | [~] |
+| Onda 2B | Zona Instituição: Dashboard KPIs + Criar Experiência + Criar Programa + Estudantes Vinculados + Propostas + Relatórios + Branding | Antigravity | [~] |
+| Onda 3A | Zona Estudante: Meus Cursos + Progresso + Certificados + Ranking + Guardados | Gemini CLI | [ ] |
+| Onda 3B | Fluxo Editorial (draft→review→approved→published) + Vínculos (bilateral, connectionType) + Mensagens (só entre vínculos) | Antigravity | [ ] |
+| Onda 4 | Admin completo + Zona Comité + Zona Estudante restante | Gemini CLI | [ ] |
+
+---
+
 ## Sequência Recomendada
 
 ```

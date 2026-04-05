@@ -1,25 +1,18 @@
-import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import { likeApi, bookmarkApi, ratingsApi } from '../../lib/api/interactions';
-import type { Simulacao } from '@pdc/shared';
 import { Card, Button, Spinner, Badge, LikeButton, BookmarkButton, RatingStars } from '../../components/ui';
 
 export const SimulacaoDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [simulacao, setSimulacao] = useState<Simulacao | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (id) {
-      simulacoesApi.getById(id)
-        .then(res => { setSimulacao(res); })
-        .catch((err: unknown) => { console.error('Erro ao carregar simulação:', err); })
-        .finally(() => { setLoading(false); });
-    }
-  }, [id]);
+  const { data: simulacao, isLoading: loading } = useQuery({
+    queryKey: ['simulacao', id],
+    queryFn: () => simulacoesApi.getById(id ?? ''),
+    enabled: !!id,
+  });
 
   const { data: likeStatus } = useQuery({
     queryKey: ['simulacao', id, 'likes'],
@@ -75,11 +68,11 @@ export const SimulacaoDetailPage = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <Badge variant="outline" className="px-3 py-1">Simulação Experimental</Badge>
-              <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">Tipo {simulacao.tipo}</Badge>
+              <Badge variant="info">Tipo {simulacao.tipo}</Badge>
             </div>
             
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <h1 className="text-4xl font-black tracking-tight">{simulacao.titulo}</h1>
+              <h1 className="text-4xl font-black tracking-tight font-display">{simulacao.titulo}</h1>
               <div className="flex items-center gap-2 shrink-0">
                 <RatingStars targetType="simulacao" targetId={id ?? ''} stats={ratingStats} />
                 <div className="w-px h-6 bg-border mx-2"></div>
@@ -87,28 +80,28 @@ export const SimulacaoDetailPage = () => {
                 <BookmarkButton targetType="simulacao" targetId={id ?? ''} initialBookmarked={isBookmarked} />
               </div>
             </div>
-            <div className="prose prose-blue max-w-none">
-              <p className="text-xl text-gray-600 leading-relaxed">{simulacao.descricao}</p>
+            <div className="prose max-w-none text-text-secondary">
+              <p className="text-xl leading-relaxed">{simulacao.descricao}</p>
             </div>
           </div>
 
-          <Card className="p-8 bg-blue-50 border-blue-100 shadow-sm space-y-4">
-            <h3 className="text-lg font-bold text-blue-900">O que vais aprender:</h3>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-blue-800">
+          <div className="rounded-xl border border-border bg-surface p-8 space-y-4">
+            <h3 className="text-lg font-bold text-text-primary">O que vais aprender:</h3>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-text-secondary">
               <li className="flex items-center gap-2">
-                <span className="text-blue-500 text-xl">✓</span> Contexto real do dia-a-dia
+                <span className="text-amber text-xl">✓</span> Contexto real do dia-a-dia
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-blue-500 text-xl">✓</span> Tomada de decisão crítica
+                <span className="text-amber text-xl">✓</span> Tomada de decisão crítica
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-blue-500 text-xl">✓</span> Feedback vocacional imediato
+                <span className="text-amber text-xl">✓</span> Feedback vocacional imediato
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-blue-500 text-xl">✓</span> Pontuação para o teu perfil
+                <span className="text-amber text-xl">✓</span> Pontuação para o teu perfil
               </li>
             </ul>
-          </Card>
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -122,20 +115,18 @@ export const SimulacaoDetailPage = () => {
             )}
             
             <div className="space-y-4">
-              <div className="flex justify-between text-sm py-2 border-b">
-                <span className="text-gray-500">Duração estimada</span>
-                <span className="font-bold">~15-20 min</span>
+              <div className="flex justify-between text-sm py-2 border-b border-border">
+                <span className="text-text-secondary">Tipo</span>
+                <span className="font-bold text-text-primary">Tipo {String(simulacao.tipo)}</span>
               </div>
-              <div className="flex justify-between text-sm py-2 border-b">
-                <span className="text-gray-500">Dificuldade</span>
-                <span className="font-bold">Intermédio</span>
-              </div>
-              <div className="flex justify-between text-sm py-2 border-b">
-                <span className="text-gray-500">Recompensas</span>
-                <span className="font-bold text-green-600">+100 XP</span>
-              </div>
+              {'area' in simulacao && (
+                <div className="flex justify-between text-sm py-2 border-b border-border">
+                  <span className="text-text-secondary">Área</span>
+                  <span className="font-bold text-text-primary">{String((simulacao as Record<string, unknown>).area)}</span>
+                </div>
+              )}
               
-              <Button onClick={() => { void handleIniciar(); }} className="w-full py-6 text-lg font-bold shadow-lg shadow-blue-200">
+              <Button onClick={() => { void handleIniciar(); }} className="w-full py-6 text-lg font-bold">
                 Começar Agora
               </Button>
             </div>

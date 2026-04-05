@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
-import { Redis } from '@upstash/redis';
+import { redis } from '../../lib/redis.js';
 import { createHash, randomUUID } from 'node:crypto';
 import type { User, Role } from '@pdc/shared';
 
@@ -8,13 +8,6 @@ const JWT_SECRET = new TextEncoder().encode(
 );
 const STRAPI_URL = process.env.STRAPI_URL || 'http://localhost:1337';
 const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN || '';
-
-const redis = process.env.UPSTASH_REDIS_REST_URL
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN ?? '',
-    })
-  : null;
 
 interface StrapiUser {
   id: number | string;

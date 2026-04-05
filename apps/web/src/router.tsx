@@ -3,6 +3,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
+import TwoFactorPage from '@/features/auth/TwoFactorPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { LandingPage } from '@/pages/LandingPage';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -30,10 +31,17 @@ import FeedPage from '@/features/feed/FeedPage';
 
 import { DenunciaListPage } from '@/features/moderacao/DenunciaListPage';
 import { DenunciaDetailPage } from '@/features/moderacao/DenunciaDetailPage';
+import { FilaAprovacaoPage } from '@/features/moderacao/FilaAprovacaoPage';
+import { ModeradorUtilizadoresPage } from '@/features/moderacao/ModeradorUtilizadoresPage';
+
+import { VinculosPage } from '@/features/vinculos/VinculosPage';
+import { MensagensPage } from '@/features/mensagens/MensagensPage';
+import { ConversaPage } from '@/features/mensagens/ConversaPage';
 import { AdminUtilizadoresPage } from '@/features/admin/AdminUtilizadoresPage';
 import { AdminStatsPage } from '@/features/admin/AdminStatsPage';
 import { AdminAuditPage } from '@/features/admin/AdminAuditPage';
 import LtiPlataformasPage from '@/features/admin/LtiPlataformasPage';
+import FeedWeightsPage from '@/features/admin/FeedWeightsPage';
 
 import { ExplorarPage } from '@/features/catalogo/ExplorarPage';
 import { CursosCatalogoPage } from '@/features/catalogo/CursosCatalogoPage';
@@ -50,6 +58,22 @@ import { RegistoEstudantePage } from '@/features/auth/RegistoEstudantePage';
 import { RegistoMentorPage } from '@/features/auth/RegistoMentorPage';
 import { RegistoInstituicaoPage } from '@/features/auth/RegistoInstituicaoPage';
 
+import { ComiteDashboard } from '@/features/comite/ComiteDashboard';
+import { ValidacaoCientificaPage } from '@/features/comite/ValidacaoCientificaPage';
+
+import { InstituicaoExperienciasPage } from '@/features/instituicao/InstituicaoExperienciasPage';
+import { CriarExperienciaPage } from '@/features/instituicao/CriarExperienciaPage';
+import { InstituicaoProgramasPage } from '@/features/instituicao/InstituicaoProgramasPage';
+import { CriarProgramaPage } from '@/features/instituicao/CriarProgramaPage';
+import { EstudantesVinculadosPage } from '@/features/instituicao/EstudantesVinculadosPage';
+import { PropostasPage } from '@/features/instituicao/PropostasPage';
+import { RelatoriosInstituicaoPage } from '@/features/instituicao/RelatoriosInstituicaoPage';
+import { BrandingPage } from '@/features/instituicao/BrandingPage';
+
+import { MeusCursosPage } from '@/features/aluno/MeusCursosPage';
+import { GuardadosPage } from '@/features/aluno/GuardadosPage';
+import { CertificadosPage } from '@/features/aluno/CertificadosPage';
+
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Role } from '@pdc/shared';
 import { Spinner } from '@/components/ui';
@@ -59,7 +83,7 @@ const ROLE_DASHBOARD: Record<Role, string> = {
   mentor: '/app/dashboard/mentor',
   instituicao: '/app/dashboard/instituicao',
   moderador: '/app/dashboard/moderador',
-  comite_cientifico: '/app/dashboard/admin',
+  comite_cientifico: '/app/comite',
   super_admin: '/app/dashboard/admin',
 };
 
@@ -112,14 +136,91 @@ export const router = createBrowserRouter([
       { path: 'mentorias', element: <MentoriaListPage /> },
       { path: 'conquistas', element: <ConquistasPage /> },
 
+      // Aluno
+      { path: 'meus-cursos', element: <RoleGuard allowed={['aluno']}><MeusCursosPage /></RoleGuard> },
+      { path: 'guardados', element: <RoleGuard allowed={['aluno']}><GuardadosPage /></RoleGuard> },
+      { path: 'certificados', element: <RoleGuard allowed={['aluno']}><CertificadosPage /></RoleGuard> },
+
       // Moderacao
-      { 
-        path: 'moderacao/denuncias', 
-        element: <RoleGuard allowed={['moderador', 'super_admin']}><DenunciaListPage /></RoleGuard> 
+      {
+        path: 'moderacao/denuncias',
+        element: <RoleGuard allowed={['moderador', 'super_admin']}><DenunciaListPage /></RoleGuard>
       },
-      { 
-        path: 'moderacao/denuncias/:id', 
-        element: <RoleGuard allowed={['moderador', 'super_admin']}><DenunciaDetailPage /></RoleGuard> 
+      {
+        path: 'moderacao/denuncias/:id',
+        element: <RoleGuard allowed={['moderador', 'super_admin']}><DenunciaDetailPage /></RoleGuard>
+      },
+      {
+        path: 'moderacao/aprovacoes',
+        element: <RoleGuard allowed={['moderador', 'comite_cientifico', 'super_admin']}><FilaAprovacaoPage /></RoleGuard>
+      },
+      {
+        path: 'moderador/utilizadores',
+        element: <RoleGuard allowed={['moderador', 'super_admin']}><ModeradorUtilizadoresPage /></RoleGuard>
+      },
+
+      // Vínculos
+      {
+        path: 'vinculos',
+        element: <ProtectedRoute><VinculosPage /></ProtectedRoute>
+      },
+
+      // Mensagens
+      {
+        path: 'mensagens',
+        element: <ProtectedRoute><MensagensPage /></ProtectedRoute>
+      },
+      {
+        path: 'mensagens/:conversaId',
+        element: <ProtectedRoute><ConversaPage /></ProtectedRoute>
+      },
+
+      // Comité Científico
+      {
+        path: 'comite',
+        element: <RoleGuard allowed={['comite_cientifico', 'super_admin']}><ComiteDashboard /></RoleGuard>
+      },
+      {
+        path: 'comite/validacao',
+        element: <RoleGuard allowed={['comite_cientifico', 'super_admin']}><ValidacaoCientificaPage /></RoleGuard>
+      },
+
+      // Instituição
+      {
+        path: 'instituicao/experiencias',
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><InstituicaoExperienciasPage /></RoleGuard>
+      },
+      {
+        path: 'instituicao/editar-experiencia/:id',
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CriarExperienciaPage /></RoleGuard>
+      },
+      {
+        path: 'instituicao/criar-experiencia',
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CriarExperienciaPage /></RoleGuard>
+      },
+      {
+        path: 'instituicao/programas',
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><InstituicaoProgramasPage /></RoleGuard>
+      },
+      {
+        path: 'instituicao/criar-programa',
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CriarProgramaPage /></RoleGuard>
+      },
+      {
+        path: 'instituicao/estudantes-vinculados',
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><EstudantesVinculadosPage /></RoleGuard>
+      },
+      {
+        path: 'instituicao/propostas',
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><PropostasPage /></RoleGuard>
+      },
+      {
+        path: 'instituicao/relatorios',
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><RelatoriosInstituicaoPage /></RoleGuard>
+      },
+      {
+        path: 'instituicao/branding',
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><BrandingPage /></RoleGuard>
       },
 
       // Admin
@@ -139,10 +240,15 @@ export const router = createBrowserRouter([
         path: 'admin/lti',
         element: <RoleGuard allowed={['super_admin']}><LtiPlataformasPage /></RoleGuard>
       },
+      {
+        path: 'admin/feed-weights',
+        element: <RoleGuard allowed={['super_admin']}><FeedWeightsPage /></RoleGuard>
+      },
     ],
   },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
+  { path: '/verificar', element: <TwoFactorPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/projetos', element: <ProjetoListPage /> },
   { path: '/projetos/:id', element: <ProjetoDetailPage /> },

@@ -12,3 +12,5 @@ export * from './Pagination';
 export * from './LikeButton';
 export * from './BookmarkButton';
 export * from './RatingStars';
+export * from './ConectarButton';
+export * from './Skeleton';

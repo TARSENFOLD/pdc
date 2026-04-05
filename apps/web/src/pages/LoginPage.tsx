@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { authApi } from '@/lib/api/auth';
+import { Input, Button } from '@/components/ui';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,8 +22,8 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await login({ email, password });
-      navigate(from, { replace: true });
+      const result = await login({ email, password });
+      navigate('/verificar', { state: { canal: result.canal, from }, replace: true });
     } catch (err: unknown) {
       const body = err instanceof Error && 'body' in err ? (err as { body?: Record<string, string> }).body : undefined;
       setError(body?.error ?? 'Erro ao iniciar sessão. Verifique as suas credenciais.');
@@ -31,61 +33,78 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] px-4">
-      <div className="w-full max-w-md rounded-2xl bg-[#141414] p-8 shadow-2xl border border-white/5">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md rounded-2xl bg-surface p-8 shadow-2xl border border-border">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white mb-2">Bem-vindo</h1>
-          <p className="text-gray-400">Inicie sessão para continuar no PDC</p>
+          <h1 className="text-3xl font-bold text-text-primary mb-2">Bem-vindo</h1>
+          <p className="text-text-muted">Inicie sessão para continuar no PDC</p>
         </div>
 
         <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
           {error && (
-            <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-500 border border-red-500/20">
+            <div className="rounded-lg bg-error/10 p-3 text-sm text-error border border-error/20">
               {error}
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-            <input
-              type="email"
-              required
-              className="w-full rounded-lg bg-[#1a1a1a] border border-white/10 p-3 text-white focus:border-[#f59e0b] focus:outline-none transition-colors"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); }}
-            />
-          </div>
+          <Input 
+            label="Email" 
+            type="email"
+            required
+            placeholder="seu@email.com"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); }}
+            className="bg-surface-raised border-border focus:border-amber"
+          />
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-gray-300">Palavra-passe</label>
-              <Link to="/forgot-password" replace className="text-sm text-[#f59e0b] hover:underline">
+              <label className="block text-sm font-medium text-text-secondary">Palavra-passe</label>
+              <Link to="/forgot-password" replace className="text-sm text-amber hover:underline">
                 Esqueceu-se?
               </Link>
             </div>
-            <input
+            <Input
               type="password"
               required
-              className="w-full rounded-lg bg-[#1a1a1a] border border-white/10 p-3 text-white focus:border-[#f59e0b] focus:outline-none transition-colors"
               placeholder="••••••••"
               value={password}
               onChange={(e) => { setPassword(e.target.value); }}
+              className="bg-surface-raised border-border focus:border-amber"
             />
           </div>
 
-          <button
+          <Button
             type="submit"
-            disabled={isLoading}
-            className="w-full rounded-lg bg-[#f59e0b] p-3 font-semibold text-black hover:bg-[#d97706] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            isLoading={isLoading}
+            className="w-full bg-amber text-black hover:bg-amber-hover transition-colors"
           >
-            {isLoading ? 'A carregar...' : 'Entrar'}
-          </button>
+            Entrar
+          </Button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-gray-400">
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-surface px-2 text-text-muted">ou</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => { authApi.loginWithGoogle(); }}
+            className="mt-6 flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-surface-raised p-3 font-medium text-text-primary transition-colors hover:bg-white/5"
+          >
+            Continuar com Google
+          </button>
+        </div>
+
+        <p className="mt-8 text-center text-sm text-text-muted">
           Não tem uma conta?{' '}
-          <Link to="/register" replace className="text-[#f59e0b] font-semibold hover:underline">
+          <Link to="/register" replace className="text-amber font-semibold hover:underline">
             Registe-se
           </Link>
         </p>

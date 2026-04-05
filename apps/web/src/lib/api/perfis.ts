@@ -1,5 +1,5 @@
 import { http } from './http';
-import type { PerfilCompleto, UpdatePerfilPayload, Role } from '@pdc/shared';
+import type { PerfilCompleto, UpdatePerfilPayload, Role, AlunoStats } from '@pdc/shared';
 
 export const perfisApi = {
   getById: (id: string) => 
@@ -13,4 +13,7 @@ export const perfisApi = {
 
   getByRole: (role: Role) => 
     http.get<PerfilCompleto[]>(`/perfis?role=${role}`),
+
+  getMyStats: () =>
+    http.get<AlunoStats>('/perfis/me/stats'),
 };

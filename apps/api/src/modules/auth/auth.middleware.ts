@@ -3,6 +3,7 @@ import type { Context, Next } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { Role } from '@pdc/shared';
 
+
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'change-me-in-production-min-32-chars'
 );

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { CriarExperienciaPayloadSchema } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
@@ -14,19 +15,41 @@ const listQuerySchema = z.object({
   instituicaoId: z.string().optional(),
 });
 
-const criarSchema = z.object({
-  titulo: z.string().min(3).max(200),
-  descricao: z.string().min(10),
-  capaUrl: z.string().url().optional(),
-  dataInicio: z.string().datetime(),
-  dataFim: z.string().datetime().optional(),
-});
-
-const atualizarSchema = criarSchema.partial();
+const atualizarSchema = CriarExperienciaPayloadSchema.partial();
 
 export const experienciaRoutes = new Hono<Vars>();
 
 experienciaRoutes.use('*', verifyJwt);
+
+// GET /experiencias/stats — dashboard instituição stats
+experienciaRoutes.get('/stats', checkRole(['instituicao']), async (c) => {
+  const { id: instituicaoId } = c.get('user');
+  try {
+    const [publicadas, inscricoes, programas] = await Promise.all([
+      strapiGet<{ meta?: { pagination?: { total?: number } } }>('/experiencias', {
+        'filters[instituicaoId][$eq]': instituicaoId,
+        'pagination[pageSize]': '1',
+      }),
+      strapiGet<{ meta?: { pagination?: { total?: number } } }>('/inscricoes-experiencias', {
+        'filters[experiencia][instituicaoId][$eq]': instituicaoId,
+        'pagination[pageSize]': '1',
+      }),
+      strapiGet<{ meta?: { pagination?: { total?: number } } }>('/programas', {
+        'filters[instituicaoId][$eq]': instituicaoId,
+        'filters[activo][$eq]': 'true',
+        'pagination[pageSize]': '1',
+      }),
+    ]);
+    return c.json({
+      experienciasPublicadas: publicadas?.meta?.pagination?.total ?? 0,
+      inscricoesTotais: inscricoes?.meta?.pagination?.total ?? 0,
+      programasActivos: programas?.meta?.pagination?.total ?? 0,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro interno';
+    return c.json({ error: message }, 502);
+  }
+});
 
 // GET /experiencias
 experienciaRoutes.get('/', zValidator('query', listQuerySchema), async (c) => {
@@ -38,6 +61,22 @@ experienciaRoutes.get('/', zValidator('query', listQuerySchema), async (c) => {
   if (q.instituicaoId !== undefined) params['filters[instituicaoId][$eq]'] = q.instituicaoId;
   try {
     const data = await strapiGet<unknown>('/experiencias', params);
+    return c.json(data);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro interno';
+    return c.json({ error: message }, 502);
+  }
+});
+
+// GET /experiencias/minhas — experiências da instituição autenticada
+experienciaRoutes.get('/minhas', checkRole(['instituicao', 'super_admin']), async (c) => {
+  const { id: autorId } = c.get('user');
+  try {
+    const data = await strapiGet<unknown>('/experiencias', {
+      'filters[instituicaoId][$eq]': autorId,
+      populate: 'capa,instituicao',
+      'sort': 'createdAt:desc',
+    });
     return c.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
@@ -62,13 +101,19 @@ experienciaRoutes.get('/:id', async (c) => {
 // POST /experiencias — instituicao apenas
 experienciaRoutes.post(
   '/',
-  checkRole(['instituicao']),
-  zValidator('json', criarSchema),
+  checkRole(['instituicao', 'super_admin']),
+  zValidator('json', CriarExperienciaPayloadSchema),
   async (c) => {
     const { id: instituicaoId } = c.get('user');
     const body = c.req.valid('json');
     try {
-      const data = await strapiPost<unknown>('/experiencias', { ...body, instituicaoId });
+      const data = await strapiPost<unknown>('/experiencias', {
+        ...body,
+        instituicaoId,
+        autorId: instituicaoId,
+        estado: 'draft',
+        preco: 0,
+      });
       return c.json(data, 201);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro interno';
@@ -77,16 +122,24 @@ experienciaRoutes.post(
   }
 );
 
-// PUT /experiencias/:id — instituicao apenas
+// PUT /experiencias/:id — instituicao apenas, verifica autorId
 experienciaRoutes.put(
   '/:id',
-  checkRole(['instituicao']),
+  checkRole(['instituicao', 'super_admin']),
   zValidator('json', atualizarSchema),
   async (c) => {
     const expId = c.req.param('id');
+    const { id: userId, role } = c.get('user');
     const body = c.req.valid('json');
     try {
-      const data = await strapiPut<unknown>(`/experiencias/${expId}`, body);
+      if (role !== 'super_admin') {
+        const existing = await strapiGet<{ data?: { attributes?: { instituicaoId?: string } }; instituicaoId?: string }>(`/experiencias/${expId}`);
+        const ownerId = existing?.data?.attributes?.instituicaoId ?? existing?.instituicaoId;
+        if (ownerId !== userId) {
+          return c.json({ error: 'Sem permissão para editar esta experiência' }, 403);
+        }
+      }
+      const data = await strapiPut<unknown>(`/experiencias/${expId}`, { ...body, preco: 0 });
       return c.json(data);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro interno';
@@ -94,3 +147,54 @@ experienciaRoutes.put(
     }
   }
 );
+
+// PATCH /experiencias/:id/estado — transição de estado editorial
+experienciaRoutes.patch('/:id/estado', checkRole(['instituicao', 'moderador', 'super_admin']), zValidator('json', z.object({
+  estado: z.enum(['review', 'published', 'archived']),
+})), async (c) => {
+  const id = c.req.param('id');
+  const { estado } = c.req.valid('json');
+  const user = c.get('user');
+
+  try {
+    // Buscar experiência actual
+    const exp = await strapiGet<any>(`/experiencias/${id}`);
+    if (!exp.data) {
+      return c.json({ error: 'Experiência não encontrada' }, 404);
+    }
+
+    const estadoActual = exp.data.estado;
+
+    // Validar transições permitidas (só instituição pode submeter para review)
+    const transicaoPermitida = (actual: string, novo: string, role: string): boolean => {
+      if (role === 'super_admin') return true;
+      if (role === 'moderador') return novo === 'archived' && actual === 'published';
+      if (role === 'instituicao') {
+        if (actual === 'draft' && novo === 'review') return true;
+        if (actual === 'approved' && novo === 'published') return true;
+      }
+      return false;
+    };
+
+    // Verificar autorização
+    const podeEditar = user.id === exp.data.instituicaoId || ['moderador', 'super_admin'].includes(user.role);
+    if (!podeEditar) {
+      return c.json({ error: 'Sem permissão para editar esta experiência' }, 403);
+    }
+
+    if (!transicaoPermitida(estadoActual, estado, user.role)) {
+      return c.json({
+        error: `Transição inválida de ${estadoActual} para ${estado}`
+      }, 400);
+    }
+
+    // Actualizar estado
+    await strapiPut<unknown>(`/experiencias/${id}`, { estado });
+
+    return c.json({ success: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro interno';
+    return c.json({ error: message }, 502);
+  }
+});
+

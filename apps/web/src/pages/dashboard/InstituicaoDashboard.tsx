@@ -1,4 +1,7 @@
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { experienciasApi } from '@/lib/api/experiencias';
+import { Spinner } from '@/components/ui';
 
 interface StatCardProps {
   label: string;
@@ -27,6 +30,19 @@ function StatCard({ label, value, icon, description }: StatCardProps) {
 export function InstituicaoDashboard() {
   const { user } = useAuth();
 
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['experiencias', 'stats'],
+    queryFn: () => experienciasApi.getStats(),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-8">
@@ -37,19 +53,19 @@ export function InstituicaoDashboard() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Experiências publicadas"
-          value={0}
+          value={stats?.experienciasPublicadas ?? '—'}
           icon="🏛️"
           description="Experiências visíveis na plataforma"
         />
         <StatCard
           label="Inscrições totais"
-          value={0}
+          value={stats?.inscricoesTotais ?? '—'}
           icon="📋"
           description="Estudantes inscritos nos vossos programas"
         />
         <StatCard
           label="Programas activos"
-          value={0}
+          value={stats?.programasActivos ?? '—'}
           icon="📌"
           description="Programas em curso"
         />

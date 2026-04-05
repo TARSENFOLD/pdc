@@ -10,6 +10,10 @@ type Vars = { Variables: AuthVariables };
 const solicitarSchema = z.object({
   mentorId: z.string().min(1),
   mensagem: z.string().min(10).max(500),
+  tipo: z.enum(['orientacao_vocacional', 'acompanhamento_curso', 'revisao_projeto']).default('orientacao_vocacional'),
+  preco: z.number().min(0).default(0),
+  cursoId: z.string().optional(),
+  projetoId: z.string().optional(),
 });
 
 const recusarSchema = z.object({
@@ -19,6 +23,82 @@ const recusarSchema = z.object({
 export const mentoriaRoutes = new Hono<Vars>();
 
 mentoriaRoutes.use('*', verifyJwt);
+
+// GET /mentorias/stats — dashboard mentor stats
+mentoriaRoutes.get('/stats', checkRole(['mentor']), async (c) => {
+  const { id } = c.get('user');
+  try {
+    const [activas, orientados, pendentes] = await Promise.all([
+      strapiGet<{ meta?: { pagination?: { total?: number } } }>('/mentorias', {
+        'filters[mentorId][$eq]': id,
+        'filters[estado][$eq]': 'aceite',
+        'pagination[pageSize]': '1',
+      }),
+      strapiGet<{ meta?: { pagination?: { total?: number } } }>('/mentorias', {
+        'filters[mentorId][$eq]': id,
+        'filters[estado][$in][0]': 'aceite',
+        'filters[estado][$in][1]': 'concluida',
+        'pagination[pageSize]': '1',
+      }),
+      strapiGet<{ meta?: { pagination?: { total?: number } } }>('/mentorias', {
+        'filters[mentorId][$eq]': id,
+        'filters[estado][$eq]': 'pendente',
+        'pagination[pageSize]': '1',
+      }),
+    ]);
+    return c.json({
+      mentoriasActivas: activas?.meta?.pagination?.total ?? 0,
+      alunosOrientados: orientados?.meta?.pagination?.total ?? 0,
+      avaliacoesPendentes: pendentes?.meta?.pagination?.total ?? 0,
+    });
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+  }
+});
+
+// GET /mentorias/mentorados — lista alunos em mentoria activa
+mentoriaRoutes.get('/mentorados', checkRole(['mentor', 'super_admin']), async (c) => {
+  const { id } = c.get('user');
+  try {
+    const data = await strapiGet<any>('/mentorias', {
+      'filters[mentorId][$eq]': id,
+      'filters[estado][$eq]': 'aceite',
+      populate: 'aluno',
+    });
+    
+    const mentorados = data.data.map((m: any) => ({
+      alunoId: m.alunoId,
+      alunoNome: m.aluno?.nome ?? 'Desconhecido',
+      alunoEmail: m.aluno?.email ?? 'N/A',
+      mentoriaId: m.id,
+      estado: m.estado,
+      criadaEm: m.createdAt,
+    }));
+
+    return c.json(mentorados);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+  }
+});
+
+// GET /mentorias/alunos/inscritos — alunos inscritos nos cursos do mentor
+mentoriaRoutes.get('/alunos/inscritos', checkRole(['mentor', 'super_admin']), async (c) => {
+  const { id } = c.get('user');
+  const page = c.req.query('page') || '1';
+  
+  try {
+    // Busca inscrições onde o curso.autorId é o mentor autenticado
+    const data = await strapiGet<any>('/inscricoes', {
+      'filters[curso][autorId][$eq]': id,
+      populate: 'aluno,curso',
+      'pagination[page]': page,
+    });
+    
+    return c.json(data);
+  } catch (err) {
+    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+  }
+});
 
 // GET /mentorias — filtrado por role
 mentoriaRoutes.get('/', async (c) => {
@@ -44,14 +124,39 @@ mentoriaRoutes.post(
   zValidator('json', solicitarSchema),
   async (c) => {
     const { id: alunoId } = c.get('user');
-    const { mentorId, mensagem } = c.req.valid('json');
+    const { mentorId, mensagem, tipo, preco, cursoId, projetoId } = c.req.valid('json');
+
+    // Validação contextual por tipo
+    if (tipo === 'acompanhamento_curso') {
+      if (!cursoId) return c.json({ error: 'cursoId obrigatório para acompanhamento de curso' }, 400);
+      const inscricao = await strapiGet<{ data: unknown[] }>('/inscricoes', {
+        'filters[alunoId][$eq]': alunoId,
+        'filters[cursoId][$eq]': cursoId,
+        'pagination[pageSize]': '1',
+      });
+      if (!inscricao.data?.length) return c.json({ error: 'Não estás inscrito neste curso' }, 400);
+    }
+
+    if (tipo === 'revisao_projeto') {
+      if (!projetoId) return c.json({ error: 'projetoId obrigatório para revisão de projecto' }, 400);
+      const proj = await strapiGet<{ data: { alunoId?: string } }>(`/projetos/${projetoId}`);
+      if (proj.data?.alunoId !== alunoId) return c.json({ error: 'Este projecto não te pertence' }, 403);
+    }
+
+    const comissaoPDC = preco > 0 ? Math.round(preco * 0.20 * 100) / 100 : 0;
+
     try {
       return c.json(
         await strapiPost<unknown>('/mentorias', {
           alunoId,
           mentorId,
           mensagem,
+          tipo,
+          preco,
+          comissaoPDC,
           estado: 'pendente',
+          ...(cursoId ? { cursoId } : {}),
+          ...(projetoId ? { projetoId } : {}),
         }),
         201
       );

@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "experiencias",
+  "info": {
+    "singularName": "experiencia",
+    "pluralName": "experiencias",
+    "displayName": "Experiência"
+  },
+  "attributes": {
+    "titulo": {
+      "type": "string",
+      "required": true
+    },
+    "descricao": {
+      "type": "text"
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "titulo"
+    },
+    "capaUrl": {
+      "type": "string"
+    },
+    "area": {
+      "type": "string"
+    },
+    "instituicaoNome": {
+      "type": "string"
+    },
+    "visibilidade": {
+      "type": "enumeration",
+      "enum": ["publico", "privado"],
+      "default": "publico"
+    },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["draft", "review", "approved", "published", "archived"],
+      "default": "draft",
+      "required": true
+    }
+  }
+}
