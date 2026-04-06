@@ -11,7 +11,7 @@ export function InstituicaoProgramasPage() {
   });
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
-  if (error) return <div className="text-red-500">Erro ao carregar programas</div>;
+  if (error) return <div className="text-error">Erro ao carregar programas</div>;
 
   const programas = data?.data ?? [];
 
@@ -41,7 +41,9 @@ export function InstituicaoProgramasPage() {
           <Button asChild size="sm" variant="secondary">
             <Link to={`/app/programas/${prog.id}`}>Ver</Link>
           </Button>
-          <Button size="sm" variant="ghost">Editar</Button>
+          <Button asChild size="sm" variant="ghost">
+            <Link to={`/app/instituicao/editar-programa/${prog.id}`}>Editar</Link>
+          </Button>
         </div>
       )
     },

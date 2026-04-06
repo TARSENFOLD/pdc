@@ -1,0 +1,18 @@
+{
+  "kind": "collectionType",
+  "collectionName": "perfis",
+  "info": {
+    "singularName": "perfil",
+    "pluralName": "perfis",
+    "displayName": "Perfil"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "nome": { "type": "string" },
+    "biografia": { "type": "text" },
+    "areaAtuacao": { "type": "string" },
+    "dataNascimento": { "type": "date" }
+  }
+}

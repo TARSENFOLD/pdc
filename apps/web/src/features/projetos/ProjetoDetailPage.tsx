@@ -5,6 +5,7 @@ import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { Spinner, Badge, Button, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
 import { DenunciarButton } from '@/components/ui/DenunciarButton';
+import { SEOHead } from '@/components/layout/SEOHead';
 
 export function ProjetoDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -62,6 +63,12 @@ export function ProjetoDetailPage() {
 
   return (
     <div className="max-w-3xl">
+      <SEOHead
+        title={projeto.titulo}
+        description={projeto.descricao}
+        url={`https://usepdc.com/projetos/${id}`}
+        type="article"
+      />
       {projeto.imagemUrl ? (
         <img src={projeto.imagemUrl} alt={projeto.titulo} className="mb-6 h-48 w-full rounded-xl object-cover" />
       ) : null}

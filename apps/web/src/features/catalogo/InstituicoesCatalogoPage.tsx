@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Card, Pagination, Badge } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 import type { InstituicaoPublica } from '@pdc/shared';
 
 const TIPOS = ['Universidade', 'Instituto', 'Escola', 'Centro de Formação'];
@@ -61,6 +62,7 @@ export function InstituicoesCatalogoPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+      <SEOHead title="Instituições" description="Instituições de ensino parceiras da plataforma PDC." url="https://usepdc.com/instituicoes" />
       <div className="mx-auto max-w-6xl">
         <h1 className="text-3xl font-bold text-text-primary sm:text-4xl">Instituições</h1>
         <p className="mt-2 text-text-muted">Instituições de ensino parceiras da plataforma.</p>

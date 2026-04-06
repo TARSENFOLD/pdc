@@ -3,7 +3,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
 import { feedApi } from '@/lib/api/feed';
 import { FeedCard } from './FeedCard';
-import { Spinner } from '@/components/ui/Spinner';
+import { FeedCardSkeleton } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { Inbox, RefreshCcw } from 'lucide-react';
@@ -77,7 +77,9 @@ export default function FeedPage() {
       </header>
 
       {isLoading && (
-        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+        <div className="flex flex-col gap-0">
+          {Array.from({ length: 3 }).map((_, i) => <FeedCardSkeleton key={i} />)}
+        </div>
       )}
 
       {isError && (
@@ -105,7 +107,7 @@ export default function FeedPage() {
       )}
 
       <div ref={ref} className="flex justify-center py-4">
-        {isFetchingNextPage && <Spinner />}
+        {isFetchingNextPage && <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber" />}
       </div>
 
       {hasNextPage && !isFetchingNextPage && (

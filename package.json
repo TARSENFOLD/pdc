@@ -10,7 +10,8 @@
   "workspaces": [
     "apps/web",
     "apps/api",
-    "packages/shared"
+    "packages/shared",
+    "infra/strapi"
   ],
   "scripts": {
     "prepare": "husky",
@@ -19,8 +20,7 @@
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev --workspaces --if-present",
-    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'dist' -type d -prune -exec rm -rf '{}' +",
-    "prepare": "husky"
+    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'dist' -type d -prune -exec rm -rf '{}' +"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.0.0",

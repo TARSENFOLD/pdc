@@ -8,7 +8,7 @@ Ver: `.planning/PROJECT.md` (actualizado: Abril 2026)
 
 **Core value:** O estudante faz uma escolha de carreira baseada em evidência real do seu próprio comportamento — não em suposições.
 
-**Current focus:** Ondas de Role — Onda 1 (Sidebar + fixes) e Onda 2 (Mentor + Instituição) em execução
+**Current focus:** Pronto para lançamento — configurar Strapi v5 em produção e variáveis de ambiente
 
 ## Current Status
 
@@ -41,20 +41,27 @@ Fase 7 — IA e Realtime     [x] COMPLETA
 - [x] Fase 5 — LTI 1.3 Provider (OIDC, AGS, NRPS, JWKS, admin CRUD, frontend)
 - [x] Fase 6 — Moderação (denúncias, painel admin, audit trail, CSP/CORS)
 - [x] Fase 7 — IA e Realtime (DeepSeek streaming, RAG, quiz gen, Socket.IO, TutorChat, QuizPlayer)
-- [~] Onda 1 — Sidebar sub-menus, Comité fix, Dashboards com dados reais (em execução)
-- [~] Onda 2A — Zona Mentor completa (em execução)
-- [~] Onda 2B — Zona Instituição completa (em execução)
+- [x] Onda 1 — Sidebar sub-menus, Comité fix, Dashboards com dados reais
+- [x] Onda 2A — Zona Mentor completa (8 páginas + 9 rotas)
+- [x] Onda 2B — Zona Instituição completa (8 páginas + 8 rotas)
+- [x] Onda 3A — Zona Estudante (MeusCursos, Certificados, Guardados, Ranking)
+- [x] Onda 3B — Fluxo Editorial + Vínculos bilaterais + Mensagens só entre connected
+- [x] Onda 4 — Admin completo (telemetria, relatórios, reativar) + Comité Científico
+- [x] M5 — SEO (OG dinâmico, sitemap, robots, Vercel edge middleware, JSON-LD)
+- [x] M5 — Performance (87KB bundle inicial, 93 lazy chunks, code splitting)
+- [x] M5 — PWA (manifest, service worker, Sentry, pino)
+- [x] M5 — Programas públicos (catálogo + detalhe + inscrição)
+- [x] M5 — Projectos abertos a aluno/mentor/instituição
+- [x] M7 — Qualidade (zero any, zero erros TS/lint, Instrument Serif, tokens CSS)
 
 ## Próximos passos
 
-- [x] M3 — Auth Completo (Google OAuth + OTP 2FA)
-- [ ] M4 — Completar Core Produto (Programas, Sim Tipo 3, Conquistas automáticas)
-- [ ] M5 — Páginas Públicas e SEO
-- [ ] M6 — Telemetria Completa
-- [ ] M7 — Qualidade e Produção
-- [ ] Onda 3A — Zona Estudante (Meus Cursos, Progresso, Certificados, Ranking, Guardados)
-- [ ] Onda 3B — Fluxo Editorial + Vínculos + Mensagens
-- [ ] Onda 4 — Admin completo + Comité + Zona Estudante restante
+- [ ] Instalar Strapi v5 em infra/strapi/ (npm install + configurar)
+- [ ] Criar content-types Strapi em falta (~20 schemas)
+- [ ] Criar og-default.png (1200×630px) em apps/web/public/
+- [ ] Configurar variáveis de ambiente no Railway (BFF + Strapi) e Vercel
+- [ ] Substituir ícones PWA placeholder por ícones reais
+- [ ] Primeiro deploy em produção (Railway + Vercel)
 
 ## Decisions Log
 
@@ -67,7 +74,7 @@ Fase 7 — IA e Realtime     [x] COMPLETA
 | Abr 2026 | JWT em httpOnly cookies (nunca localStorage/sessionStorage) | Elimina vulnerabilidade crítica do projecto anterior | Traycer |
 | Abr 2026 | Upstash Redis para rate limiting | Sem estado em memória; funciona com múltiplas instâncias | Traycer |
 | Abr 2026 | Upload direto até 50MB; vídeos via YouTube/Vimeo embed | Custo controlado; R2 para assets; plataformas externas para vídeo | Proprietário |
-| Abr 2026 | Domínio de produção não definido | Usar `[dominio-pdc]` como placeholder | Proprietário |
+| Abr 2026 | Domínio definido: usepdc.com | Frontend: Vercel; BFF: api.usepdc.com (Railway) | Confirmado |
 | Abr 2026 | Gateway de pagamento fora do MVP | Fase comercial posterior; CTAs de contacto no MVP | Proprietário |
 | Abr 2026 | Node.js 24 LTS | Versão LTS mais recente; já configurada no ambiente Fedora 43 | Traycer |
 | Abr 2026 | DeepSeek como IA principal + Ollama como fallback | DeepSeek para produção; Ollama para dev local e fallback | Traycer |

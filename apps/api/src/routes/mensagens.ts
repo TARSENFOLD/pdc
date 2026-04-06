@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { socketService } from '../modules/realtime/socket.service.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -200,6 +201,29 @@ mensagensRoutes.post(
         return c.json({ error: 'Acesso negado' }, 403);
       }
 
+      // Verificar vínculo connected entre os participantes
+      const destinatarioId =
+        conversa.data.participant1Id === userId
+          ? conversa.data.participant2Id as string
+          : conversa.data.participant1Id as string;
+
+      const vinculoCheck = await strapiGet<{ data: { id: number }[] }>('/vinculos', {
+        'filters[$or][0][senderId][$eq]': userId,
+        'filters[$or][0][receiverId][$eq]': destinatarioId,
+        'filters[$or][0][estado][$eq]': 'connected',
+        'filters[$or][1][senderId][$eq]': destinatarioId,
+        'filters[$or][1][receiverId][$eq]': userId,
+        'filters[$or][1][estado][$eq]': 'connected',
+        'pagination[pageSize]': '1',
+      });
+
+      if (!vinculoCheck.data || vinculoCheck.data.length === 0) {
+        return c.json(
+          { error: 'O vínculo foi removido. Não é possível enviar novas mensagens.' },
+          403
+        );
+      }
+
       // Criar mensagem
       const mensagem = await strapiPost<any>('/mensagens', {
         conversaId,
@@ -214,12 +238,18 @@ mensagensRoutes.post(
         updatedAt: new Date().toISOString(),
       });
 
-      // TODO: Emitir via Socket.IO para o interlocutor
-      // const destinatarioId =
-      //   conversa.data.participant1Id === userId
-      //     ? conversa.data.participant2Id
-      //     : conversa.data.participant1Id;
-      // socketService.emitTo(`user:${destinatarioId}`, 'nova_mensagem', mensagem.data);
+      // Emitir via Socket.IO para o interlocutor
+      try {
+        socketService.emitirMensagem(destinatarioId, {
+          id: String(mensagem.data?.id ?? ''),
+          conversaId,
+          remetenteId: userId,
+          conteudo,
+          createdAt: new Date().toISOString(),
+        });
+      } catch {
+        // Falha no socket não deve bloquear a resposta HTTP
+      }
 
       return c.json(mensagem, 201);
     } catch (err) {

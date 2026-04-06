@@ -35,12 +35,10 @@ denunciaRoutes.post('/', zValidator('json', createSchema), async (c) => {
   const body = c.req.valid('json');
   try {
     const data = await strapiPost<unknown>('/denuncias', {
-      data: {
-        ...body,
-        denuncianteId,
-        estado: 'pendente',
-        criadaEm: new Date().toISOString(),
-      }
+      ...body,
+      denuncianteId,
+      estado: 'pendente',
+      criadaEm: new Date().toISOString(),
     });
     return c.json(data, 201);
   } catch (err) {
@@ -90,11 +88,9 @@ denunciaRoutes.put(
     const body = c.req.valid('json');
     try {
       const data = await strapiPut<unknown>(`/denuncias/${id}`, {
-        data: {
-          estado: 'resolvida',
-          accao: body.accao,
-          nota: body.nota,
-        }
+        estado: 'resolvida',
+        accao: body.accao,
+        nota: body.nota,
       });
 
       await strapiPost('/audit-logs', { 

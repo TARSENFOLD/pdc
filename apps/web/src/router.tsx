@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import LoginPage from '@/pages/LoginPage';
@@ -7,76 +8,102 @@ import TwoFactorPage from '@/features/auth/TwoFactorPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { LandingPage } from '@/pages/LandingPage';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { AlunoDashboard } from '@/pages/dashboard/AlunoDashboard';
-import { MentorDashboard } from '@/pages/dashboard/MentorDashboard';
-import { InstituicaoDashboard } from '@/pages/dashboard/InstituicaoDashboard';
-import { ModeradorDashboard } from '@/pages/dashboard/ModeradorDashboard';
-import { AdminDashboard } from '@/pages/dashboard/AdminDashboard';
-import { CursoListPage } from '@/features/cursos/CursoListPage';
-import { CursoDetailPage } from '@/features/cursos/CursoDetailPage';
-import { ItemPlayer } from '@/features/cursos/ItemPlayer';
-import { ExperienciaListPage } from '@/features/experiencias/ExperienciaListPage';
-import { ExperienciaDetailPage } from '@/features/experiencias/ExperienciaDetailPage';
-import { PerfilPage } from '@/features/perfil/PerfilPage';
-import { ProjetoListPage } from '@/features/projetos/ProjetoListPage';
-import { ProjetoDetailPage } from '@/features/projetos/ProjetoDetailPage';
-import { ProjetoFormPage } from '@/features/projetos/ProjetoFormPage';
-import { MentoriaListPage } from '@/features/mentorias/MentoriaListPage';
-import { ConquistasPage } from '@/features/conquistas/ConquistasPage';
-import { SimulacaoListPage } from '@/features/simulacoes/SimulacaoListPage';
-import { SimulacaoDetailPage } from '@/features/simulacoes/SimulacaoDetailPage';
-import { SimulacaoPlayerPage } from '@/features/simulacoes/SimulacaoPlayerPage';
-import { RelatorioVocacional } from '@/features/simulacoes/RelatorioVocacional';
-import FeedPage from '@/features/feed/FeedPage';
-
-import { DenunciaListPage } from '@/features/moderacao/DenunciaListPage';
-import { DenunciaDetailPage } from '@/features/moderacao/DenunciaDetailPage';
-import { FilaAprovacaoPage } from '@/features/moderacao/FilaAprovacaoPage';
-import { ModeradorUtilizadoresPage } from '@/features/moderacao/ModeradorUtilizadoresPage';
-
-import { VinculosPage } from '@/features/vinculos/VinculosPage';
-import { MensagensPage } from '@/features/mensagens/MensagensPage';
-import { ConversaPage } from '@/features/mensagens/ConversaPage';
-import { AdminUtilizadoresPage } from '@/features/admin/AdminUtilizadoresPage';
-import { AdminStatsPage } from '@/features/admin/AdminStatsPage';
-import { AdminAuditPage } from '@/features/admin/AdminAuditPage';
-import LtiPlataformasPage from '@/features/admin/LtiPlataformasPage';
-import FeedWeightsPage from '@/features/admin/FeedWeightsPage';
-
-import { ExplorarPage } from '@/features/catalogo/ExplorarPage';
-import { CursosCatalogoPage } from '@/features/catalogo/CursosCatalogoPage';
-import { CursoPublicoDetailPage } from '@/features/catalogo/CursoPublicoDetailPage';
-import { SimulacoesCatalogoPage } from '@/features/catalogo/SimulacoesCatalogoPage';
-import { SimulacaoPublicoDetailPage } from '@/features/catalogo/SimulacaoPublicoDetailPage';
-import { MentoresCatalogoPage } from '@/features/catalogo/MentoresCatalogoPage';
-import { MentorPublicoPerfilPage } from '@/features/catalogo/MentorPublicoPerfilPage';
-import { InstituicoesCatalogoPage } from '@/features/catalogo/InstituicoesCatalogoPage';
-import { InstituicaoPublicoPerfilPage } from '@/features/catalogo/InstituicaoPublicoPerfilPage';
-import { PerfilPublicoPage } from '@/features/catalogo/PerfilPublicoPage';
 import { EscolhaTipoContaPage } from '@/features/auth/EscolhaTipoContaPage';
 import { RegistoEstudantePage } from '@/features/auth/RegistoEstudantePage';
 import { RegistoMentorPage } from '@/features/auth/RegistoMentorPage';
 import { RegistoInstituicaoPage } from '@/features/auth/RegistoInstituicaoPage';
-
-import { ComiteDashboard } from '@/features/comite/ComiteDashboard';
-import { ValidacaoCientificaPage } from '@/features/comite/ValidacaoCientificaPage';
-
-import { InstituicaoExperienciasPage } from '@/features/instituicao/InstituicaoExperienciasPage';
-import { CriarExperienciaPage } from '@/features/instituicao/CriarExperienciaPage';
-import { InstituicaoProgramasPage } from '@/features/instituicao/InstituicaoProgramasPage';
-import { CriarProgramaPage } from '@/features/instituicao/CriarProgramaPage';
-import { EstudantesVinculadosPage } from '@/features/instituicao/EstudantesVinculadosPage';
-import { PropostasPage } from '@/features/instituicao/PropostasPage';
-import { RelatoriosInstituicaoPage } from '@/features/instituicao/RelatoriosInstituicaoPage';
-import { BrandingPage } from '@/features/instituicao/BrandingPage';
-
-import { MeusCursosPage } from '@/features/aluno/MeusCursosPage';
-import { GuardadosPage } from '@/features/aluno/GuardadosPage';
-import { CertificadosPage } from '@/features/aluno/CertificadosPage';
-
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Role } from '@pdc/shared';
 import { Spinner } from '@/components/ui';
+import { TermosPage } from '@/pages/TermosPage';
+import { PrivacidadePage } from '@/pages/PrivacidadePage';
+
+// --- Lazy-loaded /app/* pages ---
+const AlunoDashboard = React.lazy(() => import('@/pages/dashboard/AlunoDashboard').then(m => ({ default: m.AlunoDashboard })));
+const MentorDashboard = React.lazy(() => import('@/pages/dashboard/MentorDashboard').then(m => ({ default: m.MentorDashboard })));
+const InstituicaoDashboard = React.lazy(() => import('@/pages/dashboard/InstituicaoDashboard').then(m => ({ default: m.InstituicaoDashboard })));
+const ModeradorDashboard = React.lazy(() => import('@/pages/dashboard/ModeradorDashboard').then(m => ({ default: m.ModeradorDashboard })));
+const AdminDashboard = React.lazy(() => import('@/pages/dashboard/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+
+const CursoListPage = React.lazy(() => import('@/features/cursos/CursoListPage').then(m => ({ default: m.CursoListPage })));
+const CursoDetailPage = React.lazy(() => import('@/features/cursos/CursoDetailPage').then(m => ({ default: m.CursoDetailPage })));
+const ItemPlayer = React.lazy(() => import('@/features/cursos/ItemPlayer').then(m => ({ default: m.ItemPlayer })));
+
+const ExperienciaListPage = React.lazy(() => import('@/features/experiencias/ExperienciaListPage').then(m => ({ default: m.ExperienciaListPage })));
+const ExperienciaDetailPage = React.lazy(() => import('@/features/experiencias/ExperienciaDetailPage').then(m => ({ default: m.ExperienciaDetailPage })));
+
+const PerfilPage = React.lazy(() => import('@/features/perfil/PerfilPage').then(m => ({ default: m.PerfilPage })));
+
+const ProjetoListPage = React.lazy(() => import('@/features/projetos/ProjetoListPage').then(m => ({ default: m.ProjetoListPage })));
+const ProjetoDetailPage = React.lazy(() => import('@/features/projetos/ProjetoDetailPage').then(m => ({ default: m.ProjetoDetailPage })));
+const ProjetoFormPage = React.lazy(() => import('@/features/projetos/ProjetoFormPage').then(m => ({ default: m.ProjetoFormPage })));
+
+const MentoriaListPage = React.lazy(() => import('@/features/mentorias/MentoriaListPage').then(m => ({ default: m.MentoriaListPage })));
+const ConquistasPage = React.lazy(() => import('@/features/conquistas/ConquistasPage').then(m => ({ default: m.ConquistasPage })));
+
+const SimulacaoListPage = React.lazy(() => import('@/features/simulacoes/SimulacaoListPage').then(m => ({ default: m.SimulacaoListPage })));
+const SimulacaoDetailPage = React.lazy(() => import('@/features/simulacoes/SimulacaoDetailPage').then(m => ({ default: m.SimulacaoDetailPage })));
+const SimulacaoPlayerPage = React.lazy(() => import('@/features/simulacoes/SimulacaoPlayerPage').then(m => ({ default: m.SimulacaoPlayerPage })));
+const RelatorioVocacional = React.lazy(() => import('@/features/simulacoes/RelatorioVocacional').then(m => ({ default: m.RelatorioVocacional })));
+
+const FeedPage = React.lazy(() => import('@/features/feed/FeedPage'));
+
+const DenunciaListPage = React.lazy(() => import('@/features/moderacao/DenunciaListPage').then(m => ({ default: m.DenunciaListPage })));
+const DenunciaDetailPage = React.lazy(() => import('@/features/moderacao/DenunciaDetailPage').then(m => ({ default: m.DenunciaDetailPage })));
+const FilaAprovacaoPage = React.lazy(() => import('@/features/moderacao/FilaAprovacaoPage').then(m => ({ default: m.FilaAprovacaoPage })));
+const ModeradorUtilizadoresPage = React.lazy(() => import('@/features/moderacao/ModeradorUtilizadoresPage').then(m => ({ default: m.ModeradorUtilizadoresPage })));
+
+const VinculosPage = React.lazy(() => import('@/features/vinculos/VinculosPage').then(m => ({ default: m.VinculosPage })));
+const MensagensPage = React.lazy(() => import('@/features/mensagens/MensagensPage').then(m => ({ default: m.MensagensPage })));
+const ConversaPage = React.lazy(() => import('@/features/mensagens/ConversaPage').then(m => ({ default: m.ConversaPage })));
+
+const AdminUtilizadoresPage = React.lazy(() => import('@/features/admin/AdminUtilizadoresPage').then(m => ({ default: m.AdminUtilizadoresPage })));
+const AdminStatsPage = React.lazy(() => import('@/features/admin/AdminStatsPage').then(m => ({ default: m.AdminStatsPage })));
+const AdminAuditPage = React.lazy(() => import('@/features/admin/AdminAuditPage').then(m => ({ default: m.AdminAuditPage })));
+const LtiPlataformasPage = React.lazy(() => import('@/features/admin/LtiPlataformasPage'));
+const FeedWeightsPage = React.lazy(() => import('@/features/admin/FeedWeightsPage'));
+const AdminTelemetriaPage = React.lazy(() => import('@/features/admin/AdminTelemetriaPage').then(m => ({ default: m.AdminTelemetriaPage })));
+const AdminRelatoriosPage = React.lazy(() => import('@/features/admin/AdminRelatoriosPage').then(m => ({ default: m.AdminRelatoriosPage })));
+
+const ComiteDashboard = React.lazy(() => import('@/features/comite/ComiteDashboard').then(m => ({ default: m.ComiteDashboard })));
+const ValidacaoCientificaPage = React.lazy(() => import('@/features/comite/ValidacaoCientificaPage').then(m => ({ default: m.ValidacaoCientificaPage })));
+
+const InstituicaoExperienciasPage = React.lazy(() => import('@/features/instituicao/InstituicaoExperienciasPage').then(m => ({ default: m.InstituicaoExperienciasPage })));
+const CriarExperienciaPage = React.lazy(() => import('@/features/instituicao/CriarExperienciaPage').then(m => ({ default: m.CriarExperienciaPage })));
+const InstituicaoProgramasPage = React.lazy(() => import('@/features/instituicao/InstituicaoProgramasPage').then(m => ({ default: m.InstituicaoProgramasPage })));
+const CriarProgramaPage = React.lazy(() => import('@/features/instituicao/CriarProgramaPage').then(m => ({ default: m.CriarProgramaPage })));
+const EstudantesVinculadosPage = React.lazy(() => import('@/features/instituicao/EstudantesVinculadosPage').then(m => ({ default: m.EstudantesVinculadosPage })));
+const PropostasPage = React.lazy(() => import('@/features/instituicao/PropostasPage').then(m => ({ default: m.PropostasPage })));
+const RelatoriosInstituicaoPage = React.lazy(() => import('@/features/instituicao/RelatoriosInstituicaoPage').then(m => ({ default: m.RelatoriosInstituicaoPage })));
+const BrandingPage = React.lazy(() => import('@/features/instituicao/BrandingPage').then(m => ({ default: m.BrandingPage })));
+
+const MeusCursosPage = React.lazy(() => import('@/features/aluno/MeusCursosPage').then(m => ({ default: m.MeusCursosPage })));
+const GuardadosPage = React.lazy(() => import('@/features/aluno/GuardadosPage').then(m => ({ default: m.GuardadosPage })));
+const CertificadosPage = React.lazy(() => import('@/features/aluno/CertificadosPage').then(m => ({ default: m.CertificadosPage })));
+const RankingPage = React.lazy(() => import('@/features/aluno/RankingPage').then(m => ({ default: m.RankingPage })));
+
+const MentorCursosPage = React.lazy(() => import('@/features/mentor/MentorCursosPage').then(m => ({ default: m.MentorCursosPage })));
+const CriarCursoPage = React.lazy(() => import('@/features/mentor/CriarCursoPage').then(m => ({ default: m.CriarCursoPage })));
+const MentorSimulacoesPage = React.lazy(() => import('@/features/mentor/MentorSimulacoesPage').then(m => ({ default: m.MentorSimulacoesPage })));
+const CriarSimulacaoPage = React.lazy(() => import('@/features/mentor/CriarSimulacaoPage').then(m => ({ default: m.CriarSimulacaoPage })));
+const UploadConteudoPage = React.lazy(() => import('@/features/mentor/UploadConteudoPage').then(m => ({ default: m.UploadConteudoPage })));
+const AlunosInscritosPage = React.lazy(() => import('@/features/mentor/AlunosInscritosPage').then(m => ({ default: m.AlunosInscritosPage })));
+const MentoradosPage = React.lazy(() => import('@/features/mentor/MentoradosPage').then(m => ({ default: m.MentoradosPage })));
+const MentorAnalyticsPage = React.lazy(() => import('@/features/mentor/MentorAnalyticsPage').then(m => ({ default: m.MentorAnalyticsPage })));
+
+// --- Lazy-loaded public non-critical pages ---
+const ExplorarPage = React.lazy(() => import('@/features/catalogo/ExplorarPage').then(m => ({ default: m.ExplorarPage })));
+const CursosCatalogoPage = React.lazy(() => import('@/features/catalogo/CursosCatalogoPage').then(m => ({ default: m.CursosCatalogoPage })));
+const CursoPublicoDetailPage = React.lazy(() => import('@/features/catalogo/CursoPublicoDetailPage').then(m => ({ default: m.CursoPublicoDetailPage })));
+const SimulacoesCatalogoPage = React.lazy(() => import('@/features/catalogo/SimulacoesCatalogoPage').then(m => ({ default: m.SimulacoesCatalogoPage })));
+const SimulacaoPublicoDetailPage = React.lazy(() => import('@/features/catalogo/SimulacaoPublicoDetailPage').then(m => ({ default: m.SimulacaoPublicoDetailPage })));
+const MentoresCatalogoPage = React.lazy(() => import('@/features/catalogo/MentoresCatalogoPage').then(m => ({ default: m.MentoresCatalogoPage })));
+const MentorPublicoPerfilPage = React.lazy(() => import('@/features/catalogo/MentorPublicoPerfilPage').then(m => ({ default: m.MentorPublicoPerfilPage })));
+const InstituicoesCatalogoPage = React.lazy(() => import('@/features/catalogo/InstituicoesCatalogoPage').then(m => ({ default: m.InstituicoesCatalogoPage })));
+const InstituicaoPublicoPerfilPage = React.lazy(() => import('@/features/catalogo/InstituicaoPublicoPerfilPage').then(m => ({ default: m.InstituicaoPublicoPerfilPage })));
+const PerfilPublicoPage = React.lazy(() => import('@/features/catalogo/PerfilPublicoPage').then(m => ({ default: m.PerfilPublicoPage })));
+const ProgramasCatalogoPage = React.lazy(() => import('@/features/catalogo/ProgramasCatalogoPage').then(m => ({ default: m.ProgramasCatalogoPage })));
+const ProgramaDetailPage = React.lazy(() => import('@/features/catalogo/ProgramaDetailPage').then(m => ({ default: m.ProgramaDetailPage })));
 
 const ROLE_DASHBOARD: Record<Role, string> = {
   aluno: '/app/dashboard/aluno',
@@ -109,16 +136,18 @@ export const router = createBrowserRouter([
     path: '/app',
     element: (
       <ProtectedRoute>
-        <AppLayout />
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}>
+          <AppLayout />
+        </Suspense>
       </ProtectedRoute>
     ),
     children: [
       { index: true, element: <DashboardRedirect /> },
-      { path: 'dashboard/aluno', element: <AlunoDashboard /> },
-      { path: 'dashboard/mentor', element: <MentorDashboard /> },
-      { path: 'dashboard/instituicao', element: <InstituicaoDashboard /> },
-      { path: 'dashboard/moderador', element: <ModeradorDashboard /> },
-      { path: 'dashboard/admin', element: <AdminDashboard /> },
+      { path: 'dashboard/aluno', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><AlunoDashboard /></Suspense> },
+      { path: 'dashboard/mentor', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><MentorDashboard /></Suspense> },
+      { path: 'dashboard/instituicao', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><InstituicaoDashboard /></Suspense> },
+      { path: 'dashboard/moderador', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ModeradorDashboard /></Suspense> },
+      { path: 'dashboard/admin', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><AdminDashboard /></Suspense> },
       
       { path: 'feed', element: <FeedPage /> },
       { path: 'cursos', element: <CursoListPage /> },
@@ -140,6 +169,19 @@ export const router = createBrowserRouter([
       { path: 'meus-cursos', element: <RoleGuard allowed={['aluno']}><MeusCursosPage /></RoleGuard> },
       { path: 'guardados', element: <RoleGuard allowed={['aluno']}><GuardadosPage /></RoleGuard> },
       { path: 'certificados', element: <RoleGuard allowed={['aluno']}><CertificadosPage /></RoleGuard> },
+      { path: 'ranking', element: <RoleGuard allowed={['aluno']}><RankingPage /></RoleGuard> },
+
+      // Mentor
+      { path: 'mentor/cursos', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentorCursosPage /></RoleGuard> },
+      { path: 'mentor/cursos/criar', element: <RoleGuard allowed={['mentor', 'super_admin']}><CriarCursoPage /></RoleGuard> },
+      { path: 'mentor/cursos/:id/editar', element: <RoleGuard allowed={['mentor', 'super_admin']}><CriarCursoPage /></RoleGuard> },
+      { path: 'mentor/simulacoes', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentorSimulacoesPage /></RoleGuard> },
+      { path: 'mentor/simulacoes/criar', element: <RoleGuard allowed={['mentor', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
+      { path: 'mentor/simulacoes/:id/editar', element: <RoleGuard allowed={['mentor', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
+      { path: 'mentor/upload', element: <RoleGuard allowed={['mentor', 'super_admin']}><UploadConteudoPage /></RoleGuard> },
+      { path: 'mentor/alunos/inscritos', element: <RoleGuard allowed={['mentor', 'super_admin']}><AlunosInscritosPage /></RoleGuard> },
+      { path: 'mentor/mentorados', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentoradosPage /></RoleGuard> },
+      { path: 'mentor/analytics', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentorAnalyticsPage /></RoleGuard> },
 
       // Moderacao
       {
@@ -207,6 +249,10 @@ export const router = createBrowserRouter([
         element: <RoleGuard allowed={['instituicao', 'super_admin']}><CriarProgramaPage /></RoleGuard>
       },
       {
+        path: 'instituicao/editar-programa/:id',
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CriarProgramaPage /></RoleGuard>
+      },
+      {
         path: 'instituicao/estudantes-vinculados',
         element: <RoleGuard allowed={['instituicao', 'super_admin']}><EstudantesVinculadosPage /></RoleGuard>
       },
@@ -244,29 +290,41 @@ export const router = createBrowserRouter([
         path: 'admin/feed-weights',
         element: <RoleGuard allowed={['super_admin']}><FeedWeightsPage /></RoleGuard>
       },
+      {
+        path: 'admin/telemetria',
+        element: <RoleGuard allowed={['super_admin']}><AdminTelemetriaPage /></RoleGuard>
+      },
+      {
+        path: 'admin/relatorios',
+        element: <RoleGuard allowed={['super_admin']}><AdminRelatoriosPage /></RoleGuard>
+      },
     ],
   },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   { path: '/verificar', element: <TwoFactorPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
-  { path: '/projetos', element: <ProjetoListPage /> },
-  { path: '/projetos/:id', element: <ProjetoDetailPage /> },
-  { path: '/experiencias', element: <ExperienciaListPage /> },
-  { path: '/experiencias/:id', element: <ExperienciaDetailPage /> },
-  { path: '/explorar', element: <ExplorarPage /> },
-  { path: '/cursos', element: <CursosCatalogoPage /> },
-  { path: '/cursos/:slug', element: <CursoPublicoDetailPage /> },
-  { path: '/simulacoes', element: <SimulacoesCatalogoPage /> },
-  { path: '/simulacoes/:slug', element: <SimulacaoPublicoDetailPage /> },
-  { path: '/mentores', element: <MentoresCatalogoPage /> },
-  { path: '/mentores/:id', element: <MentorPublicoPerfilPage /> },
-  { path: '/instituicoes', element: <InstituicoesCatalogoPage /> },
-  { path: '/instituicoes/:slug', element: <InstituicaoPublicoPerfilPage /> },
-  { path: '/perfil/:id', element: <PerfilPublicoPage /> },
+  { path: '/projetos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoListPage /></Suspense> },
+  { path: '/projetos/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoDetailPage /></Suspense> },
+  { path: '/experiencias', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExperienciaListPage /></Suspense> },
+  { path: '/experiencias/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExperienciaDetailPage /></Suspense> },
+  { path: '/explorar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExplorarPage /></Suspense> },
+  { path: '/cursos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><CursosCatalogoPage /></Suspense> },
+  { path: '/cursos/:slug', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><CursoPublicoDetailPage /></Suspense> },
+  { path: '/simulacoes', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><SimulacoesCatalogoPage /></Suspense> },
+  { path: '/simulacoes/:slug', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><SimulacaoPublicoDetailPage /></Suspense> },
+  { path: '/mentores', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><MentoresCatalogoPage /></Suspense> },
+  { path: '/mentores/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><MentorPublicoPerfilPage /></Suspense> },
+  { path: '/programas', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProgramasCatalogoPage /></Suspense> },
+  { path: '/programas/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProgramaDetailPage /></Suspense> },
+  { path: '/instituicoes', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><InstituicoesCatalogoPage /></Suspense> },
+  { path: '/instituicoes/:slug', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><InstituicaoPublicoPerfilPage /></Suspense> },
+  { path: '/perfil/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><PerfilPublicoPage /></Suspense> },
   { path: '/criar-conta', element: <EscolhaTipoContaPage /> },
   { path: '/criar-conta/estudante', element: <RegistoEstudantePage /> },
   { path: '/criar-conta/mentor', element: <RegistoMentorPage /> },
   { path: '/criar-conta/instituicao', element: <RegistoInstituicaoPage /> },
+  { path: '/termos', element: <TermosPage /> },
+  { path: '/privacidade', element: <PrivacidadePage /> },
   { path: '*', element: <NotFoundPage /> },
 ]);

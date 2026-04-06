@@ -8,10 +8,12 @@ import type {
 } from '@pdc/shared';
 
 export interface AlunoMentorado {
+  id: string;
   alunoId: string;
   alunoNome: string;
   alunoEmail: string;
   mentoriaId: string;
+  tipo: MentoriaTipo;
   estado: string;
   criadaEm: string;
 }

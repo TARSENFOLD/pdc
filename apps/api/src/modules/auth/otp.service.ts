@@ -1,5 +1,8 @@
 import { randomInt, createHash } from 'node:crypto';
 import { redis } from '../../lib/redis.js';
+import pino from 'pino';
+
+const log = pino({ name: 'otp-service' });
 
 export const otpService = {
   generateOtp(): string {
@@ -62,7 +65,7 @@ export const otpService = {
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({}));
-      console.error('SendGrid error:', error);
+      log.error({ err: error }, 'SendGrid error');
       throw new Error('Falha ao enviar email de OTP');
     }
   },
@@ -97,7 +100,7 @@ export const otpService = {
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({}));
-      console.error('Twilio error:', error);
+      log.error({ err: error }, 'Twilio error');
       throw new Error('Falha ao enviar SMS de OTP');
     }
   },

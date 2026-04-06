@@ -46,7 +46,7 @@ export const SimulacaoDetailPage = () => {
   if (loading) return <div className="flex justify-center p-12"><Spinner /></div>;
   if (!simulacao) return (
     <div className="text-center py-20">
-      <p className="text-gray-500 mb-4">Simulação não encontrada.</p>
+      <p className="text-text-muted mb-4">Simulação não encontrada.</p>
       <Link to="/app/simulacoes">
         <Button variant="secondary">Voltar para lista</Button>
       </Link>
@@ -57,7 +57,7 @@ export const SimulacaoDetailPage = () => {
     <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-bottom duration-500">
       <div className="flex items-center gap-2">
         <Link to="/app/simulacoes">
-          <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-900">
+          <Button variant="ghost" size="sm" className="text-text-muted hover:text-text-primary">
             ← Voltar para simulações
           </Button>
         </Link>

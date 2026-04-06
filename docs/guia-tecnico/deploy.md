@@ -4,8 +4,8 @@ O PDC v2 usa uma stack de deploy separada por serviço:
 
 | Serviço | Plataforma | URL |
 |---------|-----------|-----|
-| Frontend (`apps/web`) | Vercel | `[dominio-pdc]` |
-| BFF (`apps/api`) | Railway | `api.[dominio-pdc]` |
+| Frontend (`apps/web`) | Vercel | `usepdc.com` |
+| BFF (`apps/api`) | Railway | `api.usepdc.com` |
 | Strapi + PostgreSQL | Railway | interno |
 
 ---
@@ -24,7 +24,7 @@ O PDC v2 usa uma stack de deploy separada por serviço:
 
 | Variável | Valor |
 |----------|-------|
-| `VITE_API_URL` | `https://api.[dominio-pdc]` |
+| `VITE_API_URL` | `https://api.usepdc.com` |
 
 ### Deploy automático
 
@@ -46,14 +46,14 @@ Cada push para `main` despoleta um deploy automático. PRs geram previews com UR
 ```dotenv
 PORT=3001
 NODE_ENV=production
-FRONTEND_URL=https://[dominio-pdc]
+FRONTEND_URL=https://usepdc.com
 
 # JWT — gera segredos com: openssl rand -base64 64
 JWT_SECRET=<segredo-64-chars>
 JWT_REFRESH_SECRET=<segredo-diferente-64-chars>
 
 # Strapi
-STRAPI_URL=https://strapi.[dominio-pdc]
+STRAPI_URL=https://strapi.usepdc.com
 STRAPI_API_TOKEN=<token-full-access-gerado-no-strapi>
 
 # Cloudflare R2
@@ -93,7 +93,7 @@ TRANSFER_TOKEN_SALT=<salt>
 JWT_SECRET=<secret>
 
 # URL pública do Strapi (usado pelo BFF)
-PUBLIC_URL=https://strapi.[dominio-pdc]
+PUBLIC_URL=https://strapi.usepdc.com
 ```
 
 ---

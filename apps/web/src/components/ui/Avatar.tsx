@@ -6,9 +6,9 @@ export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 export interface AvatarProps extends ComponentPropsWithoutRef<typeof AvatarPrimitive.Root> {
   size?: AvatarSize;
-  src?: string;
-  alt?: string;
-  fallback?: string;
+  src?: string | undefined;
+  alt?: string | undefined;
+  fallback?: string | undefined;
 }
 
 const Avatar = forwardRef<ElementRef<typeof AvatarPrimitive.Root>, AvatarProps>(

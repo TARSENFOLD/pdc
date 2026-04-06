@@ -52,7 +52,7 @@ export const ltiService = {
   },
 
   async upsertLtiUser(claims: LtiLaunchClaims): Promise<User> {
-    const email = claims.email || `${claims.sub}@lti.pdc.ao`;
+    const email = claims.email || `${claims.sub}@lti.usepdc.com`;
     const username = claims.sub;
     const nome = claims.name || claims.given_name || username;
 

@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { MicroDesafio } from '../features/landing/MicroDesafio';
 import { CarrosselInstituicoes } from '../features/landing/CarrosselInstituicoes';
+import { SEOHead } from '@/components/layout/SEOHead';
 
 // ─── Animation helpers ────────────────────────────────────────────────────────
 
@@ -406,6 +407,11 @@ function Footer() {
 export function LandingPage() {
   return (
     <div className="min-h-screen bg-background font-sans text-white antialiased">
+      <SEOHead
+        title="PDC — Por Dentro do Curso"
+        description="Experimenta profissões e cursos através de simulações práticas antes de te matriculares. Toma a decisão certa com base no teu próprio comportamento."
+        url="https://usepdc.com"
+      />
       <Navbar />
       <main>
         <Hero />

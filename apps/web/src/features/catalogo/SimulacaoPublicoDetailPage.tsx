@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Badge } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 
 const TIPOS: Record<string, string> = { '1': 'Vídeo Guiado', '2': 'Laboratório Externo', '3': 'Ambiente Interactivo' };
 
@@ -19,6 +20,13 @@ export function SimulacaoPublicoDetailPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+      <SEOHead 
+        title={sim.titulo}
+        description={sim.descricao}
+        image={sim.capaUrl}
+        url={`https://usepdc.com/simulacoes/${slug}`}
+        type="article"
+      />
       <div className="mx-auto max-w-3xl">
         <Link to="/simulacoes" className="text-sm text-text-muted hover:text-text-secondary">← Voltar às simulações</Link>
 
@@ -37,7 +45,6 @@ export function SimulacaoPublicoDetailPage() {
           <h2 className="text-lg font-semibold text-text-primary">O que vais experimentar</h2>
           <ul className="mt-3 space-y-2 text-sm text-text-secondary">
             <li>• Cenário realista de {sim.area ?? 'trabalho profissional'}</li>
-            <li>• Duração estimada: 15-30 minutos</li>
             <li>• Relatório de perfil vocacional no final</li>
           </ul>
         </div>

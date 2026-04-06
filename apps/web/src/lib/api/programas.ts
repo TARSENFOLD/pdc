@@ -19,4 +19,7 @@ export const programasApi = {
 
   atualizar: (id: string, payload: Partial<CriarProgramaPayload>) =>
     http.put<Programa>(`/programas/${id}`, payload),
+
+  getById: (id: string) => http.get<Programa>(`/programas/${id}`),
+  inscrever: (id: string, inviteCode?: string) => http.post<{ success: boolean; inscricaoId: string }>(`/programas/${id}/inscricao`, { inviteCode }),
 };

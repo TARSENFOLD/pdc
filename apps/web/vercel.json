@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/sitemap.xml", "destination": "https://api.usepdc.com/seo/sitemap.xml" },
+    { "source": "/robots.txt", "destination": "https://api.usepdc.com/seo/robots.txt" }
+  ]
+}

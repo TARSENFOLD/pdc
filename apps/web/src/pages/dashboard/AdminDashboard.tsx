@@ -62,6 +62,15 @@ export function AdminDashboard() {
             >
               Estatísticas Detalhadas
             </Link>
+            <Link to="/app/admin/telemetria" className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors">
+              Telemetria
+            </Link>
+            <Link to="/app/admin/relatorios" className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors">
+              Relatórios
+            </Link>
+            <Link to="/app/moderacao/aprovacoes" className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors">
+              Fila de Aprovação
+            </Link>
           </div>
         </Card>
       </div>

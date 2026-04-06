@@ -26,8 +26,9 @@ export function CriarProgramaPage() {
       toast({ title: 'Programa criado com sucesso!' });
       navigate('/app/instituicao/programas');
     },
-    onError: (err: any) => {
-      toast({ title: 'Erro ao criar programa', description: err.message, variant: 'error' });
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Erro ao criar programa';
+      toast({ title: 'Erro', description: message, variant: 'error' });
     }
   });
 

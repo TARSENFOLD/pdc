@@ -74,6 +74,6 @@ export const socketService = {
 
   emitirMensagem(userId: string, mensagem: unknown): void {
     if (!io) return;
-    io.to(`user:${userId}`).emit('mensagem', mensagem);
+    io.to(`user:${userId}`).emit('nova_mensagem', mensagem);
   },
 };

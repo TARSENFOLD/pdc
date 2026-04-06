@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Badge } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 
 export function InstituicaoPublicoPerfilPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -17,6 +18,19 @@ export function InstituicaoPublicoPerfilPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+      <SEOHead
+        title={inst.nome}
+        description={inst.descricao ?? `Instituição de ensino${inst.regiao ? ` na região de ${inst.regiao}` : ''}`}
+        image={inst.logoUrl}
+        url={`https://usepdc.com/instituicoes/${slug}`}
+        type="profile"
+        jsonLd={{
+          '@type': 'EducationalOrganization',
+          name: inst.nome,
+          description: inst.descricao,
+          url: `https://usepdc.com/instituicoes/${slug}`,
+        }}
+      />
       <div className="mx-auto max-w-3xl">
         <Link to="/instituicoes" className="text-sm text-text-muted hover:text-text-secondary">← Voltar às instituições</Link>
 

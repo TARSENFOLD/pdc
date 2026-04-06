@@ -129,3 +129,87 @@ adminRoutes.get(
     }
   }
 );
+
+// PUT /admin/utilizadores/:id/reativar (roles: super_admin)
+adminRoutes.put(
+  '/utilizadores/:id/reativar',
+  checkRole(['super_admin']),
+  async (c) => {
+    const id = c.req.param('id');
+    try {
+      const data = await strapiPutRaw<unknown>(`/users/${id}`, {
+        bloqueado: false,
+        suspendidoEm: null,
+      });
+      await strapiPost('/audit-logs', {
+        userId: c.get('user').id,
+        accao: 'admin_reativar_utilizador',
+        recurso: `/users/${id}`,
+        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
+        timestamp: new Date().toISOString(),
+      }).catch(() => {});
+      return c.json(data);
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    }
+  }
+);
+
+// GET /admin/telemetria (roles: super_admin)
+adminRoutes.get(
+  '/telemetria',
+  checkRole(['super_admin']),
+  zValidator('query', paginacaoSchema.extend({ tipo: z.string().optional() })),
+  async (c) => {
+    const q = c.req.valid('query');
+    const params: Record<string, string> = {
+      'sort': 'createdAt:desc',
+    };
+    if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
+    if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
+    if (q.tipo) params['filters[tipo][$eq]'] = q.tipo;
+    try {
+      return c.json(await strapiGet<unknown>('/telemetrias', params));
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    }
+  }
+);
+
+// GET /admin/relatorios/retencao (roles: super_admin)
+adminRoutes.get(
+  '/relatorios/retencao',
+  checkRole(['super_admin']),
+  async (c) => {
+    try {
+      const [totalAlunos, alunosAtivos, telemetria] = await Promise.all([
+        strapiGet<{ meta: { pagination: { total: number } } }>('/users', {
+          'filters[role][$eq]': 'aluno',
+          'pagination[pageSize]': '1',
+        }),
+        strapiGet<{ meta: { pagination: { total: number } } }>('/telemetrias', {
+          'filters[tipo][$eq]': 'session.start',
+          'pagination[pageSize]': '1',
+        }),
+        strapiGet<{ data: Array<{ tipo?: string; payload?: unknown }> }>('/telemetrias', {
+          'pagination[pageSize]': '100',
+          'sort': 'createdAt:desc',
+        }),
+      ]);
+
+      const total = totalAlunos.meta.pagination.total;
+      const ativos = alunosAtivos.meta.pagination.total;
+      const semDados = total === 0 && ativos === 0;
+
+      return c.json({
+        totalAlunos: total,
+        alunosAtivos: ativos,
+        taxaRetencao: total > 0 ? Math.round((ativos / total) * 100) : 0,
+        semDados,
+        totalEventos: telemetria.data.length,
+      });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    }
+  }
+);

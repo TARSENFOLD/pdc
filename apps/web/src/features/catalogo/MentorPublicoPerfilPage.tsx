@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Avatar } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 
 export function MentorPublicoPerfilPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,19 @@ export function MentorPublicoPerfilPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+      <SEOHead 
+        title={mentor.nome}
+        description={mentor.bio ?? `Mentor especializado em ${mentor.areaEspecialidade ?? 'diversas áreas'}`}
+        image={mentor.avatarUrl}
+        url={`https://usepdc.com/mentores/${id}`}
+        type="profile"
+        jsonLd={{
+          '@type': 'Person',
+          name: mentor.nome,
+          description: mentor.bio,
+          jobTitle: mentor.areaEspecialidade,
+        }}
+      />
       <div className="mx-auto max-w-3xl">
         <Link to="/mentores" className="text-sm text-text-muted hover:text-text-secondary">← Voltar aos mentores</Link>
 

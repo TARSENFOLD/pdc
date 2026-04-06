@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Card, Pagination, Avatar } from '@/components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 import type { ExplorarResultado, MentorPublico } from '@pdc/shared';
 
 const AREAS = ['Tecnologia', 'Saúde', 'Engenharia', 'Direito', 'Gestão', 'Educação', 'Artes'];
@@ -90,6 +91,7 @@ export function ExplorarPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+      <SEOHead title="Explorar" description="Descobre cursos, simulações, mentores e mais na plataforma PDC." url="https://usepdc.com/explorar" />
       <div className="mx-auto max-w-6xl">
         <h1 className="text-3xl font-bold text-text-primary sm:text-4xl">Explorar</h1>
         <p className="mt-2 text-text-muted">Descobre cursos, simulações, mentores e mais.</p>

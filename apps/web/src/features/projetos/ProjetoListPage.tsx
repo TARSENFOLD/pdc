@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { projetosApi } from '@/lib/api/projetos';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { Spinner, Card, Pagination, Badge } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 import type { Projeto } from '@pdc/shared';
 
 function ProjetoCard({ projeto }: { projeto: Projeto }) {
@@ -63,6 +64,7 @@ export function ProjetoListPage() {
 
   return (
     <div>
+      <SEOHead title="Projetos" description="Descobre projetos de estudantes e profissionais angolanos." url="https://usepdc.com/projetos" />
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-text-primary">Projetos</h1>
         <div className="flex items-center gap-3">

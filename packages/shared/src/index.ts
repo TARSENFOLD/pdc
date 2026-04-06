@@ -151,6 +151,12 @@ export const InscricaoSchema = z.object({
 
 export type Inscricao = z.infer<typeof InscricaoSchema>;
 
+export const InscricaoComCursoSchema = InscricaoSchema.extend({
+  curso: CursoSchema.optional(),
+});
+
+export type InscricaoComCurso = z.infer<typeof InscricaoComCursoSchema>;
+
 export const ProgressoItemSchema = z.object({
   itemId: z.string(),
   concluido: z.boolean(),

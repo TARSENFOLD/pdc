@@ -33,6 +33,9 @@ export const simulacoesApi = {
   editar: (id: string, payload: Partial<CriarSimulacaoPayload>) =>
     http.put<SimulacaoMinha>(`/simulacoes/${id}`, payload),
 
+  updateEstado: (id: string, estado: 'review' | 'published' | 'archived') =>
+    http.patch<{ success: boolean }>(`/simulacoes/${id}/estado`, { estado }),
+
   iniciarTentativa: (payload: IniciarTentativaPayload) => 
     http.post<Tentativa>(`/simulacoes/tentativas`, payload),
 

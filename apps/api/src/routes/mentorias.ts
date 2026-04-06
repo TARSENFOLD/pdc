@@ -60,17 +60,27 @@ mentoriaRoutes.get('/stats', checkRole(['mentor']), async (c) => {
 mentoriaRoutes.get('/mentorados', checkRole(['mentor', 'super_admin']), async (c) => {
   const { id } = c.get('user');
   try {
-    const data = await strapiGet<any>('/mentorias', {
+    interface StrapiMentoria {
+      id: string;
+      alunoId: string;
+      aluno?: { nome?: string; email?: string };
+      tipo: string;
+      estado: string;
+      createdAt: string;
+    }
+    const data = await strapiGet<{ data: StrapiMentoria[] }>('/mentorias', {
       'filters[mentorId][$eq]': id,
       'filters[estado][$eq]': 'aceite',
       populate: 'aluno',
     });
-    
-    const mentorados = data.data.map((m: any) => ({
+
+    const mentorados = data.data.map((m: StrapiMentoria) => ({
+      id: m.id,
       alunoId: m.alunoId,
       alunoNome: m.aluno?.nome ?? 'Desconhecido',
       alunoEmail: m.aluno?.email ?? 'N/A',
       mentoriaId: m.id,
+      tipo: m.tipo,
       estado: m.estado,
       criadaEm: m.createdAt,
     }));
@@ -88,7 +98,7 @@ mentoriaRoutes.get('/alunos/inscritos', checkRole(['mentor', 'super_admin']), as
   
   try {
     // Busca inscrições onde o curso.autorId é o mentor autenticado
-    const data = await strapiGet<any>('/inscricoes', {
+    const data = await strapiGet<unknown>('/inscricoes', {
       'filters[curso][autorId][$eq]': id,
       populate: 'aluno,curso',
       'pagination[page]': page,

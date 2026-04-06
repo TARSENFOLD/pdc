@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Avatar, Badge } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 
 export function PerfilPublicoPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,13 @@ export function PerfilPublicoPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+      <SEOHead
+        title={perfil.nome}
+        description={perfil.bio ?? `Perfil de ${perfil.nome} na plataforma PDC`}
+        image={perfil.avatarUrl}
+        url={`https://usepdc.com/perfil/${id}`}
+        type="profile"
+      />
       <div className="mx-auto max-w-3xl">
         <Link to="/explorar" className="text-sm text-text-muted hover:text-text-secondary">← Voltar</Link>
 

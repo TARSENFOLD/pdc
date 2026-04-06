@@ -9,6 +9,31 @@ import type {
   Pagination 
 } from '@pdc/shared';
 
+interface EventoTelemetria {
+  id: string;
+  tipo: string;
+  timestamp: string;
+  user?: string;
+  payload?: unknown;
+}
+
+interface TelemetriaResponse {
+  data: EventoTelemetria[];
+  meta?: {
+    pagination?: {
+      pageCount?: number;
+    };
+  };
+}
+
+interface RelatorioRetencao {
+  totalAlunos: number;
+  alunosAtivos: number;
+  taxaRetencao: number;
+  semDados: boolean;
+  totalEventos: number;
+}
+
 export const adminApi = {
   getUtilizadores: (params: AdminUtilizadoresParams) => {
     const q = new URLSearchParams();
@@ -36,4 +61,16 @@ export const adminApi = {
     if (params.accao) q.set('accao', params.accao);
     return http.get<{ data: AuditLog[]; pagination: Pagination }>(`/admin/audit?${q.toString()}`);
   },
+
+  reativar: (id: string) => http.put(`/admin/utilizadores/${id}/reativar`, undefined),
+
+  getTelemetria: (params: { tipo?: string; page?: number; pageSize?: number }) => {
+    const q = new URLSearchParams();
+    if (params.tipo) q.set('tipo', params.tipo);
+    if (params.page) q.set('page', params.page.toString());
+    if (params.pageSize) q.set('pageSize', params.pageSize.toString());
+    return http.get<TelemetriaResponse>(`/admin/telemetria?${q.toString()}`);
+  },
+
+  getRelatoriosRetencao: () => http.get<RelatorioRetencao>('/admin/relatorios/retencao'),
 };

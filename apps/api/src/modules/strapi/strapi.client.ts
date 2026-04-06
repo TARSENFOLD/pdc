@@ -1,11 +1,72 @@
+import pino from 'pino';
+
+const log = pino({ name: 'strapi-client' });
+
 const STRAPI_URL = process.env['STRAPI_URL'] ?? 'http://localhost:1337';
 const STRAPI_API_TOKEN = process.env['STRAPI_API_TOKEN'] ?? '';
+const TIMEOUT = 2000;
+const MAX_RETRIES = 1;
+const BASE_DELAY = 300;
+
+/**
+ * Normalise Strapi v4 (nested `attributes`) responses to flat format.
+ * If already flat (v5), returns unchanged. Preserves `meta` for pagination.
+ */
+function normalize<T>(response: T): T {
+  if (response == null || typeof response !== 'object') return response;
+
+  const res = response as Record<string, unknown>;
+  const data = res['data'];
+
+  if (data == null) return response;
+
+  if (Array.isArray(data)) {
+    res['data'] = data.map((item: any) => {
+      if (typeof item === 'object' && item !== null && 'attributes' in item) {
+        return {
+          id: item['id'],
+          ...(item['attributes'] as Record<string, unknown>),
+        };
+      }
+      return item;
+    });
+  } else if (typeof data === 'object' && data !== null && 'attributes' in data) {
+    res['data'] = { id: (data as any)['id'], ...((data as any)['attributes'] as Record<string, unknown>) };
+  }
+
+  return response;
+}
 
 function buildHeaders(): Record<string, string> {
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${STRAPI_API_TOKEN}`,
   };
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = TIMEOUT): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  const response = await fetch(url, { ...options, signal: controller.signal });
+  clearTimeout(id);
+  return response;
+}
+
+async function fetchWithRetry(url: string, options: RequestInit = {}, timeout = TIMEOUT): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await fetchWithTimeout(url, options, timeout);
+    } catch (err) {
+      lastError = err;
+      if (attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY * Math.pow(2, attempt);
+        await new Promise(r => setTimeout(r, delay));
+        log.warn({ attempt: attempt + 1, maxRetries: MAX_RETRIES, url }, 'Strapi retry');
+      }
+    }
+  }
+  throw lastError;
 }
 
 export async function strapiGet<T>(
@@ -18,15 +79,16 @@ export async function strapiGet<T>(
       url.searchParams.set(k, v);
     }
   }
-  const res = await fetch(url.toString(), { headers: buildHeaders() });
+  const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() });
   if (!res.ok) {
     throw new Error(`Strapi GET ${path} falhou: ${res.status.toString()}`);
   }
-  return res.json() as Promise<T>;
+  const json = (await res.json()) as T;
+  return normalize(json);
 }
 
 export async function strapiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${STRAPI_URL}/api${path}`, {
+  const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
     method: 'POST',
     headers: buildHeaders(),
     body: JSON.stringify({ data: body }),
@@ -34,11 +96,12 @@ export async function strapiPost<T>(path: string, body: unknown): Promise<T> {
   if (!res.ok) {
     throw new Error(`Strapi POST ${path} falhou: ${res.status.toString()}`);
   }
-  return res.json() as Promise<T>;
+  const json = (await res.json()) as T;
+  return normalize(json);
 }
 
 export async function strapiPut<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${STRAPI_URL}/api${path}`, {
+  const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
     method: 'PUT',
     headers: buildHeaders(),
     body: JSON.stringify({ data: body }),
@@ -46,23 +109,25 @@ export async function strapiPut<T>(path: string, body: unknown): Promise<T> {
   if (!res.ok) {
     throw new Error(`Strapi PUT ${path} falhou: ${res.status.toString()}`);
   }
-  return res.json() as Promise<T>;
+  const json = (await res.json()) as T;
+  return normalize(json);
 }
 
 export async function strapiDelete<T>(path: string): Promise<T> {
-  const res = await fetch(`${STRAPI_URL}/api${path}`, {
+  const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
     method: 'DELETE',
     headers: buildHeaders(),
   });
   if (!res.ok) {
     throw new Error(`Strapi DELETE ${path} falhou: ${res.status.toString()}`);
   }
-  return res.json() as Promise<T>;
+  const json = (await res.json()) as T;
+  return normalize(json);
 }
 
 // Para endpoints que não usam o wrapper { data: ... } (ex: Strapi Users plugin)
 export async function strapiPutRaw<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${STRAPI_URL}/api${path}`, {
+  const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
     method: 'PUT',
     headers: buildHeaders(),
     body: JSON.stringify(body),

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { cursosApi } from '@/lib/api/cursos';
-import { Card, Pagination, Badge, Spinner } from '@/components/ui';
+import { Card, Pagination, Badge, CardGridSkeleton } from '@/components/ui';
 import type { Curso } from '@pdc/shared';
 
 function CursoCard({ curso }: { curso: Curso }) {
@@ -68,9 +68,7 @@ export function CursoListPage() {
         </form>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-      ) : isError ? (
+      {isLoading ? <CardGridSkeleton /> : isError ? (
         <p className="py-12 text-center text-text-muted">Ocorreu um erro ao carregar os cursos.</p>
       ) : cursos.length === 0 ? (
         <p className="py-12 text-center text-text-muted">Nenhum curso encontrado.</p>

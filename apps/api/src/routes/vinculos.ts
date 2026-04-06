@@ -38,10 +38,27 @@ vinculoRoutes.post('/', zValidator('json', CriarVinculoPayloadSchema), async (c)
       'filters[$or][1][senderId][$eq]': receiverId,
       'filters[$or][1][receiverId][$eq]': senderId,
       'pagination[pageSize]': '1',
+      sort: 'updatedAt:desc',
     });
 
     if (existing.data && existing.data.length > 0) {
-      return c.json({ error: 'Vínculo já existe' }, 409);
+      const existingVinculo = existing.data[0] as { estado: string; updatedAt: string };
+
+      if (existingVinculo.estado === 'declined') {
+        const daysSinceDecline =
+          (Date.now() - new Date(existingVinculo.updatedAt).getTime()) /
+          (1000 * 60 * 60 * 24);
+
+        if (daysSinceDecline < 30) {
+          return c.json(
+            { error: 'Aguarda 30 dias antes de enviar novo pedido de vínculo.' },
+            429
+          );
+        }
+        // Cooldown passed — fall through to create new vínculo
+      } else {
+        return c.json({ error: 'Vínculo já existe' }, 409);
+      }
     }
 
     const result = await strapiPost<any>('/vinculos', {

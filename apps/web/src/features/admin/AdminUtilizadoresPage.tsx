@@ -41,6 +41,17 @@ export function AdminUtilizadoresPage() {
     }
   });
 
+  const reativarMutation = useMutation({
+    mutationFn: (id: string) => adminApi.reativar(id),
+    onSuccess: () => {
+      toast({ title: 'Utilizador reativado', description: 'O acesso do utilizador foi restaurado.' });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+    onError: () => {
+      toast({ title: 'Erro', description: 'Não foi possível reativar o utilizador.' });
+    }
+  });
+
   const columns = [
     { 
       header: 'Utilizador', 
@@ -85,6 +96,17 @@ export function AdminUtilizadoresPage() {
           >
             Suspender
           </Button>
+          {(u as Record<string, unknown>).bloqueado === true ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => { reativarMutation.mutate(u.id); }}
+              isLoading={reativarMutation.isPending && reativarMutation.variables === u.id}
+              className="h-8 px-2 text-xs"
+            >
+              Reativar
+            </Button>
+          ) : null}
         </div>
       ),
     },

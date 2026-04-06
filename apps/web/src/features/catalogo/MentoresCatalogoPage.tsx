@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Card, Pagination, Avatar } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 import type { MentorPublico } from '@pdc/shared';
 
 const AREAS = ['Tecnologia', 'Saúde', 'Engenharia', 'Direito', 'Gestão', 'Educação', 'Artes'];
@@ -47,6 +48,7 @@ export function MentoresCatalogoPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+      <SEOHead title="Mentores" description="Conecta-te com profissionais da indústria angolana." url="https://usepdc.com/mentores" />
       <div className="mx-auto max-w-6xl">
         <h1 className="text-3xl font-bold text-text-primary sm:text-4xl">Mentores</h1>
         <p className="mt-2 text-text-muted">Conecta-te com profissionais da indústria angolana.</p>

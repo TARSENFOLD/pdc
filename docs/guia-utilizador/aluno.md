@@ -6,7 +6,7 @@ Bem-vindo ao PDC v2. Este guia explica como tirar partido de todas as funcionali
 
 ### 1. Criar conta
 
-1. Acede a `[dominio-pdc]/criar-conta`
+1. Acede a `usepdc.com/criar-conta`
 2. Escolhe o tipo de conta: **Estudante**, Mentor ou Instituição
 3. Para estudante: preenche nome, email, senha, área de interesse e nível de ensino
 4. Após confirmação, és redirecionado para o teu dashboard

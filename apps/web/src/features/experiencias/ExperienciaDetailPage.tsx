@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { experienciasApi } from '@/lib/api/experiencias';
 import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
 import { Spinner, Badge, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 
 export function ExperienciaDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -60,6 +61,13 @@ export function ExperienciaDetailPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+      <SEOHead
+        title={exp.titulo}
+        description={exp.descricao}
+        image={exp.capaUrl}
+        url={`https://usepdc.com/experiencias/${id}`}
+        type="article"
+      />
       <div className="mx-auto max-w-3xl">
         <Link to="/experiencias" className="mb-6 inline-flex text-sm text-amber hover:underline">
           ← Todas as experiências

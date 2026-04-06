@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { experienciasApi } from '@/lib/api/experiencias';
 import { Spinner, Card, Pagination, Badge } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 import type { Experiencia } from '@pdc/shared';
 
 function ExperienciaCard({ exp }: { exp: Experiencia }) {
@@ -34,6 +35,7 @@ export function ExperienciaListPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+      <SEOHead title="Experiências" description="Oportunidades de estágio e programas oferecidos por instituições parceiras angolanas." url="https://usepdc.com/experiencias" />
       <div className="mx-auto max-w-6xl">
         <div className="mb-10">
           <Badge variant="info" className="mb-4">Plataforma PDC</Badge>

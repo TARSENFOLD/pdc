@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
-import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { strapiGet, strapiPost, strapiPut, strapiDelete } from '../modules/strapi/strapi.client.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -54,17 +54,17 @@ projetoRoutes.get('/:id', async (c) => {
   }
 });
 
-// POST /projetos — aluno
+// POST /projetos — aluno, mentor ou instituição
 projetoRoutes.post(
   '/',
   verifyJwt,
-  checkRole(['aluno']),
+  checkRole(['aluno', 'mentor', 'instituicao']),
   zValidator('json', createSchema),
   async (c) => {
-    const { id: alunoId } = c.get('user');
+    const user = c.get('user');
     const body = c.req.valid('json');
     try {
-      return c.json(await strapiPost<unknown>('/projetos', { ...body, alunoId }), 201);
+      return c.json(await strapiPost<unknown>('/projetos', { ...body, autorId: user.id, alunoId: user.id }), 201);
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
@@ -73,41 +73,35 @@ projetoRoutes.post(
 
 // PUT /projetos/:id — próprio aluno
 projetoRoutes.put('/:id', verifyJwt, zValidator('json', updateSchema), async (c) => {
-  const projetoId = c.req.param('id');
-  const { id: userId } = c.get('user');
-  const body = c.req.valid('json');
-  // Verifica propriedade
-  try {
-    const proj = await strapiGet<{ data: { attributes: { alunoId: string } } }>(`/projetos/${projetoId}`);
-    if (proj.data.attributes.alunoId !== userId) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-    return c.json(await strapiPut<unknown>(`/projetos/${projetoId}`, body));
-  } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
-  }
-});
-
-// DELETE /projetos/:id — aluno (próprio) ou moderador
-projetoRoutes.delete('/:id', verifyJwt, async (c) => {
-  const projetoId = c.req.param('id');
-  const { id: userId, role } = c.get('user');
-  try {
-    const proj = await strapiGet<{ data: { attributes: { alunoId: string } } }>(`/projetos/${projetoId ?? ''}`);
-    const ehDono = proj.data.attributes.alunoId === userId;
-    const ehModerador = role === 'moderador' || role === 'super_admin';
-    if (!ehDono && !ehModerador) return c.json({ error: 'Forbidden' }, 403);
-    // Strapi v4 delete
-    const res = await fetch(
-      `${process.env['STRAPI_URL'] ?? 'http://localhost:1337'}/api/projetos/${projetoId ?? ''}`,
-      {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${process.env['STRAPI_API_TOKEN'] ?? ''}` },
+    const projetoId = c.req.param('id');
+    const { id: userId } = c.get('user');
+    const body = c.req.valid('json');
+    // Verifica propriedade
+    try {
+      const proj = await strapiGet<{ data: { alunoId: string; autorId?: string } }>(`/projetos/${projetoId}`);
+      const ownerId = proj.data.autorId ?? proj.data.alunoId;
+      if (ownerId !== userId) {
+        return c.json({ error: 'Forbidden' }, 403);
       }
-    );
-    if (!res.ok) throw new Error(`Strapi DELETE falhou: ${res.status.toString()}`);
-    return c.json({ ok: true });
-  } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
-  }
-});
+      return c.json(await strapiPut<unknown>(`/projetos/${projetoId}`, body));
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    }
+  });
+
+  // DELETE /projetos/:id — aluno (próprio) ou moderador
+  projetoRoutes.delete('/:id', verifyJwt, async (c) => {
+    const projetoId = c.req.param('id');
+    const { id: userId, role } = c.get('user');
+    try {
+      const proj = await strapiGet<{ data: { alunoId: string; autorId?: string } }>(`/projetos/${projetoId ?? ''}`);
+      const ownerId = proj.data.autorId ?? proj.data.alunoId;
+      const ehDono = ownerId === userId;
+      const ehModerador = role === 'moderador' || role === 'super_admin';
+      if (!ehDono && !ehModerador) return c.json({ error: 'Forbidden' }, 403);
+      await strapiDelete(`/projetos/${projetoId ?? ''}`);
+      return c.json({ ok: true });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    }
+  });

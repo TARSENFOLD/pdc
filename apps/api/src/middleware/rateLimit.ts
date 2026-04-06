@@ -1,6 +1,9 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { redis } from '../lib/redis.js';
 import type { Context, Next } from 'hono';
+import pino from 'pino';
+
+const log = pino({ name: 'rate-limit' });
 
 const ratelimit = redis
   ? new Ratelimit({
@@ -13,7 +16,7 @@ const ratelimit = redis
 
 export async function rateLimit(c: Context, next: Next) {
   if (!ratelimit) {
-    console.warn('Upstash Redis not configured, rate limiting skipped');
+    log.warn('Upstash Redis not configured, rate limiting skipped');
     await next(); return;
   }
 
@@ -42,7 +45,7 @@ const ratelimitRegisto = redis
 
 export async function rateLimitRegisto(c: Context, next: Next) {
   if (!ratelimitRegisto) {
-    console.warn('Upstash Redis not configured, rate limiting skipped');
+    log.warn('Upstash Redis not configured, rate limiting skipped');
     await next(); return;
   }
 

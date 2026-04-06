@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Badge } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 
 export function CursoPublicoDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -17,6 +18,19 @@ export function CursoPublicoDetailPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+      <SEOHead 
+        title={curso.titulo}
+        description={curso.descricao}
+        image={curso.capaUrl}
+        url={`https://usepdc.com/cursos/${slug}`}
+        type="course"
+        jsonLd={{
+          '@type': 'Course',
+          name: curso.titulo,
+          description: curso.descricao,
+          provider: { '@type': 'Organization', name: 'PDC — Por Dentro do Curso' },
+        }}
+      />
       <div className="mx-auto max-w-3xl">
         <Link to="/cursos" className="text-sm text-text-muted hover:text-text-secondary">← Voltar aos cursos</Link>
 

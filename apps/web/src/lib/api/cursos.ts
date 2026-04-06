@@ -3,6 +3,7 @@ import type {
   Curso, 
   CursoFilters, 
   Inscricao, 
+  InscricaoComCurso,
   ProgressoItem, 
   CriarCursoPayload, 
   CursoMeu, 
@@ -45,6 +46,12 @@ export const cursosApi = {
   updateProgresso: (cursoId: string, itemId: string, concluido: boolean) => 
     http.patch<ProgressoItem>(`/cursos/${cursoId}/progresso/${itemId}`, { concluido }),
 
+  updateEstado: (id: string, estado: 'review' | 'published' | 'archived') =>
+    http.patch<{ success: boolean }>(`/cursos/${id}/estado`, { estado }),
+
   getMinhasInscricoes: () =>
-    http.get<{ data: Inscricao[] }>('/cursos/me/inscricoes'),
+    http.get<{ data: InscricaoComCurso[] }>('/cursos/me/inscricoes'),
+
+  getCertificados: () =>
+    http.get<{ data: InscricaoComCurso[] }>('/estudante/certificados'),
 };

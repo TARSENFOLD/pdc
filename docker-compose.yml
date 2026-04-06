@@ -1,4 +1,25 @@
 services:
+  # ─── Strapi v5 ─────────────────────────────────────────────────────────────
+  strapi:
+    build: ./infra/strapi
+    container_name: pdc-strapi
+    restart: unless-stopped
+    ports:
+      - "1337:1337"
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: pdc_strapi
+      DATABASE_USERNAME: pdc
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-pdc_dev_password}
+      NODE_ENV: development
+    volumes:
+      - ./infra/strapi:/opt/app:Z
+      - pdc-strapi-modules:/opt/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # ─── PostgreSQL 16 ─────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
@@ -38,4 +59,6 @@ volumes:
   pdc-postgres-data:
     driver: local
   pdc-redis-data:
+    driver: local
+  pdc-strapi-modules:
     driver: local

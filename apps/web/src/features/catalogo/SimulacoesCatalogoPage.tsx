@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Card, Pagination, Badge } from '@/components/ui';
+import { SEOHead } from '@/components/layout/SEOHead';
 import type { SimulacaoPublica } from '@pdc/shared';
 
 const AREAS = ['Tecnologia', 'Saúde', 'Engenharia', 'Direito', 'Gestão', 'Educação', 'Artes'];
@@ -58,6 +59,7 @@ export function SimulacoesCatalogoPage() {
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+      <SEOHead title="Simulações" description="Experimenta profissões antes de decidir com simulações práticas." url="https://usepdc.com/simulacoes" />
       <div className="mx-auto max-w-6xl">
         <h1 className="text-3xl font-bold text-text-primary sm:text-4xl">Simulações</h1>
         <p className="mt-2 text-text-muted">Experimenta profissões antes de decidir.</p>
