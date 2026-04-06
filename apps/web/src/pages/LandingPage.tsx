@@ -4,6 +4,12 @@ import { Link } from 'react-router-dom';
 import { MicroDesafio } from '../features/landing/MicroDesafio';
 import { CarrosselInstituicoes } from '../features/landing/CarrosselInstituicoes';
 import { SEOHead } from '@/components/layout/SEOHead';
+import {
+  Dices, DollarSign, TrendingDown, FlaskConical, BarChart3,
+  GraduationCap, Building2, Users, Bot,
+} from 'lucide-react';
+import type { ComponentType } from 'react';
+import type { LucideProps } from 'lucide-react';
 
 // ─── Animation helpers ────────────────────────────────────────────────────────
 
@@ -180,7 +186,7 @@ function Problema() {
               transition={{ duration: 0.5, delay: i * 0.1, ease: 'easeOut' }}
               className="rounded-2xl border border-white/5 bg-white/3 p-6"
             >
-              <div className="mb-4 text-3xl">{item.icon}</div>
+              <div className="mb-4 text-amber"><item.icon size={20} aria-hidden={true} /></div>
               <h3 className="mb-2 font-semibold text-white">{item.title}</h3>
               <p className="text-sm leading-relaxed text-white/50">{item.body}</p>
             </motion.div>
@@ -191,19 +197,19 @@ function Problema() {
   );
 }
 
-const PROBLEMAS: Array<{ icon: string; title: string; body: string }> = [
+const PROBLEMAS: Array<{ icon: ComponentType<LucideProps>; title: string; body: string }> = [
   {
-    icon: '🎲',
+    icon: Dices,
     title: 'Escolha às cegas',
     body: 'A maioria dos estudantes escolhe o curso baseada em pressão familiar ou suposições sobre o mercado de trabalho.',
   },
   {
-    icon: '💸',
+    icon: DollarSign,
     title: 'Custo humano e financeiro',
     body: 'Matricular, reprovar e abandonar desperdiça anos e recursos escassos de famílias e do Estado.',
   },
   {
-    icon: '📉',
+    icon: TrendingDown,
     title: 'Mercado desalinhado',
     body: 'As instituições enchem vagas que depois ficam vazias. O mercado precisa de profissionais que as escolas não conseguem reter.',
   },
@@ -295,7 +301,7 @@ function Features() {
               transition={{ duration: 0.45, delay: i * 0.07, ease: 'easeOut' }}
               className="group rounded-2xl border border-white/5 bg-white/3 p-6 transition-colors hover:border-amber/20 hover:bg-amber/[0.03]"
             >
-              <div className="mb-4 text-3xl">{feature.icon}</div>
+              <div className="mb-4 text-amber"><feature.icon size={20} aria-hidden={true} /></div>
               <h3 className="mb-2 font-semibold text-white">{feature.titulo}</h3>
               <p className="text-sm leading-relaxed text-white/50">{feature.descricao}</p>
             </motion.article>
@@ -306,34 +312,34 @@ function Features() {
   );
 }
 
-const FEATURES: Array<{ icon: string; titulo: string; descricao: string }> = [
+const FEATURES: Array<{ icon: ComponentType<LucideProps>; titulo: string; descricao: string }> = [
   {
-    icon: '🧪',
+    icon: FlaskConical,
     titulo: 'Simulações práticas',
     descricao: 'Três tipos de simulação — vídeo guiado, laboratório externo e ambiente interativo — para cada área profissional.',
   },
   {
-    icon: '📊',
+    icon: BarChart3,
     titulo: 'Perfil Vocacional',
     descricao: 'Calculado automaticamente a partir do teu comportamento real em cada simulação, não de questionários.',
   },
   {
-    icon: '🎓',
+    icon: GraduationCap,
     titulo: 'Cursos com certificado',
     descricao: 'Módulos, tarefas, submissões e certificados emitidos pelas instituições parceiras.',
   },
   {
-    icon: '🏛️',
+    icon: Building2,
     titulo: 'Experiências institucionais',
     descricao: 'Programas e experiências publicadas por universidades e escolas — gratuitas e abertas.',
   },
   {
-    icon: '👨‍🏫',
+    icon: Users,
     titulo: 'Mentorias reais',
     descricao: 'Conecta-te com mentores da indústria angolana para orientação personalizada na tua área.',
   },
   {
-    icon: '🤖',
+    icon: Bot,
     titulo: 'AI Tutor',
     descricao: 'Tutor com IA que responde às tuas dúvidas com contexto do teu perfil e do conteúdo da plataforma.',
   },
