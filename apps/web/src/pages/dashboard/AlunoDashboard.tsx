@@ -2,22 +2,28 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { perfisApi } from '@/lib/api/perfis';
 import { Spinner } from '@/components/ui';
+import { FlaskConical, BarChart3, BookOpen } from 'lucide-react';
+import type { ComponentType } from 'react';
+import type { LucideProps } from 'lucide-react';
+import { FlaskConical, BarChart3, BookOpen } from 'lucide-react';
+import type { ComponentType } from 'react';
+import type { LucideProps } from 'lucide-react';
 
 interface StatCardProps {
   label: string;
   value: string | number;
-  icon: string;
+  icon: ComponentType<LucideProps>;
   description?: string;
 }
 
-function StatCard({ label, value, icon, description }: StatCardProps) {
+function StatCard({ label, value, icon: Icon, description }: StatCardProps) {
   return (
     <div className="rounded-2xl border border-white/5 bg-white/3 p-6">
       <div className="mb-4 flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-white/40">
           {label}
         </span>
-        <span className="text-xl">{icon}</span>
+        <Icon size={20} aria-hidden={true} className="text-amber" />
       </div>
       <p className="text-3xl font-bold text-white">{value}</p>
       {description && (
@@ -54,19 +60,19 @@ export function AlunoDashboard() {
         <StatCard
           label="Simulações concluídas"
           value={stats?.simulacoesConcluidas ?? '—'}
-          icon="🧪"
+          icon={FlaskConical}
           description="Completa simulações para construir o teu perfil"
         />
         <StatCard
           label="Perfil Vocacional"
           value="—"
-          icon="📊"
+          icon={BarChart3}
           description="Completa pelo menos uma simulação"
         />
         <StatCard
           label="Cursos em progresso"
           value={stats?.cursosEmProgresso ?? '—'}
-          icon="📚"
+          icon={BookOpen}
           description="Explora o catálogo de cursos"
         />
       </div>

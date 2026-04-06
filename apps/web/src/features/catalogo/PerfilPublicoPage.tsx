@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { Award, Lock } from 'lucide-react';
+import { Award, Lock } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Avatar, Badge } from '@/components/ui';
@@ -51,8 +53,8 @@ export function PerfilPublicoPage() {
         <div className="mt-8 rounded-xl border border-border bg-surface p-6">
           <h2 className="text-lg font-semibold text-text-primary">Conquistas</h2>
           <div className="mt-3 flex flex-wrap gap-2">
-            <span className="rounded-full bg-amber/10 px-3 py-1 text-xs text-amber">🏅 Perfil completo</span>
-            <span className="rounded-full bg-surface-raised px-3 py-1 text-xs text-text-muted">🔒 Mais conquistas visíveis após registo</span>
+            <span className="rounded-full bg-amber/10 px-3 py-1 text-xs text-amber"><Award size={14} aria-hidden={true} className="inline-block mr-1" /> Perfil completo</span>
+            <span className="rounded-full bg-surface-raised px-3 py-1 text-xs text-text-muted"><Lock size={14} aria-hidden={true} className="inline-block mr-1" /> Mais conquistas visíveis após registo</span>
           </div>
         </div>
 

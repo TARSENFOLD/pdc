@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { cursosApi } from '@/lib/api/cursos';
 import { Spinner, Badge } from '@/components/ui';
+import { GraduationCap } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 import type { InscricaoComCurso } from '@pdc/shared';
 
 export function CertificadosPage() {
@@ -18,7 +20,7 @@ export function CertificadosPage() {
       <h1 className="mb-6 text-2xl font-bold text-white font-sora">Certificados</h1>
       {certificados.length === 0 ? (
         <div className="rounded-2xl border border-white/5 bg-white/3 p-8 text-center">
-          <p className="text-4xl mb-4 text-white">🎓</p>
+          <GraduationCap size={40} aria-hidden={true} className="mb-4 text-amber mx-auto" />
           <p className="text-white/50">Ainda não tens certificados.</p>
           <p className="mt-1 text-xs text-white/30">Conclui um curso para receberes o teu primeiro certificado.</p>
         </div>
@@ -35,7 +37,7 @@ export function CertificadosPage() {
                   Concluído em {new Date(cert.dataConclusao ?? cert.dataInscricao).toLocaleDateString('pt-AO')}
                 </p>
               </div>
-              <Badge variant="success">🎓 Certificado</Badge>
+              <Badge variant="success">Certificado</Badge>
             </div>
           ))}
         </div>

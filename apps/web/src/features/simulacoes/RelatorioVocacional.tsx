@@ -3,6 +3,8 @@ import { http } from '../../lib/api/http';
 import type { RelatorioVocacional as IRelatorioVocacional } from '@pdc/shared';
 import { Card, Spinner, Badge, Button } from '../../components/ui';
 import { Link } from 'react-router-dom';
+import { Microscope, BarChart3, Target, GraduationCap } from 'lucide-react';
+import { Microscope, BarChart3, Target, GraduationCap } from 'lucide-react';
 
 export const RelatorioVocacional = () => {
   const [data, setData] = useState<IRelatorioVocacional | null>(null);
@@ -18,7 +20,7 @@ export const RelatorioVocacional = () => {
   if (loading) return <div className="flex justify-center p-20"><Spinner /></div>;
   if (!data || data.perfil.scoreGlobal === 0) return (
     <div className="max-w-2xl mx-auto text-center py-20 space-y-6">
-      <div className="text-6xl mb-4">🔬</div>
+      <Microscope size={48} aria-hidden={true} className="mb-4 text-amber mx-auto" />
       <h2 className="text-2xl font-bold text-slate-900">Perfil Vocacional em Análise</h2>
       <p className="text-slate-500 leading-relaxed">
         Ainda não temos dados suficientes para gerar o teu relatório completo. 
@@ -51,7 +53,7 @@ export const RelatorioVocacional = () => {
           <Card className="p-8 border-2 border-slate-100 shadow-xl shadow-slate-200/50">
             <div className="flex items-center justify-between mb-10">
               <h3 className="text-2xl font-bold flex items-center gap-3">
-                <span className="p-2 bg-blue-50 rounded-lg text-blue-600">📊</span>
+                <span className="p-2 bg-blue-50 rounded-lg text-blue-600"><BarChart3 size={20} aria-hidden={true} /></span>
                 Dimensões de Performance
               </h3>
               <div className="text-right">
@@ -93,7 +95,7 @@ export const RelatorioVocacional = () => {
 
         <div className="lg:col-span-2 space-y-8">
           <h3 className="text-2xl font-bold flex items-center gap-3 px-2">
-            <span className="p-2 bg-emerald-50 rounded-lg text-emerald-600">🎯</span>
+            <span className="p-2 bg-emerald-50 rounded-lg text-emerald-600"><Target size={20} aria-hidden={true} /></span>
             Recomendações Elite
           </h3>
           <div className="space-y-6">
@@ -106,7 +108,7 @@ export const RelatorioVocacional = () => {
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="p-2 bg-white rounded-lg shadow-sm">
-                    <span className="text-2xl">🎓</span>
+                    <GraduationCap size={24} aria-hidden={true} className="text-emerald-600" />
                   </div>
                   <Badge className={index === 0 ? 'bg-emerald-500' : 'bg-slate-700'}>
                     {rec.matchPercentagem}% Match

@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { CheckCircle } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { comiteApi } from '@/lib/api/comite';
 import { Spinner, Card } from '@/components/ui';
@@ -44,7 +46,7 @@ export function ComiteDashboard() {
 
       {totalPendente === 0 && !isLoading && (
         <div className="rounded-2xl border border-white/5 bg-white/3 p-8 text-center">
-          <p className="text-4xl mb-4">✅</p>
+          <CheckCircle size={40} aria-hidden={true} className="mb-4 text-emerald-500 mx-auto" />
           <p className="text-white/50">Nenhum conteúdo aguarda validação científica.</p>
         </div>
       )}

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Clapperboard } from 'lucide-react';
+import { Clapperboard } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import { telemetriaService } from '../../lib/telemetria/telemetria.service';
@@ -84,7 +86,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white bg-slate-900">
               <div className="text-center space-y-4">
-                <div className="animate-pulse text-6xl">🎬</div>
+                <Clapperboard size={48} aria-hidden={true} className="animate-pulse text-white" />
                 <p className="text-lg text-slate-400">A reproduzir conteúdo da simulação...</p>
                 <Button variant="secondary" size="sm" onClick={() => { setVideoStarted(false); }}>Reiniciar</Button>
               </div>

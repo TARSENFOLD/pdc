@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { adminApi } from '@/lib/api/admin';
 import { Spinner, Card } from '@/components/ui';
 
@@ -23,7 +25,7 @@ export function AdminRelatoriosPage() {
       <h1 className="text-2xl font-bold text-text-primary">Relatórios</h1>
       {data?.semDados ? (
         <div className="rounded-2xl border border-amber/20 bg-amber/5 p-6">
-          <p className="text-amber text-sm font-medium">⚠️ Ainda não há dados suficientes para gerar relatórios.</p>
+          <p className="text-amber text-sm font-medium"><AlertTriangle size={16} aria-hidden={true} className="inline-block mr-1 align-text-bottom" /> Ainda não há dados suficientes para gerar relatórios.</p>
           <p className="text-white/40 text-xs mt-1">Os relatórios serão gerados automaticamente à medida que os utilizadores interagem com a plataforma.</p>
         </div>
       ) : null}

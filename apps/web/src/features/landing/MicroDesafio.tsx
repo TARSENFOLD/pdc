@@ -1,4 +1,6 @@
 import { motion, useReducedMotion } from 'motion/react';
+import { Circle } from 'lucide-react';
+import { Circle } from 'lucide-react';
 import { type Area, type PerguntaData, AREA_EMOJI, AREA_LABEL } from './microDesafioData';
 import { useMicroDesafio } from './useMicroDesafio';
 import { MicroDesafioVeredito } from './MicroDesafioVeredito.tsx';
@@ -68,7 +70,7 @@ function Intro({ pulso, onComecar, f }: { pulso: { count: number; area?: string 
       </p>
       {pulso.count > 0 && (
         <p className="animate-pulse text-xs text-text-muted">
-          🟢 {pulso.count} pessoas em {pulso.area ?? 'exploração'} agora
+          <Circle size={8} aria-hidden={true} className="inline-block mr-1 fill-emerald-500 text-emerald-500" /> {pulso.count} pessoas em {pulso.area ?? 'exploração'} agora
         </p>
       )}
       <button

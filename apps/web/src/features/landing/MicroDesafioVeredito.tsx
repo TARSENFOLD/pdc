@@ -1,4 +1,6 @@
 import { motion } from 'motion/react';
+import { FlaskConical } from 'lucide-react';
+import { FlaskConical } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Veredito } from './microDesafioData';
 
@@ -43,7 +45,7 @@ export function MicroDesafioVeredito({ veredito, onReiniciar, reduced }: {
               to={`/simulacoes/${sim.toLowerCase().replace(/\s+/g, '-')}`}
               className="block rounded-xl border border-border bg-surface-raised px-4 py-2.5 text-sm text-text-secondary transition-colors hover:border-amber/30 hover:text-text-primary"
             >
-              🧪 {sim}
+              <FlaskConical size={14} aria-hidden={true} className="inline-block mr-1" /> {sim}
             </Link>
           ))}
         </div>
@@ -51,7 +53,7 @@ export function MicroDesafioVeredito({ veredito, onReiniciar, reduced }: {
 
       <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row">
         <Link
-          to="/register"
+          to="/criar-conta"
           className="rounded-xl bg-amber px-6 py-2.5 text-sm font-semibold text-black transition-all hover:scale-[1.02] hover:bg-amber-hover"
         >
           Criar conta e explorar

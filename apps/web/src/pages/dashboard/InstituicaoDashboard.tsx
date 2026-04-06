@@ -2,22 +2,28 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { experienciasApi } from '@/lib/api/experiencias';
 import { Spinner } from '@/components/ui';
+import { Building2, ClipboardList, MapPin } from 'lucide-react';
+import type { ComponentType } from 'react';
+import type { LucideProps } from 'lucide-react';
+import { Building2, ClipboardList, MapPin } from 'lucide-react';
+import type { ComponentType } from 'react';
+import type { LucideProps } from 'lucide-react';
 
 interface StatCardProps {
   label: string;
   value: string | number;
-  icon: string;
+  icon: ComponentType<LucideProps>;
   description?: string;
 }
 
-function StatCard({ label, value, icon, description }: StatCardProps) {
+function StatCard({ label, value, icon: Icon, description }: StatCardProps) {
   return (
     <div className="rounded-2xl border border-white/5 bg-white/3 p-6">
       <div className="mb-4 flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-white/40">
           {label}
         </span>
-        <span className="text-xl">{icon}</span>
+        <Icon size={20} aria-hidden={true} className="text-amber" />
       </div>
       <p className="text-3xl font-bold text-white">{value}</p>
       {description && (
@@ -54,19 +60,19 @@ export function InstituicaoDashboard() {
         <StatCard
           label="Experiências publicadas"
           value={stats?.experienciasPublicadas ?? '—'}
-          icon="🏛️"
+          icon={Building2}
           description="Experiências visíveis na plataforma"
         />
         <StatCard
           label="Inscrições totais"
           value={stats?.inscricoesTotais ?? '—'}
-          icon="📋"
+          icon={ClipboardList}
           description="Estudantes inscritos nos vossos programas"
         />
         <StatCard
           label="Programas activos"
           value={stats?.programasActivos ?? '—'}
-          icon="📌"
+          icon={MapPin}
           description="Programas em curso"
         />
       </div>

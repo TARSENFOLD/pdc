@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { GraduationCap } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import type { Simulacao } from '@pdc/shared';
@@ -38,7 +40,7 @@ export const SimulacaoListPage = () => {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-text-muted">
-                  <span className="text-4xl">🎓</span>
+                  <GraduationCap size={40} aria-hidden={true} className="text-text-muted" />
                 </div>
               )}
             </div>

@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
 import { Button, Input } from '@/components/ui';
 import { AuthSplitLayout } from './AuthSplitLayout';
+import { CheckCircle, AlertTriangle } from 'lucide-react';
 import type { RegistoMentorPayload } from '@pdc/shared';
 
 const AREAS = ['Tecnologia', 'Saúde', 'Direito', 'Engenharia', 'Artes', 'Ciências', 'Educação'] as const;
@@ -51,7 +52,7 @@ export function RegistoMentorPage() {
     return (
       <AuthSplitLayout role="mentor">
         <div className="max-w-md rounded-2xl border border-border bg-surface p-8 text-center">
-          <span className="text-4xl">✅</span>
+          <CheckCircle size={40} aria-hidden={true} className="text-emerald-500 mx-auto" />
           <h1 className="mt-4 text-xl font-bold text-text-primary">Conta criada com sucesso</h1>
           <p className="mt-2 text-sm text-text-secondary">
             A tua conta de mentor será validada pela equipa. Receberás um email quando estiver activa.
@@ -71,7 +72,7 @@ export function RegistoMentorPage() {
         <p className="mt-1 text-sm text-text-secondary">Partilha a tua experiência com estudantes.</p>
 
         <div className="mt-4 rounded-lg border border-amber/20 bg-amber/5 p-3 text-sm text-amber">
-          ⚠️ Contas de mentor requerem validação. O acesso poderá demorar até 48h.
+          <AlertTriangle size={16} aria-hidden={true} className="inline-block mr-1 align-text-bottom" /> Contas de mentor requerem validação. O acesso poderá demorar até 48h.
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -101,9 +102,6 @@ export function RegistoMentorPage() {
           <Button type="submit" className="w-full" isLoading={mutation.isPending}>Criar conta</Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-text-muted lg:block hidden">
-          <Link to="/criar-conta" className="text-amber hover:underline">← Voltar</Link>
-        </p>
       </div>
     </AuthSplitLayout>
   );

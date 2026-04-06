@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Lock, Monitor } from 'lucide-react';
+import { Lock, Monitor } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import { telemetriaService } from '../../lib/telemetria/telemetria.service';
@@ -113,11 +115,11 @@ export const Tipo2Player = ({ simulacao }: Props) => {
       </Card>
       
       <div className="flex items-center justify-center gap-4 text-slate-400 text-xs font-medium">
-        <span className="flex items-center gap-1">🔒 Conexão Segura</span>
+        <span className="flex items-center gap-1"><Lock size={14} aria-hidden={true} className="inline-block mr-1" /> Conexão Segura</span>
         <span>•</span>
         <span>⚡ Latência: 24ms</span>
         <span>•</span>
-        <span>🖥️ Resolução: Auto</span>
+        <span><Monitor size={14} aria-hidden={true} className="inline-block mr-1" /> Resolução: Auto</span>
       </div>
     </div>
   );

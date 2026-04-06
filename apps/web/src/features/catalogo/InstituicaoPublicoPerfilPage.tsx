@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Building2 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Badge } from '@/components/ui';
@@ -38,7 +39,7 @@ export function InstituicaoPublicoPerfilPage() {
           {inst.logoUrl ? (
             <img src={inst.logoUrl} alt={inst.nome} className="h-16 w-16 rounded-xl object-contain" />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-amber/10 text-2xl text-amber">🏫</div>
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-amber/10 text-amber"><Building2 size={32} aria-hidden={true} /></div>
           )}
           <div>
             <h1 className="text-2xl font-bold text-text-primary">{inst.nome}</h1>

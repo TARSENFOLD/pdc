@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { Building2 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Card, Pagination, Badge } from '@/components/ui';
@@ -16,7 +18,7 @@ function InstCard({ inst }: { inst: InstituicaoPublica }) {
           {inst.logoUrl ? (
             <img src={inst.logoUrl} alt={inst.nome} className="h-12 w-12 rounded-xl object-contain" />
           ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber/10 text-xl text-amber">🏫</div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber/10 text-amber"><Building2 size={24} aria-hidden={true} /></div>
           )}
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold text-text-primary line-clamp-1">{inst.nome}</h3>

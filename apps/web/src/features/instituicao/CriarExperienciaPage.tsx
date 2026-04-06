@@ -1,4 +1,6 @@
 import { useForm } from 'react-hook-form';
+import { Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -106,7 +108,7 @@ export function CriarExperienciaPage() {
           </div>
 
           <div className="rounded-md bg-amber/10 p-3 text-sm text-amber border border-amber/20">
-            ℹ️ As experiências são <strong>sempre gratuitas</strong> para os alunos.
+            <Info size={16} aria-hidden={true} className="inline-block mr-1 align-text-bottom" /> As experiências são <strong>sempre gratuitas</strong> para os alunos.
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
