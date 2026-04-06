@@ -2,7 +2,6 @@ import React, { Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import LoginPage from '@/pages/LoginPage';
-import RegisterPage from '@/pages/RegisterPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import TwoFactorPage from '@/features/auth/TwoFactorPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -301,7 +300,7 @@ export const router = createBrowserRouter([
     ],
   },
   { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
+  { path: '/register', element: <Navigate to="/criar-conta" replace /> },
   { path: '/verificar', element: <TwoFactorPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/projetos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoListPage /></Suspense> },

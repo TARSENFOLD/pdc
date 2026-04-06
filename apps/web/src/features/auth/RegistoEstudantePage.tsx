@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { authApi, type LoginResponse } from '@/lib/api/auth';
 import { Button, Input } from '@/components/ui';
+import { AuthSplitLayout } from './AuthSplitLayout';
 import type { RegistoEstudantePayload } from '@pdc/shared';
 
 const AREAS = ['Tecnologia', 'Saúde', 'Direito', 'Engenharia', 'Artes', 'Ciências', 'Educação'] as const;
@@ -37,7 +38,7 @@ export function RegistoEstudantePage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <AuthSplitLayout role="estudante">
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8">
         <h1 className="text-2xl font-bold text-text-primary">Conta de Estudante</h1>
         <p className="mt-1 text-sm text-text-secondary">Preenche os dados para começar.</p>
@@ -70,10 +71,10 @@ export function RegistoEstudantePage() {
           <Button type="submit" className="w-full" isLoading={mutation.isPending}>Criar conta</Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-text-muted">
+        <p className="mt-6 text-center text-sm text-text-muted lg:block hidden">
           <Link to="/criar-conta" className="text-amber hover:underline">← Voltar</Link>
         </p>
       </div>
-    </div>
+    </AuthSplitLayout>
   );
 }

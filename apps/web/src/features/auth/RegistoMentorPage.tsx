@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
 import { Button, Input } from '@/components/ui';
+import { AuthSplitLayout } from './AuthSplitLayout';
 import type { RegistoMentorPayload } from '@pdc/shared';
 
 const AREAS = ['Tecnologia', 'Saúde', 'Direito', 'Engenharia', 'Artes', 'Ciências', 'Educação'] as const;
@@ -48,7 +49,7 @@ export function RegistoMentorPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <AuthSplitLayout role="mentor">
         <div className="max-w-md rounded-2xl border border-border bg-surface p-8 text-center">
           <span className="text-4xl">✅</span>
           <h1 className="mt-4 text-xl font-bold text-text-primary">Conta criada com sucesso</h1>
@@ -59,12 +60,12 @@ export function RegistoMentorPage() {
             Ir para login →
           </Link>
         </div>
-      </div>
+      </AuthSplitLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <AuthSplitLayout role="mentor">
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8">
         <h1 className="text-2xl font-bold text-text-primary">Conta de Mentor</h1>
         <p className="mt-1 text-sm text-text-secondary">Partilha a tua experiência com estudantes.</p>
@@ -100,10 +101,10 @@ export function RegistoMentorPage() {
           <Button type="submit" className="w-full" isLoading={mutation.isPending}>Criar conta</Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-text-muted">
+        <p className="mt-6 text-center text-sm text-text-muted lg:block hidden">
           <Link to="/criar-conta" className="text-amber hover:underline">← Voltar</Link>
         </p>
       </div>
-    </div>
+    </AuthSplitLayout>
   );
 }
