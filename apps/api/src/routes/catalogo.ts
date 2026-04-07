@@ -103,6 +103,7 @@ catalogoRoutes.get('/cursos/:slug', async (c) => {
 // ─── Simulações ───────────────────────────────────────────────────────────────
 
 const simQ = pgQ.extend({
+  sort: z.string().optional(),
   area: z.string().optional(), tipo: z.coerce.number().int().min(1).max(3).optional(),
   nivel: z.string().optional(),
 });
@@ -114,6 +115,7 @@ catalogoRoutes.get('/simulacoes', zValidator('query', simQ), async (c) => {
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.tipo !== undefined) p['filters[tipo][$eq]'] = q.tipo.toString();
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
+  if (q.sort) p['sort'] = q.sort;
   const res = await strapiGet<StrapiList<StrapiSimulacao>>('/simulacoes', p);
   return c.json({ data: res.data.map(mapSim), meta: toMeta(res.meta.pagination) });
 });
@@ -138,6 +140,7 @@ catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
   addPublished(p); addPg(p, q.page, q.limit);
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
+  if (q.sort) p['sort'] = q.sort;
   const res = await strapiGet<StrapiList<StrapiExperiencia>>('/experiencias', p);
   return c.json({ data: res.data.map(mapExp), meta: toMeta(res.meta.pagination) });
 });

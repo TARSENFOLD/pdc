@@ -1,6 +1,5 @@
 import { motion, useReducedMotion } from 'motion/react';
 import { Circle } from 'lucide-react';
-import { Circle } from 'lucide-react';
 import { type Area, type PerguntaData, AREA_EMOJI, AREA_LABEL } from './microDesafioData';
 import { useMicroDesafio } from './useMicroDesafio';
 import { MicroDesafioVeredito } from './MicroDesafioVeredito.tsx';
@@ -47,6 +46,13 @@ export function MicroDesafio() {
         />
       )}
       {state.fase === 'carregando' && <Carregando f={f} />}
+      {state.fase === 'erro' && (
+        <motion.div {...f} className="flex flex-col items-center gap-4 py-8 text-center">
+          <p className="text-sm font-medium text-error">Não foi possível gerar o teu veredito.</p>
+          <p className="text-xs text-text-muted">A nossa IA está temporariamente indisponível.</p>
+          <button onClick={reiniciar} className="mt-2 rounded-xl border border-border px-6 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-raised">Tentar novamente</button>
+        </motion.div>
+      )}
       {state.fase === 'veredito' && state.veredito && (
         <MicroDesafioVeredito veredito={state.veredito} onReiniciar={reiniciar} reduced={reduced} />
       )}
@@ -124,7 +130,7 @@ function PerguntaCard({ pergunta, index, total, onResponder, f }: {
         {Array.from({ length: total }, (_, i) => (
           <div
             key={i}
-            className={`h-2 w-2 rounded-full transition-colors ${i <= index ? 'bg-amber' : 'bg-white/10'}`}
+            className={`h-2 w-2 rounded-full transition-colors ${i <= index ? 'bg-amber' : 'bg-surface-raised'}`}
           />
         ))}
       </div>

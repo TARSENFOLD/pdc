@@ -3,7 +3,7 @@ import { useSocket } from '../../lib/realtime/useSocket';
 import { telemetriaService } from '../../lib/telemetria/telemetria.service';
 import {
   type Area, type MicroDesafioState, type Veredito,
-  detectarArea, PERGUNTAS, FALLBACK_VEREDITOS, AREA_LABEL,
+  detectarArea, PERGUNTAS, AREA_LABEL,
 } from './microDesafioData';
 
 const API_URL: string =
@@ -113,7 +113,7 @@ export function useMicroDesafio() {
         proximoPasso: typeof obj.proximoPasso === 'string' ? obj.proximoPasso : '',
         simulacoes: Array.isArray(obj.simulacoes)
           ? (obj.simulacoes as string[]).map(String)
-          : FALLBACK_VEREDITOS[area].simulacoes,
+          : [],
       };
 
       setState((s) => ({ ...s, fase: 'veredito', veredito: v }));
@@ -121,7 +121,7 @@ export function useMicroDesafio() {
         .registarEvento('landing_hero_verdict_generated', { area, score: v.score })
         .catch(() => undefined);
     } catch {
-      setState((s) => ({ ...s, fase: 'veredito', veredito: FALLBACK_VEREDITOS[area] }));
+      setState((s) => ({ ...s, fase: 'erro' as const }));
       void telemetriaService
         .registarEvento('landing_hero_verdict_failed', { area })
         .catch(() => undefined);

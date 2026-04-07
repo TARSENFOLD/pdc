@@ -1,16 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'motion/react';
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
-const INSTITUICOES = [
-  { sigla: 'UCAN', nome: 'Universidade Católica de Angola' },
-  { sigla: 'UAN', nome: 'Universidade Agostinho Neto' },
-  { sigla: 'UPRA', nome: 'Universidade Privada de Angola' },
-  { sigla: 'ISPTEC', nome: 'Inst. Sup. Politécnico de Tecnologias e Ciências' },
-  { sigla: 'UJES', nome: 'Universidade José Eduardo dos Santos' },
-  { sigla: 'ISPAJ', nome: 'Inst. Sup. Politécnico Alvorecer da Juventude' },
-] as const;
+import { http } from '@/lib/api/http';
+import type { InstituicaoPublica, CatalogoResponse } from '@pdc/shared';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -19,12 +11,24 @@ export function CarrosselInstituicoes() {
   const paused = useRef(false);
   const reduced = useReducedMotion();
 
+  const { data: instituicoes, isError } = useQuery({
+    queryKey: ['landing-carrossel-instituicoes'],
+    queryFn: () => http.get<CatalogoResponse<InstituicaoPublica>>('/catalogo/instituicoes?limit=8'),
+    retry: false,
+  });
+
+  const items = instituicoes?.data ?? [];
+
   useEffect(() => {
+    if (items.length === 0) return;
     const id = setInterval(() => {
-      if (!paused.current) setActive((i) => (i + 1) % INSTITUICOES.length);
+      if (!paused.current) setActive((i) => (i + 1) % items.length);
     }, 4000);
     return () => { clearInterval(id); };
-  }, []);
+  }, [items.length]);
+
+  // Regra zero mocks: sem dados reais, não renderiza
+  if (isError || items.length === 0) return null;
 
   return (
     <section className="px-4 py-16 sm:px-6">
@@ -37,9 +41,9 @@ export function CarrosselInstituicoes() {
           onMouseEnter={() => { paused.current = true; }}
           onMouseLeave={() => { paused.current = false; }}
         >
-          {INSTITUICOES.map((inst, i) => (
+          {items.map((inst, i) => (
             <motion.div
-              key={inst.sigla}
+              key={inst.id}
               initial={false}
               animate={{
                 opacity: i === active ? 1 : 0.4,
@@ -48,8 +52,12 @@ export function CarrosselInstituicoes() {
               transition={{ duration: 0.3 }}
               className="flex min-w-[150px] flex-col items-center gap-2 rounded-2xl border border-border bg-surface-raised px-5 py-4"
             >
-              <span className="text-lg font-bold text-amber">{inst.sigla}</span>
-              <span className="text-center text-xs text-text-secondary">{inst.nome}</span>
+              {inst.logoUrl ? (
+                <img src={inst.logoUrl} alt={inst.nome} className="h-10 w-10 rounded-lg object-contain" />
+              ) : (
+                <span className="text-lg font-bold text-amber">{inst.nome.charAt(0)}</span>
+              )}
+              <span className="text-center text-xs text-text-secondary line-clamp-2">{inst.nome}</span>
             </motion.div>
           ))}
         </div>

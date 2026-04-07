@@ -13,7 +13,7 @@ export interface Veredito {
   simulacoes: string[];
 }
 
-export type Fase = 'intro' | 'texto_livre' | 'pergunta' | 'carregando' | 'veredito';
+export type Fase = 'intro' | 'texto_livre' | 'pergunta' | 'carregando' | 'veredito' | 'erro';
 
 export interface MicroDesafioState {
   fase: Fase;
@@ -122,15 +122,3 @@ export const PERGUNTAS: Record<Area, PerguntaData[]> = {
   ],
 };
 
-// ─── Fallback verdicts ────────────────────────────────────────────────────────
-
-export const FALLBACK_VEREDITOS: Record<Area, Veredito> = {
-  SAUDE: { area: 'Saúde', score: 75, arquetipo: 'Cuidador Analítico', proximoPasso: 'Experimenta simulações de saúde', simulacoes: ['Dia de um Médico', 'Farmácia Clínica', 'Primeiros Socorros'] },
-  ENGENHARIA: { area: 'Engenharia', score: 78, arquetipo: 'Construtor Metódico', proximoPasso: 'Explora projectos de engenharia', simulacoes: ['Projecto Estrutural', 'Circuitos Eléctricos', 'Gestão de Obra'] },
-  TECNOLOGIA: { area: 'Tecnologia', score: 82, arquetipo: 'Inovador Digital', proximoPasso: 'Testa simulações de programação', simulacoes: ['Hackathon Virtual', 'Análise de Dados', 'App Prototype'] },
-  DIREITO: { area: 'Direito', score: 74, arquetipo: 'Defensor Lógico', proximoPasso: 'Experimenta casos simulados', simulacoes: ['Tribunal Simulado', 'Mediação de Conflitos', 'Análise Jurídica'] },
-  GESTAO: { area: 'Gestão', score: 77, arquetipo: 'Líder Estratégico', proximoPasso: 'Explora cenários de gestão', simulacoes: ['Startup Weekend', 'Plano de Negócios', 'Gestão Financeira'] },
-  EDUCACAO: { area: 'Educação', score: 80, arquetipo: 'Mentor Inspirador', proximoPasso: 'Experimenta aulas simuladas', simulacoes: ['Aula Interactiva', 'Pedagogia Digital', 'Tutoria Inclusiva'] },
-  ARTES: { area: 'Artes', score: 76, arquetipo: 'Criador Visionário', proximoPasso: 'Explora projectos criativos', simulacoes: ['Produção Audiovisual', 'Design Digital', 'Performance Artística'] },
-  GERAL: { area: 'Exploração Geral', score: 72, arquetipo: 'Explorador Versátil', proximoPasso: 'Descobre a tua área na plataforma', simulacoes: ['Teste Vocacional', 'Explorador de Carreiras', 'Mentoria Geral'] },
-};
