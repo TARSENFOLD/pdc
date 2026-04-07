@@ -1,0 +1,40 @@
+{
+  "kind": "collectionType",
+  "collectionName": "propostas",
+  "info": {
+    "singularName": "proposta",
+    "pluralName": "propostas",
+    "displayName": "Proposta"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "estudante": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "instituicao": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::instituicao.instituicao",
+      "required": true
+    },
+    "titulo": { "type": "string", "required": true },
+    "descricao": { "type": "text" },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["emprego", "estagio", "bolsa", "parceria"]
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["pendente", "aceita", "recusada", "expirada"],
+      "default": "pendente"
+    },
+    "mensagem": { "type": "text", "maxLength": 500 },
+    "expiradaEm": { "type": "datetime" },
+    "criadoEm": { "type": "datetime" }
+  }
+}

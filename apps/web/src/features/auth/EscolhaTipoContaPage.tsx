@@ -1,26 +1,34 @@
 import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui';
+import { GraduationCap, UserCheck, Building2 } from 'lucide-react';
+import type { ComponentType } from 'react';
+import type { LucideProps } from 'lucide-react';
 
-const TIPOS = [
+const TIPOS: ReadonlyArray<{
+  icon: ComponentType<LucideProps>;
+  titulo: string;
+  descricao: string;
+  href: string;
+}> = [
   {
-    emoji: '🎓',
+    icon: GraduationCap,
     titulo: 'Estudante',
     descricao: 'Explora cursos, simulações e mentorias para o teu percurso académico.',
     href: '/criar-conta/estudante',
   },
   {
-    emoji: '🧑‍🏫',
+    icon: UserCheck,
     titulo: 'Mentor',
     descricao: 'Partilha experiência profissional e orienta estudantes na tua área.',
     href: '/criar-conta/mentor',
   },
   {
-    emoji: '🏫',
+    icon: Building2,
     titulo: 'Instituição',
     descricao: 'Publica cursos, gere programas e conecta-te com estudantes.',
     href: '/criar-conta/instituicao',
   },
-] as const;
+];
 
 export function EscolhaTipoContaPage() {
   return (
@@ -35,7 +43,7 @@ export function EscolhaTipoContaPage() {
           {TIPOS.map((t) => (
             <Link key={t.href} to={t.href}>
               <Card interactive className="flex h-full flex-col items-center p-6 text-center hover:border-amber/30">
-                <span className="text-4xl">{t.emoji}</span>
+                <t.icon size={20} aria-hidden={true} className="text-amber" />
                 <h2 className="mt-4 text-lg font-semibold text-text-primary">{t.titulo}</h2>
                 <p className="mt-2 text-sm text-text-secondary">{t.descricao}</p>
               </Card>

@@ -89,30 +89,21 @@ export function useMicroDesafio() {
 
       if (!res.ok) throw new Error(`HTTP ${String(res.status)}`);
 
-      const data: unknown = await res.json();
-      const text =
-        typeof data === 'object' && data !== null && 'text' in data
-          ? String((data as Record<string, unknown>).text)
-          : typeof data === 'string'
-            ? data
-            : String(data);
+      const data = (await res.json()) as { text: string };
+      const text = data.text;
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('No JSON');
 
-      const parsed: unknown = JSON.parse(jsonMatch[0]);
-      if (typeof parsed !== 'object' || parsed === null) throw new Error('Bad shape');
-
-      const obj = parsed as Record<string, unknown>;
-      if (!('area' in obj && 'score' in obj && 'arquetipo' in obj)) throw new Error('Bad shape');
-
+      const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+      
       const v: Veredito = {
-        area: String(obj.area),
-        score: Number(obj.score),
-        arquetipo: String(obj.arquetipo),
-        proximoPasso: typeof obj.proximoPasso === 'string' ? obj.proximoPasso : '',
-        simulacoes: Array.isArray(obj.simulacoes)
-          ? (obj.simulacoes as string[]).map(String)
+        area: String(parsed.area),
+        score: Number(parsed.score),
+        arquetipo: String(parsed.arquetipo),
+        proximoPasso: typeof parsed.proximoPasso === 'string' ? parsed.proximoPasso : '',
+        simulacoes: Array.isArray(parsed.simulacoes)
+          ? (parsed.simulacoes as string[]).map(String)
           : [],
       };
 
@@ -120,7 +111,8 @@ export function useMicroDesafio() {
       void telemetriaService
         .registarEvento('landing_hero_verdict_generated', { area, score: v.score })
         .catch(() => undefined);
-    } catch {
+    } catch (err) {
+      console.error('Veredito failed:', err);
       setState((s) => ({ ...s, fase: 'erro' as const }));
       void telemetriaService
         .registarEvento('landing_hero_verdict_failed', { area })

@@ -66,7 +66,7 @@ export function MentorPublicoPerfilPage() {
           <Link to="/login" className="rounded-xl bg-amber px-6 py-3 text-center text-sm font-semibold text-black transition-colors hover:bg-amber-hover">
             Conectar com este mentor
           </Link>
-          <Link to="/mentores" className="rounded-xl border border-border px-6 py-3 text-center text-sm text-text-secondary transition-colors hover:bg-white/5">
+          <Link to="/mentores" className="rounded-xl border border-border px-6 py-3 text-center text-sm text-text-secondary transition-colors hover:bg-surface-raised">
             Ver mais mentores
           </Link>
         </div>

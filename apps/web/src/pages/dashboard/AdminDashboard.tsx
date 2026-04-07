@@ -46,29 +46,29 @@ export function AdminDashboard() {
           <div className="flex flex-wrap gap-3">
             <Link 
               to="/app/admin/utilizadores"
-              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors"
             >
               Gerir Utilizadores
             </Link>
             <Link 
               to="/app/admin/audit"
-              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors"
             >
               Ver Auditoria
             </Link>
             <Link 
               to="/app/admin/stats"
-              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors"
             >
               Estatísticas Detalhadas
             </Link>
-            <Link to="/app/admin/telemetria" className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors">
+            <Link to="/app/admin/telemetria" className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors">
               Telemetria
             </Link>
-            <Link to="/app/admin/relatorios" className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors">
+            <Link to="/app/admin/relatorios" className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors">
               Relatórios
             </Link>
-            <Link to="/app/moderacao/aprovacoes" className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-white/5 transition-colors">
+            <Link to="/app/moderacao/aprovacoes" className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium text-text-primary hover:bg-surface-raised transition-colors">
               Fila de Aprovação
             </Link>
           </div>

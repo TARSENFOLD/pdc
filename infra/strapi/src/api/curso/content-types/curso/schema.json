@@ -1,0 +1,69 @@
+{
+  "kind": "collectionType",
+  "collectionName": "cursos",
+  "info": {
+    "singularName": "curso",
+    "pluralName": "cursos",
+    "displayName": "Curso",
+    "description": "Cursos vocacionais e técnicos"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "titulo": { "type": "string", "required": true },
+    "autorId": { "type": "string" },
+    "slug": { "type": "uid", "targetField": "titulo", "unique": true },
+    "nome": { "type": "string" },
+    "descricao": { "type": "text" },
+    "nivel": {
+      "type": "enumeration",
+      "enum": ["basico", "medio", "avancado"]
+    },
+    "area": {
+      "type": "enumeration",
+      "enum": [
+        "ENGENHARIA", "SAUDE", "TECNOLOGIA", "AGRONOMIA", "GESTAO",
+        "EDUCACAO", "DIREITO", "CIENCIAS_SOCIAIS", "ARTES", "OUTRO"
+      ]
+    },
+    "idioma": {
+      "type": "enumeration",
+      "enum": ["pt", "en", "fr"],
+      "default": "pt"
+    },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["draft", "review", "approved", "published", "archived"],
+      "default": "draft"
+    },
+    "visibilidade": {
+      "type": "enumeration",
+      "enum": ["publico", "privado", "institucional"],
+      "default": "publico"
+    },
+    "gratuito": { "type": "boolean", "default": true },
+    "preco": { "type": "decimal" },
+    "moeda": { "type": "string", "default": "USD" },
+    "thumbnailUrl": { "type": "string" },
+    "objetivos": { "type": "text" },
+    "requisitos": { "type": "text" },
+    "syllabus": { "type": "text" },
+    "duracaoEstimada": { "type": "integer" },
+    "tags": { "type": "json" },
+    "autor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "instituicao": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::instituicao.instituicao"
+    },
+    "dataInicio": { "type": "date" },
+    "dataFim": { "type": "date" },
+    "motivoRejeicao": { "type": "text" },
+    "historicoEstados": { "type": "json" }
+  }
+}

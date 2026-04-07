@@ -69,7 +69,7 @@ export function ExperienciaListPage() {
         <div className="mt-16 flex items-center justify-center gap-4 text-sm text-text-muted">
           <Link to="/login" className="text-amber hover:underline">Entrar</Link>
           <span>·</span>
-          <Link to="/register" className="text-amber hover:underline">Criar conta</Link>
+          <Link to="/criar-conta" className="text-amber hover:underline">Criar conta</Link>
         </div>
       </div>
     </div>

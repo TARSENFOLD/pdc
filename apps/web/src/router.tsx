@@ -32,6 +32,7 @@ const ExperienciaListPage = React.lazy(() => import('@/features/experiencias/Exp
 const ExperienciaDetailPage = React.lazy(() => import('@/features/experiencias/ExperienciaDetailPage').then(m => ({ default: m.ExperienciaDetailPage })));
 
 const PerfilPage = React.lazy(() => import('@/features/perfil/PerfilPage').then(m => ({ default: m.PerfilPage })));
+const ConfiguracoesPage = React.lazy(() => import('@/features/perfil/ConfiguracoesPage').then(m => ({ default: m.ConfiguracoesPage })));
 
 const ProjetoListPage = React.lazy(() => import('@/features/projetos/ProjetoListPage').then(m => ({ default: m.ProjetoListPage })));
 const ProjetoDetailPage = React.lazy(() => import('@/features/projetos/ProjetoDetailPage').then(m => ({ default: m.ProjetoDetailPage })));
@@ -159,6 +160,7 @@ export const router = createBrowserRouter([
       { path: 'perfil-vocacional', element: <RelatorioVocacional /> },
       
       { path: 'perfil', element: <PerfilPage /> },
+      { path: 'configuracoes', element: <ConfiguracoesPage /> },
       { path: 'projetos/novo', element: <ProjetoFormPage /> },
       { path: 'projetos/:id/editar', element: <ProjetoFormPage /> },
       { path: 'mentorias', element: <MentoriaListPage /> },

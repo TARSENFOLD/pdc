@@ -47,7 +47,7 @@ function Table<T extends { id?: string | number }>({
                 key={item.id ?? rowIndex}
                 onClick={() => onRowClick?.(item)}
                 className={cn(
-                  'transition-colors hover:bg-white/5',
+                  'transition-colors hover:bg-surface-raised',
                   onRowClick && 'cursor-pointer'
                 )}
               >

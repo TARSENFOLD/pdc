@@ -1,0 +1,46 @@
+{
+  "kind": "collectionType",
+  "collectionName": "conquistas",
+  "info": {
+    "singularName": "conquista",
+    "pluralName": "conquistas",
+    "displayName": "Conquista"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "slug": { "type": "uid", "targetField": "titulo", "unique": true },
+    "titulo": { "type": "string", "required": true },
+    "descricao": { "type": "text" },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["automatica", "manual", "institucional", "plataforma"]
+    },
+    "categoria": { "type": "string" },
+    "midias": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": ["images", "files", "videos"]
+    },
+    "autor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "perfis": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::perfil.perfil",
+      "mappedBy": "conquistas"
+    },
+    "tipoAutor": {
+      "type": "enumeration",
+      "enum": ["mentor", "instituicao", "plataforma", "aluno"]
+    },
+    "aprovada": { "type": "boolean", "default": false },
+    "tags": { "type": "json" },
+    "data": { "type": "datetime" },
+    "validadoAcademicamente": { "type": "boolean", "default": false }
+  }
+}

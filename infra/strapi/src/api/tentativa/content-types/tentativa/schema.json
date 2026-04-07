@@ -1,0 +1,44 @@
+{
+  "kind": "collectionType",
+  "collectionName": "tentativas",
+  "info": {
+    "singularName": "tentativa",
+    "pluralName": "tentativas",
+    "displayName": "Tentativa de Simulação"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "simulacao": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::simulacao.simulacao",
+      "required": true
+    },
+    "perfil": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "executorTipo": {
+      "type": "enumeration",
+      "enum": ["tipo1", "tipo2", "tipo3"]
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["em_progresso", "concluida", "falhou", "cancelada"]
+    },
+    "score": { "type": "decimal", "default": 0 },
+    "areaScore": { "type": "json" },
+    "feedback": { "type": "text" },
+    "sugestao": { "type": "text" },
+    "tentativaNum": { "type": "integer", "required": true },
+    "duracaoSegundos": { "type": "integer" },
+    "startedAt": { "type": "datetime" },
+    "finishedAt": { "type": "datetime" },
+    "logsExecucao": { "type": "json" },
+    "outputExecucao": { "type": "json" }
+  }
+}

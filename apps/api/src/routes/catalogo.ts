@@ -140,7 +140,6 @@ catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
   addPublished(p); addPg(p, q.page, q.limit);
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
-  if (q.sort) p['sort'] = q.sort;
   const res = await strapiGet<StrapiList<StrapiExperiencia>>('/experiencias', p);
   return c.json({ data: res.data.map(mapExp), meta: toMeta(res.meta.pagination) });
 });

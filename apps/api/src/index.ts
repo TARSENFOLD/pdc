@@ -89,7 +89,7 @@ app.route('/denuncias', denunciaRoutes);
 
 const server = serve({
   fetch: app.fetch,
-  port: 3000,
+  port: parseInt(process.env.PORT || '3001'),
 }, (info) => {
   log.info({ port: info.port }, 'BFF ouvindo');
 });

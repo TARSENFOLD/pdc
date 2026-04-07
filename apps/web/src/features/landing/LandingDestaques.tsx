@@ -61,7 +61,7 @@ export function LandingDestaques() {
 
   const { data: simulacoes, isError: simError, isLoading: loadingSims } = useQuery({
     queryKey: ['landing-simulacoes'],
-    queryFn: () => http.get<CatalogoResponse<SimulacaoPublica>>('/catalogo/simulacoes?limit=3&sort=updatedAt:desc'),
+    queryFn: () => http.get<CatalogoResponse<SimulacaoPublica>>('/catalogo/simulacoes?limit=3&sort=score:desc'),
     retry: false,
   });
 

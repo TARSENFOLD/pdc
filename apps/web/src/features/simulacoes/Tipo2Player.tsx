@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Lock, Monitor } from 'lucide-react';
-import { Lock, Monitor } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import { telemetriaService } from '../../lib/telemetria/telemetria.service';

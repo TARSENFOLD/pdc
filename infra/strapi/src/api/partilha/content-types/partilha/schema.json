@@ -1,0 +1,27 @@
+{
+  "kind": "collectionType",
+  "collectionName": "partilhas",
+  "info": {
+    "singularName": "partilha",
+    "pluralName": "partilhas",
+    "displayName": "Partilha"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "actor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "targetType": { "type": "string", "required": true },
+    "targetId": { "type": "string", "required": true },
+    "canal": {
+      "type": "enumeration",
+      "enum": ["interno", "whatsapp", "linkedin", "twitter", "email", "outro"]
+    },
+    "criadoEm": { "type": "datetime" }
+  }
+}

@@ -11,10 +11,10 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] px-4">
-      <div className="w-full max-w-md rounded-2xl bg-[#141414] p-8 shadow-2xl border border-white/5">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md rounded-2xl bg-surface p-8 shadow-2xl border border-border">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white mb-2">Recuperar acesso</h1>
+          <h1 className="text-3xl font-bold text-text-primary mb-2">Recuperar acesso</h1>
           <p className="text-gray-400">Enviaremos um link para o seu email</p>
         </div>
 
@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
               <input
                 type="email"
                 required
-                className="w-full rounded-lg bg-[#1a1a1a] border border-white/10 p-3 text-white focus:border-[#f59e0b] focus:outline-none transition-colors"
+                className="w-full rounded-lg bg-surface-raised border border-border p-3 text-text-primary focus:border-[#f59e0b] focus:outline-none transition-colors"
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); }}

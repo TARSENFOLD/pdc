@@ -23,10 +23,10 @@ export function GuardadosPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-white">Guardados</h1>
+      <h1 className="mb-6 text-2xl font-bold text-text-primary">Guardados</h1>
       {bookmarks.length === 0 ? (
-        <div className="rounded-2xl border border-white/5 bg-white/3 p-8 text-center">
-          <p className="text-white/50">Ainda não guardaste nenhum conteúdo.</p>
+        <div className="rounded-2xl border border-border bg-surface-raised p-8 text-center">
+          <p className="text-text-secondary">Ainda não guardaste nenhum conteúdo.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -34,9 +34,9 @@ export function GuardadosPage() {
             <Link
               key={b.id}
               to={`${TIPO_HREF[b.targetType] ?? '/app'}/${b.targetId}`}
-              className="flex items-center justify-between rounded-xl border border-white/5 bg-white/3 p-4 transition-colors hover:border-amber/20"
+              className="flex items-center justify-between rounded-xl border border-border bg-surface-raised p-4 transition-colors hover:border-amber/20"
             >
-              <p className="text-sm font-medium text-white">{b.targetId}</p>
+              <p className="text-sm font-medium text-text-primary">{b.targetId}</p>
               <Badge variant="outline">{TIPO_LABEL[b.targetType] ?? b.targetType}</Badge>
             </Link>
           ))}

@@ -23,6 +23,7 @@ export const UserSchema = z.object({
   avatarUrl: z.string().url().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  bio: z.string().optional(),
 });
 
 export type User = z.infer<typeof UserSchema>;
@@ -898,6 +899,11 @@ export const CatalogoMetaSchema = z.object({
 });
 
 export type CatalogoMeta = z.infer<typeof CatalogoMetaSchema>;
+
+export interface CatalogoResponse<T> {
+  data: T[];
+  meta: CatalogoMeta;
+}
 
 // ─── Interações Transversais (Likes, Bookmarks, Ratings, Comments) ────────────
 

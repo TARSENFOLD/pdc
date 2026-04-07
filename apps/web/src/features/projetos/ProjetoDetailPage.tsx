@@ -89,7 +89,7 @@ export function ProjetoDetailPage() {
             <>
               <Link
                 to={`/app/projetos/${id}/editar`}
-                className="inline-flex h-8 items-center rounded-md bg-surface-raised px-3 text-xs font-semibold text-text-primary hover:bg-white/10 border border-border"
+                className="inline-flex h-8 items-center rounded-md bg-surface-raised px-3 text-xs font-semibold text-text-primary hover:bg-surface-raised border border-border"
               >
                 Editar
               </Link>
@@ -126,7 +126,7 @@ export function ProjetoDetailPage() {
             href={projeto.repoUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-9 items-center rounded-md border border-border bg-surface-raised px-4 text-sm text-text-primary hover:bg-white/10"
+            className="inline-flex h-9 items-center rounded-md border border-border bg-surface-raised px-4 text-sm text-text-primary hover:bg-surface-raised"
           >
             Repositório
           </a>

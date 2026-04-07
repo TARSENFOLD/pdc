@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "subscricoes",
+  "info": {
+    "singularName": "subscricao",
+    "pluralName": "subscricoes",
+    "displayName": "Subscrição"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "perfil": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "instituicao": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::instituicao.instituicao"
+    },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["individual", "institucional"]
+    },
+    "plano": {
+      "type": "enumeration",
+      "enum": ["gratuito", "premium", "institucional_basico", "institucional_premium"]
+    },
+    "limiteAlunos": { "type": "integer" },
+    "ativa": { "type": "boolean", "default": true },
+    "inicioEm": { "type": "datetime" },
+    "fimEm": { "type": "datetime" },
+    "valorPago": { "type": "decimal" },
+    "moeda": { "type": "string" }
+  }
+}

@@ -13,8 +13,12 @@ Se tudo o resto falhar, o fluxo `Simulação → Score → Perfil Vocacional →
 ## Requirements
 
 ### Validated
-
-*(Nenhum ainda — repositório novo, do zero)*
+- Fase 0A — Monorepo foundations, Docker, npm workspaces ✅
+- Fase 1 — Auth Segura: JWT httpOnly, RBAC, Google OAuth, 2FA (BFF ✅)
+- Fase 2 — Design System: Tailwind v4, Motion, Shany/ui (vibrante/premium)
+- Fase 5 — LTI 1.3 Provider: OIDC, AGS, NRPS, JWKS (LMS compatível ✅)
+- Fase 6 — Moderação e Admin: Auditoria, denúncias, gestão de roles
+- Fase 7 — IA e Realtime: DeepSeek streaming, RAG, WebSockets (BFF ✅)
 
 ### Active
 
@@ -116,7 +120,7 @@ Se tudo o resto falhar, o fluxo `Simulação → Score → Perfil Vocacional →
 - **Segurança:** JWT em httpOnly cookies obrigatório — nunca `localStorage` ou `sessionStorage` para tokens
 - **Sem mocks:** Zero dados falsos em qualquer ambiente — erro explícito ou dados reais
 - **TypeScript:** Sem `any` — tipagem estrita obrigatória em `apps/web` e `apps/api`
-- **Tamanho de ficheiros:** Nenhum ficheiro de API ou serviço com mais de 200 linhas
+- **Tamanho de ficheiros:** Nenhum ficheiro de API ou serviço com mais de 200 linhas (Violado: `auth.ts`, `LandingPage.tsx` — prioritário corrigir)
 - **Uploads:** Ficheiros até 50MB via upload direto para R2; vídeos via YouTube/Vimeo embed
 - **Idioma:** Português para conceitos de negócio (perfil, conquista, vínculo); inglês para conceitos técnicos (hook, service, middleware)
 - **Domínio:** Não definido — usar `[dominio-pdc]` como placeholder em todas as configs

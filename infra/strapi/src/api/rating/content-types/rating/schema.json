@@ -1,0 +1,34 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ratings",
+  "info": {
+    "singularName": "rating",
+    "pluralName": "ratings",
+    "displayName": "Rating"
+  },
+  "options": {
+    "draftAndPublish": false,
+    "indexes": [
+      {
+        "name": "unique_rating_actor_target",
+        "columns": ["actor", "targetType", "targetId"],
+        "type": "unique"
+      }
+    ]
+  },
+  "attributes": {
+    "actor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "targetType": { "type": "string", "required": true },
+    "targetId": { "type": "string", "required": true },
+    "estrelas": { "type": "integer", "min": 1, "max": 5, "required": true },
+    "comentario": { "type": "text", "maxLength": 500 },
+    "criterios": { "type": "json" },
+    "criadoEm": { "type": "datetime" },
+    "editadoEm": { "type": "datetime" }
+  }
+}

@@ -1,4 +1,7 @@
 import type { Context, Next } from 'hono';
+import pino from 'pino';
+
+const log = pino({ name: 'audit-mw' });
 import type { AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiPost } from '../modules/strapi/strapi.client.js';
 
@@ -30,7 +33,7 @@ export function auditLog(accao: string) {
       ip,
       timestamp: new Date().toISOString(),
     }).catch((err: unknown) => {
-      console.error('[auditLog] falha ao registar:', err);
+      log.error({ err }, '[auditLog] falha ao registar');
     });
   };
 }

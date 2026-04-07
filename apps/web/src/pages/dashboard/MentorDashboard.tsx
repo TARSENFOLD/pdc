@@ -5,9 +5,6 @@ import { Spinner } from '@/components/ui';
 import { Users, GraduationCap, ClipboardList } from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { LucideProps } from 'lucide-react';
-import { Users, GraduationCap, ClipboardList } from 'lucide-react';
-import type { ComponentType } from 'react';
-import type { LucideProps } from 'lucide-react';
 
 interface StatCardProps {
   label: string;
@@ -18,16 +15,16 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon: Icon, description }: StatCardProps) {
   return (
-    <div className="rounded-2xl border border-white/5 bg-white/3 p-6">
+    <div className="rounded-2xl border border-border bg-surface-raised p-6">
       <div className="mb-4 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-white/40">
+        <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
           {label}
         </span>
         <Icon size={20} aria-hidden={true} className="text-amber" />
       </div>
-      <p className="text-3xl font-bold text-white">{value}</p>
+      <p className="text-3xl font-bold text-text-primary">{value}</p>
       {description && (
-        <p className="mt-1 text-xs text-white/40">{description}</p>
+        <p className="mt-1 text-xs text-text-muted">{description}</p>
       )}
     </div>
   );
@@ -52,8 +49,8 @@ export function MentorDashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Olá, {user?.nome ?? 'Mentor'}</h1>
-        <p className="mt-1 text-sm text-white/50">Painel de mentorias</p>
+        <h1 className="text-2xl font-bold text-text-primary">Olá, {user?.nome ?? 'Mentor'}</h1>
+        <p className="mt-1 text-sm text-text-secondary">Painel de mentorias</p>
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -77,9 +74,9 @@ export function MentorDashboard() {
         />
       </div>
 
-      <div className="mt-8 rounded-2xl border border-white/5 bg-white/3 p-6">
-        <h2 className="mb-2 font-semibold text-white">Actividade recente</h2>
-        <p className="text-sm text-white/40">Sem actividade recente. Aceita pedidos de mentoria para começar.</p>
+      <div className="mt-8 rounded-2xl border border-border bg-surface-raised p-6">
+        <h2 className="mb-2 font-semibold text-text-primary">Actividade recente</h2>
+        <p className="text-sm text-text-muted">Sem actividade recente. Aceita pedidos de mentoria para começar.</p>
       </div>
     </div>
   );

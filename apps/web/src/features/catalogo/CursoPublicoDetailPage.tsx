@@ -62,7 +62,7 @@ export function CursoPublicoDetailPage() {
           <Link to="/login" className="rounded-xl bg-amber px-6 py-3 text-center text-sm font-semibold text-black transition-colors hover:bg-amber-hover">
             Inscrever-me neste curso
           </Link>
-          <Link to="/cursos" className="rounded-xl border border-border px-6 py-3 text-center text-sm text-text-secondary transition-colors hover:bg-white/5">
+          <Link to="/cursos" className="rounded-xl border border-border px-6 py-3 text-center text-sm text-text-secondary transition-colors hover:bg-surface-raised">
             Ver mais cursos
           </Link>
         </div>

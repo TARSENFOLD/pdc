@@ -32,7 +32,7 @@ function getLink(item: FeedItem): string {
 
 export function FeedCard({ item }: { item: FeedItem }) {
   return (
-    <div className="py-5 border-b border-border/40 hover:bg-white/[0.02] transition-colors group">
+    <div className="py-5 border-b border-border/40 hover:bg-surface-raised transition-colors group">
       <div className="flex justify-between items-start mb-3">
         <div className="flex flex-col gap-1">
           <Badge variant="outline" className="w-fit text-[10px] font-bold uppercase tracking-wider border-none bg-surface-raised/50">

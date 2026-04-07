@@ -1,0 +1,40 @@
+{
+  "kind": "collectionType",
+  "collectionName": "instituicoes",
+  "info": {
+    "singularName": "instituicao",
+    "pluralName": "instituicoes",
+    "displayName": "Instituição",
+    "description": "Instituições B2B e B2C"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "nome": { "type": "string", "required": true },
+    "slug": { "type": "uid", "targetField": "nome", "unique": true },
+    "descricao": { "type": "text" },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["universidade", "instituto", "escola", "empresa", "ong", "outro"]
+    },
+    "endereco": { "type": "string" },
+    "regiao": { "type": "string" },
+    "natureza": {
+      "type": "enumeration",
+      "enum": ["publica", "privada", "mista"]
+    },
+    "contatos": { "type": "json" },
+    "website": { "type": "string" },
+    "logo": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "capa": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "codigoAcesso": { "type": "string", "unique": true },
+    "planoAtivo": {
+      "type": "enumeration",
+      "enum": ["gratuito", "basico", "premium"]
+    },
+    "limiteAlunos": { "type": "integer", "default": 0 },
+    "aprovada": { "type": "boolean", "default": false },
+    "branding": { "type": "json" }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "voto_projetos",
+  "info": {
+    "singularName": "voto-projeto",
+    "pluralName": "voto-projetos",
+    "displayName": "Voto em Projeto"
+  },
+  "options": {
+    "draftAndPublish": false,
+    "indexes": [
+      {
+        "name": "unique_voto_actor_projeto_tipo",
+        "columns": ["actor", "projeto", "tipo"],
+        "type": "unique"
+      }
+    ]
+  },
+  "attributes": {
+    "actor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "projeto": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::projeto.projeto",
+      "required": true
+    },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["upvote", "endorsement", "fork"]
+    },
+    "criadoEm": { "type": "datetime" }
+  }
+}

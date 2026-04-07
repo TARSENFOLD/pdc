@@ -10,11 +10,11 @@
 
 | Fase | Estado | Notas |
 |------|--------|-------|
-| Fase 0 — Fundação | ✅ Completa | Monorepo, tooling, Docker, CI/CD |
-| Fase 1 — Auth Segura | ✅ Parcial | JWT httpOnly + RBAC + rate limiting ✅; Google OAuth + 2FA ❌ |
-| Fase 2 — Design System | ✅ Completa | Componentes base, layouts por role, landing, auth pages |
-| Fase 3 — API Layer | ✅ Completa | Strapi client, R2, 7 módulos de domínio |
-| Fase 4 — Core Produto | ✅ Parcial | Sim Tipo 1+2, Cursos, Experiências, Projetos, Mentorias, Conquistas ✅; Sim Tipo 3, Programas, Conquistas automáticas, Feed ❌ |
+| Fase 0 — Fundação | ✅ Parcial | Strapi v5 instalado; Prod config pendente |
+| Fase 1 — Auth Segura | ✅ Completa | JWT, RBAC, Google, 2FA (BFF ✅) |
+| Fase 2 — Design System | ✅ Completa | Componentes base, layouts, tokens v4 |
+| Fase 3 — API Layer | ✅ Parcial | Módulos lib/api ✅; Dívida modular (REQ-NF-007) |
+| Fase 4 — Core Produto | ✅ Parcial | Sim 1+2, Feed, Interações, Mentores ✅; Sim 3 e Programas ❌ |
 | Fase 5 — LTI 1.3 | ✅ Completa | OIDC, AGS, NRPS, JWKS, admin CRUD, frontend |
 | Fase 6 — Moderação/Admin | ✅ Completa | Denúncias, painel admin, audit trail, CSP/CORS |
 | Fase 7 — IA e Realtime | ✅ Completa | DeepSeek streaming, RAG, quiz gen, Socket.IO, TutorChat, QuizPlayer |
@@ -42,12 +42,14 @@
 
 | ID | Título | Estado | Prioridade |
 |----|--------|--------|------------|
-| **M0-T1** | **Fix: `apiClient` → fetch em `lib/api/admin.ts` e `denuncias.ts`** | `[ ]` | 🔴 Crítico |
-| M0-T2 | Fix: `Avatar` prop `name` → `fallback` em AdminAuditPage e AdminUtilizadoresPage | `[ ]` | 🔴 Crítico |
-| M0-T3 | Fix: LtiPlataformasPage — variantes Button, prop Modal (`isOpen`→`open`), API Table | `[ ]` | 🔴 Crítico |
-| M0-T4 | Fix: DenunciaDetailPage e SolicitarMentoriaModal — propriedades incorrectas | `[ ]` | 🔴 Crítico |
-| M0-T5 | Verificar `tsc --noEmit` em ambos os workspaces (zero erros) | `[ ]` | 🔴 Crítico |
-| M0-T6 | Actualizar `STATE.md` e `REQUIREMENTS.md` com estado real (Fases 0–7 completas) | `[ ]` | 🟠 Alto |
+| **M0-T1** | **Fix: `apiClient` → fetch em `lib/api/admin.ts` e `denuncias.ts`** | `[x]` | 🔴 Crítico |
+| **M0-T2** | **Fix: `Avatar` prop `name` → `fallback` em AdminAuditPage e AdminUtilizadoresPage** | `[x]` | 🔴 Crítico |
+| **M0-T3** | **Fix: LtiPlataformasPage — variantes Button, prop Modal (`isOpen`→`open`), API Table** | `[x]` | 🔴 Crítico |
+| **M0-T4** | **Fix: DenunciaDetailPage e SolicitarMentoriaModal — propriedades incorrectas** | `[x]` | 🔴 Crítico |
+| **M0-T5** | **Verificar `tsc --noEmit` em ambos os workspaces (zero erros)** | `[~]` | 🔴 Crítico |
+| **M0-T6** | **Actualizar `STATE.md` e `REQUIREMENTS.md` com estado real** | `[x]` | 🟠 Alto |
+| **M0-T7** | **Refactor: Dividir `auth.ts` em handlers menores (max 200 linhas)** | `[ ]` | 🔴 Crítico |
+| **M0-T8** | **Refactor: Modularizar `LandingPage.tsx` extraindo heróis e secções** | `[ ]` | 🔴 Crítico |
 
 ---
 
@@ -57,11 +59,11 @@
 
 | ID | Título | Estado | Prioridade |
 |----|--------|--------|------------|
-| M1-T1 | Strapi: collections `like`, `bookmark`, `rating`, `comment` com índices únicos | `[ ]` | 🔴 Crítico |
-| M1-T2 | BFF: `POST/GET /interactions/like` — toggle, count, status por utilizador | `[ ]` | 🔴 Crítico |
-| M1-T3 | BFF: `POST/GET /interactions/bookmark` — toggle e listagem pessoal | `[ ]` | 🔴 Crítico |
-| M1-T4 | BFF: `POST/GET /ratings` — avaliação 1–5 por `targetType`+`targetId` | `[ ]` | 🔴 Crítico |
-| M1-T5 | BFF: `POST/GET /comments` — comentários com moderação (estado `pendente`) | `[ ]` | 🟠 Alto |
+| M1-T1 | Strapi: collections `like`, `bookmark`, `rating`, `comment` com índices únicos | `[x]` | 🔴 Crítico |
+| M1-T2 | BFF: `POST/GET /interactions/like` — toggle, count, status por utilizador | `[x]` | 🔴 Crítico |
+| M1-T3 | BFF: `POST/GET /interactions/bookmark` — toggle e listagem pessoal | `[x]` | 🔴 Crítico |
+| M1-T4 | BFF: `POST/GET /ratings` — avaliação 1–5 por `targetType`+`targetId` | `[x]` | 🔴 Crítico |
+| M1-T5 | BFF: `POST/GET /comments` — comentários com moderação (estado `pendente`) | `[x]` | 🟠 Alto |
 | M1-T6 | BFF: `entity_score` — job que agrega likes+ratings+completion num único score | `[ ]` | 🟠 Alto |
 | M1-T7 | Frontend: componentes `LikeButton`, `BookmarkButton`, `RatingStars` | `[ ]` | 🟠 Alto |
 | M1-T8 | Frontend: integrar componentes nas páginas Cursos, Experiências, Simulações, Projetos | `[ ]` | 🟠 Alto |
@@ -93,11 +95,11 @@
 | ID | Título | Estado | Prioridade |
 |----|--------|--------|------------|
 | M3-T1 | Strapi: campos `googleId`, `otpSecret`, `otpEnabled` no schema `Perfil` | `[ ]` | 🟠 Alto |
-| M3-T2 | BFF: `GET /auth/google` + `GET /auth/google/callback` com `passport-google-oauth2` | `[ ]` | 🟠 Alto |
-| M3-T3 | Frontend: botão "Entrar com Google" nas páginas Login e Criar Conta | `[ ]` | 🟠 Alto |
-| M3-T4 | BFF: `POST /auth/otp/send` via SendGrid — código 6 dígitos, expiração 10min | `[ ]` | 🟠 Alto |
-| M3-T5 | BFF: `POST /auth/otp/verify` — valida OTP e completa login com cookie JWT | `[ ]` | 🟠 Alto |
-| M3-T6 | BFF: `POST /auth/otp/sms` via Twilio para números angolanos (+244) | `[ ]` | 🟡 Médio |
+| M3-T2 | BFF: `GET /auth/google` + `GET /auth/google/callback` (passport ✅) | `[x]` | 🟠 Alto |
+| M3-T3 | Frontend: botão "Entrar com Google" nas páginas Login e Criar Conta | `[x]` | 🟠 Alto |
+| M3-T4 | BFF: `POST /auth/otp/send` via SendGrid/Resend (BFF ✅) | `[x]` | 🟠 Alto |
+| M3-T5 | BFF: `POST /auth/otp/verify` — valida OTP e completa login | `[x]` | 🟠 Alto |
+| M3-T6 | BFF: `POST /auth/otp/sms` via Twilio para números angolanos (+244) | `[-]` | 🟡 Médio |
 | M3-T7 | Frontend: fluxo de 2FA no login (step 2 após password bem-sucedida) | `[ ]` | 🟠 Alto |
 
 ---

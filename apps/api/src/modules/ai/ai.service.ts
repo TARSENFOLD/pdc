@@ -1,3 +1,6 @@
+import pino from 'pino';
+
+const log = pino({ name: 'ai-service' });
 import { strapiGet } from '../strapi/strapi.client.js';
 import { vocacionalService } from '../vocacional/vocacional.service.js';
 import type { ChatMessage, QuizPergunta } from '@pdc/shared';
@@ -12,25 +15,23 @@ export const aiService = {
   async buildContexto(alunoId: string): Promise<string> {
     const perfil = await vocacionalService.calcularPerfil(alunoId);
     
-    const tentativasRes = await strapiGet<{ data: Array<{ id: number; attributes: Record<string, unknown> }> }>('/tentativas', {
+    const tentativasRes = await strapiGet<{ data: Array<{ id: number; simulacao?: { data?: { titulo: string } } }> }>('/tentativas', {
       'filters[alunoId][$eq]': alunoId,
       'filters[dataFim][$notNull]': 'true',
       'populate': 'simulacao',
     });
     
-    const inscricoesRes = await strapiGet<{ data: Array<{ id: number; attributes: Record<string, unknown> }> }>('/inscricoes', {
+    const inscricoesRes = await strapiGet<{ data: Array<{ id: number; curso?: { data?: { titulo: string } } }> }>('/inscricoes', {
       'filters[alunoId][$eq]': alunoId,
       'populate': 'curso',
     });
 
     const sims = tentativasRes.data.map(t => {
-      const sim = t.attributes['simulacao'] as { data: { attributes: { titulo: string } } } | undefined;
-      return sim?.data.attributes.titulo;
+      return t.simulacao?.data?.titulo;
     }).filter(Boolean).join(', ');
 
     const cursos = inscricoesRes.data.map(i => {
-      const curso = i.attributes['curso'] as { data: { attributes: { titulo: string } } } | undefined;
-      return curso?.data.attributes.titulo;
+      return i.curso?.data?.titulo;
     }).filter(Boolean).join(', ');
 
     return `Perfil Vocacional: Score Global ${perfil.scoreGlobal.toString()}, Aptidão ${perfil.aptidao.toString()}, Dedicação ${perfil.dedicacao.toString()}. Simulações concluídas: ${sims || 'Nenhuma'}. Cursos inscritos: ${cursos || 'Nenhum'}.`;
@@ -70,7 +71,7 @@ export const aiService = {
 
       return res;
     } catch (err) {
-      console.error('DeepSeek error, falling back to Ollama:', err);
+      log.error({ err }, 'DeepSeek error, falling back to Ollama');
       return this.fallbackOllama(fullMessages, stream);
     }
   },

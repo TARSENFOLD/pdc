@@ -1,25 +1,30 @@
 @import "tailwindcss";
 
 @theme {
-  /* ─── Paleta PDC v2 ─── */
-  --color-background: #0a0a0a;
-  --color-surface: #141414;
-  --color-surface-raised: #1a1a1a;
-  --color-border: rgba(255, 255, 255, 0.08);
+  /* ─── Paleta PDC v2 (Dinâmica) ─── */
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-alt: var(--surface-alt);
+  --color-background-secondary: var(--surface-alt);
+  --color-border: var(--border);
 
   /* ─── Texto ─── */
-  --color-text-primary: #f5f5f5;
-  --color-text-secondary: #a3a3a3;
-  --color-text-muted: #525252;
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
 
   /* ─── Acentos e Estados ─── */
-  --color-amber: #f59e0b;
-  --color-amber-hover: #d97706;
+  --color-accent: var(--accent);
+  --color-accent-trust: var(--accent-trust);
+  --color-amber: var(--accent); /* Alias de retrocompatibilidade */
+  --color-amber-hover: var(--accent-hover);
+  
   --color-error: #ef4444;
   --color-success: #22c55e;
-  --color-info: #3b82f6;
+  --color-info: var(--accent-trust);
 
-  /* ─── Cores de Role ─── */
+  /* ─── Cores de Role (Estáticas por enquanto) ─── */
   --color-role-admin: #a855f7;
   --color-role-mentor: #06b6d4;
   --color-role-aluno: #10b981;
@@ -39,7 +44,51 @@
 }
 
 @layer base {
+  :root {
+    /* Dark Mode (Default) */
+    --background: #0a0a0a;
+    --surface: #141414;
+    --surface-raised: #1a1a1a;
+    --surface-alt: #0d0d0d;
+    --border: rgba(255, 255, 255, 0.08);
+
+    --text-primary: #f5f5f5;
+    --text-secondary: #a3a3a3;
+    --text-muted: #525252;
+
+    --accent: #f59e0b;
+    --accent-hover: #d97706;
+    --accent-trust: #3b82f6;
+
+    color-scheme: dark;
+  }
+
+  .light {
+    /* Light Mode Overrides */
+    --background: #f8f8fc;
+    --surface: #ffffff;
+    --surface-raised: #f0f0f5;
+    --surface-alt: #eeeef5;
+    --border: rgba(0, 0, 0, 0.08);
+
+    --text-primary: #0a0a0f;
+    --text-secondary: #4a4a5a;
+    --text-muted: #8b8b9e;
+
+    --accent: #d97706;
+    --accent-hover: #b45309;
+    --accent-trust: #2563eb;
+
+    color-scheme: light;
+  }
+
   body {
-    @apply bg-background text-text-primary font-sans antialiased;
+    @apply bg-background text-text-primary font-sans antialiased transition-colors duration-150;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body {
+      @apply transition-none;
+    }
   }
 }

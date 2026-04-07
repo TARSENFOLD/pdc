@@ -20,6 +20,35 @@ const mensagensQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(50).default(10),
 });
 
+interface StrapiParticipante {
+  id: string;
+  nome: string;
+}
+
+interface StrapiMensagem {
+  id: string;
+  conteudo: string;
+  lida: boolean;
+  remetenteId: string;
+  createdAt: string;
+}
+
+interface StrapiConversa {
+  id: string;
+  participant1Id: string;
+  participant2Id: string;
+  participant1?: StrapiParticipante;
+  participant2?: StrapiParticipante;
+  ultimaMensagem?: { conteudo: string };
+  mensagens?: StrapiMensagem[];
+  updatedAt: string;
+}
+
+interface StrapiListResponse<T> {
+  data: T[];
+  meta?: { pagination?: { total?: number; pageCount?: number } };
+}
+
 export const mensagensRoutes = new Hono<Vars>();
 
 mensagensRoutes.use('*', verifyJwt);
@@ -31,7 +60,7 @@ mensagensRoutes.get('/conversas', zValidator('query', mensagensQuerySchema), asy
 
   try {
     // Buscar conversas do utilizador
-    const data = await strapiGet<any>('/conversas', {
+    const data = await strapiGet<StrapiListResponse<StrapiConversa>>('/conversas', {
       'filters[$or][0][participant1Id][$eq]': userId,
       'filters[$or][1][participant2Id][$eq]': userId,
       'pagination[page]': page.toString(),
@@ -40,7 +69,7 @@ mensagensRoutes.get('/conversas', zValidator('query', mensagensQuerySchema), asy
       sort: 'updatedAt:desc',
     });
 
-    const conversas = (data.data || []).map((conv: any) => {
+    const conversas = (data.data || []).map((conv: StrapiConversa) => {
       const outroParticipante =
         conv.participant1Id === userId ? conv.participant2 : conv.participant1;
       return {
@@ -49,7 +78,7 @@ mensagensRoutes.get('/conversas', zValidator('query', mensagensQuerySchema), asy
         interlocutorNome: outroParticipante?.nome,
         ultimaMensagem: conv.ultimaMensagem?.conteudo,
         naoLidas: (conv.mensagens || []).filter(
-          (m: any) => m.lida === false && m.remetenteId !== userId
+          (m: StrapiMensagem) => m.lida === false && m.remetenteId !== userId
         ).length,
         updatedAt: conv.updatedAt,
       };
@@ -81,7 +110,7 @@ mensagensRoutes.post(
       }
 
       // Verificar se existe vínculo connected entre os utilizadores
-      const vinculoData = await strapiGet<any>('/vinculos', {
+      const vinculoData = await strapiGet<{ data: Array<{ id: string }> }>('/vinculos', {
         'filters[$or][0][senderId][$eq]': userId,
         'filters[$or][0][receiverId][$eq]': destinatarioId,
         'filters[$or][0][estado][$eq]': 'connected',
@@ -99,7 +128,7 @@ mensagensRoutes.post(
       }
 
       // Verificar se conversa já existe
-      const conversaExistente = await strapiGet<any>('/conversas', {
+      const conversaExistente = await strapiGet<StrapiListResponse<StrapiConversa>>('/conversas', {
         'filters[$or][0][participant1Id][$eq]': userId,
         'filters[$or][0][participant2Id][$eq]': destinatarioId,
         'filters[$or][1][participant1Id][$eq]': destinatarioId,
@@ -112,7 +141,7 @@ mensagensRoutes.post(
       }
 
       // Criar conversa
-      const novaConversa = await strapiPost<any>('/conversas', {
+      const novaConversa = await strapiPost<StrapiConversa>('/conversas', {
         participant1Id: userId,
         participant2Id: destinatarioId,
         ultimaMensagem: null,
@@ -133,7 +162,7 @@ mensagensRoutes.get('/conversas/:conversaId', zValidator('query', mensagensQuery
 
   try {
     // Verificar se user é participante
-    const conversa = await strapiGet<any>(`/conversas/${conversaId}`, {
+    const conversa = await strapiGet<{ data: StrapiConversa | null }>(`/conversas/${conversaId}`, {
       populate: 'participant1,participant2,mensagens',
     });
 
@@ -149,7 +178,7 @@ mensagensRoutes.get('/conversas/:conversaId', zValidator('query', mensagensQuery
     }
 
     // Buscar mensagens
-    const mensagens = await strapiGet<any>('/mensagens', {
+    const mensagens = await strapiGet<StrapiListResponse<StrapiMensagem>>('/mensagens', {
       'filters[conversaId][$eq]': conversaId,
       'pagination[page]': page.toString(),
       'pagination[pageSize]': pageSize.toString(),
@@ -161,7 +190,7 @@ mensagensRoutes.get('/conversas/:conversaId', zValidator('query', mensagensQuery
     if (mensagens.data) {
       for (const msg of mensagens.data) {
         if (msg.lida === false && msg.remetenteId !== userId) {
-          await strapiPut<any>(`/mensagens/${msg.id}`, { lida: true });
+          await strapiPut<unknown>(`/mensagens/${msg.id}`, { lida: true });
         }
       }
     }
@@ -186,7 +215,7 @@ mensagensRoutes.post(
 
     try {
       // Verificar se user é participante
-      const conversa = await strapiGet<any>(`/conversas/${conversaId}`, {
+      const conversa = await strapiGet<{ data: StrapiConversa | null }>(`/conversas/${conversaId}`, {
         populate: 'participant1,participant2',
       });
 
@@ -204,8 +233,8 @@ mensagensRoutes.post(
       // Verificar vínculo connected entre os participantes
       const destinatarioId =
         conversa.data.participant1Id === userId
-          ? conversa.data.participant2Id as string
-          : conversa.data.participant1Id as string;
+          ? (conversa.data.participant2Id as string)
+          : (conversa.data.participant1Id as string);
 
       const vinculoCheck = await strapiGet<{ data: { id: number }[] }>('/vinculos', {
         'filters[$or][0][senderId][$eq]': userId,
@@ -225,7 +254,7 @@ mensagensRoutes.post(
       }
 
       // Criar mensagem
-      const mensagem = await strapiPost<any>('/mensagens', {
+      const mensagem = await strapiPost<{ data: StrapiMensagem }>('/mensagens', {
         conversaId,
         remetenteId: userId,
         conteudo,
@@ -233,7 +262,7 @@ mensagensRoutes.post(
       });
 
       // Atualizar ultima mensagem da conversa
-      await strapiPut<any>(`/conversas/${conversaId}`, {
+      await strapiPut<unknown>(`/conversas/${conversaId}`, {
         ultimaMensagem: mensagem.data?.id,
         updatedAt: new Date().toISOString(),
       });
@@ -257,4 +286,3 @@ mensagensRoutes.post(
     }
   }
 );
-

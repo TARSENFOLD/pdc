@@ -1,0 +1,32 @@
+{
+  "kind": "collectionType",
+  "collectionName": "modulo_items",
+  "info": {
+    "singularName": "modulo-item",
+    "pluralName": "modulo-items",
+    "displayName": "Item de Módulo"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "modulo": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::modulo.modulo",
+      "required": true
+    },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["video", "pdf", "texto", "quiz", "tarefa", "iframe"],
+      "required": true
+    },
+    "titulo": { "type": "string", "required": true },
+    "url": { "type": "string" },
+    "conteudo": { "type": "richtext" },
+    "duracaoMin": { "type": "integer" },
+    "ordem": { "type": "integer", "default": 0 },
+    "obrigatorio": { "type": "boolean", "default": true },
+    "requisitoConcluidoId": { "type": "string" }
+  }
+}

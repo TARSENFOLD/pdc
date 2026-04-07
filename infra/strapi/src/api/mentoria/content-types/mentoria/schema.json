@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "mentorias",
+  "info": {
+    "singularName": "mentoria",
+    "pluralName": "mentorias",
+    "displayName": "Mentoria"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "mentor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "estudante": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "titulo": { "type": "string", "required": true },
+    "descricao": { "type": "text" },
+    "area": {
+      "type": "enumeration",
+      "enum": [
+        "ENGENHARIA", "SAUDE", "TECNOLOGIA", "AGRONOMIA", "GESTAO",
+        "EDUCACAO", "DIREITO", "CIENCIAS_SOCIAIS", "ARTES", "OUTRO"
+      ]
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["disponivel", "agendada", "concluida", "cancelada"],
+      "default": "disponivel"
+    },
+    "dataHora": { "type": "datetime" },
+    "duracaoMinutos": { "type": "integer" },
+    "linkReuniao": { "type": "string" }
+  }
+}

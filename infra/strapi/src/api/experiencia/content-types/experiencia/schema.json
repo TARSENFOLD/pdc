@@ -1,0 +1,50 @@
+{
+  "kind": "collectionType",
+  "collectionName": "experiencias",
+  "info": {
+    "singularName": "experiencia",
+    "pluralName": "experiencias",
+    "displayName": "Experiência"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "slug": { "type": "uid", "targetField": "titulo", "unique": true },
+    "titulo": { "type": "string", "required": true },
+    "descricao": { "type": "text" },
+    "nivel": {
+      "type": "enumeration",
+      "enum": ["basico", "medio", "avancado"]
+    },
+    "area": {
+      "type": "enumeration",
+      "enum": [
+        "ENGENHARIA", "SAUDE", "TECNOLOGIA", "AGRONOMIA", "GESTAO",
+        "EDUCACAO", "DIREITO", "CIENCIAS_SOCIAIS", "ARTES", "OUTRO"
+      ]
+    },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["draft", "review", "approved", "published", "archived"],
+      "default": "draft"
+    },
+    "visibilidade": {
+      "type": "enumeration",
+      "enum": ["publico", "privado", "institucional"],
+      "default": "publico"
+    },
+    "autor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "instituicao": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::instituicao.instituicao"
+    },
+    "validadoAcademicamente": { "type": "boolean", "default": false },
+    "tags": { "type": "json" }
+  }
+}

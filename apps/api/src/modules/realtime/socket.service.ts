@@ -1,5 +1,8 @@
 import { Server } from 'socket.io';
 import { jwtVerify } from 'jose';
+import pino from 'pino';
+
+const log = pino({ name: 'socket-service' });
 import type { Server as HttpServer } from 'node:http';
 import { strapiPost } from '../strapi/strapi.client.js';
 import type { NotificacaoRealtime } from '@pdc/shared';
@@ -46,7 +49,7 @@ export const socketService = {
 
       socket.on('mensagem:enviar', async (payload: { destinatarioId: string; conteudo: string }) => {
         try {
-          const res = await strapiPost<{ data: { id: number; attributes: Record<string, unknown> } }>('/mensagens', {
+          const res = await strapiPost<{ data: { id: number } }>('/mensagens', {
             remetenteId: userId,
             destinatarioId: payload.destinatarioId,
             conteudo: payload.conteudo,
@@ -61,7 +64,7 @@ export const socketService = {
             createdAt: new Date().toISOString(),
           });
         } catch (err) {
-          console.error('Erro ao guardar mensagem no Strapi:', err);
+          log.error({ err }, 'Erro ao guardar mensagem no Strapi');
         }
       });
     });

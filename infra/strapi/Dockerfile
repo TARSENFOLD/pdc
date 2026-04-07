@@ -1,9 +1,6 @@
 FROM node:20-alpine
 RUN apk add --no-cache libc6-compat
 WORKDIR /opt/app
-COPY package.json package-lock.json* ./
-RUN npm install
-COPY . .
-RUN npm run build
+COPY package.json ./
 EXPOSE 1337
-CMD ["npm", "run", "develop"]
+CMD ["sh", "-c", "npm install && npm run develop"]

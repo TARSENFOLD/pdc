@@ -1,22 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ComponentType } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { Role } from '@/config/roles';
+import {
+  LayoutDashboard, Rss, BookOpen, FlaskConical, BarChart3, Trophy,
+  GraduationCap, Bookmark, Users, Award, Link2, MessageSquare,
+  UserCircle, TrendingUp, Upload, Shield, CheckCircle, Flag,
+  Settings, LogOut, BookOpenText, PenSquare, ClipboardList, Building2,
+  MapPin, Mail, Star, Microscope, ScrollText, Plug, Scale, ChevronRight,
+  type LucideProps,
+} from 'lucide-react';
 
 // ─── Sidebar item types ───────────────────────────────────────────────────────
+
+type LucideIcon = ComponentType<LucideProps>;
 
 interface NavLeaf {
   type: 'leaf';
   label: string;
   to: string;
-  icon: string;
+  icon: LucideIcon;
   roles: Role[];
 }
 
 interface NavGroup {
   type: 'group';
   label: string;
-  icon: string;
+  icon: LucideIcon;
   roles: Role[];
   children: NavLeaf[];
 }
@@ -33,95 +43,96 @@ const ALL_ROLES: Role[] = [
 ];
 
 const SIDEBAR_CONFIG: SidebarItem[] = [
-  { type: 'leaf', label: 'Dashboard', to: '/app', icon: '◈', roles: ALL_ROLES },
-  { type: 'leaf', label: 'Feed', to: '/app/feed', icon: '◉', roles: ALL_ROLES },
+  { type: 'leaf', label: 'Dashboard', to: '/app', icon: LayoutDashboard, roles: ALL_ROLES },
+  { type: 'leaf', label: 'Feed', to: '/app/feed', icon: Rss, roles: ALL_ROLES },
 
   // Aluno
   {
-    type: 'group', label: 'Aprendizagem', icon: '📖', roles: ['aluno'],
+    type: 'group', label: 'Aprendizagem', icon: BookOpen, roles: ['aluno'],
     children: [
-      { type: 'leaf', label: 'Simulações', to: '/app/simulacoes', icon: '⬡', roles: ['aluno'] },
-      { type: 'leaf', label: 'Cursos', to: '/app/cursos', icon: '📚', roles: ['aluno'] },
-      { type: 'leaf', label: 'Meus Cursos', to: '/app/meus-cursos', icon: '📕', roles: ['aluno'] },
-      { type: 'leaf', label: 'Relatório Vocacional', to: '/app/perfil-vocacional', icon: '📊', roles: ['aluno'] },
-      { type: 'leaf', label: 'Ranking', to: '/app/ranking', icon: '🏆', roles: ['aluno'] },
-      { type: 'leaf', label: 'Certificados', to: '/app/certificados', icon: '🎓', roles: ['aluno'] },
-      { type: 'leaf', label: 'Guardados', to: '/app/guardados', icon: '🔖', roles: ['aluno'] },
+      { type: 'leaf', label: 'Simulações', to: '/app/simulacoes', icon: FlaskConical, roles: ['aluno'] },
+      { type: 'leaf', label: 'Cursos', to: '/app/cursos', icon: BookOpenText, roles: ['aluno'] },
+      { type: 'leaf', label: 'Meus Cursos', to: '/app/meus-cursos', icon: BookOpen, roles: ['aluno'] },
+      { type: 'leaf', label: 'Relatório Vocacional', to: '/app/perfil-vocacional', icon: BarChart3, roles: ['aluno'] },
+      { type: 'leaf', label: 'Ranking', to: '/app/ranking', icon: Trophy, roles: ['aluno'] },
+      { type: 'leaf', label: 'Certificados', to: '/app/certificados', icon: GraduationCap, roles: ['aluno'] },
+      { type: 'leaf', label: 'Guardados', to: '/app/guardados', icon: Bookmark, roles: ['aluno'] },
     ],
   },
 
   // Mentor
   {
-    type: 'group', label: 'Conteúdo', icon: '📝', roles: ['mentor'],
+    type: 'group', label: 'Conteúdo', icon: PenSquare, roles: ['mentor'],
     children: [
-      { type: 'leaf', label: 'Cursos', to: '/app/mentor/cursos', icon: '📚', roles: ['mentor'] },
-      { type: 'leaf', label: 'Simulações', to: '/app/mentor/simulacoes', icon: '⬡', roles: ['mentor'] },
-      { type: 'leaf', label: 'Upload', to: '/app/mentor/upload', icon: '⬆️', roles: ['mentor'] },
+      { type: 'leaf', label: 'Cursos', to: '/app/mentor/cursos', icon: BookOpen, roles: ['mentor'] },
+      { type: 'leaf', label: 'Simulações', to: '/app/mentor/simulacoes', icon: FlaskConical, roles: ['mentor'] },
+      { type: 'leaf', label: 'Upload', to: '/app/mentor/upload', icon: Upload, roles: ['mentor'] },
     ],
   },
   {
-    type: 'group', label: 'Alunos', icon: '🎓', roles: ['mentor'],
+    type: 'group', label: 'Alunos', icon: GraduationCap, roles: ['mentor'],
     children: [
-      { type: 'leaf', label: 'Inscritos', to: '/app/mentor/alunos/inscritos', icon: '📋', roles: ['mentor'] },
-      { type: 'leaf', label: 'Mentorados', to: '/app/mentor/mentorados', icon: '👥', roles: ['mentor'] },
+      { type: 'leaf', label: 'Inscritos', to: '/app/mentor/alunos/inscritos', icon: ClipboardList, roles: ['mentor'] },
+      { type: 'leaf', label: 'Mentorados', to: '/app/mentor/mentorados', icon: Users, roles: ['mentor'] },
     ],
   },
-  { type: 'leaf', label: 'Analytics', to: '/app/mentor/analytics', icon: '📈', roles: ['mentor'] },
+  { type: 'leaf', label: 'Analytics', to: '/app/mentor/analytics', icon: TrendingUp, roles: ['mentor'] },
 
   // Instituição
   {
-    type: 'group', label: 'Conteúdo', icon: '📝', roles: ['instituicao'],
+    type: 'group', label: 'Conteúdo', icon: PenSquare, roles: ['instituicao'],
     children: [
-      { type: 'leaf', label: 'Experiências', to: '/app/instituicao/experiencias', icon: '🏛️', roles: ['instituicao'] },
-      { type: 'leaf', label: 'Programas', to: '/app/instituicao/programas', icon: '📌', roles: ['instituicao'] },
+      { type: 'leaf', label: 'Experiências', to: '/app/instituicao/experiencias', icon: Building2, roles: ['instituicao'] },
+      { type: 'leaf', label: 'Programas', to: '/app/instituicao/programas', icon: MapPin, roles: ['instituicao'] },
     ],
   },
   {
-    type: 'group', label: 'Pessoas', icon: '👥', roles: ['instituicao'],
+    type: 'group', label: 'Pessoas', icon: Users, roles: ['instituicao'],
     children: [
-      { type: 'leaf', label: 'Estudantes Vinculados', to: '/app/instituicao/estudantes-vinculados', icon: '🔗', roles: ['instituicao'] },
-      { type: 'leaf', label: 'Propostas', to: '/app/instituicao/propostas', icon: '📩', roles: ['instituicao'] },
+      { type: 'leaf', label: 'Estudantes Vinculados', to: '/app/instituicao/estudantes-vinculados', icon: Link2, roles: ['instituicao'] },
+      { type: 'leaf', label: 'Propostas', to: '/app/instituicao/propostas', icon: Mail, roles: ['instituicao'] },
     ],
   },
-  { type: 'leaf', label: 'Relatórios', to: '/app/instituicao/relatorios', icon: '📊', roles: ['instituicao'] },
+  { type: 'leaf', label: 'Relatórios', to: '/app/instituicao/relatorios', icon: BarChart3, roles: ['instituicao'] },
 
   // Moderação
   {
-    type: 'group', label: 'Moderação', icon: '🛡️', roles: ['moderador', 'super_admin'],
+    type: 'group', label: 'Moderação', icon: Shield, roles: ['moderador', 'super_admin'],
     children: [
-      { type: 'leaf', label: 'Aprovações', to: '/app/moderacao/aprovacoes', icon: '✅', roles: ['moderador', 'super_admin'] },
-      { type: 'leaf', label: 'Denúncias', to: '/app/moderacao/denuncias', icon: '🚩', roles: ['moderador', 'super_admin'] },
+      { type: 'leaf', label: 'Aprovações', to: '/app/moderacao/aprovacoes', icon: CheckCircle, roles: ['moderador', 'super_admin'] },
+      { type: 'leaf', label: 'Denúncias', to: '/app/moderacao/denuncias', icon: Flag, roles: ['moderador', 'super_admin'] },
     ],
   },
   {
-    type: 'group', label: 'Gestão', icon: '⚙️', roles: ['moderador', 'super_admin'],
+    type: 'group', label: 'Gestão', icon: Settings, roles: ['moderador', 'super_admin'],
     children: [
-      { type: 'leaf', label: 'Utilizadores', to: '/app/moderador/utilizadores', icon: '👤', roles: ['moderador', 'super_admin'] },
-      { type: 'leaf', label: 'Reputação', to: '/app/moderador/reputacao', icon: '⭐', roles: ['moderador', 'super_admin'] },
+      { type: 'leaf', label: 'Utilizadores', to: '/app/moderador/utilizadores', icon: UserCircle, roles: ['moderador', 'super_admin'] },
+      { type: 'leaf', label: 'Reputação', to: '/app/moderador/reputacao', icon: Star, roles: ['moderador', 'super_admin'] },
     ],
   },
 
   // Comité Científico
-  { type: 'leaf', label: 'Validação Científica', to: '/app/comite/validacao', icon: '🔬', roles: ['comite_cientifico'] },
+  { type: 'leaf', label: 'Validação Científica', to: '/app/comite/validacao', icon: Microscope, roles: ['comite_cientifico'] },
 
   // Admin
   {
-    type: 'group', label: 'Admin', icon: '⚙️', roles: ['super_admin'],
+    type: 'group', label: 'Admin', icon: Settings, roles: ['super_admin'],
     children: [
-      { type: 'leaf', label: 'Stats', to: '/app/admin/stats', icon: '📊', roles: ['super_admin'] },
-      { type: 'leaf', label: 'Utilizadores', to: '/app/admin/utilizadores', icon: '👤', roles: ['super_admin'] },
-      { type: 'leaf', label: 'Audit', to: '/app/admin/audit', icon: '📜', roles: ['super_admin'] },
-      { type: 'leaf', label: 'LTI', to: '/app/admin/lti', icon: '🔌', roles: ['super_admin'] },
-      { type: 'leaf', label: 'Feed Weights', to: '/app/admin/feed-weights', icon: '⚖️', roles: ['super_admin'] },
+      { type: 'leaf', label: 'Stats', to: '/app/admin/stats', icon: BarChart3, roles: ['super_admin'] },
+      { type: 'leaf', label: 'Utilizadores', to: '/app/admin/utilizadores', icon: UserCircle, roles: ['super_admin'] },
+      { type: 'leaf', label: 'Audit', to: '/app/admin/audit', icon: ScrollText, roles: ['super_admin'] },
+      { type: 'leaf', label: 'LTI', to: '/app/admin/lti', icon: Plug, roles: ['super_admin'] },
+      { type: 'leaf', label: 'Feed Weights', to: '/app/admin/feed-weights', icon: Scale, roles: ['super_admin'] },
     ],
   },
 
   // Transversal
-  { type: 'leaf', label: 'Mentorias', to: '/app/mentorias', icon: '👨‍🏫', roles: ['aluno', 'mentor', 'super_admin'] },
-  { type: 'leaf', label: 'Conquistas', to: '/app/conquistas', icon: '🏆', roles: ['aluno', 'super_admin'] },
-  { type: 'leaf', label: 'Vínculos', to: '/app/vinculos', icon: '🔗', roles: ALL_ROLES },
-  { type: 'leaf', label: 'Mensagens', to: '/app/mensagens', icon: '✉️', roles: ALL_ROLES },
-  { type: 'leaf', label: 'Perfil', to: '/app/perfil', icon: '👤', roles: ALL_ROLES },
+  { type: 'leaf', label: 'Mentorias', to: '/app/mentorias', icon: Users, roles: ['aluno', 'mentor', 'super_admin'] },
+  { type: 'leaf', label: 'Conquistas', to: '/app/conquistas', icon: Award, roles: ['aluno', 'super_admin'] },
+  { type: 'leaf', label: 'Vínculos', to: '/app/vinculos', icon: Link2, roles: ALL_ROLES },
+  { type: 'leaf', label: 'Mensagens', to: '/app/mensagens', icon: MessageSquare, roles: ALL_ROLES },
+  { type: 'leaf', label: 'Perfil', to: '/app/perfil', icon: UserCircle, roles: ALL_ROLES },
+  { type: 'leaf', label: 'Configurações', to: '/app/configuracoes', icon: Settings, roles: ALL_ROLES },
 ];
 
 // ─── Role label ───────────────────────────────────────────────────────────────
@@ -204,11 +215,11 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
               'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
               isActive
                 ? 'bg-amber/10 text-amber font-medium'
-                : 'text-white/60 hover:bg-white/5 hover:text-white',
+                : 'text-text-secondary hover:bg-surface-raised hover:text-text-primary',
             ].join(' ')
           }
         >
-          <span className="text-base leading-none">{item.icon}</span>
+          <item.icon size={18} aria-hidden={true} className="shrink-0" />
           {item.label}
         </NavLink>
       </li>
@@ -226,14 +237,14 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
       <li key={groupKey}>
         <button
           onClick={() => { toggleGroup(groupKey); }}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
         >
-          <span className="text-base leading-none">{item.icon}</span>
+          <item.icon size={18} aria-hidden={true} className="shrink-0" />
           <span className="flex-1 text-left">{item.label}</span>
-          <span className={`text-xs transition-transform ${isOpen ? 'rotate-90' : ''}`}>▸</span>
+          <ChevronRight size={14} aria-hidden={true} className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} />
         </button>
         {isOpen && (
-          <ul className="ml-4 mt-0.5 space-y-0.5 border-l border-white/5 pl-2">
+          <ul className="ml-4 mt-0.5 space-y-0.5 border-l border-border pl-2">
             {visibleChildren.map(renderLeaf)}
           </ul>
         )}
@@ -244,9 +255,9 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className="flex items-center gap-2 px-5 py-5 border-b border-white/5">
+      <div className="flex items-center gap-2 px-5 py-5 border-b border-border">
         <span className="text-lg font-bold text-amber">PDC</span>
-        <span className="text-xs text-white/30">Por Dentro do Curso</span>
+        <span className="text-xs text-text-muted">Por Dentro do Curso</span>
       </div>
 
       {/* Navigation */}
@@ -260,24 +271,24 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
       {/* User footer */}
       {user && (
-        <div className="border-t border-white/5 p-4">
-          <div className="mb-3 flex items-center gap-3 rounded-lg bg-white/3 px-3 py-2.5">
+        <div className="border-t border-border p-4">
+          <div className="mb-3 flex items-center gap-3 rounded-lg bg-surface-raised px-3 py-2.5">
             {/* Avatar initials */}
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber/20 text-xs font-bold text-amber">
               {user.nome.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-white">{user.nome}</p>
-              <p className="truncate text-xs text-white/40">
+              <p className="truncate text-sm font-medium text-text-primary">{user.nome}</p>
+              <p className="truncate text-xs text-text-muted">
                 {role ? ROLE_LABELS[role] : ''}
               </p>
             </div>
           </div>
           <button
             onClick={() => void handleLogout()}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-white/50 transition-colors hover:bg-white/5 hover:text-white"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
           >
-            <span>↩</span>
+            <LogOut size={18} aria-hidden={true} className="shrink-0" />
             Sair
           </button>
         </div>

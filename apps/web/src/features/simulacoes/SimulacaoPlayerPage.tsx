@@ -1,6 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
 import { Wrench } from 'lucide-react';
-import { Wrench } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import { Tipo1Player } from './Tipo1Player';

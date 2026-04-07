@@ -1,0 +1,31 @@
+{
+  "kind": "collectionType",
+  "collectionName": "comments",
+  "info": {
+    "singularName": "comment",
+    "pluralName": "comments",
+    "displayName": "Comment"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "autor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "targetType": { "type": "string", "required": true },
+    "targetId": { "type": "string", "required": true },
+    "conteudo": { "type": "text", "required": true, "maxLength": 1000 },
+    "parentId": { "type": "string" },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["ativo", "removido", "moderado"],
+      "default": "ativo"
+    },
+    "editadoEm": { "type": "datetime" },
+    "criadoEm": { "type": "datetime" }
+  }
+}

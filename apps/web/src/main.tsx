@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './router';
 import { AuthProvider } from './lib/auth/AuthContext';
+import { ThemeProvider } from './lib/theme/ThemeContext';
 import './index.css';
 
 if (import.meta.env.VITE_SENTRY_DSN) {
@@ -37,11 +38,13 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-        <ReactQueryDevtools initialIsOpen={false} />
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <RouterProvider router={router} />
+          <ReactQueryDevtools initialIsOpen={false} />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );

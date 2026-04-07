@@ -6,10 +6,9 @@ export interface LoginPayload {
   password: string;
 }
 
-export interface LoginResponse {
-  requiresOtp: true;
-  canal: 'email' | 'sms';
-}
+export type LoginResponse = 
+  | { requiresOtp: true; canal: 'email' | 'sms' }
+  | User;
 
 export interface RegisterPayload {
   email: string;

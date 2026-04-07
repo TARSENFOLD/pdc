@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { Building2 } from 'lucide-react';
-import { Building2 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Card, Pagination, Badge } from '@/components/ui';

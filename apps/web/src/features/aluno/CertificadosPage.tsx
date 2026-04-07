@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { cursosApi } from '@/lib/api/cursos';
 import { Spinner, Badge } from '@/components/ui';
 import { GraduationCap } from 'lucide-react';
-import { GraduationCap } from 'lucide-react';
 import type { InscricaoComCurso } from '@pdc/shared';
 
 export function CertificadosPage() {
@@ -17,23 +16,23 @@ export function CertificadosPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-white font-sora">Certificados</h1>
+      <h1 className="mb-6 text-2xl font-bold text-text-primary font-sora">Certificados</h1>
       {certificados.length === 0 ? (
-        <div className="rounded-2xl border border-white/5 bg-white/3 p-8 text-center">
+        <div className="rounded-2xl border border-border bg-surface-raised p-8 text-center">
           <GraduationCap size={40} aria-hidden={true} className="mb-4 text-amber mx-auto" />
-          <p className="text-white/50">Ainda não tens certificados.</p>
-          <p className="mt-1 text-xs text-white/30">Conclui um curso para receberes o teu primeiro certificado.</p>
+          <p className="text-text-secondary">Ainda não tens certificados.</p>
+          <p className="mt-1 text-xs text-text-muted">Conclui um curso para receberes o teu primeiro certificado.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {certificados.map((cert: InscricaoComCurso) => (
             <div
               key={cert.id}
-              className="flex items-center justify-between rounded-xl border border-white/5 bg-white/3 p-4"
+              className="flex items-center justify-between rounded-xl border border-border bg-surface-raised p-4"
             >
               <div>
-                <p className="text-sm font-medium text-white">{cert.curso?.titulo ?? 'Curso'}</p>
-                <p className="mt-0.5 text-xs text-white/40">
+                <p className="text-sm font-medium text-text-primary">{cert.curso?.titulo ?? 'Curso'}</p>
+                <p className="mt-0.5 text-xs text-text-muted">
                   Concluído em {new Date(cert.dataConclusao ?? cert.dataInscricao).toLocaleDateString('pt-AO')}
                 </p>
               </div>

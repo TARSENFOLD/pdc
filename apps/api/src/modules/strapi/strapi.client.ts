@@ -21,17 +21,19 @@ function normalize<T>(response: T): T {
   if (data == null) return response;
 
   if (Array.isArray(data)) {
-    res['data'] = data.map((item: any) => {
+    res['data'] = data.map((item: unknown) => {
       if (typeof item === 'object' && item !== null && 'attributes' in item) {
+        const entry = item as { id: unknown; attributes: Record<string, unknown> };
         return {
-          id: item['id'],
-          ...(item['attributes'] as Record<string, unknown>),
+          id: entry.id,
+          ...entry.attributes,
         };
       }
       return item;
     });
-  } else if (typeof data === 'object' && data !== null && 'attributes' in data) {
-    res['data'] = { id: (data as any)['id'], ...((data as any)['attributes'] as Record<string, unknown>) };
+  } else if (typeof data === 'object' && 'attributes' in data) {
+    const entry = data as { id: unknown; attributes: Record<string, unknown> };
+    res['data'] = { id: entry.id, ...entry.attributes };
   }
 
   return response;
@@ -46,7 +48,7 @@ function buildHeaders(): Record<string, string> {
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = TIMEOUT): Promise<Response> {
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
+  const id = setTimeout(() => { controller.abort(); }, timeout);
   const response = await fetch(url, { ...options, signal: controller.signal });
   clearTimeout(id);
   return response;
@@ -61,7 +63,7 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, timeout = 
       lastError = err;
       if (attempt < MAX_RETRIES) {
         const delay = BASE_DELAY * Math.pow(2, attempt);
-        await new Promise(r => setTimeout(r, delay));
+        await new Promise(r => { setTimeout(r, delay); });
         log.warn({ attempt: attempt + 1, maxRetries: MAX_RETRIES, url }, 'Strapi retry');
       }
     }

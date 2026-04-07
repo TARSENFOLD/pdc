@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "vinculos",
+  "info": {
+    "singularName": "vinculo",
+    "pluralName": "vinculos",
+    "displayName": "Vínculo"
+  },
+  "options": {
+    "draftAndPublish": false,
+    "indexes": [
+      {
+        "name": "unique_vinculo_solicitante_destinatario_tipo",
+        "columns": ["solicitante", "destinatario", "tipo"],
+        "type": "unique"
+      }
+    ]
+  },
+  "attributes": {
+    "senderId": { "type": "string", "required": true },
+    "receiverId": { "type": "string", "required": true },
+    "connectionType": { "type": "string" },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["pending", "connected", "declined"],
+      "default": "pending"
+    },
+    "solicitante": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "destinatario": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["aluno-mentor", "mentor-instituicao", "aluno-instituicao"]
+    },
+    "mensagem": { "type": "text", "maxLength": 300 },
+    "visibleOnProfile": { "type": "boolean", "default": true },
+    "documentos": { "type": "json" },
+    "criadoEm": { "type": "datetime" },
+    "resolvidoEm": { "type": "datetime" }
+  }
+}

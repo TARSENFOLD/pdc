@@ -47,9 +47,9 @@ mentoriaRoutes.get('/stats', checkRole(['mentor']), async (c) => {
       }),
     ]);
     return c.json({
-      mentoriasActivas: activas?.meta?.pagination?.total ?? 0,
-      alunosOrientados: orientados?.meta?.pagination?.total ?? 0,
-      avaliacoesPendentes: pendentes?.meta?.pagination?.total ?? 0,
+      mentoriasActivas: activas.meta?.pagination?.total ?? 0,
+      alunosOrientados: orientados.meta?.pagination?.total ?? 0,
+      avaliacoesPendentes: pendentes.meta?.pagination?.total ?? 0,
     });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
@@ -144,13 +144,13 @@ mentoriaRoutes.post(
         'filters[cursoId][$eq]': cursoId,
         'pagination[pageSize]': '1',
       });
-      if (!inscricao.data?.length) return c.json({ error: 'Não estás inscrito neste curso' }, 400);
+      if (!inscricao.data.length) return c.json({ error: 'Não estás inscrito neste curso' }, 400);
     }
 
     if (tipo === 'revisao_projeto') {
       if (!projetoId) return c.json({ error: 'projetoId obrigatório para revisão de projecto' }, 400);
       const proj = await strapiGet<{ data: { alunoId?: string } }>(`/projetos/${projetoId}`);
-      if (proj.data?.alunoId !== alunoId) return c.json({ error: 'Este projecto não te pertence' }, 403);
+      if (proj.data.alunoId !== alunoId) return c.json({ error: 'Este projecto não te pertence' }, 403);
     }
 
     const comissaoPDC = preco > 0 ? Math.round(preco * 0.20 * 100) / 100 : 0;

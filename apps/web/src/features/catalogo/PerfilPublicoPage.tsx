@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { Award, Lock } from 'lucide-react';
-import { Award, Lock } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Avatar, Badge } from '@/components/ui';

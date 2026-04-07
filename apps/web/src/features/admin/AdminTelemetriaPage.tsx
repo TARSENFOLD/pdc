@@ -50,8 +50,8 @@ export function AdminTelemetriaPage() {
       {isLoading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : (data?.data ?? []).length === 0 ? (
-        <div className="rounded-2xl border border-white/5 bg-white/3 p-8 text-center">
-          <p className="text-white/50">Ainda não há eventos de telemetria registados.</p>
+        <div className="rounded-2xl border border-border bg-surface-raised p-8 text-center">
+          <p className="text-text-secondary">Ainda não há eventos de telemetria registados.</p>
         </div>
       ) : (
         <div className="space-y-6">

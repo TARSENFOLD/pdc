@@ -12,16 +12,16 @@ export function RankingPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white font-sora">Ranking Global</h1>
-      <Card className="divide-y divide-white/5 border-white/5 bg-white/3">
+      <h1 className="text-2xl font-bold text-text-primary font-sora">Ranking Global</h1>
+      <Card className="divide-y divide-border border-border bg-surface-raised">
         {(data?.data ?? []).map((user, idx) => (
           <div key={user.id} className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <span className={`font-bold w-6 ${idx === 0 ? 'text-amber' : 'text-white/40'}`}>
+              <span className={`font-bold w-6 ${idx === 0 ? 'text-amber' : 'text-text-muted'}`}>
                 {idx + 1}º
               </span>
               <Avatar src={user.avatarUrl} fallback={user.nome[0] || '?'} />
-              <span className="font-medium text-white">{user.nome}</span>
+              <span className="font-medium text-text-primary">{user.nome}</span>
             </div>
             <span className="font-bold text-amber">{user.xp} XP</span>
           </div>

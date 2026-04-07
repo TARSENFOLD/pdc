@@ -1,5 +1,8 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import pino from 'pino';
+
+const log = pino({ name: 'moderacao-routes' });
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPut } from '../modules/strapi/strapi.client.js';
@@ -79,7 +82,7 @@ moderacaoRoutes.get('/fila', async (c) => {
       },
     });
   } catch (error) {
-    console.error('Erro ao buscar fila de moderacao:', error);
+    log.error({ err: error }, 'Erro ao buscar fila de moderacao');
     return c.json({ error: 'Erro ao buscar fila' }, 500);
   }
 });
@@ -108,7 +111,7 @@ moderacaoRoutes.put('/:tipo/:id/aprovar', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Erro ao aprovar item:', error);
+    log.error({ err: error }, 'Erro ao aprovar item');
     return c.json({ error: 'Erro ao aprovar' }, 500);
   }
 });
@@ -138,7 +141,7 @@ moderacaoRoutes.put('/:tipo/:id/rejeitar', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Erro ao rejeitar item:', error);
+    log.error({ err: error }, 'Erro ao rejeitar item');
     return c.json({ error: 'Erro ao rejeitar' }, 500);
   }
 });

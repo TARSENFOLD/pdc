@@ -1,0 +1,28 @@
+{
+  "kind": "collectionType",
+  "collectionName": "audit_logs",
+  "info": {
+    "singularName": "audit-log",
+    "pluralName": "audit-logs",
+    "displayName": "Log de Auditoria"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "acao": { "type": "string", "required": true },
+    "actorId": { "type": "string" },
+    "actorRole": { "type": "string" },
+    "alvoId": { "type": "string" },
+    "alvoTipo": { "type": "string" },
+    "detalhes": { "type": "json" },
+    "ipHash": { "type": "string" },
+    "userAgent": { "type": "string" },
+    "serverTimestamp": { "type": "datetime" },
+    "autor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    }
+  }
+}

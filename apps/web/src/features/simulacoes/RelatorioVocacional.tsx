@@ -4,7 +4,6 @@ import type { RelatorioVocacional as IRelatorioVocacional } from '@pdc/shared';
 import { Card, Spinner, Badge, Button } from '../../components/ui';
 import { Link } from 'react-router-dom';
 import { Microscope, BarChart3, Target, GraduationCap } from 'lucide-react';
-import { Microscope, BarChart3, Target, GraduationCap } from 'lucide-react';
 
 export const RelatorioVocacional = () => {
   const [data, setData] = useState<IRelatorioVocacional | null>(null);
@@ -83,7 +82,7 @@ export const RelatorioVocacional = () => {
             </div>
           </Card>
 
-          <Card className="p-8 bg-slate-900 text-white border-0 shadow-2xl">
+          <Card className="p-8 bg-slate-900 text-text-primary border-0 shadow-2xl">
             <h4 className="text-xl font-bold mb-4">Análise do Consultor IA</h4>
             <p className="text-slate-300 leading-relaxed italic">
               "Demonstras uma forte tendência para áreas que exigem {perfil.aptidao > 7 ? 'elevada precisão técnica' : 'grande capacidade de exploração'}. 

@@ -3,6 +3,9 @@ import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { MicroDesafio } from '../features/landing/MicroDesafio';
 import { CarrosselInstituicoes } from '../features/landing/CarrosselInstituicoes';
+import { LandingDestaques } from '../features/landing/LandingDestaques';
+import { LandingMentores } from '../features/landing/LandingMentores';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { SEOHead } from '@/components/layout/SEOHead';
 import {
   Dices, DollarSign, TrendingDown, FlaskConical, BarChart3,
@@ -27,34 +30,35 @@ function useFadeUp() {
 
 function Navbar() {
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-md">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2">
           <span className="text-xl font-bold tracking-tight text-amber">PDC</span>
-          <span className="hidden text-sm text-white/50 sm:block">Por Dentro do Curso</span>
+          <span className="hidden text-sm text-text-muted sm:block">Por Dentro do Curso</span>
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">
-          <a href="#problema" className="text-sm text-white/60 transition-colors hover:text-white">
+          <a href="#problema" className="text-sm text-text-secondary transition-colors hover:text-text-primary">
             Problema
           </a>
-          <a href="#como-funciona" className="text-sm text-white/60 transition-colors hover:text-white">
+          <a href="#como-funciona" className="text-sm text-text-secondary transition-colors hover:text-text-primary">
             Como funciona
           </a>
-          <a href="#features" className="text-sm text-white/60 transition-colors hover:text-white">
+          <a href="#features" className="text-sm text-text-secondary transition-colors hover:text-text-primary">
             Funcionalidades
           </a>
         </div>
 
         <div className="flex items-center gap-3">
+          <ThemeToggle variant="icon" />
           <Link
             to="/login"
-            className="text-sm text-white/70 transition-colors hover:text-white"
+            className="text-sm text-text-secondary transition-colors hover:text-text-primary"
           >
             Entrar
           </Link>
           <Link
-            to="/register"
+            to="/criar-conta"
             className="rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-amber-hover"
           >
             Começar grátis
@@ -89,7 +93,7 @@ function Hero() {
 
       <motion.h1
         {...stagger(1)}
-        className="mx-auto max-w-4xl text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl"
+        className="mx-auto max-w-4xl text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
       >
         Escolhe a tua carreira com{' '}
         <span className="text-amber">evidência real</span>
@@ -97,7 +101,7 @@ function Hero() {
 
       <motion.p
         {...stagger(2)}
-        className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-white/60"
+        className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-text-secondary"
       >
         Experimenta profissões e cursos através de simulações práticas antes de te matriculares.
         Toma a decisão certa com base no teu próprio comportamento — não em suposições.
@@ -105,14 +109,14 @@ function Hero() {
 
       <motion.div {...stagger(3)} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
         <Link
-          to="/register"
+          to="/criar-conta"
           className="w-full rounded-xl bg-amber px-8 py-3.5 text-base font-semibold text-black transition-all hover:bg-amber-hover hover:scale-[1.02] sm:w-auto"
         >
           Começa agora — é grátis
         </Link>
         <a
           href="#como-funciona"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-white/10 sm:w-auto"
+          className="w-full rounded-xl border border-border bg-surface-raised px-8 py-3.5 text-base font-semibold text-text-primary transition-colors hover:bg-surface sm:w-auto"
         >
           Ver como funciona
         </a>
@@ -129,7 +133,7 @@ function Hero() {
         {STATS.map((stat) => (
           <div key={stat.label} className="flex flex-col items-center gap-1">
             <span className="text-3xl font-bold text-amber">{stat.value}</span>
-            <span className="text-sm text-white/50">{stat.label}</span>
+            <span className="text-sm text-text-muted">{stat.label}</span>
           </div>
         ))}
       </motion.div>
@@ -140,7 +144,7 @@ function Hero() {
         animate={reduced ? {} : { y: [0, 8, 0] }}
         transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
       >
-        <svg className="h-6 w-6 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-6 w-6 text-text-muted/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
         </svg>
       </motion.div>
@@ -162,17 +166,17 @@ function Problema() {
   return (
     <section
       id="problema"
-      className="bg-[#0d0d0d] px-4 py-24 sm:px-6"
+      className="bg-surface-alt px-4 py-24 sm:px-6"
     >
       <div className="mx-auto max-w-4xl">
         <motion.div {...fadeUp} className="text-center">
           <span className="text-xs font-semibold uppercase tracking-widest text-amber">
             O problema
           </span>
-          <h2 className="mt-4 text-3xl font-bold text-white sm:text-4xl">
+          <h2 className="mt-4 text-3xl font-bold text-text-primary sm:text-4xl">
             Angola perde 6 em cada 10 estudantes no primeiro ano
           </h2>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/60">
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary">
             Cerca de 60% dos estudantes universitários angolanos abandonam o curso no primeiro ano.
             O motivo? Escolheram sem conhecer. Sem experimentar. Sem evidência.
           </p>
@@ -184,11 +188,11 @@ function Problema() {
               key={item.title}
               {...fadeUp}
               transition={{ duration: 0.5, delay: i * 0.1, ease: 'easeOut' }}
-              className="rounded-2xl border border-white/5 bg-white/3 p-6"
+              className="rounded-2xl border border-border bg-surface p-6"
             >
               <div className="mb-4 text-amber"><item.icon size={20} aria-hidden={true} /></div>
-              <h3 className="mb-2 font-semibold text-white">{item.title}</h3>
-              <p className="text-sm leading-relaxed text-white/50">{item.body}</p>
+              <h3 className="mb-2 font-semibold text-text-primary">{item.title}</h3>
+              <p className="text-sm leading-relaxed text-text-secondary">{item.body}</p>
             </motion.div>
           ))}
         </div>
@@ -227,7 +231,7 @@ function ComoFunciona() {
           <span className="text-xs font-semibold uppercase tracking-widest text-amber">
             Como funciona
           </span>
-          <h2 className="mt-4 text-3xl font-bold text-white sm:text-4xl">
+          <h2 className="mt-4 text-3xl font-bold text-text-primary sm:text-4xl">
             Três passos para uma decisão segura
           </h2>
         </motion.div>
@@ -247,8 +251,8 @@ function ComoFunciona() {
                 <div className="relative mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber/30 bg-amber/10 text-2xl font-bold text-amber">
                   {i + 1}
                 </div>
-                <h3 className="mb-3 text-lg font-semibold text-white">{passo.titulo}</h3>
-                <p className="text-sm leading-relaxed text-white/50">{passo.descricao}</p>
+                <h3 className="mb-3 text-lg font-semibold text-text-primary">{passo.titulo}</h3>
+                <p className="text-sm leading-relaxed text-text-secondary">{passo.descricao}</p>
               </motion.div>
             ))}
           </div>
@@ -282,13 +286,13 @@ function Features() {
   const fadeUp = useFadeUp();
 
   return (
-    <section id="features" className="bg-[#0d0d0d] px-4 py-24 sm:px-6">
+    <section id="features" className="bg-surface-alt px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <motion.div {...fadeUp} className="text-center">
           <span className="text-xs font-semibold uppercase tracking-widest text-amber">
             Funcionalidades
           </span>
-          <h2 className="mt-4 text-3xl font-bold text-white sm:text-4xl">
+          <h2 className="mt-4 text-3xl font-bold text-text-primary sm:text-4xl">
             Tudo o que precisas, num só lugar
           </h2>
         </motion.div>
@@ -299,11 +303,11 @@ function Features() {
               key={feature.titulo}
               {...fadeUp}
               transition={{ duration: 0.45, delay: i * 0.07, ease: 'easeOut' }}
-              className="group rounded-2xl border border-white/5 bg-white/3 p-6 transition-colors hover:border-amber/20 hover:bg-amber/[0.03]"
+              className="group rounded-2xl border border-border bg-surface p-6 transition-colors hover:border-amber/20 hover:bg-amber/[0.03]"
             >
               <div className="mb-4 text-amber"><feature.icon size={20} aria-hidden={true} /></div>
-              <h3 className="mb-2 font-semibold text-white">{feature.titulo}</h3>
-              <p className="text-sm leading-relaxed text-white/50">{feature.descricao}</p>
+              <h3 className="mb-2 font-semibold text-text-primary">{feature.titulo}</h3>
+              <p className="text-sm leading-relaxed text-text-secondary">{feature.descricao}</p>
             </motion.article>
           ))}
         </div>
@@ -365,7 +369,7 @@ function CTAFinal() {
         </p>
         <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
-            to="/register"
+            to="/criar-conta"
             className="w-full rounded-xl bg-black px-8 py-3.5 text-base font-semibold text-white transition-all hover:bg-black/80 hover:scale-[1.02] sm:w-auto"
           >
             Criar conta grátis
@@ -386,21 +390,21 @@ function CTAFinal() {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/5 bg-background px-4 py-12 sm:px-6">
+    <footer className="border-t border-border bg-background px-4 py-12 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-center">
           <div>
             <span className="text-lg font-bold text-amber">PDC</span>
-            <p className="mt-1 text-xs text-white/30">Por Dentro do Curso — Angola</p>
+            <p className="mt-1 text-xs text-text-muted">Por Dentro do Curso — Angola</p>
           </div>
-          <div className="flex flex-wrap gap-6 text-sm text-white/40">
-            <Link to="/login" className="transition-colors hover:text-white">Entrar</Link>
-            <Link to="/register" className="transition-colors hover:text-white">Registar</Link>
-            <a href="#problema" className="transition-colors hover:text-white">Problema</a>
-            <a href="#como-funciona" className="transition-colors hover:text-white">Como funciona</a>
+          <div className="flex flex-wrap gap-6 text-sm text-text-secondary">
+            <Link to="/login" className="transition-colors hover:text-text-primary">Entrar</Link>
+            <Link to="/criar-conta" className="transition-colors hover:text-text-primary">Registar</Link>
+            <a href="#problema" className="transition-colors hover:text-text-primary">Problema</a>
+            <a href="#como-funciona" className="transition-colors hover:text-text-primary">Como funciona</a>
           </div>
         </div>
-        <p className="mt-8 text-xs text-white/20">
+        <p className="mt-8 text-xs text-text-muted">
           © {new Date().getFullYear()} Por Dentro do Curso. Todos os direitos reservados.
         </p>
       </div>
@@ -412,7 +416,7 @@ function Footer() {
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-background font-sans text-white antialiased">
+    <div className="min-h-screen bg-background font-sans text-text-primary antialiased">
       <SEOHead
         title="PDC — Por Dentro do Curso"
         description="Experimenta profissões e cursos através de simulações práticas antes de te matriculares. Toma a decisão certa com base no teu próprio comportamento."
@@ -421,10 +425,12 @@ export function LandingPage() {
       <Navbar />
       <main>
         <Hero />
+        <LandingDestaques />
         <CarrosselInstituicoes />
         <Problema />
         <ComoFunciona />
         <Features />
+        <LandingMentores />
         <CTAFinal />
       </main>
       <Footer />

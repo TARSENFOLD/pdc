@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle } from 'lucide-react';
-import { CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { comiteApi } from '@/lib/api/comite';
 import { Spinner, Card } from '@/components/ui';
@@ -20,8 +19,8 @@ export function ComiteDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white font-display">Comité Científico</h1>
-      <p className="text-white/50 text-sm">Valida o rigor académico das simulações e experiências antes da publicação.</p>
+      <h1 className="text-2xl font-bold text-text-primary font-display">Comité Científico</h1>
+      <p className="text-text-secondary text-sm">Valida o rigor académico das simulações e experiências antes da publicação.</p>
 
       {isLoading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
@@ -45,9 +44,9 @@ export function ComiteDashboard() {
       )}
 
       {totalPendente === 0 && !isLoading && (
-        <div className="rounded-2xl border border-white/5 bg-white/3 p-8 text-center">
+        <div className="rounded-2xl border border-border bg-surface-raised p-8 text-center">
           <CheckCircle size={40} aria-hidden={true} className="mb-4 text-emerald-500 mx-auto" />
-          <p className="text-white/50">Nenhum conteúdo aguarda validação científica.</p>
+          <p className="text-text-secondary">Nenhum conteúdo aguarda validação científica.</p>
         </div>
       )}
     </div>

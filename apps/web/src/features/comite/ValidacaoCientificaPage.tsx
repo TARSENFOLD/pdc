@@ -49,15 +49,15 @@ export function ValidacaoCientificaPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white font-display">Validação Científica</h1>
+      <h1 className="text-2xl font-bold text-text-primary font-display">Validação Científica</h1>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg border border-white/5 bg-white/3 p-1 w-fit">
+      <div className="flex gap-1 rounded-lg border border-border bg-surface-raised p-1 w-fit">
         {(['simulacao', 'experiencia'] as TabTipo[]).map((t) => (
           <button
             key={t}
             onClick={() => { setTab(t); setPage(1); setSelectedItem(null); }}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${tab === t ? 'bg-amber text-black' : 'text-white/60 hover:text-white'}`}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${tab === t ? 'bg-amber text-black' : 'text-text-secondary hover:text-white'}`}
           >
             {t === 'simulacao' ? 'Simulações' : 'Experiências'}
           </button>
@@ -70,19 +70,19 @@ export function ValidacaoCientificaPage() {
           {isLoading ? (
             <ListRowSkeleton />
           ) : itens.length === 0 ? (
-            <div className="rounded-2xl border border-white/5 bg-white/3 p-8 text-center">
-              <p className="text-white/50">Nenhum conteúdo aguarda validação científica.</p>
+            <div className="rounded-2xl border border-border bg-surface-raised p-8 text-center">
+              <p className="text-text-secondary">Nenhum conteúdo aguarda validação científica.</p>
             </div>
           ) : (
             itens.map((item) => (
               <button
                 key={item.id}
                 onClick={() => { setSelectedItem(item); setParecer(''); }}
-                className={`w-full text-left rounded-xl border p-4 transition-colors ${selectedItem?.id === item.id ? 'border-amber/40 bg-amber/5' : 'border-white/5 bg-white/3 hover:border-white/10'}`}
+                className={`w-full text-left rounded-xl border p-4 transition-colors ${selectedItem?.id === item.id ? 'border-amber/40 bg-amber/5' : 'border-border bg-surface-raised hover:border-border'}`}
               >
-                <p className="text-sm font-medium text-white">{item.titulo ?? 'Sem título'}</p>
+                <p className="text-sm font-medium text-text-primary">{item.titulo ?? 'Sem título'}</p>
                 <div className="mt-1 flex items-center gap-2">
-                  <span className="text-xs text-white/40">{item.autorNome ?? 'Autor desconhecido'}</span>
+                  <span className="text-xs text-text-muted">{item.autorNome ?? 'Autor desconhecido'}</span>
                   <Badge variant="warning" className="text-[10px]">Em revisão</Badge>
                 </div>
               </button>
@@ -92,13 +92,13 @@ export function ValidacaoCientificaPage() {
 
         {/* Painel de validação */}
         {selectedItem ? (
-          <div className="rounded-2xl border border-white/5 bg-white/3 p-6 space-y-4">
-            <h2 className="font-semibold text-white">{selectedItem.titulo}</h2>
-            <p className="text-xs text-white/40">Autor: {selectedItem.autorNome}</p>
+          <div className="rounded-2xl border border-border bg-surface-raised p-6 space-y-4">
+            <h2 className="font-semibold text-text-primary">{selectedItem.titulo}</h2>
+            <p className="text-xs text-text-muted">Autor: {selectedItem.autorNome}</p>
 
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
-                Parecer científico <span className="text-white/30">(mínimo 20 caracteres)</span>
+                Parecer científico <span className="text-text-muted">(mínimo 20 caracteres)</span>
               </label>
               <textarea
                 value={parecer}
@@ -107,7 +107,7 @@ export function ValidacaoCientificaPage() {
                 placeholder="Descreve a fundamentação académica da tua decisão..."
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber resize-none"
               />
-              <p className="mt-1 text-xs text-white/30">{parecer.trim().length}/20 caracteres mínimos</p>
+              <p className="mt-1 text-xs text-text-muted">{parecer.trim().length}/20 caracteres mínimos</p>
             </div>
 
             <div className="flex gap-3">
@@ -136,8 +136,8 @@ export function ValidacaoCientificaPage() {
             </Button>
           </div>
         ) : (
-          <div className="rounded-2xl border border-white/5 bg-white/3 p-8 text-center flex items-center justify-center">
-            <p className="text-white/30 text-sm">Selecciona um item para validar</p>
+          <div className="rounded-2xl border border-border bg-surface-raised p-8 text-center flex items-center justify-center">
+            <p className="text-text-muted text-sm">Selecciona um item para validar</p>
           </div>
         )}
       </div>

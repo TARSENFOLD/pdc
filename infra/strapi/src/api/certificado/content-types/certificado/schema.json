@@ -1,0 +1,29 @@
+{
+  "kind": "collectionType",
+  "collectionName": "certificados",
+  "info": {
+    "singularName": "certificado",
+    "pluralName": "certificados",
+    "displayName": "Certificado"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "aluno": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "curso": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::curso.curso",
+      "required": true
+    },
+    "codigoValidacao": { "type": "string", "unique": true, "required": true },
+    "urlArquivo": { "type": "string" },
+    "emitidoEm": { "type": "datetime", "required": true }
+  }
+}

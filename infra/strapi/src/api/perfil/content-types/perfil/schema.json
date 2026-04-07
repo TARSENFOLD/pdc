@@ -4,15 +4,140 @@
   "info": {
     "singularName": "perfil",
     "pluralName": "perfis",
-    "displayName": "Perfil"
+    "displayName": "Perfil",
+    "description": "Perfil central do utilizador"
   },
   "options": {
     "draftAndPublish": false
   },
   "attributes": {
-    "nome": { "type": "string" },
-    "biografia": { "type": "text" },
-    "areaAtuacao": { "type": "string" },
-    "dataNascimento": { "type": "date" }
+    "nome": {
+      "type": "string",
+      "required": true
+    },
+    "tipo": {
+      "type": "enumeration",
+      "enum": [
+        "aluno",
+        "mentor",
+        "instituicao",
+        "moderador",
+        "super_admin",
+        "comite_cientifico"
+      ],
+      "required": true
+    },
+    "email": {
+      "type": "email"
+    },
+    "userId": {
+      "type": "string"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true
+    },
+    "suspensaAte": {
+      "type": "datetime"
+    },
+    "bio": {
+      "type": "text",
+      "maxLength": 1000
+    },
+    "headline": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "foto": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"]
+    },
+    "capa": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"]
+    },
+    "telefone": {
+      "type": "string"
+    },
+    "website": {
+      "type": "string"
+    },
+    "socialLinks": {
+      "type": "json"
+    },
+    "areasInteresse": {
+      "type": "json"
+    },
+    "competencias": {
+      "type": "json"
+    },
+    "areaFormacao": {
+      "type": "string"
+    },
+    "regiao": {
+      "type": "string"
+    },
+    "nivelEnsino": {
+      "type": "string"
+    },
+    "anoAcademico": {
+      "type": "string"
+    },
+    "funcao": {
+      "type": "string"
+    },
+    "tipoInstituicao": {
+      "type": "string"
+    },
+    "niveisEnsino": {
+      "type": "json"
+    },
+    "modalidadeCusto": {
+      "type": "string"
+    },
+    "natureza": {
+      "type": "string"
+    },
+    "aprovado": {
+      "type": "boolean",
+      "default": true
+    },
+    "modoAcesso": {
+      "type": "enumeration",
+      "enum": ["individual", "institucional"],
+      "default": "individual"
+    },
+    "codigoInstitucional": {
+      "type": "string"
+    },
+    "instituicao": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::instituicao.instituicao"
+    },
+    "conquistas": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::conquista.conquista",
+      "inversedBy": "perfis"
+    },
+    "documentos": {
+      "type": "json"
+    },
+    "notificationPreferences": {
+      "type": "json"
+    },
+    "visibilitySettings": {
+      "type": "json"
+    },
+    "preferenciasUi": {
+      "type": "json"
+    },
+    "language": {
+      "type": "string",
+      "default": "pt-AO"
+    }
   }
 }

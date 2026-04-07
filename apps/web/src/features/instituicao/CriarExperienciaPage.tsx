@@ -1,6 +1,5 @@
 import { useForm } from 'react-hook-form';
 import { Info } from 'lucide-react';
-import { Info } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';

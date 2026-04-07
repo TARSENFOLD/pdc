@@ -1,6 +1,9 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
+import pino from 'pino';
+
+const log = pino({ name: 'telemetria-routes' });
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { redis } from '../lib/redis.js';
 import { strapiPost } from '../modules/strapi/strapi.client.js';
@@ -47,7 +50,7 @@ telemetriaRoutes.post('/', zValidator('json', TelemetriaSchema), async (c) => {
 
     return c.json({ ok: true });
   } catch (err) {
-    console.error('Erro ao processar telemetria:', err);
+    log.error({ err }, 'Erro ao processar telemetria');
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 500);
   }

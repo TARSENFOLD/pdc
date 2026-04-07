@@ -215,7 +215,7 @@ export function MensagensPage() {
                     </p>
                   </div>
                   {conversa.naoLidas > 0 && (
-                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-error text-white text-xs font-bold">
+                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-error text-text-primary text-xs font-bold">
                       {conversa.naoLidas}
                     </span>
                   )}
@@ -253,12 +253,12 @@ export function MensagensPage() {
                     <div
                       className={`max-w-xs px-4 py-2 rounded-lg ${
                         isOwn
-                          ? 'bg-amber text-white'
+                          ? 'bg-amber text-background'
                           : 'bg-background-secondary text-text-primary'
                       }`}
                     >
                       <p className="text-sm break-words">{msg.conteudo}</p>
-                      <p className={`text-xs mt-1 ${isOwn ? 'text-white/70' : 'text-text-secondary'}`}>
+                      <p className={`text-xs mt-1 ${isOwn ? 'text-background/70' : 'text-text-secondary'}`}>
                         {new Date(msg.createdAt).toLocaleTimeString('pt-PT', {
                           hour: '2-digit',
                           minute: '2-digit',

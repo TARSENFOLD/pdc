@@ -3,7 +3,7 @@
  * Todos os pedidos incluem cookies httpOnly automaticamente.
  */
 
-const BASE_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001';
+const BASE_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000';
 
 export class ApiError extends Error {
   constructor(

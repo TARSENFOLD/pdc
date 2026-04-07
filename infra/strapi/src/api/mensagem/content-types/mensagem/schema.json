@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "mensagens",
+  "info": {
+    "singularName": "mensagem",
+    "pluralName": "mensagens",
+    "displayName": "Mensagem"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "remetente": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "destinatario": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "conteudo": { "type": "text", "required": true, "maxLength": 2000 },
+    "lida": { "type": "boolean", "default": false },
+    "lidaEm": { "type": "datetime" },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["texto", "sistema"],
+      "default": "texto"
+    },
+    "criadoEm": { "type": "datetime" }
+  }
+}

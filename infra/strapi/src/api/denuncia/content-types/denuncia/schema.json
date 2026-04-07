@@ -1,0 +1,44 @@
+{
+  "kind": "collectionType",
+  "collectionName": "denuncias",
+  "info": {
+    "singularName": "denuncia",
+    "pluralName": "denuncias",
+    "displayName": "Denúncia"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "tipo": { "type": "string", "required": true },
+    "motivo": { "type": "string", "required": true },
+    "targetType": { "type": "string" },
+    "targetId": { "type": "string" },
+    "detalhes": { "type": "text", "maxLength": 500 },
+    "autor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["pendente", "em_analise", "resolvida", "rejeitada"],
+      "default": "pendente"
+    },
+    "prioridade": {
+      "type": "enumeration",
+      "enum": ["baixa", "media", "alta", "critica"]
+    },
+    "moderador": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "comentarioModerador": { "type": "text" },
+    "acaoTomada": {
+      "type": "enumeration",
+      "enum": ["nenhuma", "aviso", "remocao", "suspensao"]
+    },
+    "resolvidaEm": { "type": "datetime" }
+  }
+}

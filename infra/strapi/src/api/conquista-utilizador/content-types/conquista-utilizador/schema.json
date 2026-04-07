@@ -1,0 +1,27 @@
+{
+  "kind": "collectionType",
+  "collectionName": "conquista_utilizadores",
+  "info": {
+    "singularName": "conquista-utilizador",
+    "pluralName": "conquista-utilizadores",
+    "displayName": "Conquista do Utilizador"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "perfil": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "conquista": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::conquista.conquista",
+      "required": true
+    },
+    "desbloqueadaEm": { "type": "datetime" }
+  }
+}

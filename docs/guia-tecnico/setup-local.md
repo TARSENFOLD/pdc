@@ -59,6 +59,11 @@ Edita `apps/api/.env`:
 PORT=3001
 FRONTEND_URL=http://localhost:5173
 
+# ⚠️ Bypass de OTP (opcional em dev local)
+# Define como true para saltar verificação de e-mail/sms
+# Ver: docs/guia-tecnico/dev-skip-otp.md
+DEV_SKIP_OTP=true
+
 # JWT
 JWT_SECRET=muda-isto-em-producao-min-32-chars
 JWT_REFRESH_SECRET=muda-isto-em-producao-tambem-32

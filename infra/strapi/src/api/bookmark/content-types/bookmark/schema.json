@@ -1,0 +1,31 @@
+{
+  "kind": "collectionType",
+  "collectionName": "bookmarks",
+  "info": {
+    "singularName": "bookmark",
+    "pluralName": "bookmarks",
+    "displayName": "Bookmark"
+  },
+  "options": {
+    "draftAndPublish": false,
+    "indexes": [
+      {
+        "name": "unique_bookmark_actor_target",
+        "columns": ["actor", "targetType", "targetId"],
+        "type": "unique"
+      }
+    ]
+  },
+  "attributes": {
+    "actor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "targetType": { "type": "string", "required": true },
+    "targetId": { "type": "string", "required": true },
+    "colecao": { "type": "string" },
+    "criadoEm": { "type": "datetime" }
+  }
+}

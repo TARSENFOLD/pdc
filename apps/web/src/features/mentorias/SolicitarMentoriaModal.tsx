@@ -153,7 +153,7 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
             className={selectCls}
           />
           {Number(preco) > 0 && (
-            <p className="mt-1 text-xs text-white/40">
+            <p className="mt-1 text-xs text-text-muted">
               Comissão PDC (20%): ${(Number(preco) * 0.20).toFixed(2)} — Recebes: ${(Number(preco) * 0.80).toFixed(2)}
             </p>
           )}

@@ -7,6 +7,8 @@ import { AuthSplitLayout } from './AuthSplitLayout';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import type { RegistoMentorPayload } from '@pdc/shared';
 
+import { ArrowLeft } from 'lucide-react';
+
 const AREAS = ['Tecnologia', 'Saúde', 'Direito', 'Engenharia', 'Artes', 'Ciências', 'Educação'] as const;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
@@ -94,7 +96,7 @@ export function RegistoMentorPage() {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-text-secondary">Documento comprovativo (PDF, máx 5 MB)</label>
             <input ref={fileRef} type="file" accept=".pdf" onChange={handleFileChange}
-              className="block w-full text-sm text-text-secondary file:mr-4 file:rounded-md file:border-0 file:bg-surface-raised file:px-3 file:py-2 file:text-sm file:text-text-primary hover:file:bg-white/10" />
+              className="block w-full text-sm text-text-secondary file:mr-4 file:rounded-md file:border-0 file:bg-surface-raised file:px-3 file:py-2 file:text-sm file:text-text-primary hover:file:bg-surface-raised" />
             {docFile ? <p className="text-xs text-text-muted">{docFile.name}</p> : null}
             {docError ? <p className="text-xs text-error">{docError}</p> : null}
           </div>
@@ -102,6 +104,12 @@ export function RegistoMentorPage() {
           <Button type="submit" className="w-full" isLoading={mutation.isPending}>Criar conta</Button>
         </form>
 
+        <p className="mt-6 text-center text-sm text-text-muted lg:block hidden">
+          <Link to="/criar-conta" className="inline-flex items-center gap-1 text-amber hover:underline">
+            <ArrowLeft size={16} aria-hidden={true} />
+            Voltar
+          </Link>
+        </p>
       </div>
     </AuthSplitLayout>
   );

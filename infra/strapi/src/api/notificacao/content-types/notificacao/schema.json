@@ -1,0 +1,31 @@
+{
+  "kind": "collectionType",
+  "collectionName": "notificacoes",
+  "info": {
+    "singularName": "notificacao",
+    "pluralName": "notificacoes",
+    "displayName": "Notificação"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "perfil": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "tipo": { "type": "string", "required": true },
+    "titulo": { "type": "string" },
+    "mensagem": { "type": "text", "required": true },
+    "lida": { "type": "boolean", "default": false },
+    "lidaEm": { "type": "datetime" },
+    "targetType": { "type": "string" },
+    "targetId": { "type": "string" },
+    "actorId": { "type": "string" },
+    "agrupada": { "type": "boolean", "default": false },
+    "contagemAgrupada": { "type": "integer", "default": 1 },
+    "data": { "type": "datetime" }
+  }
+}

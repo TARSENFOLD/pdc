@@ -113,7 +113,7 @@ export function ExperienciaDetailPage() {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/register"
+              to="/criar-conta"
               className="inline-flex h-10 items-center rounded-md bg-amber px-5 text-sm font-semibold text-background hover:bg-amber-hover"
             >
               Candidatar-se

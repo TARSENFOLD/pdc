@@ -23,7 +23,11 @@ export default function LoginPage() {
 
     try {
       const result = await login({ email, password });
-      navigate('/verificar', { state: { canal: result.canal, from }, replace: true });
+      if ('requiresOtp' in result) {
+        navigate('/verificar', { state: { canal: result.canal, from }, replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (err: unknown) {
       const body = err instanceof Error && 'body' in err ? (err as { body?: Record<string, string> }).body : undefined;
       setError(body?.error ?? 'Erro ao iniciar sessão. Verifique as suas credenciais.');
@@ -96,7 +100,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => { authApi.loginWithGoogle(); }}
-            className="mt-6 flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-surface-raised p-3 font-medium text-text-primary transition-colors hover:bg-white/5"
+            className="mt-6 flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-surface-raised p-3 font-medium text-text-primary transition-colors hover:bg-surface-raised"
           >
             Continuar com Google
           </button>
@@ -104,7 +108,7 @@ export default function LoginPage() {
 
         <p className="mt-8 text-center text-sm text-text-muted">
           Não tem uma conta?{' '}
-          <Link to="/register" replace className="text-amber font-semibold hover:underline">
+          <Link to="/criar-conta" replace className="text-amber font-semibold hover:underline">
             Registe-se
           </Link>
         </p>

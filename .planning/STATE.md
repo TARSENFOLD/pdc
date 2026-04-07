@@ -8,16 +8,16 @@ Ver: `.planning/PROJECT.md` (actualizado: Abril 2026)
 
 **Core value:** O estudante faz uma escolha de carreira baseada em evidência real do seu próprio comportamento — não em suposições.
 
-**Current focus:** Pronto para lançamento — configurar Strapi v5 em produção e variáveis de ambiente
+**Current focus:** Pronto para lançamento — configurar Strapi v5 em produção, variáveis de ambiente e resolver dívida técnica de modularidade
 
 ## Current Status
 
 ```
-Fase 0 — Fundação          [x] COMPLETA
-Fase 1 — Auth Segura       [x] COMPLETA (JWT+RBAC ✅; OAuth+2FA ✅)
+Fase 0 — Fundação          [~] PARCIAL (Strapi v5 instalado, mas configuração de produção pendente)
+Fase 1 — Auth Segura       [x] COMPLETA (JWT+RBAC ✅; OAuth+2FA ✅; Google ✅)
 Fase 2 — Design System     [x] COMPLETA
-Fase 3 — API Layer         [x] COMPLETA
-Fase 4 — Core do Produto   [~] PARCIAL (Sim Tipo 1+2, Cursos, Experiências, Projetos, Mentorias, Conquistas, Feed ✅; Sim Tipo 3, Programas, Conquistas auto ❌)
+Fase 3 — API Layer         [~] PARCIAL (Módulos frontend ✅; Rotas BFF violam limite de 200 linhas)
+Fase 4 — Core do Produto   [~] PARCIAL (Sim Tipo 1+2, Cursos, Experiências, Projetos, Mentorias, Conquistas, Feed, Mentores ✅; Sim Tipo 3, Programas, Conquistas auto ❌)
 Fase 5 — LTI 1.3           [x] COMPLETA
 Fase 6 — Moderação/Admin   [x] COMPLETA
 Fase 7 — IA e Realtime     [x] COMPLETA
@@ -25,7 +25,7 @@ Fase 7 — IA e Realtime     [x] COMPLETA
 
 **Repositório:** `pdc-v2/` — criado em Abril 2026
 **Branch activa:** main
-**Último commit:** (M3 - Auth Google + OTP 2FA adicionados)
+**Último commit:** (Auditoria Técnica — Estado sincronizado com realidade do código)
 
 ## O que foi feito
 
@@ -34,10 +34,10 @@ Fase 7 — IA e Realtime     [x] COMPLETA
 - [x] Fase 2 — Design system (tokens Tailwind v4), 11 componentes ui/, AppLayout, Sidebar, 5 dashboards, LandingPage
 - [x] Fase 3 — 7 módulos API frontend, 6 rotas BFF, strapi.client.ts, r2.service.ts
 - [x] Fase 4A — Simulações Tipo 1 e 2, telemetria com idempotência Redis, perfil vocacional, relatório
-- [x] Fase 4B — Cursos (list/detail/player), Experiências (list/detail), PerfilPage
+- [x] Fase 4B — Cursos (list/detail/player), Experiências (list/detail), PerfilPage, LandingMentores (M5)
 - [x] Fase 4C — Projetos (CRUD, 4 modos, ACL), Vínculos (pedido/aprovação/rejeição), Conquistas (listagem, badges)
 - [x] Fase 4D — Feed e Algoritmo de Ranking (M2)
-- [x] Fase 4E — Features Transversais: Likes, Bookmarks, Ratings, Comments (M1)
+- [x] Fase 4E — M1 Interações: Likes, Bookmarks, Ratings, Comments (API ✅)
 - [x] Fase 5 — LTI 1.3 Provider (OIDC, AGS, NRPS, JWKS, admin CRUD, frontend)
 - [x] Fase 6 — Moderação (denúncias, painel admin, audit trail, CSP/CORS)
 - [x] Fase 7 — IA e Realtime (DeepSeek streaming, RAG, quiz gen, Socket.IO, TutorChat, QuizPlayer)
@@ -56,11 +56,11 @@ Fase 7 — IA e Realtime     [x] COMPLETA
 
 ## Próximos passos
 
-- [ ] Instalar Strapi v5 em infra/strapi/ (npm install + configurar)
-- [ ] Criar content-types Strapi em falta (~20 schemas)
-- [ ] Criar og-default.png (1200×630px) em apps/web/public/
+- [ ] Refactor: Dividir `auth.ts` (477 linhas) em múltiplos handlers (REQ-NF-007)
+- [ ] Refactor: Modularizar `LandingPage.tsx` (440 linhas) extraindo componentes internos
+- [ ] Configurar content-types finais no Strapi v5
 - [ ] Configurar variáveis de ambiente no Railway (BFF + Strapi) e Vercel
-- [ ] Substituir ícones PWA placeholder por ícones reais
+- [ ] Criar og-default.png (1200×630px) em apps/web/public/
 - [ ] Primeiro deploy em produção (Railway + Vercel)
 
 ## Decisions Log

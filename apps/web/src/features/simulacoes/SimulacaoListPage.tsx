@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { GraduationCap } from 'lucide-react';
-import { GraduationCap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import type { Simulacao } from '@pdc/shared';

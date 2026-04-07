@@ -1,8 +1,10 @@
 import { Redis } from '@upstash/redis';
 
-export const redis = process.env.UPSTASH_REDIS_REST_URL
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN ?? '',
-    })
-  : null;
+if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+  throw new Error('CONFIGURAÇÃO CRÍTICA: UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN são obrigatórios.');
+}
+
+export const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});

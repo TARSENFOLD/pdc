@@ -14,18 +14,28 @@ interface StrapiUser {
   email: string;
   username: string;
   nome?: string;
-  role?: {
-    name: string;
-  };
-  avatar?: {
-    url: string;
-  };
+  role?: { name: string };
+  avatar?: { url: string };
   createdAt?: string;
   updatedAt?: string;
 }
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
+}
+
+let cachedAlunoRoleId: string | null = null;
+
+async function getAlunoRoleId(): Promise<string> {
+  if (cachedAlunoRoleId) return cachedAlunoRoleId;
+  const res = await fetch(`${STRAPI_URL}/api/users-permissions/roles`, {
+    headers: { Authorization: `Bearer ${STRAPI_API_TOKEN}` },
+  });
+  const data = (await res.json()) as { roles: { id: string; name: string }[] };
+  const aluno = data.roles.find((r) => r.name === 'Aluno' || r.name === 'aluno');
+  if (!aluno) throw new Error('Role Aluno não encontrada');
+  cachedAlunoRoleId = aluno.id.toString();
+  return cachedAlunoRoleId;
 }
 
 export const authService = {
@@ -35,37 +45,26 @@ export const authService = {
       .setIssuedAt()
       .setExpirationTime('15m')
       .sign(JWT_SECRET);
-
     const refreshToken = await new SignJWT({ sub: user.id })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('7d')
       .setJti(randomUUID())
       .sign(JWT_SECRET);
-
     return { accessToken, refreshToken };
   },
 
   async saveRefreshToken(userId: string, token: string) {
-    if (!redis) {
-      console.warn('Redis not configured, refresh tokens will not be persisted');
-      return;
-    }
     const hash = hashToken(token);
     await redis.set(`refresh_token:${userId}:${hash}`, 'true', { ex: 7 * 24 * 60 * 60 });
   },
 
   async revokeRefreshToken(userId: string, token: string) {
-    if (!redis) return;
     const hash = hashToken(token);
     await redis.del(`refresh_token:${userId}:${hash}`);
   },
 
   async verifyRefreshToken(token: string): Promise<{ userId: string } | null> {
-    if (!redis) {
-      console.warn('Redis not configured, refresh token verification bypassed');
-      return null;
-    }
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
       const userId = payload.sub as string;
@@ -83,49 +82,24 @@ export const authService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifier: email, password }),
     });
-
-    if (!res.ok) {
-      const error = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
-      throw new Error(error.error?.message || 'Invalid credentials');
-    }
+    if (!res.ok) throw new Error('Invalid credentials');
     const data = (await res.json()) as { user: StrapiUser };
-    return this.mapStrapiUser(data.user);
+    return this.getUserById(data.user.id.toString());
   },
 
   async register(email: string, password: string, nome: string): Promise<User> {
-    const res = await fetch(`${STRAPI_URL}/api/auth/local/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, username: email, nome, role: 'aluno' }),
-    });
-
-    if (!res.ok) {
-      const error = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
-      throw new Error(error.error?.message || 'Registration failed');
-    }
-    const data = (await res.json()) as { user: StrapiUser };
-    return this.mapStrapiUser(data.user);
+    return this.registerWithRole(email, password, nome, 'aluno', {});
   },
 
-  async registerWithRole(
-    email: string,
-    password: string,
-    nome: string,
-    role: Role,
-    extra: Record<string, unknown>,
-  ): Promise<User> {
+  async registerWithRole(email: string, password: string, nome: string, role: Role, extra: Record<string, unknown>): Promise<User> {
     const res = await fetch(`${STRAPI_URL}/api/auth/local/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, username: email, nome, role, ...extra }),
     });
-
-    if (!res.ok) {
-      const error = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
-      throw new Error(error.error?.message || 'Registration failed');
-    }
+    if (!res.ok) throw new Error('Registration failed');
     const data = (await res.json()) as { user: StrapiUser };
-    return this.mapStrapiUser(data.user);
+    return this.getUserById(data.user.id.toString());
   },
 
   async getUserById(id: string): Promise<User> {
@@ -133,55 +107,48 @@ export const authService = {
       headers: { Authorization: `Bearer ${STRAPI_API_TOKEN}` },
     });
     if (!res.ok) throw new Error('User not found');
-    const data = (await res.json()) as StrapiUser;
-    return this.mapStrapiUser(data);
+    const user = (await res.json()) as StrapiUser;
+
+    const resPerfil = await fetch(`${STRAPI_URL}/api/perfils?filters[userId][$eq]=${id}&populate=*`, {
+      headers: { Authorization: `Bearer ${STRAPI_API_TOKEN}` },
+    });
+    
+    let perfilData: any = null;
+    if (resPerfil.ok) {
+      const data = (await resPerfil.json()) as { data: { attributes: any }[] };
+      perfilData = data.data?.[0]?.attributes;
+    }
+    return this.mapStrapiUser(user, perfilData);
   },
 
   async findOrCreateUser(email: string, nome: string): Promise<User> {
-    // 1. Tentar buscar por email
     const resSearch = await fetch(`${STRAPI_URL}/api/users?filters[email][$eq]=${email}&populate=role`, {
       headers: { Authorization: `Bearer ${STRAPI_API_TOKEN}` },
     });
     const users = (await resSearch.json()) as StrapiUser[];
-    const firstUser = users[0];
-    if (firstUser) {
-      return this.mapStrapiUser(firstUser);
-    }
+    if (users[0]) return this.getUserById(users[0].id.toString());
 
-    // 2. Se não existir, criar (registo social sem password)
+    const alunoRoleId = await getAlunoRoleId();
     const resCreate = await fetch(`${STRAPI_URL}/api/users`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${STRAPI_API_TOKEN}`,
-      },
-      body: JSON.stringify({
-        email,
-        username: email,
-        nome,
-        confirmed: true,
-        role: 1, // Assumindo que 1 é o ID da role 'aluno' no Strapi
-      }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${STRAPI_API_TOKEN}` },
+      body: JSON.stringify({ email, username: email, nome, confirmed: true, role: alunoRoleId }),
     });
-
-    if (!resCreate.ok) {
-      const error = (await resCreate.json()) as { error?: { message?: string } };
-      throw new Error(error.error?.message || 'Failed to create social user');
-    }
+    if (!resCreate.ok) throw new Error('Failed to create user');
     const newUser = (await resCreate.json()) as StrapiUser;
-    // Precisamos de repopular a role se o POST /users não retornar a role populada
     return this.getUserById(newUser.id.toString());
   },
 
-  mapStrapiUser(u: StrapiUser): User {
+  mapStrapiUser(u: StrapiUser, perfil?: any): User {
     return {
       id: u.id.toString(),
       email: u.email,
       nome: u.nome ?? u.username,
       role: (u.role?.name.toLowerCase() ?? 'aluno') as Role,
-      avatarUrl: u.avatar?.url,
+      avatarUrl: perfil?.foto?.data?.attributes?.url ?? u.avatar?.url,
       createdAt: u.createdAt ?? new Date().toISOString(),
       updatedAt: u.updatedAt ?? new Date().toISOString(),
+      bio: perfil?.bio,
     };
   },
 };

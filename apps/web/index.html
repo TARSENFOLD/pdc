@@ -18,6 +18,18 @@
     <meta name="twitter:image" content="https://usepdc.com/og-default.png">
     <link rel="canonical" href="https://usepdc.com">
 <link rel="manifest" href="/manifest.json">
+    <script>
+      (function() {
+        const theme = localStorage.getItem('pdc-theme') || 'dark';
+        if (theme === 'light') {
+          document.documentElement.classList.add('light');
+        } else if (theme === 'system') {
+          if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+            document.documentElement.classList.add('light');
+          }
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

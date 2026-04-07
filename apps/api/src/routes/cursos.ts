@@ -46,20 +46,39 @@ cursoRoutes.get('/', zValidator('query', cursoQuerySchema), async (c) => {
 cursoRoutes.get('/meus', checkRole(['mentor', 'instituicao', 'super_admin']), async (c) => {
   const { id } = c.get('user');
   const page = c.req.query('page') || '1';
-  try {
-    const data = await strapiGet<any>('/cursos', {
-      'filters[autorId][$eq]': id,
-      populate: 'capa',
-      'pagination[page]': page,
-    });
-    return c.json({
-      data: data.data,
-      pagination: data.meta?.pagination
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    return c.json({ error: message }, 502);
+  interface StrapiData<T> {
+    id: number;
+    attributes: T;
   }
+
+  interface StrapiListResponse<T> {
+    data: StrapiData<T>[];
+    meta: { pagination: { page: number; pageSize: number; pageCount: number; total: number } };
+  }
+
+  interface CursoAttributes {
+    titulo: string;
+    autorId: string;
+    estado: 'draft' | 'review' | 'published' | 'archived';
+    capa?: { data: unknown };
+    autor?: { data: unknown };
+    modulos?: { data: unknown };
+  }
+
+  try {
+      const data = await strapiGet<StrapiListResponse<CursoAttributes>>('/cursos', {
+        'filters[autorId][$eq]': id,
+        populate: 'capa',
+        'pagination[page]': page,
+      });
+      return c.json({
+        data: data.data,
+        pagination: data.meta?.pagination
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro interno';
+      return c.json({ error: message }, 502);
+    }
 });
 
 // GET /cursos/me/inscricoes — deve vir antes de /:id

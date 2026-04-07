@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "perfil_vocacionais",
+  "info": {
+    "singularName": "perfil-vocacional",
+    "pluralName": "perfil-vocacionais",
+    "displayName": "Perfil Vocacional"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "perfil": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "area": {
+      "type": "enumeration",
+      "enum": [
+        "ENGENHARIA", "SAUDE", "TECNOLOGIA", "AGRONOMIA", "GESTAO",
+        "EDUCACAO", "DIREITO", "CIENCIAS_SOCIAIS", "ARTES", "OUTRO"
+      ]
+    },
+    "aptidaoTecnica": { "type": "float" },
+    "compatibilidadePsicologica": { "type": "float" },
+    "motivacaoIntrinseca": { "type": "float" },
+    "potencialSucesso": { "type": "float" },
+    "scoreGlobal": { "type": "float" },
+    "certeza": {
+      "type": "enumeration",
+      "enum": ["baixa", "media", "alta"]
+    },
+    "totalEventos": { "type": "integer" },
+    "resumo": { "type": "text" },
+    "ultimoCalculoEm": { "type": "datetime" }
+  }
+}

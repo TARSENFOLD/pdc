@@ -1,0 +1,29 @@
+{
+  "kind": "collectionType",
+  "collectionName": "telemetrias",
+  "info": {
+    "singularName": "telemetria",
+    "pluralName": "telemetrias",
+    "displayName": "Telemetria"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "eventId": { "type": "string", "unique": true, "required": true },
+    "sessionId": { "type": "string", "required": true },
+    "correlationId": { "type": "string" },
+    "tipo": { "type": "string", "required": true },
+    "targetType": { "type": "string" },
+    "targetId": { "type": "string" },
+    "dados": { "type": "json" },
+    "clientTimestamp": { "type": "biginteger" },
+    "url": { "type": "string" },
+    "userAgent": { "type": "string" },
+    "perfil": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    }
+  }
+}

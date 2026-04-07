@@ -17,7 +17,7 @@
 | REQ-0-001 | Criar repositório `pdc-v2` com estrutura de monorepo npm workspaces | 🔴 | `[x]` | `npm install` na raiz instala dependências de todos os workspaces |
 | REQ-0-002 | Workspace `apps/web` com Vite + React 18 + TypeScript estrito | 🔴 | `[x]` | `npm run build` em `apps/web` sem erros ou warnings |
 | REQ-0-003 | Workspace `apps/api` com Hono + Node.js 24 + TypeScript estrito | 🔴 | `[x]` | `npm run build` em `apps/api` sem erros ou warnings |
-| REQ-0-004 | Workspace `infra/strapi` com Strapi v5 + PostgreSQL via Docker | 🔴 | `[ ]` | Strapi admin acessível em `localhost:1337/admin` |
+| REQ-0-004 | Strapi v5 instalado e funcional | 🔴 | `[~]` | `infra/strapi/package.json` v5.0 ✅; Config de prod ❌ |
 | REQ-0-005 | ESLint + Prettier configurados em todos os workspaces | 🟠 | `[x]` | `npm run lint` na raiz passa sem erros |
 | REQ-0-006 | Husky pre-commit: lint + type-check antes de cada commit | 🟠 | `[x]` | Commit com erro de lint é bloqueado automaticamente |
 | REQ-0-007 | GitHub Actions: pipeline CI com build + lint em cada PR | 🟠 | `[x]` | PR com erro de build falha o CI |
@@ -39,9 +39,9 @@
 | REQ-1-005 | Endpoint `POST /auth/logout` revoga refresh token | 🔴 | `[x]` | Após logout, refresh token não funciona |
 | REQ-1-006 | RBAC no servidor — 6 roles verificados em cada rota protegida | 🔴 | `[x]` | Rota de admin retorna 403 para role `aluno` |
 | REQ-1-007 | Rate limiting via Upstash Redis em `/auth/*` (5 req/min por IP) | 🔴 | `[x]` | 6ª tentativa de login retorna 429 |
-| REQ-1-008 | Google OAuth 2.0 — login social | 🟠 | `[ ]` | Login com Google cria/actualiza perfil e define cookie JWT |
-| REQ-1-009 | OTP por email (SendGrid) para 2FA — código 6 dígitos, 10min expiração | 🟠 | `[ ]` | OTP expirado retorna erro; OTP correcto completa login |
-| REQ-1-010 | OTP por SMS (Twilio) como alternativa ao email | 🟡 | `[ ]` | SMS enviado para número angolano (+244) |
+| REQ-1-008 | Login social Google OAuth 2.0 | 🟠 | `[x]` | `apps/api/src/routes/auth.ts` (Passport ✅) |
+| REQ-1-009 | MFA/2FA via código 6 dígitos (Email/SMS) | 🟠 | `[x]` | `apps/api/src/routes/auth.ts` (BFF ✅) |
+| REQ-1-010 | OTP por SMS (Twilio) como alternativa ao email | 🟡 | `[-]` | Descartado para MVP; mantida apenas estrutura no BFF |
 | REQ-1-011 | Frontend: AuthContext sem sessionStorage — estado derivado do cookie | 🔴 | `[x]` | Refresh da página mantém sessão; DevTools não mostra token |
 | REQ-1-012 | Endpoint `GET /auth/me` retorna perfil do utilizador autenticado | 🔴 | `[x]` | Retorna perfil completo; 401 sem cookie válido |
 | REQ-1-013 | Mass assignment protection — apenas campos permitidos aceites | 🔴 | `[x]` | Campo `role` no body de registo é ignorado |
@@ -76,7 +76,7 @@
 | REQ-3-005 | Módulo `lib/api/notificacoes.ts` — CRUD + realtime | 🟠 | `[x]` | Idem |
 | REQ-3-006 | Módulo `lib/api/mensagens.ts` — CRUD + realtime | 🟠 | `[x]` | Idem |
 | REQ-3-007 | Módulo `lib/api/media.ts` — upload para Cloudflare R2 | 🔴 | `[x]` | Upload de ficheiro até 50MB retorna URL pública |
-| REQ-3-008 | Zero mocks — erro explícito quando API falha | 🔴 | `[x]` | Nenhum import de `mockApi` ou dados hardcoded no projecto |
+| REQ-3-008 | Zero mocks de dados (erro explícito) | 🔴 | `[~]` | BFF real ✅; UI esconde secções em erro em vez de avisar ❌ |
 | REQ-3-009 | Cliente Strapi v5 tipado com tipos gerados dos schemas | 🟠 | `[x]` | Tipos TypeScript correspondem aos schemas Strapi |
 | REQ-3-010 | Limites de input em todas as rotas BFF (Zod) | 🔴 | `[x]` | Input com campo extra é rejeitado com 400 |
 
@@ -141,10 +141,11 @@
 | --- | --- | --- | --- | --- |
 | REQ-NF-001 | Lighthouse Performance ≥ 90 em mobile na landing page | 🔴 | `[ ]` | Medido com Lighthouse CI |
 | REQ-NF-002 | Tempo de resposta do BFF ≤ 200ms para endpoints de leitura | 🟠 | `[ ]` | Medido com k6 ou Artillery |
-| REQ-NF-003 | Zero `any` em TypeScript — tipagem estrita | 🔴 | `[x]` | `tsc --noEmit` sem erros |
-| REQ-NF-004 | Zero `console.log` em produção — logger estruturado | 🟠 | `[ ]` | Grep no build de produção |
+| REQ-NF-003 | Zero erros de lint/TypeScript (sem `any`) | 🔴 | `[~]` | `z.any()` em shared; `tsc` pendente |
+| REQ-NF-004 | Zero `console.log` (usar `pino` logger) | 🟠 | `[x]` | `apps/api/src/index.ts` e `auth.ts` (pino) |
 | REQ-NF-005 | Acessibilidade básica — labels, alt text, foco de teclado | 🟠 | `[ ]` | axe-core sem erros críticos |
 | REQ-NF-006 | Funcional em conectividade lenta (2G/3G) — assets optimizados | 🟠 | `[ ]` | Lighthouse em modo "Slow 3G" |
-| REQ-NF-007 | Nenhum ficheiro de API ou serviço com mais de 200 linhas | 🟡 | `[ ]` | Script de lint de tamanho de ficheiro |
+| REQ-NF-007 | Modularidade (ficheiros < 200 linhas) | 🟡 | `[ ]` | **Violado:** `auth.ts` (477), `LandingPage.tsx` (440) ❌ |
+| REQ-NF-008 | SEO: OG Head dinâmico em todas as páginas públicas | 🔴 | `[x]` | SEOHead implementado e verificado com metadados reais |
 
-*Last updated: Abril 2026 — Fases 0–7 concluídas; foco em M1 Features Transversais*
+*Last updated: Abril 2026 — Auditoria técnica concluída; estado real sincronizado.*

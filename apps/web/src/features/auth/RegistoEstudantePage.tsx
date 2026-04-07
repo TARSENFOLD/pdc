@@ -5,6 +5,7 @@ import { authApi, type LoginResponse } from '@/lib/api/auth';
 import { Button, Input } from '@/components/ui';
 import { AuthSplitLayout } from './AuthSplitLayout';
 import type { RegistoEstudantePayload } from '@pdc/shared';
+import { ArrowLeft } from 'lucide-react';
 
 const AREAS = ['Tecnologia', 'Saúde', 'Direito', 'Engenharia', 'Artes', 'Ciências', 'Educação'] as const;
 const NIVEIS = ['Secundário', 'Licenciatura', 'Mestrado', 'Doutoramento'] as const;
@@ -19,8 +20,11 @@ export function RegistoEstudantePage() {
   const mutation = useMutation({
     mutationFn: (payload: RegistoEstudantePayload) => authApi.registarEstudante(payload),
     onSuccess: (result: LoginResponse) => { 
-      // result.canal is 'email'
-      navigate('/verificar', { state: { canal: result.canal, from: '/app/dashboard' }, replace: true }); 
+      if ('requiresOtp' in result) {
+        navigate('/verificar', { state: { canal: result.canal, from: '/app/dashboard' }, replace: true }); 
+      } else {
+        navigate('/app/dashboard', { replace: true });
+      }
     },
     onError: (err: Error & { body?: { error?: string } }) => {
       setError(err.body?.error ?? 'Erro ao criar conta.');
@@ -72,7 +76,10 @@ export function RegistoEstudantePage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-text-muted lg:block hidden">
-          <Link to="/criar-conta" className="text-amber hover:underline">← Voltar</Link>
+          <Link to="/criar-conta" className="inline-flex items-center gap-1 text-amber hover:underline">
+            <ArrowLeft size={16} aria-hidden={true} />
+            Voltar
+          </Link>
         </p>
       </div>
     </AuthSplitLayout>

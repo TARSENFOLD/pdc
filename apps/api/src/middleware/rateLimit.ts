@@ -5,23 +5,17 @@ import pino from 'pino';
 
 const log = pino({ name: 'rate-limit' });
 
-const ratelimit = redis
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(5, '1 m'),
-      analytics: true,
-      prefix: 'ratelimit',
-    })
-  : null;
+const ratelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '1 m'),
+  analytics: true,
+  prefix: 'ratelimit',
+});
 
 export async function rateLimit(c: Context, next: Next) {
-  if (!ratelimit) {
-    log.warn('Upstash Redis not configured, rate limiting skipped');
-    await next(); return;
-  }
-
   const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
   const { success, limit, reset, remaining } = await ratelimit.limit(ip);
+
 
   c.header('X-RateLimit-Limit', limit.toString());
   c.header('X-RateLimit-Remaining', remaining.toString());

@@ -39,10 +39,10 @@ export function TinaChat() {
   return (
     <div
       className="fixed bottom-6 right-6 z-50 flex flex-col overflow-hidden shadow-2xl"
-      style={{ width: 360, height: 520, borderRadius: 16, background: '#141414' }}
+      style={{ width: 360, height: 520, borderRadius: 16, background: 'var(--surface)' }}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
+      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber text-background text-sm font-bold">
           T
         </span>
@@ -56,7 +56,7 @@ export function TinaChat() {
           )}
           <button
             onClick={() => { setOpen(false); }}
-            className="text-white/40 hover:text-white"
+            className="text-text-muted hover:text-text-primary"
             aria-label="Fechar Tina"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -84,11 +84,11 @@ export function TinaChat() {
             if (val) setRemaining(Number(val));
             return res as DeepChatResponse;
           }}
-          inputAreaStyle={{ backgroundColor: '#1a1a1a', borderTop: '1px solid rgba(255,255,255,0.1)' }}
+          inputAreaStyle={{ backgroundColor: 'var(--surface-raised)', borderTop: '1px solid var(--border)' }}
           messageStyles={{
             default: {
-              shared: { bubble: { backgroundColor: 'transparent', color: '#e0e0e0', fontSize: '0.875rem' } },
-              ai: { bubble: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '8px 12px' } },
+              shared: { bubble: { backgroundColor: 'transparent', color: 'var(--text-primary)', fontSize: '0.875rem' } },
+              ai: { bubble: { backgroundColor: 'var(--surface-raised)', borderRadius: '12px', padding: '8px 12px' } },
               user: { bubble: { backgroundColor: '#d4a017', color: '#0a0a0f', borderRadius: '12px', padding: '8px 12px' } },
             },
           }}
@@ -96,9 +96,9 @@ export function TinaChat() {
             placeholder: { text: 'Escreve aqui...' },
             styles: {
               container: {
-                backgroundColor: 'rgba(255,255,255,0.05)',
+                backgroundColor: 'var(--surface-raised)',
                 borderRadius: '8px',
-                color: '#e0e0e0',
+                color: 'var(--text-primary)',
                 border: 'none',
               },
               focus: { border: '1px solid #d4a017' },
@@ -108,23 +108,23 @@ export function TinaChat() {
             submit: { container: { default: { backgroundColor: '#d4a017', borderRadius: '8px' } } },
           }}
           chatStyle={{
-            backgroundColor: '#141414',
+            backgroundColor: 'var(--surface)',
             height: '100%',
             width: '100%',
             border: 'none',
             borderRadius: '0',
           }}
-          auxiliaryStyle="::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }"
+          auxiliaryStyle="::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }"
         />
       </div>
 
       {/* Suggestion chips */}
-      <div className="flex flex-wrap gap-2 border-t border-white/10 px-3 py-2">
+      <div className="flex flex-wrap gap-2 border-t border-border px-3 py-2">
         {SUGGESTIONS.map((text) => (
           <button
             key={text}
             onClick={() => { handleSuggestion(text); }}
-            className="rounded-full border border-white/10 px-3 py-1 text-[11px] text-text-muted transition-colors hover:border-amber hover:text-amber"
+            className="rounded-full border border-border px-3 py-1 text-[11px] text-text-muted transition-colors hover:border-amber hover:text-amber"
           >
             {text}
           </button>

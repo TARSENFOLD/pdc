@@ -1,4 +1,7 @@
 import { Hono } from 'hono';
+import pino from 'pino';
+
+const log = pino({ name: 'seo-routes' });
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { redis } from '../lib/redis.js';
 
@@ -104,7 +107,7 @@ seoRoutes.get('/sitemap.xml', async (c) => {
   } catch (err) {
     counters.sitemapFallback++;
     counters.strapiTimeout++;
-    console.warn('[seo] Sitemap fallback — Strapi indisponível:', err instanceof Error ? err.message : String(err));
+    log.warn({ err }, '[seo] Sitemap fallback — Strapi indisponível');
     const xml = buildStaticSitemap();
     return c.newResponse(xml, 200, { 'Content-Type': 'application/xml', 'Cache-Control': 'public, max-age=300' });
   }
@@ -250,7 +253,7 @@ seoRoutes.get('/meta', async (c) => {
     }
   } catch (err) {
     counters.strapiTimeout++;
-    console.warn('[seo] Bot meta fetch failed:', err instanceof Error ? err.message : String(err));
+    log.warn({ err }, '[seo] Bot meta fetch failed');
   }
 
   const canonical = `${BASE_URL}${path}`;

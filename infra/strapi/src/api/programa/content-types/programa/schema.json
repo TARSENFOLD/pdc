@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "programas",
+  "info": {
+    "singularName": "programa",
+    "pluralName": "programas",
+    "displayName": "Programa"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "titulo": { "type": "string", "required": true },
+    "slug": { "type": "uid", "targetField": "titulo", "unique": true },
+    "descricao": { "type": "text" },
+    "instituicao": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::instituicao.instituicao"
+    },
+    "area": {
+      "type": "enumeration",
+      "enum": [
+        "ENGENHARIA", "SAUDE", "TECNOLOGIA", "AGRONOMIA", "GESTAO",
+        "EDUCACAO", "DIREITO", "CIENCIAS_SOCIAIS", "ARTES", "OUTRO"
+      ]
+    },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["draft", "published", "archived"],
+      "default": "draft"
+    },
+    "modalidade": {
+      "type": "enumeration",
+      "enum": ["presencial", "online", "hibrido"]
+    },
+    "duracao": { "type": "string" },
+    "vagas": { "type": "integer" },
+    "requisitos": { "type": "text" },
+    "tags": { "type": "json" }
+  }
+}

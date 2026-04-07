@@ -1,0 +1,23 @@
+{
+  "kind": "collectionType",
+  "collectionName": "modulos",
+  "info": {
+    "singularName": "modulo",
+    "pluralName": "modulos",
+    "displayName": "Módulo"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "curso": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::curso.curso"
+    },
+    "titulo": { "type": "string", "required": true },
+    "ordem": { "type": "integer", "default": 0 },
+    "obrigatorio": { "type": "boolean", "default": true },
+    "desbloqueioCondicional": { "type": "boolean", "default": false }
+  }
+}

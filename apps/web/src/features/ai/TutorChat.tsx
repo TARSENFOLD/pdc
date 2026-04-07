@@ -77,11 +77,11 @@ export function TutorChat() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex w-85 flex-col overflow-hidden rounded-lg border border-white/10 shadow-2xl" style={{ height: 480, background: '#1a1a1a' }}>
+    <div className="fixed bottom-6 right-6 z-50 flex w-85 flex-col overflow-hidden rounded-lg border border-border shadow-2xl" style={{ height: 480, background: 'var(--surface-raised)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="text-sm font-semibold text-amber">Tutor IA</span>
-        <button onClick={() => { setOpen(false); }} className="text-white/40 hover:text-white" aria-label="Fechar chat">
+        <button onClick={() => { setOpen(false); }} className="text-text-muted hover:text-text-primary" aria-label="Fechar chat">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -99,7 +99,7 @@ export function TutorChat() {
             className={`max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
               m.role === 'user'
                 ? 'ml-auto bg-amber text-background'
-                : 'bg-white/5 text-text-secondary'
+                : 'bg-surface-raised text-text-secondary'
             }`}
           >
             {m.text || (streaming && i === messages.length - 1 ? '...' : '')}
@@ -111,14 +111,14 @@ export function TutorChat() {
       {/* Input */}
       <form
         onSubmit={(e) => { e.preventDefault(); void handleSend(); }}
-        className="flex gap-2 border-t border-white/10 p-3"
+        className="flex gap-2 border-t border-border p-3"
       >
         <input
           value={input}
           onChange={(e) => { setInput(e.target.value); }}
           placeholder="Escreve aqui..."
           disabled={streaming}
-          className="flex-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-text-primary placeholder:text-text-muted outline-none focus:ring-1 focus:ring-amber"
+          className="flex-1 rounded-lg bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted outline-none focus:ring-1 focus:ring-amber"
         />
         <button
           type="submit"

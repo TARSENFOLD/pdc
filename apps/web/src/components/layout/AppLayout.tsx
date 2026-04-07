@@ -27,7 +27,7 @@ export function AppLayout() {
         style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
       >
         <div
-          className="fixed top-0 bottom-0 flex flex-col border-r border-white/5 bg-[#0d0d0d]"
+          className="fixed top-0 bottom-0 flex flex-col border-r border-border bg-surface-alt"
           style={{ width: SIDEBAR_WIDTH }}
         >
           <SidebarContent />
@@ -37,7 +37,7 @@ export function AppLayout() {
       {/* ── Mobile: hamburger button ── */}
       <button
         onClick={() => { setDrawerOpen(true); }}
-        className="fixed left-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-[#0d0d0d] text-white/70 transition-colors hover:text-white lg:hidden"
+        className="fixed left-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-alt text-text-secondary transition-colors hover:text-text-primary lg:hidden"
         aria-label="Abrir menu"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -67,13 +67,13 @@ export function AppLayout() {
               animate={reduced ? { opacity: 1 } : { x: 0 }}
               exit={reduced ? { opacity: 0 } : { x: -SIDEBAR_WIDTH }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/5 bg-[#0d0d0d] lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface-alt lg:hidden"
               style={{ width: SIDEBAR_WIDTH }}
             >
               {/* Close button */}
               <button
                 onClick={() => { setDrawerOpen(false); }}
-                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-white/40 hover:text-white"
+                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:text-text-primary"
                 aria-label="Fechar menu"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

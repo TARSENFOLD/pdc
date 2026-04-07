@@ -27,6 +27,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: (payload: LoginPayload) => authApi.login(payload),
+    onSuccess: (result) => {
+      if ('id' in result) {
+        queryClient.setQueryData(['auth', 'me'], result);
+      }
+    },
   });
 
   const completeOtpMutation = useMutation({
@@ -39,6 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: (payload: RegisterPayload) => authApi.register(payload),
+    onSuccess: (result) => {
+      if ('id' in result) {
+        queryClient.setQueryData(['auth', 'me'], result);
+      }
+    },
   });
 
   async function login(payload: LoginPayload): Promise<LoginResponse> {

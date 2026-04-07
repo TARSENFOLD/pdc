@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "posts",
+  "info": {
+    "singularName": "post",
+    "pluralName": "posts",
+    "displayName": "Post"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "slug": { "type": "uid", "targetField": "titulo", "unique": true },
+    "titulo": { "type": "string", "required": true },
+    "descricao": { "type": "text" },
+    "conteudo": { "type": "richtext" },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["post", "aviso", "noticia", "conquista_partilhada"]
+    },
+    "autor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "tipoAutor": {
+      "type": "enumeration",
+      "enum": ["mentor", "instituicao", "plataforma", "aluno"]
+    },
+    "mediaUrls": { "type": "json" },
+    "tags": { "type": "json" },
+    "aprovada": { "type": "boolean", "default": false },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["draft", "published", "archived"],
+      "default": "draft"
+    }
+  }
+}

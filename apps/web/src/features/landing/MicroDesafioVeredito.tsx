@@ -1,6 +1,5 @@
 import { motion } from 'motion/react';
 import { FlaskConical } from 'lucide-react';
-import { FlaskConical } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Veredito } from './microDesafioData';
 
@@ -60,7 +59,7 @@ export function MicroDesafioVeredito({ veredito, onReiniciar, reduced }: {
         </Link>
         <button
           onClick={onReiniciar}
-          className="rounded-xl border border-border px-6 py-2.5 text-sm text-text-secondary transition-colors hover:bg-white/5"
+          className="rounded-xl border border-border px-6 py-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-raised"
         >
           Repetir desafio
         </button>
