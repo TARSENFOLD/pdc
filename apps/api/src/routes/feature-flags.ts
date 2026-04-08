@@ -1,104 +1,69 @@
 import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
-import * as flagsService from '../modules/feature-flags/feature-flags.service.js';
+import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
+import { strapiGet, strapiPutRaw } from '../modules/strapi/strapi.client.js';
 
 type Vars = { Variables: AuthVariables };
 export const featureFlagRoutes = new Hono<Vars>();
-featureFlagRoutes.use('*', verifyJwt);
 
-const effectiveQuerySchema = z.object({
-  perfilTipo: z.string().min(1),
-  instituicaoId: z.coerce.number().int().positive().optional(),
+// GET /effective — Acessível por qualquer user autenticado
+featureFlagRoutes.get('/effective', verifyJwt, async (c) => {
+  const user = c.get('user');
+  const instituicaoId = user.role === 'instituicao' ? (user as any).instituicaoId : undefined;
+  const flags = await featureFlagService.getEffectiveFlags(instituicaoId);
+  return c.json(flags);
 });
 
-const upsertBodySchema = z.object({
-  enabled: z.boolean(),
-  description: z.string().optional(),
+// Admin Routes (super_admin only)
+featureFlagRoutes.use('*', verifyJwt, checkRole(['super_admin']));
+
+// GET / — Lista todas as flags (admin)
+featureFlagRoutes.get('/', async (c) => {
+  const { data } = await strapiGet<{ data: any[] }>('/feature-flags');
+  return c.json(data);
 });
 
-const overrideBodySchema = z.object({
-  enabled: z.boolean(),
+featureFlagRoutes.put('/defaults/:domain', async (c) => {
+  const domain = c.req.param('domain');
+  const body = await c.req.json();
+  const { data: existing } = await strapiGet<{ data: any[] }>(`/feature-flags?filters[domain][$eq]=${domain}`);
+  
+  if (existing.length === 0) return c.json({ error: 'Flag não encontrada' }, 404);
+  
+  await strapiPutRaw(`/feature-flags/${existing[0].documentId ?? existing[0].id}`, { data: { enabled: body.enabled } });
+  return c.json({ success: true });
 });
 
-// GET /feature-flags/effective?perfilTipo=aluno&instituicaoId=5
-featureFlagRoutes.get(
-  '/effective',
-  zValidator('query', effectiveQuerySchema),
-  async (c) => {
-    const { perfilTipo, instituicaoId } = c.req.valid('query');
-    try {
-      const flags = await flagsService.getEffectiveFlags(perfilTipo, instituicaoId);
-      return c.json(flags);
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
-    }
-  },
-);
+featureFlagRoutes.put('/institutions/:id/:domain', async (c) => {
+  const domain = c.req.param('domain');
+  const instituicaoId = parseInt(c.req.param('id'));
+  const body = await c.req.json();
+  
+  const { data: existing } = await strapiGet<{ data: any[] }>(`/feature-flags?filters[domain][$eq]=${domain}`);
+  if (existing.length === 0) return c.json({ error: 'Flag não encontrada' }, 404);
+  
+  const flag = existing[0];
+  const overrides = flag.overrides || [];
+  const idx = overrides.findIndex((o: any) => o.instituicaoId === instituicaoId);
+  
+  if (idx > -1) overrides[idx].enabled = body.enabled;
+  else overrides.push({ instituicaoId, enabled: body.enabled });
+  
+  await strapiPutRaw(`/feature-flags/${flag.documentId ?? flag.id}`, { data: { overrides } });
+  return c.json({ success: true });
+});
 
-// GET /feature-flags — admin list all flags
-featureFlagRoutes.get(
-  '/',
-  checkRole(['super_admin']),
-  async (c) => {
-    try {
-      const flags = await flagsService.listAll();
-      return c.json({ data: flags });
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
-    }
-  },
-);
-
-// PUT /feature-flags/defaults/:domain — create/update flag default (admin only)
-featureFlagRoutes.put(
-  '/defaults/:domain',
-  checkRole(['super_admin']),
-  zValidator('json', upsertBodySchema),
-  async (c) => {
-    const domain = c.req.param('domain');
-    const { enabled, description } = c.req.valid('json');
-    try {
-      const flag = await flagsService.upsertDefault(domain, enabled, description);
-      return c.json(flag);
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
-    }
-  },
-);
-
-// PUT /feature-flags/institutions/:id/:domain — set override (admin only)
-featureFlagRoutes.put(
-  '/institutions/:id/:domain',
-  checkRole(['super_admin']),
-  zValidator('json', overrideBodySchema),
-  async (c) => {
-    const instituicaoId = Number(c.req.param('id'));
-    const domain = c.req.param('domain');
-    const { enabled } = c.req.valid('json');
-    try {
-      const flag = await flagsService.setInstitutionOverride(domain, instituicaoId, enabled);
-      return c.json(flag);
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
-    }
-  },
-);
-
-// DELETE /feature-flags/institutions/:id/:domain — remove override (admin only)
-featureFlagRoutes.delete(
-  '/institutions/:id/:domain',
-  checkRole(['super_admin']),
-  async (c) => {
-    const instituicaoId = Number(c.req.param('id'));
-    const domain = c.req.param('domain');
-    try {
-      const flag = await flagsService.removeInstitutionOverride(domain, instituicaoId);
-      return c.json(flag);
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
-    }
-  },
-);
+featureFlagRoutes.delete('/institutions/:id/:domain', async (c) => {
+  const domain = c.req.param('domain');
+  const instituicaoId = parseInt(c.req.param('id'));
+  
+  const { data: existing } = await strapiGet<{ data: any[] }>(`/feature-flags?filters[domain][$eq]=${domain}`);
+  if (existing.length === 0) return c.json({ error: 'Flag não encontrada' }, 404);
+  
+  const flag = existing[0];
+  const overrides = (flag.overrides || []).filter((o: any) => o.instituicaoId !== instituicaoId);
+  
+  await strapiPutRaw(`/feature-flags/${flag.documentId ?? flag.id}`, { data: { overrides } });
+  return c.json({ success: true });
+});
