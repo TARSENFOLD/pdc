@@ -9,6 +9,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
+import { securityMiddleware as security } from './middleware/security.js';
 import { authRoutes } from './routes/auth.js';
 import { aiRoutes } from './routes/ai.js';
 import { feedRoutes } from './routes/feed.js';
@@ -41,6 +42,7 @@ import { mediaRoutes } from './routes/media.js';
 import { notificacaoRoutes } from './routes/notificacoes.js';
 import { perfilRoutes } from './routes/perfis.js';
 import { denunciaRoutes } from './routes/denuncias.js';
+import { healthRoutes } from './routes/health.js';
 
 if (process.env.SENTRY_DSN) {
   Sentry.init({
@@ -53,10 +55,20 @@ if (process.env.SENTRY_DSN) {
 const app = new Hono();
 
 app.use('*', logger());
-app.use('*', secureHeaders());
-app.use('*', cors());
+app.use('*', secureHeaders({
+  xFrameOptions: 'DENY',
+  referrerPolicy: 'strict-origin-when-cross-origin',
+}));
+app.use('*', cors({
+  origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+  credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+}));
+app.use('*', security);
 
 app.route('/auth', authRoutes);
+app.route('/health', healthRoutes);
 app.route('/ai', aiRoutes);
 app.route('/cursos', cursoRoutes);
 app.route('/lti', ltiRoutes);

@@ -4,7 +4,8 @@ const log = pino({ name: 'strapi-client' });
 
 const STRAPI_URL = process.env['STRAPI_URL'] ?? 'http://localhost:1337';
 const STRAPI_API_TOKEN = process.env['STRAPI_API_TOKEN'] ?? '';
-const TIMEOUT = 2000;
+const TIMEOUT = parseInt(process.env.STRAPI_TIMEOUT ?? '5000');
+const WRITE_TIMEOUT = parseInt(process.env.STRAPI_WRITE_TIMEOUT ?? '10000');
 const MAX_RETRIES = 1;
 const BASE_DELAY = 300;
 
@@ -81,7 +82,7 @@ export async function strapiGet<T>(
       url.searchParams.set(k, v);
     }
   }
-  const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() });
+  const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() }, TIMEOUT);
   if (!res.ok) {
     throw new Error(`Strapi GET ${path} falhou: ${res.status.toString()}`);
   }
@@ -94,7 +95,7 @@ export async function strapiPost<T>(path: string, body: unknown): Promise<T> {
     method: 'POST',
     headers: buildHeaders(),
     body: JSON.stringify({ data: body }),
-  });
+  }, WRITE_TIMEOUT);
   if (!res.ok) {
     throw new Error(`Strapi POST ${path} falhou: ${res.status.toString()}`);
   }
@@ -107,7 +108,7 @@ export async function strapiPut<T>(path: string, body: unknown): Promise<T> {
     method: 'PUT',
     headers: buildHeaders(),
     body: JSON.stringify({ data: body }),
-  });
+  }, WRITE_TIMEOUT);
   if (!res.ok) {
     throw new Error(`Strapi PUT ${path} falhou: ${res.status.toString()}`);
   }
@@ -119,7 +120,7 @@ export async function strapiDelete<T>(path: string): Promise<T> {
   const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
     method: 'DELETE',
     headers: buildHeaders(),
-  });
+  }, WRITE_TIMEOUT);
   if (!res.ok) {
     throw new Error(`Strapi DELETE ${path} falhou: ${res.status.toString()}`);
   }
@@ -133,7 +134,7 @@ export async function strapiPutRaw<T>(path: string, body: unknown): Promise<T> {
     method: 'PUT',
     headers: buildHeaders(),
     body: JSON.stringify(body),
-  });
+  }, WRITE_TIMEOUT);
   if (!res.ok) {
     throw new Error(`Strapi PUT ${path} falhou: ${res.status.toString()}`);
   }
