@@ -138,6 +138,12 @@
     "language": {
       "type": "string",
       "default": "pt-AO"
+    },
+    "reputacao": {
+      "type": "integer",
+      "default": 0,
+      "min": 0,
+      "max": 100
     }
   }
 }
