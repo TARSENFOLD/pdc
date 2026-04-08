@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
+import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
+import { serializePublicProfile } from '../modules/perfil/perfil.serializer.js';
 import type {
   MentorPublico,
   InstituicaoPublica,
@@ -51,6 +53,22 @@ interface StrapiUserPublic {
   avatarUrl?: string;
   bio?: string;
   role?: { name: string };
+}
+
+interface StrapiPerfilPublic {
+  id: string | number;
+  nome?: string;
+  tipo?: string;
+  bio?: string;
+  headline?: string;
+  telefone?: string;
+  website?: string;
+  socialLinks?: unknown;
+  areasInteresse?: unknown;
+  competencias?: unknown;
+  avatarUrl?: string;
+  foto?: { url?: string } | null;
+  visibilitySettings?: Record<string, string> | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -156,6 +174,29 @@ export const perfilPublicoRoutes = new Hono();
 
 perfilPublicoRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
+
+  // Check feature flag — if active, use new perfil-based serialization
+  let useV2 = false;
+  try {
+    const flags = await featureFlagService.getEffectiveFlags();
+    useV2 = flags['PROFILE_V2_PUBLIC'] === true;
+  } catch {
+    // Flag service down → safe fallback to legacy
+  }
+
+  if (useV2) {
+    const perfil = await strapiGet<StrapiPerfilPublic>(`/perfis`, {
+      'filters[userId][$eq]': id,
+      'pagination[pageSize]': '1',
+      populate: 'foto',
+    });
+    const data = Array.isArray(perfil) ? perfil : (perfil as unknown as { data: StrapiPerfilPublic[] }).data;
+    const first = data?.[0];
+    if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);
+    return c.json({ data: serializePublicProfile(first) });
+  }
+
+  // Legacy path — read from /users
   const d = await strapiGet<StrapiUserPublic>(`/users/${id}`, { populate: 'avatar,role' });
   const roleName = d.role?.name.toLowerCase() ?? 'aluno';
   const perfil: PerfilPublicoBasico = {

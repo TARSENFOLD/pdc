@@ -38,6 +38,28 @@ export const PerfilPublicoSchema = z.object({
 
 export type PerfilPublico = z.infer<typeof PerfilPublicoSchema>;
 
+// ─── Visibility & Notifications ───────────────────────────────────────────────
+
+export const FieldVisibilitySchema = z.enum(['publico', 'conexoes', 'privado']);
+export type FieldVisibility = z.infer<typeof FieldVisibilitySchema>;
+
+export const VisibilitySettingsSchema = z.object({
+  bio: FieldVisibilitySchema.optional(),
+  telefone: FieldVisibilitySchema.optional(),
+  socialLinks: FieldVisibilitySchema.optional(),
+  areasInteresse: FieldVisibilitySchema.optional(),
+  competencias: FieldVisibilitySchema.optional(),
+});
+export type VisibilitySettings = z.infer<typeof VisibilitySettingsSchema>;
+
+export const NotificationPreferencesSchema = z.object({
+  emailMensagens: z.boolean().optional(),
+  emailConquistas: z.boolean().optional(),
+  emailMentorias: z.boolean().optional(),
+  emailNewsletter: z.boolean().optional(),
+});
+export type NotificationPreferences = z.infer<typeof NotificationPreferencesSchema>;
+
 export const PerfilCompletoSchema = UserSchema.extend({
   bio: z.string().optional(),
   telefone: z.string().optional(),
@@ -45,9 +67,13 @@ export const PerfilCompletoSchema = UserSchema.extend({
   githubUrl: z.string().url().optional(),
   websiteUrl: z.string().url().optional(),
   instituicaoId: z.string().optional(),
+  visibilitySettings: VisibilitySettingsSchema.optional().nullable(),
+  notificationPreferences: NotificationPreferencesSchema.optional().nullable(),
 });
 
 export type PerfilCompleto = z.infer<typeof PerfilCompletoSchema>;
+
+// ─── Update Payload ───────────────────────────────────────────────────────────
 
 export const UpdatePerfilPayloadSchema = z.object({
   nome: z.string().min(2).optional(),
@@ -57,6 +83,8 @@ export const UpdatePerfilPayloadSchema = z.object({
   githubUrl: z.string().url().optional().or(z.literal('')),
   websiteUrl: z.string().url().optional().or(z.literal('')),
   avatarUrl: z.string().url().optional().or(z.literal('')),
+  visibilitySettings: VisibilitySettingsSchema.optional(),
+  notificationPreferences: NotificationPreferencesSchema.optional(),
 });
 
 export type UpdatePerfilPayload = z.infer<typeof UpdatePerfilPayloadSchema>;
@@ -162,7 +190,7 @@ export const ProgressoItemSchema = z.object({
   itemId: z.string(),
   concluido: z.boolean(),
   dataConclusao: z.string().datetime().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export type ProgressoItem = z.infer<typeof ProgressoItemSchema>;
