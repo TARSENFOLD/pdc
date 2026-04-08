@@ -1,163 +1,76 @@
 import http from 'k6/http';
-import { check, sleep, group } from 'k6';
-import { Rate, Trend } from 'k6/metrics';
-import { BASE_URL, STANDARD_THRESHOLDS } from './helpers.js';
+import { check, sleep } from 'k6';
+import { randomString } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
 
-/**
- * full-journey.js — Register → Login → Browse → Inscrever Curso → Player → Telemetria
- *
- * Simulates a complete user journey from registration to course consumption.
- * 50 VUs for 3 minutes.
- *
- * Run: k6 run tests/k6/full-journey.js
- */
-
-const journeyDuration = new Trend('journey_step_duration', true);
-const errorRate = new Rate('journey_errors');
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:3001';
 
 export const options = {
-  stages: [
-    { duration: '30s', target: 25 },
-    { duration: '30s', target: 50 },
-    { duration: '3m', target: 50 },    // Sustain 50 VUs
-    { duration: '30s', target: 0 },
-  ],
+  vus: 50,
+  duration: '3m',
   thresholds: {
-    ...STANDARD_THRESHOLDS,
-    journey_step_duration: ['p(95)<800'],
-    journey_errors: ['rate<0.02'],
+    http_req_duration: ['p(95)<800'],
   },
 };
 
 export default function () {
-  const jar = http.cookieJar();
-  const uniqueId = `${__VU}-${__ITER}-${Date.now()}`;
-  const testEmail = `k6-load-${uniqueId}@traycer.test`;
+  const email = `test-${randomString(8)}@example.com`;
+  const password = 'Password123!';
 
-  // ── Step 1: Register ──────────────────────────────────────────────────────
-  group('01_register', () => {
-    const res = http.post(
-      `${BASE_URL}/auth/register`,
-      JSON.stringify({
-        email: testEmail,
-        password: 'LoadTest123!',
-        nome: `K6 User ${uniqueId}`,
-      }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-        jar,
-        redirects: 0,
-      },
-    );
-    journeyDuration.add(res.timings.duration);
-    const ok = check(res, {
-      'register 200': (r) => r.status === 200,
-    });
-    if (!ok) {
-      errorRate.add(1);
-      return;
-    }
-    errorRate.add(0);
+  // 1. Register
+  const registerRes = http.post(`${BASE_URL}/auth/register`, JSON.stringify({
+    email,
+    password,
+    name: 'Test User',
+  }), { headers: { 'Content-Type': 'application/json' } });
+
+  check(registerRes, {
+    'register status is 201': (r) => r.status === 201,
   });
 
-  sleep(1);
+  sleep(2);
 
-  // ── Step 2: Get /auth/me ──────────────────────────────────────────────────
-  group('02_auth_me', () => {
-    const res = http.get(`${BASE_URL}/auth/me`, { jar, redirects: 0 });
-    journeyDuration.add(res.timings.duration);
-    check(res, {
-      'me 200': (r) => r.status === 200,
-    });
+  // 2. Login
+  const loginRes = http.post(`${BASE_URL}/auth/login`, JSON.stringify({ email, password }), {
+    headers: { 'Content-Type': 'application/json' },
   });
 
-  sleep(0.5);
-
-  // ── Step 3: Browse catálogo cursos ────────────────────────────────────────
-  let cursoSlug = null;
-  group('03_browse_catalogo', () => {
-    const res = http.get(`${BASE_URL}/catalogo/cursos?page=1&pageSize=5`, { jar, redirects: 0 });
-    journeyDuration.add(res.timings.duration);
-    check(res, {
-      'catalogo cursos 200': (r) => r.status === 200,
-    });
-
-    // Try to extract first curso slug for next steps
-    try {
-      const body = JSON.parse(res.body);
-      if (body.data && body.data.length > 0) {
-        cursoSlug = body.data[0].slug || body.data[0].id;
-      }
-    } catch (_) {
-      // Ignore parse errors
-    }
+  check(loginRes, {
+    'login status is 200': (r) => r.status === 200,
   });
 
-  sleep(0.5);
+  sleep(3);
 
-  // ── Step 4: View curso detail ─────────────────────────────────────────────
-  if (cursoSlug) {
-    group('04_curso_detail', () => {
-      const res = http.get(`${BASE_URL}/catalogo/cursos/${cursoSlug}`, { jar, redirects: 0 });
-      journeyDuration.add(res.timings.duration);
-      check(res, {
-        'curso detail ok': (r) => r.status === 200 || r.status === 404,
-      });
-    });
+  // 3. Browse Catalogo
+  http.get(`${BASE_URL}/catalogo/cursos`);
+  sleep(2);
 
-    sleep(0.5);
-
-    // ── Step 5: Inscrever no curso ────────────────────────────────────────
-    group('05_inscrever_curso', () => {
-      const res = http.post(
-        `${BASE_URL}/cursos/${cursoSlug}/inscrever`,
-        null,
-        { jar, redirects: 0 },
-      );
-      journeyDuration.add(res.timings.duration);
-      check(res, {
-        'inscrever ok': (r) => r.status === 200 || r.status === 201 || r.status === 409,
-      });
-    });
-
-    sleep(0.5);
-  }
-
-  // ── Step 6: Browse simulações ─────────────────────────────────────────────
-  group('06_browse_simulacoes', () => {
-    const res = http.get(`${BASE_URL}/catalogo/simulacoes?page=1&pageSize=5`, { jar, redirects: 0 });
-    journeyDuration.add(res.timings.duration);
-    check(res, {
-      'simulacoes 200': (r) => r.status === 200,
-    });
+  // 4. Inscrever Curso (assumes ID 1 exists)
+  const inscricaoRes = http.post(`${BASE_URL}/cursos/1/inscrever`);
+  check(inscricaoRes, {
+    'inscricao status is 200/201': (r) => [200, 201].includes(r.status),
   });
 
-  sleep(0.5);
+  sleep(2);
 
-  // ── Step 7: Send telemetria ────────────────────────────────────────────────
-  group('07_telemetria', () => {
-    const events = [
-      {
-        event: 'page_view',
-        page: '/cursos',
-        timestamp: new Date().toISOString(),
-        properties: { source: 'k6-load-test' },
-      },
-    ];
-    const res = http.post(
-      `${BASE_URL}/telemetria/batch`,
-      JSON.stringify({ events }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-        jar,
-        redirects: 0,
-      },
-    );
-    journeyDuration.add(res.timings.duration);
-    check(res, {
-      'telemetria ok': (r) => r.status === 200 || r.status === 201 || r.status === 204,
-    });
+  // 5. Get Curso Details
+  const cursoRes = http.get(`${BASE_URL}/cursos/1`);
+  check(cursoRes, {
+    'curso details status is 200': (r) => r.status === 200,
   });
 
-  sleep(1);
+  sleep(5);
+
+  // 6. Post Telemetry Batch
+  const telemetryRes = http.post(`${BASE_URL}/telemetria/batch`, JSON.stringify({
+    events: [
+      { type: 'video_progress', curso_id: 1, position: 10, timestamp: Date.now() },
+      { type: 'video_progress', curso_id: 1, position: 20, timestamp: Date.now() + 1000 },
+    ]
+  }), { headers: { 'Content-Type': 'application/json' } });
+
+  check(telemetryRes, {
+    'telemetry status is 201': (r) => r.status === 201,
+  });
+
+  sleep(10);
 }

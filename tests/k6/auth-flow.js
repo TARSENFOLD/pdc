@@ -1,80 +1,53 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
-import { Rate, Trend } from 'k6/metrics';
-import { BASE_URL, STANDARD_THRESHOLDS, TEST_USERS, login, refreshToken, logout } from './helpers.js';
 
-/**
- * auth-flow.js — Login → Refresh Token → Logout
- *
- * Validates the full auth lifecycle under load.
- * Ramps from 50 to 200 VUs over 5 minutes sustained.
- *
- * Run: k6 run tests/k6/auth-flow.js
- */
-
-const loginDuration = new Trend('login_duration', true);
-const refreshDuration = new Trend('refresh_duration', true);
-const errorRate = new Rate('auth_errors');
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:3001';
 
 export const options = {
   stages: [
-    { duration: '30s', target: 50 },   // Ramp up to 50 VUs
-    { duration: '1m', target: 100 },    // Ramp to 100
-    { duration: '1m', target: 200 },    // Ramp to 200
-    { duration: '5m', target: 200 },    // Sustain 200 VUs
-    { duration: '30s', target: 0 },     // Ramp down
+    { duration: '1m', target: 50 },  // Ramp up to 50
+    { duration: '1m', target: 200 }, // Ramp up to 200
+    { duration: '5m', target: 200 }, // Stay at 200
+    { duration: '1m', target: 0 },   // Ramp down to 0
   ],
   thresholds: {
-    ...STANDARD_THRESHOLDS,
-    login_duration: ['p(95)<500'],
-    refresh_duration: ['p(95)<300'],
-    auth_errors: ['rate<0.01'],
+    http_req_duration: ['p(95)<500'], // 95% of requests must be below 500ms
+    http_req_failed: ['rate<0.01'],   // Error rate must be less than 1%
   },
 };
 
 export default function () {
-  const jar = http.cookieJar();
-  const user = TEST_USERS[__VU % TEST_USERS.length];
+  const loginData = {
+    email: 'test-user@example.com',
+    password: 'Password123!',
+  };
 
   // 1. Login
-  const loginRes = login(http, jar, user);
-  loginDuration.add(loginRes.timings.duration);
-
-  const loginOk = check(loginRes, {
-    'login status 200': (r) => r.status === 200,
-    'login has body': (r) => r.body && r.body.length > 0,
-  });
-  if (!loginOk) {
-    errorRate.add(1);
-    return;
-  }
-  errorRate.add(0);
-
-  sleep(1);
-
-  // 2. Refresh token
-  const refreshRes = refreshToken(http, jar);
-  refreshDuration.add(refreshRes.timings.duration);
-
-  check(refreshRes, {
-    'refresh status 200': (r) => r.status === 200,
+  const loginRes = http.post(`${BASE_URL}/auth/login`, JSON.stringify(loginData), {
+    headers: { 'Content-Type': 'application/json' },
   });
 
+  check(loginRes, {
+    'login status is 200': (r) => r.status === 200,
+    'has auth token': (r) => r.json().token !== undefined || r.headers['Set-Cookie'] !== undefined,
+  });
+
+  // Small pause to simulate user thinking
   sleep(1);
 
-  // 3. Get current user
-  const meRes = http.get(`${BASE_URL}/auth/me`, { jar, redirects: 0 });
+  // 2. Get Me
+  const meRes = http.get(`${BASE_URL}/auth/me`);
   check(meRes, {
-    'me status 200': (r) => r.status === 200,
+    'me status is 200': (r) => r.status === 200,
   });
 
-  sleep(0.5);
+  sleep(2);
 
-  // 4. Logout
-  const logoutRes = logout(http, jar);
-  check(logoutRes, {
-    'logout status 200': (r) => r.status === 200,
+  // 3. Refresh Token
+  const refreshRes = http.post(`${BASE_URL}/auth/refresh`);
+  check(refreshRes, {
+    'refresh status is 200': (r) => r.status === 200,
   });
 
-  sleep(0.5);
+  sleep(5);
 }

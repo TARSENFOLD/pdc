@@ -17,7 +17,7 @@ Fase 0 — Fundação          [~] PARCIAL (Strapi v5 instalado, mas configuraç
 Fase 1 — Auth Segura       [x] COMPLETA (JWT+RBAC ✅; OAuth+2FA ✅; Google ✅)
 Fase 2 — Design System     [x] COMPLETA
 Fase 3 — API Layer         [~] PARCIAL (Módulos frontend ✅; Rotas BFF violam limite de 200 linhas)
-Fase 4 — Core do Produto   [~] PARCIAL (Sim Tipo 1+2, Cursos, Experiências, Projetos, Mentorias, Conquistas, Feed, Mentores ✅; Sim Tipo 3, Programas, Conquistas auto ❌)
+Fase 4 — Core do Produto   [~] PARCIAL (Sim Tipo 1+2, Cursos, Experiências, Projetos, Mentorias, Conquistas✅, Feed ranking✅, Programas✅; Sim Tipo 3 ❌)
 Fase 5 — LTI 1.3           [x] COMPLETA
 Fase 6 — Moderação/Admin   [x] COMPLETA
 Fase 7 — IA e Realtime     [x] COMPLETA
@@ -53,15 +53,13 @@ Fase 7 — IA e Realtime     [x] COMPLETA
 - [x] M5 — Programas públicos (catálogo + detalhe + inscrição)
 - [x] M5 — Projectos abertos a aluno/mentor/instituição
 - [x] M7 — Qualidade (zero any, zero erros TS/lint, Instrument Serif, tokens CSS)
-
+- [x] Refactor: `LandingPage.tsx` extraído em 9 componentes (`LandingNavbar`, `LandingHero`, `LandingProblema`, `LandingComoFunciona`, `LandingFeatures`, `LandingCTAFinal`, `LandingFooter`, `useFadeUp`) — 37 linhas finais
+- [x] Conquistas auto-trigger: `conquistas.engine.ts` com 12 regras declar. + flag gate + idempotência
+- [x] Feed ranking: `feed.scoring.ts` + `feed.weights.ts` integrados no `feed.ts`
+- [x] Programas: `POST /programas/:id/inscricao` + `GET /programas/:id/participantes` adicionados
 ## Próximos passos
 
-- [ ] Refactor: Dividir `auth.ts` (477 linhas) em múltiplos handlers (REQ-NF-007)
-- [ ] Refactor: Modularizar `LandingPage.tsx` (440 linhas) extraindo componentes internos
-- [ ] Configurar content-types finais no Strapi v5
-- [ ] Configurar variáveis de ambiente no Railway (BFF + Strapi) e Vercel
-- [ ] Criar og-default.png (1200×630px) em apps/web/public/
-- [ ] Primeiro deploy em produção (Railway + Vercel)
+- [ ] Simulação Tipo 3: ambiente interativo com feedback AI inline (REQ-4-003) — próxima wave
 
 ## Decisions Log
 

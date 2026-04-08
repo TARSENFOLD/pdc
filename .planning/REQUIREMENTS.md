@@ -94,12 +94,12 @@
 | REQ-4-006 | Relatório vocacional do estudante com recomendações | 🔴 | `[x]` | Relatório gerado com dados reais; sem texto genérico |
 | REQ-4-007 | Cursos: módulos, itens (vídeo/pdf/texto/quiz/tarefa/iframe), submissões | 🔴 | `[x]` | Estudante completa módulo; progresso actualizado |
 | REQ-4-008 | Experiências institucionais: sempre gratuitas, fluxo editorial completo | 🔴 | `[x]` | Experiência publicada visível sem login |
-| REQ-4-009 | Programas: criação, inscrição, gestão de participantes | 🟠 | `[ ]` | Estudante inscreve-se; instituição vê lista de inscritos |
+| REQ-4-009 | Programas: criação, inscrição, gestão de participantes | 🟠 | `[x]` | Estudante inscreve-se; instituição vê lista de inscritos |
 | REQ-4-010 | Projetos: abstract público + core privado com ACL por grant | 🔴 | `[x]` | Utilizador sem grant não acede ao core; owner sempre acede |
 | REQ-4-011 | Projetos: 4 modos (portfolio, collaboration, mentorship, sponsorship) | 🟠 | `[x]` | Modo definido na criação; visível na listagem |
 | REQ-4-012 | Vínculos: pedido, aprovação, rejeição, cancelamento | 🔴 | `[x]` | Vínculo duplicado é rejeitado (índice único) |
-| REQ-4-013 | Conquistas: automáticas (trigger por evento) + manuais + institucionais | 🟠 | `[ ]` | Conquista automática criada após primeira simulação concluída |
-| REQ-4-014 | Feed: algoritmo de ranking com sinais de telemetria | 🟠 | `[ ]` | Feed ordenado por score de relevância, não apenas por data |
+| REQ-4-013 | Conquistas: automáticas (trigger por evento) + manuais + institucionais | 🟠 | `[x]` | Conquista automática criada após primeira simulação concluída |
+| REQ-4-014 | Feed: algoritmo de ranking com sinais de telemetria | 🟠 | `[x]` | Feed ordenado por score de relevância, não apenas por data |
 
 ## Fase 5 — LTI 1.3 Provider
 
@@ -141,11 +141,11 @@
 | --- | --- | --- | --- | --- |
 | REQ-NF-001 | Lighthouse Performance ≥ 90 em mobile na landing page | 🔴 | `[ ]` | Medido com Lighthouse CI |
 | REQ-NF-002 | Tempo de resposta do BFF ≤ 200ms para endpoints de leitura | 🟠 | `[ ]` | Medido com k6 ou Artillery |
-| REQ-NF-003 | Zero erros de lint/TypeScript (sem `any`) | 🔴 | `[~]` | `z.any()` em shared; `tsc` pendente |
+| REQ-NF-003 | Zero erros de lint/TypeScript (sem `any`) | 🔴 | `[~]` | `z.any()` resolvido ✅; `tsc --noEmit` pendente de verificação |
 | REQ-NF-004 | Zero `console.log` (usar `pino` logger) | 🟠 | `[x]` | `apps/api/src/index.ts` e `auth.ts` (pino) |
 | REQ-NF-005 | Acessibilidade básica — labels, alt text, foco de teclado | 🟠 | `[ ]` | axe-core sem erros críticos |
 | REQ-NF-006 | Funcional em conectividade lenta (2G/3G) — assets optimizados | 🟠 | `[ ]` | Lighthouse em modo "Slow 3G" |
-| REQ-NF-007 | Modularidade (ficheiros < 200 linhas) | 🟡 | `[ ]` | **Violado:** `auth.ts` (477), `LandingPage.tsx` (440) ❌ |
+| REQ-NF-007 | Modularidade (ficheiros < 200 linhas) | 🟡 | `[~]` | `LandingPage.tsx` extraído para 9 componentes ✅; múltiplos route files ainda > 200L |
 | REQ-NF-008 | SEO: OG Head dinâmico em todas as páginas públicas | 🔴 | `[x]` | SEOHead implementado e verificado com metadados reais |
 
 *Last updated: Abril 2026 — Auditoria técnica concluída; estado real sincronizado.*
