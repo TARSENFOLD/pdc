@@ -63,9 +63,11 @@ export type NotificationPreferences = z.infer<typeof NotificationPreferencesSche
 export const PerfilCompletoSchema = UserSchema.extend({
   bio: z.string().optional(),
   telefone: z.string().optional(),
-  linkedinUrl: z.string().url().optional(),
-  githubUrl: z.string().url().optional(),
-  websiteUrl: z.string().url().optional(),
+  website: z.string().url().optional().or(z.literal('')),
+  socialLinks: z.array(z.object({
+    platform: z.string(),
+    url: z.string().url()
+  })).optional(),
   instituicaoId: z.string().optional(),
   visibilitySettings: VisibilitySettingsSchema.optional().nullable(),
   notificationPreferences: NotificationPreferencesSchema.optional().nullable(),
@@ -79,9 +81,11 @@ export const UpdatePerfilPayloadSchema = z.object({
   nome: z.string().min(2).optional(),
   bio: z.string().max(500).optional(),
   telefone: z.string().optional(),
-  linkedinUrl: z.string().url().optional().or(z.literal('')),
-  githubUrl: z.string().url().optional().or(z.literal('')),
-  websiteUrl: z.string().url().optional().or(z.literal('')),
+  website: z.string().url().optional().or(z.literal('')),
+  socialLinks: z.array(z.object({
+    platform: z.string(),
+    url: z.string().url()
+  })).optional(),
   avatarUrl: z.string().url().optional().or(z.literal('')),
   visibilitySettings: VisibilitySettingsSchema.optional(),
   notificationPreferences: NotificationPreferencesSchema.optional(),
@@ -1196,4 +1200,46 @@ export const SolicitarMentoriaPayloadV2Schema = z.object({
   projetoId: z.string().optional(),
 });
 export type SolicitarMentoriaPayloadV2 = z.infer<typeof SolicitarMentoriaPayloadV2Schema>;
+
+// ─── Telemetria ───────────────────────────────────────────────────────────────
+
+export const TelemetriaTipoSchema = z.enum([
+  'simulacao.iniciada',
+  'simulacao.concluida',
+  'video.assistido',
+  'checklist.item_marcado',
+  'iframe.sessao',
+  'curso.item_concluido',
+  'landing_hero_started',
+  'landing_hero_area_detected',
+  'landing_hero_verdict_generated',
+  'landing_hero_verdict_failed',
+  'page.viewed',
+  'curso.detail_viewed',
+  'dashboard.viewed',
+  'vinculos.viewed',
+  'vinculos.action',
+  'login.success',
+]);
+export type TelemetriaTipo = z.infer<typeof TelemetriaTipoSchema>;
+
+export const TelemetriaEventoSchema = z.object({
+  eventId: z.string().uuid(),
+  tipo: TelemetriaTipoSchema,
+  payload: z.record(z.unknown()).optional().default({}),
+  timestamp: z.string(),
+});
+export type TelemetriaEvento = z.infer<typeof TelemetriaEventoSchema>;
+
+export const TelemetriaBatchSchema = z.object({
+  events: z.array(TelemetriaEventoSchema).min(1).max(50),
+});
+export type TelemetriaBatch = z.infer<typeof TelemetriaBatchSchema>;
+
+export const TelemetriaSummarySchema = z.object({
+  totalEventos: z.number(),
+  porTipo: z.record(z.number()),
+  ultimoEvento: z.string().datetime().nullable(),
+});
+export type TelemetriaSummary = z.infer<typeof TelemetriaSummarySchema>;
 

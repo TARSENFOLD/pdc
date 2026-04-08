@@ -1,22 +1,12 @@
 import { http } from '../api/http';
+import type { TelemetriaTipo, TelemetriaEvento, TelemetriaSummary } from '@pdc/shared';
 
-export type TelemetriaTipo = 
-  | 'simulacao.iniciada' 
-  | 'simulacao.concluida' 
-  | 'video.assistido' 
-  | 'checklist.item_marcado' 
-  | 'iframe.sessao' 
-  | 'curso.item_concluido'
-  | 'landing_hero_started'
-  | 'landing_hero_area_detected'
-  | 'landing_hero_verdict_generated'
-  | 'landing_hero_verdict_failed';
+// Re-export shared types so existing consumers keep working
+export type { TelemetriaTipo, TelemetriaEvento } from '@pdc/shared';
 
-export interface TelemetriaEvento {
-  eventId: string;
-  tipo: TelemetriaTipo;
-  payload: Record<string, unknown>;
-  timestamp: string;
+export interface BatchResult {
+  ok: boolean;
+  results: Array<{ eventId: string; ok: boolean; duplicado?: boolean }>;
 }
 
 export const telemetriaService = {
@@ -30,5 +20,17 @@ export const telemetriaService = {
       payload,
       timestamp,
     });
-  }
+  },
+
+  registarBatch: async (events: TelemetriaEvento[]): Promise<BatchResult | undefined> => {
+    if (events.length === 0) return;
+    return http.post<BatchResult>(
+      '/telemetria/batch',
+      { events },
+    );
+  },
+
+  getSummary: async (userId: string): Promise<TelemetriaSummary> => {
+    return http.get<TelemetriaSummary>(`/telemetria/summary?userId=${encodeURIComponent(userId)}`);
+  },
 };

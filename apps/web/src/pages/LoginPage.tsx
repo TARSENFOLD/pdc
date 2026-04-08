@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { authApi } from '@/lib/api/auth';
+import { useTelemetry } from '@/hooks/useTelemetry';
 import { Input, Button } from '@/components/ui';
 
 export default function LoginPage() {
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   
   const { login } = useAuth();
+  const { track } = useTelemetry();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -26,6 +28,7 @@ export default function LoginPage() {
       if ('requiresOtp' in result) {
         navigate('/verificar', { state: { canal: result.canal, from }, replace: true });
       } else {
+        track('login.success');
         navigate(from, { replace: true });
       }
     } catch (err: unknown) {

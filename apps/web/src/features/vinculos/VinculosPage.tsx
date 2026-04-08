@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Spinner, Tabs, TabsList, TabsTrigger, TabsContent, Button, Avatar, Card, ConectarButton } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
+import { useTelemetry } from '@/hooks/useTelemetry';
 import { http } from '@/lib/api/http';
 import type { VinculoTipo, PerfilPublicoBasico } from '@pdc/shared';
 
@@ -27,6 +28,11 @@ export function VinculosPage() {
   const [tipoFiltro, setTipoFiltro] = useState<VinculoTipo | undefined>();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { track } = useTelemetry();
+
+  useEffect(() => {
+    track('vinculos.viewed');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pedidos Recebidos
   const { data: pendentes, isLoading: loadingPendentes } = useQuery({
@@ -57,6 +63,7 @@ export function VinculosPage() {
     mutationFn: ({ vinculoId, acao }: { vinculoId: string; acao: 'aceitar' | 'rejeitar' }) =>
       http.patch<{ success: boolean }>(`/vinculos/${vinculoId}`, { acao }),
     onSuccess: (_, { acao }) => {
+      track('vinculos.action', { acao });
       toast({
         title: 'Sucesso',
         description: acao === 'aceitar' ? 'Vinculo aceite!' : 'Vinculo rejeitado.',

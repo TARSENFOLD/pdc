@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
@@ -7,6 +8,7 @@ import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { DiscussionsPanel } from '@/features/discussions/DiscussionsPanel';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useTelemetry } from '@/hooks/useTelemetry';
 import type { ProgressoItem } from '@pdc/shared';
 
 export function CursoDetailPage() {
@@ -14,8 +16,13 @@ export function CursoDetailPage() {
   const qc = useQueryClient();
   const flags = useFeatureFlags();
   const { user } = useAuth();
+  const { track } = useTelemetry();
   const discussionsEnabled = !!flags['DISCUSSIONS_ENABLED'];
   const isMentorOrAdmin = user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'mentor';
+
+  useEffect(() => {
+    if (id) track('curso.detail_viewed', { cursoId: id });
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: curso, isLoading, isError } = useQuery({
     queryKey: ['cursos', id ?? ''],

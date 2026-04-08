@@ -1,7 +1,14 @@
+import { useEffect } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useTelemetry } from '@/hooks/useTelemetry';
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
+  const { track } = useTelemetry();
+
+  useEffect(() => {
+    track('dashboard.viewed', { role: user?.role });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen bg-background text-text-primary p-8">
