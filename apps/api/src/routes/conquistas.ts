@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import { strapiGet, strapiPost } from '../modules/strapi/strapi.client.js';
+import { strapiGet } from '../modules/strapi/strapi.client.js';
+import { verificarConquistas } from '../modules/conquistas/conquistas.engine.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -31,19 +32,13 @@ conquistaRoutes.get('/minhas', async (c) => {
   }
 });
 
-// POST /conquistas/verificar — verifica e desbloqueia conquistas por evento
+// POST /conquistas/verificar — executa engine local de conquistas
 conquistaRoutes.post('/verificar', zValidator('json', verificarSchema), async (c) => {
   const { id: userId } = c.get('user');
   const { evento, referencia } = c.req.valid('json');
   try {
-    return c.json(
-      await strapiPost<unknown>('/conquistas/verificar', {
-        userId,
-        evento,
-        ...(referencia !== undefined ? { referencia } : {}),
-      }),
-      201
-    );
+    const unlocked = await verificarConquistas(userId, evento, referencia);
+    return c.json({ unlocked }, unlocked.length > 0 ? 201 : 200);
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
   }
