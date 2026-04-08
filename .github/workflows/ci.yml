@@ -97,3 +97,128 @@ jobs:
 
       - name: Build (packages/shared)
         run: npm run build -w packages/shared
+
+  # ─── E2E Smoke — Playwright (PRs + push) ────────────────────────────────────
+  e2e-smoke:
+    name: "e2e — Playwright smoke (Chromium)"
+    runs-on: ubuntu-latest
+    needs: [web, api, shared]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build shared package
+        run: npm run build -w packages/shared
+
+      - name: Build API
+        run: npm run build -w apps/api
+
+      - name: Build Web
+        run: npm run build -w apps/web
+
+      - name: Start test infrastructure (Strapi + PG + Redis)
+        run: docker compose -f docker-compose.test.yml up -d --wait --wait-timeout 120
+
+      - name: Seed test accounts
+        run: npx tsx tests/helpers/seed.ts
+        env:
+          DEV_SKIP_OTP: "true"
+          API_URL: http://localhost:3001
+          STRAPI_URL: http://localhost:1337
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run Playwright smoke tests
+        run: npx playwright test --project=smoke
+        env:
+          DEV_SKIP_OTP: "true"
+          NODE_ENV: test
+          STRAPI_URL: http://localhost:1337
+          REDIS_URL: redis://localhost:6379
+          FRONTEND_URL: http://localhost:5173
+
+      - name: Stop test infrastructure
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-smoke
+          path: playwright-report/
+          retention-days: 7
+
+  # ─── E2E Full — Playwright (main only) ──────────────────────────────────────
+  e2e-full:
+    name: "e2e — Playwright full (Chromium + Firefox)"
+    runs-on: ubuntu-latest
+    needs: [web, api, shared]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox
+
+      - name: Build shared package
+        run: npm run build -w packages/shared
+
+      - name: Build API
+        run: npm run build -w apps/api
+
+      - name: Build Web
+        run: npm run build -w apps/web
+
+      - name: Start test infrastructure (Strapi + PG + Redis)
+        run: docker compose -f docker-compose.test.yml up -d --wait --wait-timeout 120
+
+      - name: Seed test accounts
+        run: npx tsx tests/helpers/seed.ts
+        env:
+          DEV_SKIP_OTP: "true"
+          API_URL: http://localhost:3001
+          STRAPI_URL: http://localhost:1337
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run Playwright full suite
+        run: npx playwright test --project=chromium --project=firefox
+        env:
+          DEV_SKIP_OTP: "true"
+          NODE_ENV: test
+          STRAPI_URL: http://localhost:1337
+          REDIS_URL: redis://localhost:6379
+          FRONTEND_URL: http://localhost:5173
+
+      - name: Stop test infrastructure
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-full
+          path: playwright-report/
+          retention-days: 14
