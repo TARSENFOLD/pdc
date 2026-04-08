@@ -43,6 +43,7 @@ import { notificacaoRoutes } from './routes/notificacoes.js';
 import { perfilRoutes } from './routes/perfis.js';
 import { denunciaRoutes } from './routes/denuncias.js';
 import { healthRoutes } from './routes/health.js';
+import { featureFlagRoutes } from './routes/feature-flags.js';
 
 if (process.env.SENTRY_DSN) {
   Sentry.init({
@@ -98,6 +99,7 @@ app.route('/media', mediaRoutes);
 app.route('/notificacoes', notificacaoRoutes);
 app.route('/perfis', perfilRoutes);
 app.route('/denuncias', denunciaRoutes);
+app.route('/feature-flags', featureFlagRoutes);
 
 const server = serve({
   fetch: app.fetch,

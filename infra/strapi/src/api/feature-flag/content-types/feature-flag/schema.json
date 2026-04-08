@@ -1,0 +1,25 @@
+{
+  "kind": "collectionType",
+  "collectionName": "feature_flags",
+  "info": {
+    "singularName": "feature-flag",
+    "pluralName": "feature-flags",
+    "displayName": "Feature Flag"
+  },
+  "options": {
+    "draftAndPublish": false,
+    "indexes": [
+      {
+        "name": "unique_feature_flag_domain",
+        "columns": ["domain"],
+        "type": "unique"
+      }
+    ]
+  },
+  "attributes": {
+    "domain": { "type": "string", "required": true, "unique": true },
+    "enabled": { "type": "boolean", "default": false, "required": true },
+    "description": { "type": "text" },
+    "overrides": { "type": "json" }
+  }
+}

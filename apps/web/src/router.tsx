@@ -64,6 +64,7 @@ const LtiPlataformasPage = React.lazy(() => import('@/features/admin/LtiPlatafor
 const FeedWeightsPage = React.lazy(() => import('@/features/admin/FeedWeightsPage'));
 const AdminTelemetriaPage = React.lazy(() => import('@/features/admin/AdminTelemetriaPage').then(m => ({ default: m.AdminTelemetriaPage })));
 const AdminRelatoriosPage = React.lazy(() => import('@/features/admin/AdminRelatoriosPage').then(m => ({ default: m.AdminRelatoriosPage })));
+const FeatureFlagsPage = React.lazy(() => import('@/features/admin/FeatureFlagsPage').then(m => ({ default: m.FeatureFlagsPage })));
 
 const ComiteDashboard = React.lazy(() => import('@/features/comite/ComiteDashboard').then(m => ({ default: m.ComiteDashboard })));
 const ValidacaoCientificaPage = React.lazy(() => import('@/features/comite/ValidacaoCientificaPage').then(m => ({ default: m.ValidacaoCientificaPage })));
@@ -298,6 +299,10 @@ export const router = createBrowserRouter([
       {
         path: 'admin/relatorios',
         element: <RoleGuard allowed={['super_admin']}><AdminRelatoriosPage /></RoleGuard>
+      },
+      {
+        path: 'admin/feature-flags',
+        element: <RoleGuard allowed={['super_admin']}><FeatureFlagsPage /></RoleGuard>
       },
     ],
   },
