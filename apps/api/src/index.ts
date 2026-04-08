@@ -10,6 +10,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
 import { securityMiddleware as security } from './middleware/security.js';
+import { noStoreCache } from './middleware/cache.js';
 import { authRoutes } from './routes/auth.js';
 import { aiRoutes } from './routes/ai.js';
 import { feedRoutes } from './routes/feed.js';
@@ -44,13 +45,17 @@ import { perfilRoutes } from './routes/perfis.js';
 import { denunciaRoutes } from './routes/denuncias.js';
 import { featureFlagRoutes } from './routes/feature-flags.js';
 import { reputationRoutes } from './routes/reputation.js';
+import { discussionRoutes } from './routes/discussions.js';
 import { healthRoutes } from './routes/health.js';
 
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV ?? 'development',
+    release: process.env.npm_package_version ?? '0.0.0',
     integrations: [nodeProfilingIntegration()],
-    tracesSampleRate: 1.0,
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
+    profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
   });
 }
 
@@ -68,6 +73,7 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use('*', security);
+app.use('*', noStoreCache);
 
 app.route('/auth', authRoutes);
 app.route('/health', healthRoutes);
@@ -102,6 +108,7 @@ app.route('/perfis', perfilRoutes);
 app.route('/denuncias', denunciaRoutes);
 app.route('/feature-flags', featureFlagRoutes);
 app.route('/admin/reputation', reputationRoutes);
+app.route('/discussions', discussionRoutes);
 
 const server = serve({
   fetch: app.fetch,

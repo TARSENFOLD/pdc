@@ -2,11 +2,15 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
+import { withPublicCache } from '../middleware/cache.js';
 import type { CursoPublico, SimulacaoPublica, ExperienciaPublica, CatalogoMeta } from '@pdc/shared';
 import { catalogoExplorarRoutes } from './catalogo-explorar.js';
 import { mentoresRoutes, instituicoesRoutes, perfilPublicoRoutes } from './catalogo-pessoas.js';
 
 export const catalogoRoutes = new Hono();
+
+// Public catalogue endpoints get stale-while-revalidate caching
+catalogoRoutes.use('*', withPublicCache(60, 300));
 
 // ─── Strapi shapes ───────────────────────────────────────────────────────────
 
