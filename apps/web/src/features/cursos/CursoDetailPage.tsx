@@ -4,11 +4,18 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Button, Spinner, Badge, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
 import { cursosApi } from '@/lib/api/cursos';
 import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { DiscussionsPanel } from '@/features/discussions/DiscussionsPanel';
+import { useAuth } from '@/lib/auth/AuthContext';
 import type { ProgressoItem } from '@pdc/shared';
 
 export function CursoDetailPage() {
   const { id } = useParams<{ id: string }>();
   const qc = useQueryClient();
+  const flags = useFeatureFlags();
+  const { user } = useAuth();
+  const discussionsEnabled = !!flags['DISCUSSIONS_ENABLED'];
+  const isMentorOrAdmin = user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'mentor';
 
   const { data: curso, isLoading, isError } = useQuery({
     queryKey: ['cursos', id ?? ''],
@@ -104,6 +111,7 @@ export function CursoDetailPage() {
         <TabsList>
           <TabsTrigger value="visao">Visão Geral</TabsTrigger>
           <TabsTrigger value="progresso">Progresso</TabsTrigger>
+          {discussionsEnabled && <TabsTrigger value="discussoes">Discussões</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="visao">
@@ -151,6 +159,12 @@ export function CursoDetailPage() {
             </div>
           )}
         </TabsContent>
+
+        {discussionsEnabled && (
+          <TabsContent value="discussoes">
+            <DiscussionsPanel cursoId={id} isMentorOrAdmin={isMentorOrAdmin} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
