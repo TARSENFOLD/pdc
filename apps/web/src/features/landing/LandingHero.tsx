@@ -31,7 +31,7 @@ export function LandingHero() {
 
       <motion.h1
         {...stagger(1)}
-        className="mx-auto max-w-4xl text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
+        className="mx-auto max-w-4xl font-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
       >
         Escolhe a tua carreira com{' '}
         <span className="text-amber">evidência real</span>

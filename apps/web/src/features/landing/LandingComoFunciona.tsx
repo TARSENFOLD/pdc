@@ -1,21 +1,24 @@
 import { motion } from 'motion/react';
 import { useFadeUp } from './useFadeUp';
 
-const PASSOS: Array<{ titulo: string; descricao: string }> = [
+const PASSOS: Array<{ num: string; titulo: string; descricao: string }> = [
   {
-    titulo: 'Explora e simula',
+    num: '01',
+    titulo: 'Explora sem compromisso',
     descricao:
-      'Escolhe uma área de interesse e faz simulações práticas que replicam o dia a dia real da profissão.',
+      'Visita experiências reais de instituições. Vê depoimentos, currículos e o dia a dia de quem já lá está. Tudo gratuito.',
   },
   {
-    titulo: 'O sistema aprende',
+    num: '02',
+    titulo: 'Testa as tuas aptidões',
     descricao:
-      'Cada acção tua — tempo, escolhas, resultados — gera um perfil vocacional baseado em comportamento real.',
+      'Faz simulações práticas que replicam tarefas reais da profissão. O sistema mede o teu desempenho e constrói o teu perfil vocacional.',
   },
   {
-    titulo: 'Decides com evidência',
+    num: '03',
+    titulo: 'Decide com evidência',
     descricao:
-      'Recebes um relatório vocacional personalizado com recomendações de cursos alinhadas ao teu perfil.',
+      'Recebe recomendações baseadas no teu comportamento real — não num questionário de 5 minutos. Conecta-te com mentores e instituições.',
   },
 ];
 
@@ -25,34 +28,35 @@ export function LandingComoFunciona() {
   return (
     <section id="como-funciona" className="px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-5xl">
-        <motion.div {...fadeUp} className="text-center">
-          <span className="text-xs font-semibold uppercase tracking-widest text-amber">
+        <motion.div {...fadeUp} className="mb-16">
+          <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
             Como funciona
           </span>
-          <h2 className="mt-4 text-3xl font-bold text-text-primary sm:text-4xl">
-            Três passos para uma decisão segura
+          <h2 className="mt-4 font-display text-3xl font-bold text-text-primary sm:text-4xl">
+            Três passos para uma decisão que não vais arrepender-te.
           </h2>
         </motion.div>
 
-        <div className="relative mt-16">
-          <div className="absolute left-1/2 top-8 hidden h-px w-[66%] -translate-x-1/2 bg-linear-to-r from-transparent via-amber/30 to-transparent lg:block" />
-
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
-            {PASSOS.map((passo, i) => (
-              <motion.div
-                key={passo.titulo}
-                {...fadeUp}
-                transition={{ duration: 0.5, delay: i * 0.15, ease: 'easeOut' }}
-                className="flex flex-col items-center text-center"
-              >
-                <div className="relative mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber/30 bg-amber/10 text-2xl font-bold text-amber">
-                  {i + 1}
-                </div>
-                <h3 className="mb-3 text-lg font-semibold text-text-primary">{passo.titulo}</h3>
-                <p className="text-sm leading-relaxed text-text-secondary">{passo.descricao}</p>
-              </motion.div>
-            ))}
-          </div>
+        {/* Editorial no-card grid — separated by vertical dividers */}
+        <div className="grid grid-cols-1 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
+          {PASSOS.map((passo, i) => (
+            <motion.div
+              key={passo.num}
+              {...fadeUp}
+              transition={{ duration: 0.5, delay: i * 0.12, ease: 'easeOut' }}
+              className="px-0 py-10 md:px-10 md:py-0 first:pl-0 last:pr-0"
+            >
+              <span className="font-display text-5xl font-bold leading-none text-border">
+                {passo.num}
+              </span>
+              <h3 className="mt-6 text-lg font-semibold tracking-tight text-text-primary">
+                {passo.titulo}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+                {passo.descricao}
+              </p>
+            </motion.div>
+          ))}
         </div>
       </div>
     </section>
