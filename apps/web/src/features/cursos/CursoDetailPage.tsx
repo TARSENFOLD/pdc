@@ -18,7 +18,7 @@ export function CursoDetailPage() {
   const { user } = useAuth();
   const { track } = useTelemetry();
   const discussionsEnabled = !!flags['DISCUSSIONS_ENABLED'];
-  const isMentorOrAdmin = user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'mentor';
+  const isMentorOrAdmin = user?.role === 'super_admin' || user?.role === 'mentor';
 
   useEffect(() => {
     if (id) track('curso.detail_viewed', { cursoId: id });

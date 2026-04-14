@@ -1,7 +1,7 @@
 import pino from 'pino';
 import { strapiGet, strapiPut } from '../strapi/strapi.client.js';
 import { redis } from '../../lib/redis.js';
-import { featureFlagService } from '../feature-flags/feature-flags.service.js';
+import * as featureFlagService from '../feature-flags/feature-flags.service.js';
 
 const log = pino({ name: 'reputation' });
 
@@ -90,48 +90,35 @@ async function getAvgRating(perfilId: string): Promise<number> {
 export async function calcularReputacao(perfilId: string): Promise<number> {
   const perfilIdStr = String(perfilId);
 
-  // 1. Average rating (0-5 → 0-1)
-  const avgRating = await getAvgRating(perfilIdStr);
-  const ratingScore = clamp(avgRating / 5, 0, 1);
-
-  // 2. Courses published
-  const cursosCount = await countItems('/cursos', {
-    'filters[autor][$eq]': perfilIdStr,
-  });
-  const cursosScore = clamp(cursosCount / 10, 0, 1);
-
-  // 3. Simulations
-  const simCount = await countItems('/simulacoes', {
-    'filters[autor][$eq]': perfilIdStr,
-  });
-  const simScore = clamp(simCount / 20, 0, 1);
-
-  // 4. Conquistas — count from perfil relation
-  const conquistas = await countItems('/conquistas', {
-    'filters[perfis][id][$eq]': perfilIdStr,
-  });
-  const conquistasScore = clamp(conquistas / 15, 0, 1);
-
-  // 5. Time on platform (months)
-  let tempoScore = 0;
-  try {
-    const perfil = await strapiGet<{ data: StrapiPerfilBasic }>(`/perfis/${perfilIdStr}`, {
+  // Parallel fetch all independent metrics
+  const [
+    avgRating,
+    cursosCount,
+    simCount,
+    conquistas,
+    comentarios,
+    ratingsGiven,
+    tempoScore,
+  ] = await Promise.all([
+    getAvgRating(perfilIdStr),
+    countItems('/cursos', { 'filters[autor][$eq]': perfilIdStr }),
+    countItems('/simulacoes', { 'filters[autor][$eq]': perfilIdStr }),
+    countItems('/conquistas', { 'filters[perfis][id][$eq]': perfilIdStr }),
+    countItems('/comments', { 'filters[autor][$eq]': perfilIdStr }),
+    countItems('/ratings', { 'filters[autor][$eq]': perfilIdStr }),
+    strapiGet<{ data: StrapiPerfilBasic }>(`/perfis/${perfilIdStr}`, {
       'fields[0]': 'createdAt',
-    });
-    const created = new Date(perfil.data?.createdAt ?? Date.now());
-    const months = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24 * 30);
-    tempoScore = clamp(months / 24, 0, 1);
-  } catch {
-    tempoScore = 0;
-  }
+    }).then((perfil) => {
+      const created = new Date(perfil.data?.createdAt ?? Date.now());
+      const months = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24 * 30);
+      return clamp(months / 24, 0, 1);
+    }).catch(() => 0),
+  ]);
 
-  // 6. Engagement (comments + ratings given)
-  const comentarios = await countItems('/comments', {
-    'filters[autor][$eq]': perfilIdStr,
-  });
-  const ratingsGiven = await countItems('/ratings', {
-    'filters[autor][$eq]': perfilIdStr,
-  });
+  const ratingScore = clamp(avgRating / 5, 0, 1);
+  const cursosScore = clamp(cursosCount / 10, 0, 1);
+  const simScore = clamp(simCount / 20, 0, 1);
+  const conquistasScore = clamp(conquistas / 15, 0, 1);
   const engagementScore = clamp((comentarios + ratingsGiven) / 50, 0, 1);
 
   // Weighted sum

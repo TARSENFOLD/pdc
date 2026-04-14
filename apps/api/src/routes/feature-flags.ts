@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
-import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
+import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 import { strapiGet, strapiPutRaw } from '../modules/strapi/strapi.client.js';
 
 type Vars = { Variables: AuthVariables };

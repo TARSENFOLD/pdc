@@ -5,7 +5,7 @@ export function LandingTestimonial() {
   const reduced = useReducedMotion();
 
   return (
-    <section className="bg-[#0A0A0F] px-4 py-24 sm:px-6">
+    <section className="bg-surface-alt px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-4xl">
         <motion.div
           initial={reduced ? { opacity: 0 } : { opacity: 0, y: 24 }}
@@ -14,7 +14,7 @@ export function LandingTestimonial() {
           transition={{ duration: 0.6, ease: 'easeOut' }}
         >
           <blockquote>
-            <p className="font-display text-3xl font-bold leading-snug tracking-tight text-white sm:text-4xl lg:text-5xl">
+            <p className="text-3xl font-bold leading-snug tracking-tight text-text-primary sm:text-4xl lg:text-5xl">
               &ldquo;Passei dois anos num curso que não era para mim.
               Com o PDC, teria sabido{' '}
               <em className="italic text-amber">antes de entrar.</em>&rdquo;
@@ -24,8 +24,8 @@ export function LandingTestimonial() {
                 A
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Ana Luísa M.</p>
-                <p className="text-xs text-white/40">Estudante de Medicina, Luanda</p>
+                <p className="text-sm font-semibold text-text-primary">Ana Luísa M.</p>
+                <p className="text-xs text-text-muted">Estudante de Medicina, Luanda</p>
               </div>
             </footer>
           </blockquote>

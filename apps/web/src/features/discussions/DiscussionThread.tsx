@@ -15,7 +15,6 @@ interface Props {
 
 export function DiscussionThread({ discussion, isMentorOrAdmin, onBack, onPin, onResolve }: Props) {
   const { user } = useAuth();
-  const qc = useQueryClient();
   const discussionId = String(discussion.id);
 
   const { data, isLoading } = useQuery({

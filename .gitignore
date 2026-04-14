@@ -9,6 +9,8 @@ build/
 .env
 .env.local
 .env.*.local
+apps/api/.env.production
+apps/api/.env.staging
 
 # Logs
 *.log

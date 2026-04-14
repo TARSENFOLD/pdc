@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240">
+  <rect width="400" height="240" fill="#0f172a"/>
+  <rect width="400" height="240" fill="url(#grad)"/>
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:0.15"/>
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0.08"/>
+    </linearGradient>
+  </defs>
+  <!-- Book icon -->
+  <g transform="translate(160,60)">
+    <rect x="0" y="0" width="50" height="64" rx="4" fill="none" stroke="#0ea5e9" stroke-width="2.5"/>
+    <rect x="8" y="12" width="34" height="3" rx="1.5" fill="#0ea5e9" opacity="0.6"/>
+    <rect x="8" y="20" width="26" height="3" rx="1.5" fill="#0ea5e9" opacity="0.4"/>
+    <rect x="8" y="28" width="30" height="3" rx="1.5" fill="#0ea5e9" opacity="0.4"/>
+    <rect x="8" y="36" width="20" height="3" rx="1.5" fill="#0ea5e9" opacity="0.4"/>
+    <line x1="2" y1="5" x2="2" y2="59" stroke="#0ea5e9" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="200" y="158" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#94a3b8" text-anchor="middle">Sem imagem de capa</text>
+  <text x="200" y="176" font-family="system-ui, sans-serif" font-size="11" fill="#475569" text-anchor="middle">Adicione uma imagem ao curso</text>
+</svg>

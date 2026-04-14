@@ -1,24 +1,24 @@
 import { motion } from 'motion/react';
-import { Dices, DollarSign, TrendingDown } from 'lucide-react';
+import { Compass, Clock, Shuffle } from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { LucideProps } from 'lucide-react';
 import { useFadeUp } from './useFadeUp';
 
 const PROBLEMAS: Array<{ icon: ComponentType<LucideProps>; title: string; body: string }> = [
   {
-    icon: Dices,
-    title: 'Escolha às cegas',
-    body: 'A maioria dos estudantes escolhe o curso baseada em pressão familiar ou suposições sobre o mercado de trabalho.',
+    icon: Compass,
+    title: 'Escolha sem referência',
+    body: 'A maioria dos estudantes escolhe o curso sem nunca ter experimentado a profissão. Decidem com base em opinião de terceiros.',
   },
   {
-    icon: DollarSign,
-    title: 'Custo humano e financeiro',
-    body: 'Matricular, reprovar e abandonar desperdiça anos e recursos escassos de famílias e do Estado.',
+    icon: Clock,
+    title: 'Tempo e dinheiro perdidos',
+    body: 'Quem descobre tarde que o curso não é o certo perde semestres inteiros e recursos que podiam ser investidos melhor.',
   },
   {
-    icon: TrendingDown,
-    title: 'Mercado desalinhado',
-    body: 'As instituições enchem vagas que depois ficam vazias. O mercado precisa de profissionais que as escolas não conseguem reter.',
+    icon: Shuffle,
+    title: 'Desalinhamento com o mercado',
+    body: 'Estudantes formam-se em áreas saturadas enquanto o mercado angolano precisa de perfis que ficam por preencher.',
   },
 ];
 
@@ -29,13 +29,13 @@ export function LandingProblema() {
     <section id="problema" className="bg-surface-alt px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-4xl">
         <motion.div {...fadeUp} className="text-center">
-          <span className="text-xs font-semibold uppercase tracking-widest text-amber">O problema</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-amber">O desafio</span>
           <h2 className="mt-4 text-3xl font-bold text-text-primary sm:text-4xl">
-            Angola perde 6 em cada 10 estudantes no primeiro ano
+            Escolher um curso não devia ser um salto no escuro
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary">
-            Cerca de 60% dos estudantes universitários angolanos abandonam o curso no primeiro ano.
-            O motivo? Escolheram sem conhecer. Sem experimentar. Sem evidência.
+            Todos os anos, milhares de estudantes angolanos entram em cursos que não conhecem.
+            O resultado? Frustração, mudanças tardias e potencial desperdiçado.
           </p>
         </motion.div>
 

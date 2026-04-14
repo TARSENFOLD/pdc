@@ -4,6 +4,8 @@ import { UpdatePerfilPayloadSchema } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPutRaw } from '../modules/strapi/strapi.client.js';
+import { serializePublicProfile } from '../modules/perfil/perfil.serializer.js';
+import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -15,6 +17,23 @@ interface VinculoData {
 
 interface VinculosResponse {
   data?: VinculoData[];
+}
+
+interface StrapiPerfilRaw {
+  id: string | number;
+  nome?: string;
+  tipo?: string;
+  bio?: string;
+  headline?: string;
+  telefone?: string;
+  website?: string;
+  socialLinks?: unknown;
+  areasInteresse?: unknown;
+  competencias?: unknown;
+  avatarUrl?: string;
+  foto?: { url?: string } | null;
+  visibilitySettings?: Record<string, string> | null;
+  [key: string]: unknown;
 }
 
 export const perfilRoutes = new Hono<Vars>();
@@ -109,10 +128,49 @@ perfilRoutes.get('/estudantes-vinculados', checkRole(['instituicao', 'super_admi
   }
 });
 
-// GET /perfis/:id — perfil público
+// GET /perfis/:id — perfil público (respeita PROFILE_V2_PUBLIC + visibilitySettings)
 perfilRoutes.get('/:id', async (c) => {
   const userId = c.req.param('id');
+  const requesterId = c.get('user')?.id;
+
+  let useV2 = false;
   try {
+    const flags = await featureFlagService.getEffectiveFlags();
+    useV2 = flags['PROFILE_V2_PUBLIC'] === true;
+  } catch {
+    // Flag service down → fallback seguro
+  }
+
+  try {
+    if (useV2) {
+      const raw = await strapiGet<{ data?: StrapiPerfilRaw[] }>('/perfis', {
+        'filters[userId][$eq]': userId,
+        'pagination[pageSize]': '1',
+        populate: 'foto',
+      });
+      const first = raw.data?.[0];
+      if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);
+
+      // Check if requester is connected to this user (for 'conexoes' visibility)
+      let isConnected = false;
+      if (requesterId && requesterId !== userId) {
+        try {
+          const vinculos = await strapiGet<VinculosResponse>('/vinculos', {
+            'filters[senderId][$eq]': requesterId,
+            'filters[receiverId][$eq]': userId,
+            'filters[estado][$eq]': 'connected',
+            'pagination[pageSize]': '1',
+          });
+          isConnected = (vinculos?.data?.length ?? 0) > 0;
+        } catch {
+          // Vinculos service down → treat as not connected
+        }
+      }
+
+      return c.json({ data: serializePublicProfile(first, isConnected) });
+    }
+
+    // Legacy path — raw Strapi user
     const data = await strapiGet<unknown>(`/users/${userId}`, {
       populate: 'role,avatar',
     });

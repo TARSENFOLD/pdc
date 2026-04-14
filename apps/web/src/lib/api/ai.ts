@@ -1,6 +1,6 @@
 import type { ChatPayload, QuizPergunta } from '@pdc/shared';
 
-const BASE_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001';
+const BASE_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 
 export const aiApi = {
   chat(payload: ChatPayload): Promise<ReadableStream<Uint8Array>> {

@@ -16,7 +16,7 @@ export function LandingMarquee() {
   return (
     <div className="overflow-hidden border-y border-amber/20 bg-amber/5 py-3.5">
       <div
-        className="flex gap-10 whitespace-nowrap"
+        className="marquee-track flex gap-10 whitespace-nowrap"
         style={{
           animation: 'marquee-scroll 28s linear infinite',
           width: 'max-content',
@@ -31,16 +31,6 @@ export function LandingMarquee() {
           </span>
         ))}
       </div>
-
-      <style>{`
-        @keyframes marquee-scroll {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .overflow-hidden > div { animation: none !important; }
-        }
-      `}</style>
     </div>
   );
 }

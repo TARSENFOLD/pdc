@@ -7,12 +7,20 @@ import {
 } from './microDesafioData';
 
 const API_URL: string =
-  (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:3001';
+  (import.meta.env['VITE_API_URL'] as string | undefined) ?? '/api';
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useMicroDesafio() {
   const { on } = useSocket();
+
+  const sessionId = useMemo(() => {
+    const stored = sessionStorage.getItem('pdc_session_id');
+    if (stored) return stored;
+    const id = crypto.randomUUID();
+    sessionStorage.setItem('pdc_session_id', id);
+    return id;
+  }, []);
 
   const [state, setState] = useState<MicroDesafioState>({
     fase: 'intro',
@@ -53,9 +61,14 @@ export function useMicroDesafio() {
       if (s.textoLivre.length >= 3 && area !== 'GERAL') {
         void telemetriaService.registarEvento('landing_hero_area_detected', { area }).catch(() => undefined);
       }
+      void fetch(`${API_URL}/landing/pulse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, area: area !== 'GERAL' ? area : undefined }),
+      }).catch(() => undefined);
       return { ...s, fase: 'pergunta' as const };
     });
-  }, []);
+  }, [sessionId]);
 
   const gerarVeredito = useCallback(async (respostas: number[], area: Area, textoLivre: string) => {
     setState((s) => ({ ...s, fase: 'carregando' }));

@@ -162,7 +162,7 @@ programasRoutes.get(
         }
       }
       const data = await strapiGet<unknown>('/programa-inscricaos', {
-        'filters[programaId][$eq]': programaId,
+        'filters[programaId][$eq]': programaId!,
         populate: 'perfil',
         sort: 'createdAt:desc',
       });

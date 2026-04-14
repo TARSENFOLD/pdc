@@ -23,8 +23,7 @@ export function BrandingPage() {
       nome: user?.nome ?? '',
       bio: user?.bio ?? '',
       telefone: user?.telefone ?? '',
-      websiteUrl: user?.websiteUrl ?? '',
-      linkedinUrl: user?.linkedinUrl ?? '',
+      website: user?.website ?? '',
     }
   });
 
@@ -98,8 +97,8 @@ const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
             <Input 
               label="Website" 
               placeholder="https://..."
-              {...register('websiteUrl')}
-              error={errors.websiteUrl?.message || ''}
+              {...register('website')}
+              error={errors.website?.message || ''}
             />
             <Input 
               label="Telefone de Contacto" 
@@ -107,13 +106,6 @@ const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
               error={errors.telefone?.message || ''}
             />
           </div>
-
-          <Input 
-            label="LinkedIn (URL)" 
-            placeholder="https://linkedin.com/school/..."
-            {...register('linkedinUrl')}
-            error={errors.linkedinUrl?.message || ''}
-          />
 
           <div className="flex justify-end pt-4">
             <Button type="submit" isLoading={mutation.isPending}>

@@ -4,6 +4,7 @@ import { perfisApi } from '@/lib/api/perfis';
 import { mediaApi } from '@/lib/api/media';
 import { Button, Spinner, Input } from '@/components/ui';
 import { DenunciarButton } from '@/components/ui/DenunciarButton';
+import { useTelemetry } from '@/hooks/useTelemetry';
 import type { UpdatePerfilPayload } from '@pdc/shared';
 
 interface FormState {
@@ -12,7 +13,7 @@ interface FormState {
   telefone: string;
   linkedinUrl: string;
   githubUrl: string;
-  websiteUrl: string;
+  website: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -21,13 +22,14 @@ const EMPTY_FORM: FormState = {
   telefone: '',
   linkedinUrl: '',
   githubUrl: '',
-  websiteUrl: '',
+  website: '',
 };
 
 export function PerfilPage() {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const initialized = useRef(false);
+  const { track } = useTelemetry();
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -41,13 +43,14 @@ export function PerfilPage() {
   useEffect(() => {
     if (perfil && !initialized.current) {
       initialized.current = true;
+      track('page.viewed', { page: 'perfil', userId: perfil.id });
       setForm({
         nome: perfil.nome,
         bio: perfil.bio ?? '',
         telefone: perfil.telefone ?? '',
-        linkedinUrl: perfil.linkedinUrl ?? '',
-        githubUrl: perfil.githubUrl ?? '',
-        websiteUrl: perfil.websiteUrl ?? '',
+        linkedinUrl: perfil.socialLinks?.find(l => l.platform === 'linkedin')?.url ?? '',
+        githubUrl: perfil.socialLinks?.find(l => l.platform === 'github')?.url ?? '',
+        website: perfil.website ?? '',
       });
     }
   }, [perfil]);
@@ -63,6 +66,7 @@ export function PerfilPage() {
     mutationFn: (payload: UpdatePerfilPayload) => perfisApi.update(payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['perfis', 'me'] });
+      track('page.viewed', { page: 'perfil', action: 'updated' });
       setSaveSuccess(true);
       setTimeout(() => { setSaveSuccess(false); }, 3000);
     },
@@ -79,9 +83,11 @@ export function PerfilPage() {
     const payload: UpdatePerfilPayload = {
       bio: form.bio,
       telefone: form.telefone || undefined,
-      linkedinUrl: form.linkedinUrl,
-      githubUrl: form.githubUrl,
-      websiteUrl: form.websiteUrl,
+      website: form.website || undefined,
+      socialLinks: [
+        ...(form.linkedinUrl ? [{ platform: 'linkedin', url: form.linkedinUrl }] : []),
+        ...(form.githubUrl ? [{ platform: 'github', url: form.githubUrl }] : []),
+      ],
     };
     if (form.nome.length >= 2) payload.nome = form.nome;
     updateMutation.mutate(payload);
@@ -158,7 +164,7 @@ export function PerfilPage() {
         <Input id="telefone" label="Telefone" value={form.telefone} onChange={handleField('telefone')} />
         <Input id="linkedinUrl" label="LinkedIn" type="url" value={form.linkedinUrl} onChange={handleField('linkedinUrl')} />
         <Input id="githubUrl" label="GitHub" type="url" value={form.githubUrl} onChange={handleField('githubUrl')} />
-        <Input id="websiteUrl" label="Website" type="url" value={form.websiteUrl} onChange={handleField('websiteUrl')} />
+        <Input id="websiteUrl" label="Website" type="url" value={form.website} onChange={handleField('website')} />
 
         <div className="flex items-center gap-3 pt-2">
           <Button type="submit" isLoading={updateMutation.isPending}>

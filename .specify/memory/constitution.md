@@ -1,50 +1,50 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# PDC v2 Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Zero `any` / `z.any()`
+TypeScript strict typing non-negotiable. Every use of `any` must be replaced with a concrete type or generic type. This ensures type safety and prevents runtime errors. Zod schemas must use specific types instead of `z.any()`.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. JWT in httpOnly Cookies
+Authentication tokens must never be stored in localStorage or sessionStorage. All JWT tokens must be stored in httpOnly, Secure, SameSite cookies to prevent XSS attacks and token theft.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Zero Mocks, Hardcoded Data Only for Display
+No fictitious hardcoded data in components. Components without real data must not render content—they display skeletons or loading states instead. Data-driven rendering only.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+## Technology Stack
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+- **API:** Hono 4 (BFF) with Node.js 24 LTS
+- **Frontend:** React 18 + Vite 5 + Tailwind v4
+- **State Management:** TanStack Query 5, Socket.IO 4
+- **Routing:** react-router-dom 6
+- **Animation:** motion/react
+- **CMS:** Strapi
+- **Database:** PostgreSQL + Redis
+- **Language:** TypeScript 5.x
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Monorepo Structure
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+```
+apps/api/src/          # Hono API endpoints, services, middleware
+apps/web/src/          # React components, pages, hooks, features
+packages/shared/       # Shared types, utilities, constants
+infra/strapi/          # Strapi configuration and types
+tests/e2e/             # Playwright E2E tests
+tests/helpers/         # Test utilities and seed data
+tests/k6/              # K6 load testing scripts
+```
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Code Standards
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- **File Limit:** 300 lines maximum per file (TypeScript/TSX)
+- **Type Annotations:** Mandatory for all function parameters and returns
+- **No `any` Types:** Use generics, unions, or concrete types
+- **Component Structure:** One primary export per file
+- **Error Handling:** Explicit error types, no silent failures
+- **Testing:** E2E critical paths, unit tests for business logic
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+Constitution supersedes all other development practices. All PRs must verify compliance with these three core principles. Exceptions require explicit documentation and approval.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version:** 2.0.0 | **Ratified:** 2026-04-09 | **Last Amended:** 2026-04-09

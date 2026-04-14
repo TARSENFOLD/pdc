@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { DeepChat } from 'deep-chat-react';
 import type { Response as DeepChatResponse } from 'deep-chat/dist/types/response';
 
-const API_URL: string = (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:3001';
+const API_URL: string = (import.meta.env['VITE_API_URL'] as string | undefined) ?? '/api';
 const AI_PROVIDER: string = (import.meta.env['VITE_AI_PROVIDER'] as string | undefined) ?? 'deepseek';
 
 const SUGGESTIONS = [

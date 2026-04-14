@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { http } from '../api/http';
+import { http } from '../lib/api/http';
 
 /**
  * Fetch effective feature flags from the BFF.

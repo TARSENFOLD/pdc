@@ -4,9 +4,9 @@ import { Link } from 'react-router-dom';
 import { MicroDesafio } from './MicroDesafio';
 
 const STATS: Array<{ value: string; label: string }> = [
-  { value: '~60%', label: 'taxa de evasão no 1.º ano' },
-  { value: '3 tipos', label: 'de simulações disponíveis' },
-  { value: '6 roles', label: 'para todo o ecossistema' },
+  { value: '7', label: 'áreas vocacionais' },
+  { value: '3 tipos', label: 'de simulação prática' },
+  { value: '6 roles', label: 'estudante a instituição' },
 ];
 
 export function LandingHero() {
@@ -22,8 +22,18 @@ export function LandingHero() {
         };
 
   return (
-    <section className="flex min-h-screen flex-col items-center justify-center px-4 pt-24 pb-16 text-center sm:px-6">
-      <motion.div {...stagger(0)} className="mb-4">
+    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 pt-24 pb-16 text-center sm:px-6">
+      {/* Hero background image */}
+      <img
+        src="/images/hero/hero-students.jpg"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+      />
+      {/* Dark overlay for text readability */}
+      <div className="pointer-events-none absolute inset-0 bg-background/85" />
+
+      <motion.div {...stagger(0)} className="relative z-10 mb-4">
         <span className="inline-flex items-center gap-2 rounded-full border border-amber/30 bg-amber/10 px-4 py-1.5 text-xs font-medium text-amber">
           Plataforma educacional angolana
         </span>
@@ -31,26 +41,26 @@ export function LandingHero() {
 
       <motion.h1
         {...stagger(1)}
-        className="mx-auto max-w-4xl font-display text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
+        className="relative z-10 mx-auto max-w-4xl text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
       >
-        Escolhe a tua carreira com{' '}
-        <span className="text-amber">evidência real</span>
+        Experimenta antes de{' '}
+        <span className="text-amber">escolher</span>
       </motion.h1>
 
       <motion.p
         {...stagger(2)}
-        className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-text-secondary"
+        className="relative z-10 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-text-secondary"
       >
-        Experimenta profissões e cursos através de simulações práticas antes de te matriculares.
-        Toma a decisão certa com base no teu próprio comportamento — não em suposições.
+        Simula profissões reais, descobre onde te encaixas e escolhe o teu curso
+        com base no teu comportamento — não em suposições.
       </motion.p>
 
-      <motion.div {...stagger(3)} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+      <motion.div {...stagger(3)} className="relative z-10 mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
         <Link
           to="/criar-conta"
           className="w-full rounded-xl bg-amber px-8 py-3.5 text-base font-semibold text-black transition-all hover:bg-amber-hover hover:scale-[1.02] sm:w-auto"
         >
-          Começa agora — é grátis
+          Começar — é grátis
         </Link>
         <a
           href="#como-funciona"
@@ -60,9 +70,11 @@ export function LandingHero() {
         </a>
       </motion.div>
 
-      <MicroDesafio />
+      <div className="relative z-10">
+        <MicroDesafio />
+      </div>
 
-      <motion.div {...stagger(4)} className="mt-20 grid grid-cols-1 gap-8 sm:grid-cols-3">
+      <motion.div {...stagger(4)} className="relative z-10 mt-20 grid grid-cols-1 gap-8 sm:grid-cols-3">
         {STATS.map((stat) => (
           <div key={stat.label} className="flex flex-col items-center gap-1">
             <span className="text-3xl font-bold text-amber">{stat.value}</span>
@@ -72,7 +84,7 @@ export function LandingHero() {
       </motion.div>
 
       <motion.div
-        className="mt-16"
+        className="relative z-10 mt-16"
         animate={reduced ? {} : { y: [0, 8, 0] }}
         transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
       >

@@ -98,17 +98,61 @@ PUBLIC_URL=https://strapi.usepdc.com
 
 ---
 
-## Checklist de Produção
+## Checklist de Produção (Serviços Externos)
 
-Antes do primeiro deploy em produção, confirma:
+Siga esta ordem recomendada para configurar a infraestrutura de produção:
 
-- [ ] `JWT_SECRET` e `JWT_REFRESH_SECRET` gerados com `openssl rand -base64 64` (≥ 64 chars)
-- [ ] `STRAPI_API_TOKEN` com tipo **Full access** gerado no painel Strapi
-- [ ] CORS configurado — `FRONTEND_URL` aponta para o domínio real
-- [ ] `R2_PUBLIC_URL` configurado e bucket com permissão pública
-- [ ] Health check activo: `GET /health` retorna `{ status: 'ok' }`
-- [ ] SSL/TLS activo em todos os domínios (Railway + Vercel fornecem automaticamente)
-- [ ] Sentry configurado (Fase 6) para captura de erros em produção
+### 1. Railway (PaaS & Base de Dados)
+- **O que fazer:** Criar projecto no [Railway](https://railway.app/). Adicionar base de dados **PostgreSQL**.
+- **Variáveis (Strapi):** `DATABASE_URL`, `APP_KEYS`, `API_TOKEN_SALT`, `ADMIN_JWT_SECRET`, `JWT_SECRET`.
+- **Variáveis (BFF):** `PORT=3001`, `NODE_ENV=production`.
+
+### 2. Upstash (Redis)
+- **O que fazer:** Criar conta no [Upstash](https://console.upstash.com/). Criar uma base de dados **Redis** (Global ou Regional).
+- **Variáveis (BFF):**
+  - `UPSTASH_REDIS_REST_URL`: URL do endpoint REST.
+  - `UPSTASH_REDIS_REST_TOKEN`: Token de acesso REST.
+
+### 3. Vercel (Frontend)
+- **O que fazer:** Ligar o repositório ao [Vercel](https://vercel.com/). Configurar o domínio `usepdc.com`.
+- **Variáveis (Web):** `VITE_API_URL=https://api.usepdc.com`.
+
+### 4. SendGrid (Emails/OTP)
+- **O que fazer:** Criar conta no [SendGrid](https://sendgrid.com/). Validar o "Sender Identity". Gerar uma **API Key**.
+- **Variáveis (BFF):**
+  - `SENDGRID_API_KEY`: A chave gerada.
+  - `SENDGRID_FROM_EMAIL`: O email validado (ex: `noreply@usepdc.com`).
+
+### 5. Cloudflare R2 (Storage de Media)
+- **O que fazer:** No painel Cloudflare, criar um bucket **R2**. Configurar CORS para permitir o domínio do BFF e Frontend. Activar "Public Bucket" ou configurar um domínio personalizado.
+- **Variáveis (BFF):**
+  - `R2_ACCOUNT_ID`: Encontrado no dashboard do R2.
+  - `R2_ACCESS_KEY_ID` & `R2_SECRET_ACCESS_KEY`: Criados em "Manage R2 API Tokens".
+  - `R2_BUCKET_NAME`: O nome do bucket (ex: `pdc-media-prod`).
+  - `R2_PUBLIC_URL`: URL pública do bucket.
+
+### 6. Google Cloud Console (OAuth)
+- **O que fazer:** Criar projecto no [Google Cloud](https://console.cloud.google.com/). Configurar "OAuth consent screen". Criar "OAuth 2.0 Client ID" (Web application).
+- **Authorized Redirect URIs:** `https://api.usepdc.com/auth/google/callback`.
+- **Variáveis (BFF):**
+  - `GOOGLE_CLIENT_ID`
+  - `GOOGLE_CLIENT_SECRET`
+  - `GOOGLE_REDIRECT_URI`: `https://api.usepdc.com/auth/google/callback`.
+
+### 7. Sentry (Monitoring)
+- **O que fazer:** Criar projecto no [Sentry](https://sentry.io/) (Node.js/Hono).
+- **Variáveis (BFF):**
+  - `SENTRY_DSN`: O DSN do projecto.
+
+---
+
+## Verificação Final
+
+Antes de considerar o deploy concluído, execute:
+
+1. **Health Check:** `curl https://api.usepdc.com/health` -> deve retornar `200 OK`.
+2. **Logs:** Verifique no Railway se o BFF arrancou sem erros de validação de `env.ts`.
+3. **CORS:** Tente fazer login a partir de `usepdc.com` e verifique se não há erros de cross-origin.
 
 ---
 

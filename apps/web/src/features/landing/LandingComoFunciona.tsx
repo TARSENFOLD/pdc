@@ -3,22 +3,22 @@ import { useFadeUp } from './useFadeUp';
 
 const PASSOS: Array<{ num: string; titulo: string; descricao: string }> = [
   {
-    num: '01',
-    titulo: 'Explora sem compromisso',
+    num: '1',
+    titulo: 'Simula uma profissão',
     descricao:
-      'Visita experiências reais de instituições. Vê depoimentos, currículos e o dia a dia de quem já lá está. Tudo gratuito.',
+      'Escolhe uma área e entra numa simulação prática que replica situações reais do dia a dia profissional.',
   },
   {
-    num: '02',
-    titulo: 'Testa as tuas aptidões',
+    num: '2',
+    titulo: 'A plataforma analisa',
     descricao:
-      'Faz simulações práticas que replicam tarefas reais da profissão. O sistema mede o teu desempenho e constrói o teu perfil vocacional.',
+      'As tuas acções, tempo e decisões geram um perfil vocacional único — baseado em comportamento, não em respostas a questionários.',
   },
   {
-    num: '03',
-    titulo: 'Decide com evidência',
+    num: '3',
+    titulo: 'Decides com clareza',
     descricao:
-      'Recebe recomendações baseadas no teu comportamento real — não num questionário de 5 minutos. Conecta-te com mentores e instituições.',
+      'Recebes recomendações de cursos e áreas alinhadas ao teu perfil real. Sem adivinhação.',
   },
 ];
 
@@ -28,28 +28,28 @@ export function LandingComoFunciona() {
   return (
     <section id="como-funciona" className="px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-5xl">
-        <motion.div {...fadeUp} className="mb-16">
-          <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
+        <motion.div {...fadeUp} className="mb-16 text-center">
+          <span className="text-xs font-semibold uppercase tracking-widest text-amber">
             Como funciona
           </span>
-          <h2 className="mt-4 font-display text-3xl font-bold text-text-primary sm:text-4xl">
-            Três passos para uma decisão que não vais arrepender-te.
+          <h2 className="mt-4 text-3xl font-bold text-text-primary sm:text-4xl">
+            Três passos. Uma decisão segura.
           </h2>
+          <div className="mx-auto mt-8 h-px w-2/3 bg-linear-to-r from-transparent via-amber/30 to-transparent" />
         </motion.div>
 
-        {/* Editorial no-card grid — separated by vertical dividers */}
-        <div className="grid grid-cols-1 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-3">
           {PASSOS.map((passo, i) => (
             <motion.div
               key={passo.num}
               {...fadeUp}
               transition={{ duration: 0.5, delay: i * 0.12, ease: 'easeOut' }}
-              className="px-0 py-10 md:px-10 md:py-0 first:pl-0 last:pr-0"
+              className="flex flex-col items-center text-center"
             >
-              <span className="font-display text-5xl font-bold leading-none text-border">
+              <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-xl border border-amber/20 bg-amber/10 text-2xl font-bold text-amber">
                 {passo.num}
-              </span>
-              <h3 className="mt-6 text-lg font-semibold tracking-tight text-text-primary">
+              </div>
+              <h3 className="text-lg font-semibold tracking-tight text-text-primary">
                 {passo.titulo}
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-text-secondary">

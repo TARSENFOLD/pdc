@@ -1,0 +1,16 @@
+node_modules
+dist
+.env*
+.planning
+.git
+tests
+playwright-report
+test-results
+infra/strapi
+apps/web
+.venv
+.vscode
+.specify
+.husky
+docs
+specs

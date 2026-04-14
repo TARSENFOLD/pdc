@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { Button, Spinner } from '@/components/ui';
-import { Palette, Bell, Shield, Eye } from 'lucide-react';
+import { Spinner } from '@/components/ui';
+import { Palette, Bell, Eye } from 'lucide-react';
 import { perfisApi } from '@/lib/api/perfis';
 import type { VisibilitySettings, NotificationPreferences, FieldVisibility } from '@pdc/shared';
 

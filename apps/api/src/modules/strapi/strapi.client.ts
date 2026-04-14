@@ -4,8 +4,20 @@ const log = pino({ name: 'strapi-client' });
 
 const STRAPI_URL = process.env['STRAPI_URL'] ?? 'http://localhost:1337';
 const STRAPI_API_TOKEN = process.env['STRAPI_API_TOKEN'] ?? '';
-const TIMEOUT = parseInt(process.env.STRAPI_TIMEOUT ?? '5000');
-const WRITE_TIMEOUT = parseInt(process.env.STRAPI_WRITE_TIMEOUT ?? '10000');
+
+function parseTimeoutEnv(envKey: string, defaultMs: number): number {
+  const raw = process.env[envKey];
+  if (raw === undefined || raw.trim() === '') return defaultMs;
+  const parsed = parseInt(raw, 10);
+  if (isNaN(parsed) || parsed <= 0) {
+    log.warn({ envKey, raw, fallback: defaultMs }, `Invalid timeout env var — using default`);
+    return defaultMs;
+  }
+  return parsed;
+}
+
+const TIMEOUT = parseTimeoutEnv('STRAPI_TIMEOUT', 5000);
+const WRITE_TIMEOUT = parseTimeoutEnv('STRAPI_WRITE_TIMEOUT', 10000);
 const MAX_RETRIES = 1;
 const BASE_DELAY = 300;
 

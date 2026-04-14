@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
-import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
+import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 import { serializePublicProfile } from '../modules/perfil/perfil.serializer.js';
 import type {
   MentorPublico,

@@ -2,12 +2,8 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPutRaw } from '../modules/strapi/strapi.client.js';
-import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
-import pino from 'pino';
-
-const log = pino({ name: 'discussions' });
+import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 
 type Vars = { Variables: AuthVariables };
 export const discussionRoutes = new Hono<Vars>();
@@ -67,7 +63,7 @@ async function getReplyDepth(paiId: number): Promise<number> {
   let currentId: number | null = paiId;
   while (currentId && depth < MAX_REPLY_DEPTH + 1) {
     try {
-      const res = await strapiGet<{ data: { pai?: { id: number } } }>(
+      const res: { data: { pai?: { id: number } } } = await strapiGet<{ data: { pai?: { id: number } } }>(
         `/respostas-discussao/${String(currentId)}`,
         { 'populate': 'pai' },
       );
@@ -102,10 +98,16 @@ discussionRoutes.use('*', async (c, next) => {
 
 discussionRoutes.get(
   '/course/:cursoId',
+  verifyJwt,
   zValidator('query', paginationSchema),
   async (c) => {
     const cursoId = c.req.param('cursoId');
+    const user = c.get('user');
     const { page, limit } = c.req.valid('query');
+
+    if (!(await isEnrolled(user.id, cursoId))) {
+      return c.json({ error: 'Tens de estar inscrito no curso para ver discussões' }, 403);
+    }
 
     const res = await strapiGet<{ data: unknown[]; meta: unknown }>('/discussoes', {
       'filters[curso][id][$eq]': cursoId,
@@ -227,7 +229,7 @@ discussionRoutes.put(
     const cursoId = discussion.data?.curso?.id;
     if (!cursoId) return c.json({ error: 'Discussão não encontrada' }, 404);
 
-    const isAdmin = user.role === 'super_admin' || user.role === 'admin';
+    const isAdmin = user.role === 'super_admin';
     if (!isAdmin && !(await isMentorOrAdmin(user.id, cursoId))) {
       return c.json({ error: 'Apenas o mentor do curso ou admin pode fixar discussões' }, 403);
     }
@@ -256,7 +258,7 @@ discussionRoutes.put(
     const cursoId = discussion.data?.curso?.id;
     if (!cursoId) return c.json({ error: 'Discussão não encontrada' }, 404);
 
-    const isAdmin = user.role === 'super_admin' || user.role === 'admin';
+    const isAdmin = user.role === 'super_admin';
     if (!isAdmin && !(await isMentorOrAdmin(user.id, cursoId))) {
       return c.json({ error: 'Apenas o mentor do curso ou admin pode resolver discussões' }, 403);
     }

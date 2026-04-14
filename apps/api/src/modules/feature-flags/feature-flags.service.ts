@@ -52,7 +52,6 @@ async function invalidateCache(): Promise<void> {
  * Invariant: institution override takes precedence over global default.
  */
 export async function getEffectiveFlags(
-  _perfilTipo: string,
   instituicaoId?: number,
 ): Promise<Record<string, boolean>> {
   const flags = await getAllFlags();
@@ -187,3 +186,12 @@ export async function deleteFlag(domain: string): Promise<void> {
   await invalidateCache();
   log.info({ domain }, 'Flag deleted');
 }
+
+export const featureFlagService = {
+  getEffectiveFlags,
+  upsertDefault,
+  setInstitutionOverride,
+  removeInstitutionOverride,
+  listAll,
+  deleteFlag,
+};

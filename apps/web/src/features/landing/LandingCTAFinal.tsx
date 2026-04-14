@@ -11,10 +11,10 @@ export function LandingCTAFinal() {
         {...fadeUp}
         className="mx-auto max-w-3xl overflow-hidden rounded-3xl bg-amber px-8 py-16 text-center"
       >
-        <h2 className="text-3xl font-bold text-black sm:text-4xl">Começa hoje. Gratuito.</h2>
+        <h2 className="text-3xl font-bold text-black sm:text-4xl">Pronto para experimentar?</h2>
         <p className="mx-auto mt-4 max-w-lg text-base text-black/70">
-          Junta-te a estudantes que já estão a tomar decisões de carreira com evidência real.
-          Sem pressão, sem subscrição obrigatória.
+          Cria a tua conta em segundos e começa a explorar simulações reais.
+          Gratuito. Sem compromisso.
         </p>
         <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link

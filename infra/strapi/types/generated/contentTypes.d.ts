@@ -885,6 +885,48 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiFeatureFlagFeatureFlag extends Struct.CollectionTypeSchema {
+  collectionName: 'feature_flags';
+  info: {
+    displayName: 'Feature Flag';
+    pluralName: 'feature-flags';
+    singularName: 'feature-flag';
+  };
+  options: {
+    draftAndPublish: false;
+    indexes: [
+      {
+        columns: ['domain'];
+        name: 'unique_feature_flag_domain';
+        type: 'unique';
+      },
+    ];
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    domain: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    enabled: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::feature-flag.feature-flag'
+    > &
+      Schema.Attribute.Private;
+    overrides: Schema.Attribute.JSON;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiInscricaoInscricao extends Struct.CollectionTypeSchema {
   collectionName: 'inscricoes';
   info: {
@@ -1364,6 +1406,15 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     preferenciasUi: Schema.Attribute.JSON;
     publishedAt: Schema.Attribute.DateTime;
     regiao: Schema.Attribute.String;
+    reputacao: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 100;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
     socialLinks: Schema.Attribute.JSON;
     suspensaAte: Schema.Attribute.DateTime;
     telefone: Schema.Attribute.String;
@@ -2460,6 +2511,7 @@ declare module '@strapi/strapi' {
       'api::curso.curso': ApiCursoCurso;
       'api::denuncia.denuncia': ApiDenunciaDenuncia;
       'api::experiencia.experiencia': ApiExperienciaExperiencia;
+      'api::feature-flag.feature-flag': ApiFeatureFlagFeatureFlag;
       'api::inscricao.inscricao': ApiInscricaoInscricao;
       'api::instituicao.instituicao': ApiInstituicaoInstituicao;
       'api::like.like': ApiLikeLike;

@@ -1,9 +1,10 @@
 /**
  * HTTP client base para comunicar com o BFF (apps/api).
- * Todos os pedidos incluem cookies httpOnly automaticamente.
+ * Em dev, usa o proxy do Vite (/api → localhost:3001) para evitar CORS.
+ * Em produção, VITE_API_URL aponta para o domínio real da API.
  */
 
-const BASE_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000';
+const BASE_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 
 export class ApiError extends Error {
   constructor(

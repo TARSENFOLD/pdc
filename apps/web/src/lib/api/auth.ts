@@ -29,7 +29,7 @@ export const authApi = {
   verifyOtp: (otp: string, canal: 'email' | 'sms') =>
     http.post<User>('/auth/otp/verify', { otp, canal }),
   loginWithGoogle: () => {
-    const baseUrl: string = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001';
+    const baseUrl: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
     window.location.href = `${baseUrl}/auth/google`;
   },
 };

@@ -101,7 +101,10 @@ authRoutes.use('/register/instituicao', rateLimitRegisto);
 authRoutes.post('/register/estudante', zValidator('json', RegistoEstudantePayloadSchema), async (c) => {
   const { email, password, nome, areaInteresse, nivelEnsino } = c.req.valid('json');
   try {
-    const user = await authService.registerWithRole(email, password, nome, 'aluno', { areaInteresse, nivelEnsino });
+    const user = await authService.registerWithRole(email, password, nome, 'aluno', { 
+      areasInteresse: [areaInteresse], 
+      nivelEnsino 
+    });
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -112,7 +115,11 @@ authRoutes.post('/register/estudante', zValidator('json', RegistoEstudantePayloa
 authRoutes.post('/register/mentor', zValidator('json', RegistoMentorPayloadSchema), async (c) => {
   const { email, password, nome, areaEspecialidade, documentos } = c.req.valid('json');
   try {
-    const user = await authService.registerWithRole(email, password, nome, 'mentor', { areaEspecialidade, documentos: documentos ?? [], aprovado: false });
+    const user = await authService.registerWithRole(email, password, nome, 'mentor', { 
+      areaFormacao: areaEspecialidade, 
+      documentos: documentos ?? [], 
+      aprovado: false 
+    });
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -123,7 +130,12 @@ authRoutes.post('/register/mentor', zValidator('json', RegistoMentorPayloadSchem
 authRoutes.post('/register/instituicao', zValidator('json', RegistoInstituicaoPayloadSchema), async (c) => {
   const { nomeInstituicao, email, password, regiao, tipo, documentos } = c.req.valid('json');
   try {
-    const user = await authService.registerWithRole(email, password, nomeInstituicao, 'instituicao', { regiao, tipo, documentos: documentos ?? [], aprovado: false });
+    const user = await authService.registerWithRole(email, password, nomeInstituicao, 'instituicao', { 
+      regiao, 
+      tipoInstituicao: tipo, 
+      documentos: documentos ?? [], 
+      aprovado: false 
+    });
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido';

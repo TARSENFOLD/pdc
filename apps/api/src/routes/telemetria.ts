@@ -92,8 +92,9 @@ telemetriaRoutes.post('/batch', zValidator('json', TelemetriaBatchSchema), async
 
   const results = settled.map((s, i) => {
     if (s.status === 'fulfilled') return s.value;
-    log.error({ err: s.reason, eventId: events[i].eventId }, 'Erro ao processar evento batch');
-    return { eventId: events[i].eventId, ok: false };
+    const evt = events[i]!;
+    log.error({ err: s.reason, eventId: evt.eventId }, 'Erro ao processar evento batch');
+    return { eventId: evt.eventId, ok: false };
   });
 
   const hasFailures = results.some((r) => !r.ok);

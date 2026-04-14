@@ -156,14 +156,14 @@ export interface UnlockedConquista {
 
 /**
  * Check if a conquista has already been unlocked for this user.
- * Uses the conquistas collection (userId + titulo) for compatibility with GET /minhas.
+ * Uses the conquistas collection (userId + slug) for stable identification.
  */
-async function isAlreadyUnlocked(userId: string, titulo: string): Promise<boolean> {
+async function isAlreadyUnlocked(userId: string, slug: string): Promise<boolean> {
   try {
     const res = await strapiGet<StrapiCountMeta>('/conquistas', {
       'pagination[pageSize]': '1',
       'filters[userId][$eq]': userId,
-      'filters[titulo][$eq]': titulo,
+      'filters[slug][$eq]': slug,
     });
     return (res.meta?.pagination?.total ?? 0) > 0;
   } catch {
@@ -197,6 +197,7 @@ async function unlock(userId: string, rule: ConquistaRule): Promise<void> {
     '/conquistas',
     {
       userId,
+      slug: rule.slug,
       titulo: rule.titulo,
       descricao: rule.descricao,
       desbloqueada: true,
@@ -249,7 +250,7 @@ export async function verificarConquistas(
   for (const rule of matchingRules) {
     try {
       // Idempotency — already unlocked?
-      if (await isAlreadyUnlocked(userId, rule.titulo)) continue;
+      if (await isAlreadyUnlocked(userId, rule.slug)) continue;
 
       // Evaluate condition
       const passes = await rule.condition(userId, referencia);

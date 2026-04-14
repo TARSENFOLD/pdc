@@ -25,14 +25,14 @@ export const socketService = {
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
     io.use(async (socket, next) => {
       const cookieHeader = socket.handshake.headers.cookie;
-      if (!cookieHeader) { next(new Error('Unauthorized')); return; }
+      if (!cookieHeader) { next(); return; }
 
       const token = cookieHeader
         .split(';')
         .find((c) => c.trim().startsWith('access_token='))
         ?.split('=')[1];
 
-      if (!token) { next(new Error('Unauthorized')); return; }
+      if (!token) { next(); return; }
 
       try {
         const { payload } = await jwtVerify(token, JWT_SECRET);
@@ -44,10 +44,11 @@ export const socketService = {
     });
 
     io.on('connection', (socket) => {
-      const userId = (socket.data as Record<string, unknown>).userId as string;
-      void socket.join(`user:${userId}`);
+      const userId = (socket.data as Record<string, unknown>).userId as string | undefined;
+      if (userId) void socket.join(`user:${userId}`);
 
       socket.on('mensagem:enviar', async (payload: { destinatarioId: string; conteudo: string }) => {
+        if (!userId) return;
         try {
           const res = await strapiPost<{ data: { id: number } }>('/mensagens', {
             remetenteId: userId,
@@ -57,7 +58,7 @@ export const socketService = {
             createdAt: new Date().toISOString(),
           });
 
-          this.emitirMensagem(payload.destinatarioId, {
+          socketService.emitirMensagem(payload.destinatarioId, {
             id: res.data.id.toString(),
             remetenteId: userId,
             conteudo: payload.conteudo,
@@ -68,6 +69,11 @@ export const socketService = {
         }
       });
     });
+  },
+
+  emitirLandingPulse(area: string | undefined, count: number): void {
+    if (!io) return;
+    io.emit('landing:pulse', { count, ...(area ? { area } : {}) });
   },
 
   emitirNotificacao(userId: string, notificacao: NotificacaoRealtime): void {

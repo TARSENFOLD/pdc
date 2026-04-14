@@ -17,17 +17,18 @@ export function setAuthCookies(
   accessToken: string,
   refreshToken: string
 ) {
+  const sameSite = isProd ? 'Strict' : 'Lax';
   setCookie(c, 'access_token', accessToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: 'Strict',
+    sameSite,
     maxAge: 15 * 60,
     path: '/',
   });
   setCookie(c, 'refresh_token', refreshToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: 'Strict',
+    sameSite,
     maxAge: 7 * 24 * 60 * 60,
     path: '/',
   });

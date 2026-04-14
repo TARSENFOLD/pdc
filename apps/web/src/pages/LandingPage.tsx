@@ -8,7 +8,7 @@ import { LandingProblema } from '../features/landing/LandingProblema';
 import { LandingComoFunciona } from '../features/landing/LandingComoFunciona';
 import { LandingFeatures } from '../features/landing/LandingFeatures';
 import { LandingMentores } from '../features/landing/LandingMentores';
-import { LandingTestimonial } from '../features/landing/LandingTestimonial';
+import { LandingLivePulse } from '../features/landing/LandingLivePulse';
 import { LandingCTAFinal } from '../features/landing/LandingCTAFinal';
 import { LandingFooter } from '../features/landing/LandingFooter';
 
@@ -32,7 +32,7 @@ export function LandingPage() {
         <LandingComoFunciona />
         <LandingFeatures />
         <LandingMentores />
-        <LandingTestimonial />
+        <LandingLivePulse />
         <LandingCTAFinal />
       </main>
       <LandingFooter />

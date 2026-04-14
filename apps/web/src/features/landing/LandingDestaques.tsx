@@ -6,6 +6,21 @@ import { useReducedMotion } from 'motion/react';
 import { Play, Building2, ArrowRight } from 'lucide-react';
 import type { SimulacaoPublica, InstituicaoPublica, CatalogoResponse } from '@pdc/shared';
 
+// ─── Placeholder config ──────────────────────────────────────────────────────
+
+const PLACEHOLDER_COLORS: Record<string, { from: string; to: string }> = {
+  tecnologia: { from: '#f59e0b', to: '#d97706' },
+  saude: { from: '#10b981', to: '#059669' },
+  educacao: { from: '#6366f1', to: '#4f46e5' },
+  engenharia: { from: '#3b82f6', to: '#2563eb' },
+  default: { from: '#f59e0b', to: '#b45309' },
+};
+
+function getPlaceholderColors(area?: string): { from: string; to: string } {
+  const key = (area ?? '').toLowerCase();
+  return PLACEHOLDER_COLORS[key] ?? PLACEHOLDER_COLORS.default!;
+}
+
 // ─── Skeletons ───────────────────────────────────────────────────────────────
 
 function LandingDestaquesSkeleton() {
@@ -111,9 +126,25 @@ export function LandingDestaques() {
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-surface-raised text-text-muted">
-                        <Play size={40} />
-                      </div>
+                      (() => {
+                        const colors = getPlaceholderColors(sim.area);
+                        return (
+                          <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
+                            <svg aria-hidden="true" className="absolute inset-0 h-full w-full" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
+                              <defs>
+                                <linearGradient id={`ph-${sim.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                  <stop offset="0%" stopColor={colors.from} stopOpacity="0.15" />
+                                  <stop offset="100%" stopColor={colors.to} stopOpacity="0.25" />
+                                </linearGradient>
+                              </defs>
+                              <rect width="320" height="180" fill={`url(#ph-${sim.id})`} />
+                              <circle cx="260" cy="40" r="60" fill={colors.from} opacity="0.1" />
+                              <circle cx="60" cy="140" r="40" fill={colors.to} opacity="0.08" />
+                            </svg>
+                            <Play size={40} className="relative z-10 text-text-muted/60" />
+                          </div>
+                        );
+                      })()
                     )}
                   </div>
                   <div className="p-5">
@@ -155,7 +186,7 @@ export function LandingDestaques() {
                     {inst.logoUrl ? (
                       <img src={inst.logoUrl} alt={inst.nome} className="h-full w-full rounded-lg object-contain" />
                     ) : (
-                      <Building2 size={20} />
+                      <img src="/images/placeholder/logo-default.svg" alt="" className="h-6 w-6" />
                     )}
                   </div>
                   <div className="min-w-0">

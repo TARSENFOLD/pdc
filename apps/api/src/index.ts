@@ -1,3 +1,4 @@
+import { env } from './lib/env.js';
 import { serve } from '@hono/node-server';
 import type { Server } from 'node:http';
 import pino from 'pino';
@@ -47,15 +48,16 @@ import { featureFlagRoutes } from './routes/feature-flags.js';
 import { reputationRoutes } from './routes/reputation.js';
 import { discussionRoutes } from './routes/discussions.js';
 import { healthRoutes } from './routes/health.js';
+import { landingRoutes } from './routes/landing.js';
 
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV ?? 'development',
+    environment: env.NODE_ENV ?? 'development',
     release: process.env.npm_package_version ?? '0.0.0',
     integrations: [nodeProfilingIntegration()],
-    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
-    profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    tracesSampleRate: env.NODE_ENV === 'production' ? 0.2 : 1.0,
+    profilesSampleRate: env.NODE_ENV === 'production' ? 0.1 : 1.0,
   });
 }
 
@@ -67,7 +69,7 @@ app.use('*', secureHeaders({
   referrerPolicy: 'strict-origin-when-cross-origin',
 }));
 app.use('*', cors({
-  origin: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+  origin: env.FRONTEND_URL,
   credentials: true,
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
@@ -109,10 +111,11 @@ app.route('/denuncias', denunciaRoutes);
 app.route('/feature-flags', featureFlagRoutes);
 app.route('/admin/reputation', reputationRoutes);
 app.route('/discussions', discussionRoutes);
+app.route('/landing', landingRoutes);
 
 const server = serve({
   fetch: app.fetch,
-  port: parseInt(process.env.PORT || '3001'),
+  port: parseInt(env.PORT),
 }, (info) => {
   log.info({ port: info.port }, 'BFF ouvindo');
 });

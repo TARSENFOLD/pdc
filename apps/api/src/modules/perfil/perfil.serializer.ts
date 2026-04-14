@@ -19,8 +19,6 @@ interface StrapiPerfil {
   [key: string]: unknown;
 }
 
-const PRIVATE_FIELDS = ['email', 'telefone', 'notificationPreferences', 'preferenciasUi', 'documentos'] as const;
-
 function sid(val: string | number): string {
   return typeof val === 'number' ? val.toString() : val;
 }
@@ -58,9 +56,11 @@ export function serializePublicProfile(
   const result: PublicProfileResult = {
     id: sid(perfil.id),
     nome: perfil.nome ?? '',
-    avatarUrl: perfil.foto?.url ?? perfil.avatarUrl,
     role: perfil.tipo ?? 'aluno',
   };
+
+  const avatarUrl = perfil.foto?.url ?? perfil.avatarUrl;
+  if (avatarUrl !== undefined) result.avatarUrl = avatarUrl;
 
   if (perfil.headline) result.headline = perfil.headline;
 
