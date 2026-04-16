@@ -50,10 +50,21 @@ programasRoutes.post(
   zValidator('json', CriarProgramaPayloadSchema),
   async (c) => {
     const { id: autorId } = c.get('user');
-    const body = c.req.valid('json');
+    const { profissionalShadow, areaShadowing, visitaUrl, localizacaoFisica, metadata: existingMetadata, ...body } = c.req.valid('json');
+    
+    // Mover campos específicos para metadata
+    const metadata = {
+      ...existingMetadata,
+      ...(profissionalShadow && { profissionalShadow }),
+      ...(areaShadowing && { areaShadowing }),
+      ...(visitaUrl && { visitaUrl }),
+      ...(localizacaoFisica && { localizacaoFisica }),
+    };
+
     try {
       const data = await strapiPost<unknown>('/programas', {
         ...body,
+        metadata,
         autorId,
         instituicaoId: autorId,
         estado: 'draft',
@@ -74,7 +85,15 @@ programasRoutes.put(
   async (c) => {
     const id = c.req.param('id');
     const { id: userId, role } = c.get('user');
-    const body = c.req.valid('json');
+    const { profissionalShadow, areaShadowing, visitaUrl, localizacaoFisica, metadata: existingMetadata, ...body } = c.req.valid('json');
+    
+    // Mover campos específicos para metadata se presentes
+    const metadataUpdate: Record<string, any> = { ...existingMetadata };
+    if (profissionalShadow) metadataUpdate.profissionalShadow = profissionalShadow;
+    if (areaShadowing) metadataUpdate.areaShadowing = areaShadowing;
+    if (visitaUrl) metadataUpdate.visitaUrl = visitaUrl;
+    if (localizacaoFisica) metadataUpdate.localizacaoFisica = localizacaoFisica;
+
     try {
       if (role !== 'super_admin') {
         const existing = await strapiGet<{ data?: { attributes?: { autorId?: string } }; autorId?: string }>(`/programas/${id}`);
@@ -83,7 +102,13 @@ programasRoutes.put(
           return c.json({ error: 'Sem permissão para editar este programa' }, 403);
         }
       }
-      const data = await strapiPut<unknown>(`/programas/${id}`, body);
+      
+      const payload: any = { ...body };
+      if (Object.keys(metadataUpdate).length > 0) {
+        payload.metadata = metadataUpdate;
+      }
+
+      const data = await strapiPut<unknown>(`/programas/${id}`, payload);
       return c.json(data);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro interno';

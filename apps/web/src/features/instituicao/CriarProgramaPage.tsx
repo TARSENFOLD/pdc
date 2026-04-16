@@ -71,17 +71,51 @@ export function CriarProgramaPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Área Vocacional</label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
+                {...register('area')}
+              >
+                <option value="ENGENHARIA">Engenharia</option>
+                <option value="SAUDE">Saúde</option>
+                <option value="TECNOLOGIA">Tecnologia</option>
+                <option value="AGRONOMIA">Agronomia</option>
+                <option value="GESTAO">Gestão</option>
+                <option value="EDUCACAO">Educação</option>
+                <option value="DIREITO">Direito</option>
+                <option value="CIENCIAS_SOCIAIS">Ciências Sociais</option>
+                <option value="ARTES">Artes</option>
+                <option value="OUTRO">Outro</option>
+              </select>
+              {errors.area && <p className="text-xs text-error">{errors.area.message}</p>}
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Modalidade</label>
+              <select 
+                className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
+                {...register('modalidade')}
+              >
+                <option value="presencial">Presencial</option>
+                <option value="online">Online</option>
+                <option value="hibrido">Híbrido</option>
+              </select>
+              {errors.modalidade && <p className="text-xs text-error">{errors.modalidade.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <Input 
-              label="Área" 
-              placeholder="Ex: Tecnologia"
-              {...register('area')}
-              error={errors.area?.message || ''}
-            />
-            <Input 
-              label="Vagas" 
+              label="Vagas (Opcional)" 
               type="number"
               {...register('vagas', { valueAsNumber: true })}
               error={errors.vagas?.message || ''}
+            />
+            <Input 
+              label="Requisitos (Opcional)" 
+              placeholder="Ex: Alunos do 10º ano"
+              {...register('requisitos')}
+              error={errors.requisitos?.message || ''}
             />
           </div>
 

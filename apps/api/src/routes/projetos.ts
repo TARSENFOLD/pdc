@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { CriarProjetoPayloadSchema } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut, strapiDelete } from '../modules/strapi/strapi.client.js';
@@ -14,18 +15,6 @@ const listQuerySchema = z.object({
   cursoId: z.string().optional(),
   tags: z.string().optional(), // comma-separated
 });
-
-const createSchema = z.object({
-  titulo: z.string().min(3).max(120),
-  descricao: z.string().min(10).max(2000),
-  cursoId: z.string().optional(),
-  tags: z.array(z.string().max(30)).max(10).optional(),
-  imagemUrl: z.string().url().optional(),
-  repoUrl: z.string().url().optional(),
-  demoUrl: z.string().url().optional(),
-});
-
-const updateSchema = createSchema.partial();
 
 export const projetoRoutes = new Hono<Vars>();
 
@@ -59,7 +48,7 @@ projetoRoutes.post(
   '/',
   verifyJwt,
   checkRole(['aluno', 'mentor', 'instituicao']),
-  zValidator('json', createSchema),
+  zValidator('json', CriarProjetoPayloadSchema),
   async (c) => {
     const user = c.get('user');
     const body = c.req.valid('json');
@@ -72,7 +61,7 @@ projetoRoutes.post(
 );
 
 // PUT /projetos/:id — próprio aluno
-projetoRoutes.put('/:id', verifyJwt, zValidator('json', updateSchema), async (c) => {
+projetoRoutes.put('/:id', verifyJwt, zValidator('json', CriarProjetoPayloadSchema.partial()), async (c) => {
     const projetoId = c.req.param('id');
     const { id: userId } = c.get('user');
     const body = c.req.valid('json');

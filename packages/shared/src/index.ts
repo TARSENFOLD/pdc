@@ -312,77 +312,7 @@ export const ExperienciaMinhaSchema = ExperienciaSchema.extend({
 
 export type ExperienciaMinha = z.infer<typeof ExperienciaMinhaSchema>;
 
-// ─── Programas ────────────────────────────────────────────────────────────────
 
-export const ProgramaTipoSchema = z.enum(['standard', 'shadowapro', 'eduvisit']);
-export type ProgramaTipo = z.infer<typeof ProgramaTipoSchema>;
-
-export const ProgramaSchema = z.object({
-  id: z.string(),
-  titulo: z.string(),
-  descricao: z.string(),
-  area: z.string().optional(),
-  tipo: ProgramaTipoSchema,
-  vagas: z.number().optional(),
-  dataInicio: z.string().datetime().optional(),
-  dataFim: z.string().datetime().optional(),
-  estado: EstadoEditorialSchema,
-  autorId: z.string(),
-  profissionalShadow: z.string().optional(),
-  areaShadowing: z.string().optional(),
-  visitaUrl: z.string().url().optional(),
-  localizacaoFisica: z.string().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-export type Programa = z.infer<typeof ProgramaSchema>;
-
-export const CriarProgramaPayloadSchema = z.object({
-  titulo: z.string().min(3).max(200),
-  descricao: z.string().min(10),
-  area: z.string().min(2).max(100),
-  tipo: ProgramaTipoSchema,
-  vagas: z.number().int().min(1).optional(),
-  dataInicio: z.string().datetime().optional(),
-  dataFim: z.string().datetime().optional(),
-  profissionalShadow: z.string().max(200).optional(),
-  areaShadowing: z.string().max(200).optional(),
-  visitaUrl: z.string().url().optional(),
-  localizacaoFisica: z.string().max(300).optional(),
-});
-
-export type CriarProgramaPayload = z.infer<typeof CriarProgramaPayloadSchema>;
-
-// ─── Propostas ────────────────────────────────────────────────────────────────
-
-export const PropostaEstadoSchema = z.enum(['pendente', 'aceite', 'recusada']);
-export type PropostaEstado = z.infer<typeof PropostaEstadoSchema>;
-
-export const PropostaTipoSchema = z.enum(['experiencia', 'programa', 'bolsa']);
-export type PropostaTipo = z.infer<typeof PropostaTipoSchema>;
-
-export const PropostaSchema = z.object({
-  id: z.string(),
-  instituicaoId: z.string(),
-  estudanteId: z.string(),
-  mensagem: z.string(),
-  tipo: PropostaTipoSchema,
-  estado: PropostaEstadoSchema,
-  estudanteNome: z.string().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-export type Proposta = z.infer<typeof PropostaSchema>;
-
-export const CriarPropostaPayloadSchema = z.object({
-  estudanteId: z.string().min(1),
-  mensagem: z.string().min(10).max(1000),
-  tipo: PropostaTipoSchema,
-});
-
-export type CriarPropostaPayload = z.infer<typeof CriarPropostaPayloadSchema>;
 
 // ─── Notificações ─────────────────────────────────────────────────────────────
 
@@ -520,35 +450,6 @@ export const RelatorioVocacionalSchema = z.object({
 
 export type RelatorioVocacional = z.infer<typeof RelatorioVocacionalSchema>;
 
-// ─── Projetos ─────────────────────────────────────────────────────────────────
-
-export const ProjetoSchema = z.object({
-  id: z.string(),
-  titulo: z.string(),
-  descricao: z.string(),
-  alunoId: z.string(),
-  cursoId: z.string().optional(),
-  tags: z.array(z.string()),
-  imagemUrl: z.string().url().optional(),
-  repoUrl: z.string().url().optional(),
-  demoUrl: z.string().url().optional(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-export type Projeto = z.infer<typeof ProjetoSchema>;
-
-export const CreateProjetoPayloadSchema = z.object({
-  titulo: z.string().min(3).max(120),
-  descricao: z.string().min(10).max(2000),
-  cursoId: z.string().optional(),
-  tags: z.array(z.string().max(30)).max(10).optional(),
-  imagemUrl: z.string().url().optional(),
-  repoUrl: z.string().url().optional(),
-  demoUrl: z.string().url().optional(),
-});
-
-export type CreateProjetoPayload = z.infer<typeof CreateProjetoPayloadSchema>;
 
 // ─── Mentorias ────────────────────────────────────────────────────────────────
 
@@ -1201,45 +1102,16 @@ export const SolicitarMentoriaPayloadV2Schema = z.object({
 });
 export type SolicitarMentoriaPayloadV2 = z.infer<typeof SolicitarMentoriaPayloadV2Schema>;
 
-// ─── Telemetria ───────────────────────────────────────────────────────────────
 
-export const TelemetriaTipoSchema = z.enum([
-  'simulacao.iniciada',
-  'simulacao.concluida',
-  'video.assistido',
-  'checklist.item_marcado',
-  'iframe.sessao',
-  'curso.item_concluido',
-  'landing_hero_started',
-  'landing_hero_area_detected',
-  'landing_hero_verdict_generated',
-  'landing_hero_verdict_failed',
-  'page.viewed',
-  'curso.detail_viewed',
-  'dashboard.viewed',
-  'vinculos.viewed',
-  'vinculos.action',
-  'login.success',
-]);
-export type TelemetriaTipo = z.infer<typeof TelemetriaTipoSchema>;
+export * from './behavior-patterns.js';
 
-export const TelemetriaEventoSchema = z.object({
-  eventId: z.string().uuid(),
-  tipo: TelemetriaTipoSchema,
-  payload: z.record(z.unknown()).optional().default({}),
-  timestamp: z.string(),
-});
-export type TelemetriaEvento = z.infer<typeof TelemetriaEventoSchema>;
+// ─── Telemetria & Behavior Patterns ───────────────────────────────────────────
+export * from './telemetry.js';
+export { BehaviorPatternSchema, type BehaviorPattern } from './behavior-patterns.js';
 
-export const TelemetriaBatchSchema = z.object({
-  events: z.array(TelemetriaEventoSchema).min(1).max(50),
-});
-export type TelemetriaBatch = z.infer<typeof TelemetriaBatchSchema>;
+// ─── Novos Schemas (T7) ──────────────────────────────────────────────────────
 
-export const TelemetriaSummarySchema = z.object({
-  totalEventos: z.number(),
-  porTipo: z.record(z.number()),
-  ultimoEvento: z.string().datetime().nullable(),
-});
-export type TelemetriaSummary = z.infer<typeof TelemetriaSummarySchema>;
-
+export * from './schemas/enums.js';
+export * from './schemas/programas.js';
+export * from './schemas/propostas.js';
+export * from './schemas/projetos.js';
