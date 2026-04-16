@@ -39,7 +39,7 @@ export const CriarProgramaPayloadSchema = z.object({
   areaShadowing: z.string().optional(),
   visitaUrl: z.string().optional(),
   localizacaoFisica: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export type CriarProgramaPayload = z.infer<typeof CriarProgramaPayloadSchema>;

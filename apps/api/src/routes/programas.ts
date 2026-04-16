@@ -88,7 +88,7 @@ programasRoutes.put(
     const { profissionalShadow, areaShadowing, visitaUrl, localizacaoFisica, metadata: existingMetadata, ...body } = c.req.valid('json');
     
     // Mover campos específicos para metadata se presentes
-    const metadataUpdate: Record<string, any> = { ...existingMetadata };
+    const metadataUpdate: Record<string, unknown> = { ...(existingMetadata as Record<string, unknown>) };
     if (profissionalShadow) metadataUpdate.profissionalShadow = profissionalShadow;
     if (areaShadowing) metadataUpdate.areaShadowing = areaShadowing;
     if (visitaUrl) metadataUpdate.visitaUrl = visitaUrl;
@@ -103,7 +103,7 @@ programasRoutes.put(
         }
       }
       
-      const payload: any = { ...body };
+      const payload: Record<string, unknown> = { ...body };
       if (Object.keys(metadataUpdate).length > 0) {
         payload.metadata = metadataUpdate;
       }
