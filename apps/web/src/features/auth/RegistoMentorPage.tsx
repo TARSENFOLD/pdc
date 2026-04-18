@@ -2,19 +2,37 @@ import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
+import { ApiError } from '@/lib/api/http';
 import { Button, Input } from '@/components/ui';
 import { AuthSplitLayout } from './AuthSplitLayout';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
-import type { RegistoMentorPayload } from '@pdc/shared';
+import type { RegistoMentorPayload, AreaVocacional } from '@pdc/shared';
 
 import { ArrowLeft } from 'lucide-react';
 
-const AREAS = ['Tecnologia', 'Saúde', 'Direito', 'Engenharia', 'Artes', 'Ciências', 'Educação'] as const;
+const AREAS: Array<{ value: AreaVocacional; label: string }> = [
+  { value: 'TECNOLOGIA', label: 'Tecnologia' },
+  { value: 'SAUDE', label: 'Saúde' },
+  { value: 'DIREITO', label: 'Direito' },
+  { value: 'ENGENHARIA', label: 'Engenharia' },
+  { value: 'ARTES', label: 'Artes' },
+  { value: 'CIENCIAS_SOCIAIS', label: 'Ciências Sociais' },
+  { value: 'EDUCACAO', label: 'Educação' },
+  { value: 'AGRONOMIA', label: 'Agronomia' },
+  { value: 'GESTAO', label: 'Gestão' },
+  { value: 'OUTRA', label: 'Outro' },
+];
+
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 export function RegistoMentorPage() {
-  const [form, setForm] = useState({
-    nome: '', email: '', password: '', areaEspecialidade: '',
+  const [form, setForm] = useState<RegistoMentorPayload>({
+    nome: '', 
+    email: '', 
+    password: '', 
+    areaEspecialidade: 'TECNOLOGIA',
+    especialidade: 'Especialista em Tecnologia',
+    areasAtuacao: ['TECNOLOGIA'],
   });
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docError, setDocError] = useState('');
@@ -25,12 +43,19 @@ export function RegistoMentorPage() {
   const mutation = useMutation({
     mutationFn: (payload: RegistoMentorPayload) => authApi.registarMentor(payload),
     onSuccess: () => { setSuccess(true); },
-    onError: (err: Error & { body?: { error?: string } }) => {
-      setError(err.body?.error ?? 'Erro ao criar conta.');
+    onError: (err: unknown) => {
+      let message = 'Erro ao criar conta.';
+      if (err instanceof ApiError) {
+        const body = err.body as Record<string, unknown> | undefined;
+        if (typeof body?.error === 'string') message = body.error;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setError(message);
     },
   });
 
-  function handleChange(key: keyof typeof form, value: string) {
+  function handleChange<K extends keyof RegistoMentorPayload>(key: K, value: RegistoMentorPayload[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -47,7 +72,12 @@ export function RegistoMentorPage() {
     e.preventDefault();
     setError('');
     // TODO: upload docFile to media endpoint and get URL
-    mutation.mutate(form);
+    mutation.mutate({
+      ...form,
+      areasAtuacao: form.areaEspecialidade ? [form.areaEspecialidade] : form.areasAtuacao,
+      especialidade: form.especialidade || (form.areaEspecialidade as string),
+      documentos: docFile ? [docFile.name] : [],
+    });
   }
 
   if (success) {
@@ -86,10 +116,9 @@ export function RegistoMentorPage() {
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-text-secondary">Área de especialidade</label>
-            <select required value={form.areaEspecialidade} onChange={(e) => { handleChange('areaEspecialidade', e.target.value); }}
+            <select required value={form.areaEspecialidade} onChange={(e) => { handleChange('areaEspecialidade', e.target.value as AreaVocacional); }}
               className="flex h-10 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber">
-              <option value="">Seleciona…</option>
-              {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
+              {AREAS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
             </select>
           </div>
 

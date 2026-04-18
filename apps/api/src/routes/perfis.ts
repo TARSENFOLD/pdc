@@ -4,7 +4,7 @@ import { UpdatePerfilPayloadSchema } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPutRaw } from '../modules/strapi/strapi.client.js';
-import { serializePublicProfile } from '../modules/perfil/perfil.serializer.js';
+import { serializePublicProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
 import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 
 type Vars = { Variables: AuthVariables };
@@ -16,7 +16,7 @@ interface VinculoData {
 }
 
 interface VinculosResponse {
-  data?: VinculoData[];
+  data: VinculoData[];
 }
 
 interface StrapiPerfilRaw {
@@ -75,26 +75,26 @@ perfilRoutes.get('/me/stats', checkRole(['aluno']), async (c) => {
   const id = user.id;
   try {
     const [telemetria, inscricoes, conquistas] = await Promise.all([
-      strapiGet<{ meta?: { pagination?: { total?: number } } }>('/telemetrias', {
+      strapiGet<{ meta: { pagination: { total: number } } }>('/telemetrias', {
         'filters[userId][$eq]': id,
         'filters[tipo][$eq]': 'simulacao.completed',
         'pagination[pageSize]': '1',
       }),
-      strapiGet<{ meta?: { pagination?: { total?: number } } }>('/inscricoes', {
+      strapiGet<{ meta: { pagination: { total: number } } }>('/inscricoes', {
         'filters[alunoId][$eq]': id,
         'filters[concluido][$eq]': 'false',
         'pagination[pageSize]': '1',
       }),
-      strapiGet<{ meta?: { pagination?: { total?: number } } }>('/conquistas', {
+      strapiGet<{ meta: { pagination: { total: number } } }>('/conquistas', {
         'filters[userId][$eq]': id,
         'filters[desbloqueada][$eq]': 'true',
         'pagination[pageSize]': '1',
       }),
     ]);
     return c.json({
-      simulacoesConcluidas: telemetria?.meta?.pagination?.total ?? 0,
-      cursosEmProgresso: inscricoes?.meta?.pagination?.total ?? 0,
-      conquistasTotal: conquistas?.meta?.pagination?.total ?? 0,
+      simulacoesConcluidas: telemetria.meta.pagination.total,
+      cursosEmProgresso: inscricoes.meta.pagination.total,
+      conquistasTotal: conquistas.meta.pagination.total,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
@@ -112,7 +112,7 @@ perfilRoutes.get('/estudantes-vinculados', checkRole(['instituicao', 'super_admi
       'filters[estado][$eq]': 'connected',
       'pagination[pageSize]': '100',
     });
-    const studentIds = (vinculos?.data ?? []).map((v) => v?.attributes?.senderId ?? v?.senderId).filter(Boolean) as string[];
+    const studentIds = vinculos.data.map((v) => v.attributes?.senderId ?? v.senderId).filter(Boolean) as string[];
     if (studentIds.length === 0) {
       return c.json({ data: [] });
     }
@@ -131,27 +131,24 @@ perfilRoutes.get('/estudantes-vinculados', checkRole(['instituicao', 'super_admi
 // GET /perfis/:id — perfil público (respeita PROFILE_V2_PUBLIC + visibilitySettings)
 perfilRoutes.get('/:id', async (c) => {
   const userId = c.req.param('id');
-  const requesterId = c.get('user')?.id;
+  const requesterId = c.get('user').id;
 
   let useV2 = false;
   try {
     const flags = await featureFlagService.getEffectiveFlags();
     useV2 = flags['PROFILE_V2_PUBLIC'] === true;
-  } catch {
-    // Flag service down → fallback seguro
-  }
+  } catch { /* ignore */ }
 
   try {
     if (useV2) {
-      const raw = await strapiGet<{ data?: StrapiPerfilRaw[] }>('/perfis', {
+      const raw = await strapiGet<{ data: StrapiPerfilRaw[] }>('/perfis', {
         'filters[userId][$eq]': userId,
         'pagination[pageSize]': '1',
         populate: 'foto',
       });
-      const first = raw.data?.[0];
+      const first = raw.data[0];
       if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);
 
-      // Check if requester is connected to this user (for 'conexoes' visibility)
       let isConnected = false;
       if (requesterId && requesterId !== userId) {
         try {
@@ -161,16 +158,14 @@ perfilRoutes.get('/:id', async (c) => {
             'filters[estado][$eq]': 'connected',
             'pagination[pageSize]': '1',
           });
-          isConnected = (vinculos?.data?.length ?? 0) > 0;
-        } catch {
-          // Vinculos service down → treat as not connected
-        }
+          isConnected = vinculos.data.length > 0;
+        } catch { /* ignore vinculos fail */ }
       }
 
-      return c.json({ data: serializePublicProfile(first, isConnected) });
+      const profileData = first as unknown as StrapiPerfil;
+      return c.json({ data: serializePublicProfile(profileData, isConnected) });
     }
 
-    // Legacy path — raw Strapi user
     const data = await strapiGet<unknown>(`/users/${userId}`, {
       populate: 'role,avatar',
     });

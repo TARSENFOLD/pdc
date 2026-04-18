@@ -84,11 +84,20 @@ export const Tipo1Player = ({ simulacao }: Props) => {
             </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-text-primary bg-slate-900">
-              <div className="text-center space-y-4">
-                <Clapperboard size={48} aria-hidden={true} className="animate-pulse text-text-primary" />
-                <p className="text-lg text-slate-400">A reproduzir conteúdo da simulação...</p>
-                <Button variant="secondary" size="sm" onClick={() => { setVideoStarted(false); }}>Reiniciar</Button>
-              </div>
+              {simulacao.conteudoUrl ? (
+                <video 
+                  src={simulacao.conteudoUrl} 
+                  controls 
+                  autoPlay 
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="text-center space-y-4">
+                  <Clapperboard size={48} aria-hidden={true} className="animate-pulse text-text-primary" />
+                  <p className="text-lg text-slate-400">A reproduzir conteúdo da simulação...</p>
+                  <Button variant="secondary" size="sm" onClick={() => { setVideoStarted(false); }}>Reiniciar</Button>
+                </div>
+              )}
             </div>
           )}
         </Card>

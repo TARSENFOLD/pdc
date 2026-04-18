@@ -1,206 +1,170 @@
 import { useQuery } from '@tanstack/react-query';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { http } from '@/lib/api/http';
-import { useReducedMotion } from 'motion/react';
-import { Play, Building2, ArrowRight } from 'lucide-react';
+import { Play, Building2, ChevronRight } from 'lucide-react';
 import type { SimulacaoPublica, InstituicaoPublica, CatalogoResponse } from '@pdc/shared';
 
-// ─── Placeholder config ──────────────────────────────────────────────────────
-
 const PLACEHOLDER_COLORS: Record<string, { from: string; to: string }> = {
-  tecnologia: { from: '#f59e0b', to: '#d97706' },
-  saude: { from: '#10b981', to: '#059669' },
-  educacao: { from: '#6366f1', to: '#4f46e5' },
-  engenharia: { from: '#3b82f6', to: '#2563eb' },
+  tecnologia: { from: '#3b82f6', to: '#1d4ed8' },
+  saude: { from: '#ef4444', to: '#b91c1c' },
+  engenharia: { from: '#10b981', to: '#047857' },
+  gestao: { from: '#f59e0b', to: '#b45309' },
   default: { from: '#f59e0b', to: '#b45309' },
 };
 
 function getPlaceholderColors(area?: string): { from: string; to: string } {
   const key = (area ?? '').toLowerCase();
-  return PLACEHOLDER_COLORS[key] ?? PLACEHOLDER_COLORS.default!;
+  const found = PLACEHOLDER_COLORS[key];
+  if (found) return found;
+  return PLACEHOLDER_COLORS.default as { from: string; to: string };
 }
 
 // ─── Skeletons ───────────────────────────────────────────────────────────────
 
 function LandingDestaquesSkeleton() {
   return (
-    <section className="bg-background px-4 py-24 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-12 text-center lg:text-left">
-          <div className="h-10 w-64 rounded-lg bg-surface-raised mx-auto lg:mx-0 mb-4" />
-          <div className="h-4 w-96 rounded-lg bg-surface-raised mx-auto lg:mx-0" />
+    <div className="mx-auto max-w-7xl animate-pulse">
+      <div className="h-8 w-64 bg-surface-raised mb-12 rounded-lg" />
+      <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
+        <div className="lg:col-span-2 grid gap-6 sm:grid-cols-2">
+          {[1,2,3,4].map(i => <div key={i} className="h-64 bg-surface-raised rounded-2xl" />)}
         </div>
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="rounded-2xl border border-border bg-surface p-5">
-                  <div className="aspect-video w-full rounded-xl bg-surface-raised mb-4" />
-                  <div className="h-3 w-16 bg-surface-raised mb-3 rounded" />
-                  <div className="h-5 w-full bg-surface-raised mb-2 rounded" />
-                  <div className="h-4 w-2/3 bg-surface-raised rounded" />
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col gap-6">
-            <div className="h-4 w-32 bg-surface-raised rounded" />
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4 rounded-xl border border-border bg-surface p-3">
-                <div className="h-10 w-10 shrink-0 rounded-lg bg-surface-raised" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 w-full bg-surface-raised rounded" />
-                  <div className="h-3 w-1/2 bg-surface-raised rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="space-y-4">
+          {[1,2,3].map(i => <div key={i} className="h-20 bg-surface-raised rounded-xl" />)}
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 
-// ─── Componente ───────────────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export function LandingDestaques() {
   const reduced = useReducedMotion();
-
   const fadeUp = {
     initial: reduced ? { opacity: 0 } : { opacity: 0, y: 24 },
     whileInView: { opacity: 1, y: 0 },
     viewport: { once: true },
-    transition: { duration: 0.5, ease: 'easeOut' },
+    transition: { duration: 0.5 },
   };
 
-  const { data: simulacoes, isError: simError, isLoading: loadingSims } = useQuery({
-    queryKey: ['landing-simulacoes'],
-    queryFn: () => http.get<CatalogoResponse<SimulacaoPublica>>('/catalogo/simulacoes?limit=3&sort=score:desc'),
+  const { data: simulacoes, isLoading: loadingSims, isError: simError } = useQuery({
+    queryKey: ['landing-destaques-sims'],
+    queryFn: () => http.get<CatalogoResponse<SimulacaoPublica>>('/catalogo/simulacoes?limit=4&sort=reputacao:desc'),
     retry: false,
   });
 
-  const { data: instituicoes, isError: instError, isLoading: loadingInsts } = useQuery({
-    queryKey: ['landing-instituicoes'],
-    queryFn: () => http.get<CatalogoResponse<InstituicaoPublica>>('/catalogo/instituicoes?limit=6'),
+  const { data: instituicoes, isLoading: loadingInsts, isError: instError } = useQuery({
+    queryKey: ['landing-destaques-insts'],
+    queryFn: () => http.get<CatalogoResponse<InstituicaoPublica>>('/catalogo/instituicoes?limit=3&sort=reputacao:desc'),
     retry: false,
   });
 
   if (loadingSims || loadingInsts) {
-    return <LandingDestaquesSkeleton />;
+    return (
+      <section className="bg-background px-4 py-24 sm:px-6">
+        <LandingDestaquesSkeleton />
+      </section>
+    );
   }
 
   // Regra zero mocks: se houver erro ou não houver dados em simulações, não renderiza nada
-  if (simError || instError || !simulacoes?.data?.length) {
+  if (simError || instError || !simulacoes?.data.length) {
     return null;
   }
 
   return (
     <section className="bg-background px-4 py-24 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <motion.div {...fadeUp} className="mb-12 text-center lg:text-left">
-          <h2 className="text-3xl font-bold text-text-primary sm:text-4xl">
-            Em destaque agora
+      <div className="mx-auto max-w-7xl">
+        <motion.div {...fadeUp} className="mb-16">
+          <h2 className="text-3xl font-bold text-text-primary sm:text-4xl font-display tracking-tight">
+            Explora por conta própria
           </h2>
-          <p className="mt-4 text-text-secondary">
-            Explora as simulações mais populares e as instituições parceiras.
+          <p className="mt-4 max-w-2xl text-text-secondary">
+            Simulações reais criadas por mentores e instituições para te ajudar a decidir o teu futuro.
           </p>
         </motion.div>
 
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
-          {/* Simulações Col */}
+          {/* Simulações Col (2/3) */}
           <div className="lg:col-span-2">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {simulacoes.data.map((sim: SimulacaoPublica, i: number) => (
-                <motion.div
-                  key={sim.id}
-                  {...fadeUp}
-                  transition={{ delay: i * 0.1 }}
-                  className="group relative overflow-hidden rounded-2xl border border-border bg-surface transition-all hover:border-amber/20"
-                >
-                  <div className="aspect-video w-full overflow-hidden">
-                    {sim.capaUrl ? (
-                      <img
-                        src={sim.capaUrl}
-                        alt={sim.titulo}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                    ) : (
-                      (() => {
-                        const colors = getPlaceholderColors(sim.area);
-                        return (
-                          <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
-                            <svg aria-hidden="true" className="absolute inset-0 h-full w-full" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
-                              <defs>
-                                <linearGradient id={`ph-${sim.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                                  <stop offset="0%" stopColor={colors.from} stopOpacity="0.15" />
-                                  <stop offset="100%" stopColor={colors.to} stopOpacity="0.25" />
-                                </linearGradient>
-                              </defs>
-                              <rect width="320" height="180" fill={`url(#ph-${sim.id})`} />
-                              <circle cx="260" cy="40" r="60" fill={colors.from} opacity="0.1" />
-                              <circle cx="60" cy="140" r="40" fill={colors.to} opacity="0.08" />
-                            </svg>
-                            <Play size={40} className="relative z-10 text-text-muted/60" />
+              {simulacoes.data.map((sim: SimulacaoPublica, i: number) => {
+                const colors = getPlaceholderColors(sim.area);
+                return (
+                  <motion.div
+                    key={sim.id}
+                    {...fadeUp}
+                    transition={{ delay: i * 0.1 }}
+                    className="group relative overflow-hidden rounded-3xl border border-white/5 bg-surface shadow-sm transition-all hover:border-accent/30 hover:shadow-2xl hover:shadow-accent/5"
+                  >
+                    <Link to={`/simulacoes/${sim.slug}`} className="block">
+                      <div className="aspect-video w-full overflow-hidden">
+                        {sim.capaUrl ? (
+                          <img
+                            src={sim.capaUrl}
+                            alt={sim.titulo}
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div 
+                            className="flex h-full w-full items-center justify-center"
+                            style={{ background: `linear-gradient(135deg, ${colors.from}, ${colors.to})` }}
+                          >
+                            <Play className="h-12 w-12 text-white/50" />
                           </div>
-                        );
-                      })()
-                    )}
-                  </div>
-                  <div className="p-5">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-amber">
-                      {sim.area || 'Geral'}
-                    </span>
-                    <h3 className="mt-2 text-lg font-bold text-text-primary line-clamp-1">
-                      {sim.titulo}
-                    </h3>
-                    <p className="mt-2 text-sm text-text-secondary line-clamp-2">
-                      {sim.descricao}
-                    </p>
-                    <Link
-                      to={`/simulacoes/${sim.slug || sim.id}`}
-                      className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-amber transition-colors hover:text-amber-hover"
-                    >
-                      Experimentar <ArrowRight size={14} />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        <div className="absolute bottom-4 left-4 right-4">
+                          <span className="inline-block rounded-full bg-accent/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg">
+                            {sim.area}
+                          </span>
+                          <h3 className="mt-3 text-lg font-bold text-white line-clamp-1 tracking-tight">{sim.titulo}</h3>
+                        </div>
+                      </div>
                     </Link>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
 
           {/* Instituições Col */}
           <div className="flex flex-col gap-6">
-            <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-text-muted">
-              <Building2 size={14} /> Instituições parceiras
+            <h3 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">
+              <Building2 size={12} className="text-accent" /> Instituições parceiras
             </h3>
             <div className="flex flex-col gap-3">
-              {instituicoes?.data?.map((inst: InstituicaoPublica, i: number) => (
+              {instituicoes?.data.map((inst: InstituicaoPublica, i: number) => (
                 <motion.div
                   key={inst.id}
                   {...fadeUp}
                   transition={{ delay: 0.3 + i * 0.05 }}
-                  className="flex items-center gap-4 rounded-xl border border-border bg-surface p-3 transition-colors hover:bg-surface-raised"
+                  className="flex items-center gap-4 rounded-xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10 hover:border-accent/20 group"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber/10 text-amber">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-surface-alt border border-white/5 overflow-hidden">
                     {inst.logoUrl ? (
-                      <img src={inst.logoUrl} alt={inst.nome} className="h-full w-full rounded-lg object-contain" />
+                      <img src={inst.logoUrl} alt={inst.nome} className="h-full w-full object-contain p-2" />
                     ) : (
-                      <img src="/images/placeholder/logo-default.svg" alt="" className="h-6 w-6" />
+                      <Building2 className="h-6 w-6 text-text-muted" />
                     )}
                   </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-text-primary">{inst.nome}</p>
-                    <p className="truncate text-xs text-text-muted">{inst.regiao || 'Angola'}</p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-bold text-text-primary truncate group-hover:text-accent transition-colors">{inst.nome}</h4>
+                    <p className="text-[10px] text-text-muted uppercase font-medium tracking-wider">{inst.regiao || 'Angola'}</p>
                   </div>
+                  <Link to={`/instituicoes/${inst.slug}`} className="text-text-muted group-hover:text-accent transition-colors">
+                    <ChevronRight size={18} />
+                  </Link>
                 </motion.div>
               ))}
             </div>
-            <Link
-              to="/instituicoes"
-              className="mt-2 text-xs font-medium text-text-muted transition-colors hover:text-amber"
+            <Link 
+              to="/explorar?tab=instituicoes" 
+              className="mt-2 text-xs font-bold uppercase tracking-widest text-accent/60 hover:text-accent transition-colors inline-flex items-center gap-1"
             >
-              Ver todas as instituições →
+              Ver todas <ChevronRight size={12} />
             </Link>
           </div>
         </div>

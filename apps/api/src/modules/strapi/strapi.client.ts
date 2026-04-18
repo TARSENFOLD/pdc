@@ -1,12 +1,14 @@
 import pino from 'pino';
+import { env } from '../../lib/env.js';
 
 const log = pino({ name: 'strapi-client' });
 
-const STRAPI_URL = process.env['STRAPI_URL'] ?? 'http://localhost:1337';
-const STRAPI_API_TOKEN = process.env['STRAPI_API_TOKEN'] ?? '';
+const STRAPI_URL = env.STRAPI_URL;
+const STRAPI_API_TOKEN = env.STRAPI_API_TOKEN;
 
 function parseTimeoutEnv(envKey: string, defaultMs: number): number {
-  const raw = process.env[envKey];
+  // @ts-ignore - dynamic access
+  const raw = env[envKey] as string | undefined;
   if (raw === undefined || raw.trim() === '') return defaultMs;
   const parsed = parseInt(raw, 10);
   if (isNaN(parsed) || parsed <= 0) {

@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Badge } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Search } from 'lucide-react';
 
 const TIPOS: Record<string, string> = { '1': 'Vídeo Guiado', '2': 'Laboratório Externo', '3': 'Ambiente Interactivo' };
 
@@ -16,7 +18,7 @@ export function SimulacaoPublicoDetailPage() {
   });
 
   if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><Spinner size="lg" /></div>;
-  if (isError || !sim) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="text-text-muted">Simulação não encontrada.</p></div>;
+  if (isError || !sim) return <div className="flex min-h-screen items-center justify-center bg-background p-4"><EmptyState icon={Search} title="Simulação não encontrada" description="Não foi possível carregar os dados desta simulação." /></div>;
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
@@ -24,7 +26,7 @@ export function SimulacaoPublicoDetailPage() {
         title={sim.titulo}
         description={sim.descricao}
         image={sim.capaUrl}
-        url={`https://usepdc.com/simulacoes/${slug}`}
+        url={`https://usepdc.com/simulacoes/${slug ?? ''}`}
         type="article"
       />
       <div className="mx-auto max-w-3xl">

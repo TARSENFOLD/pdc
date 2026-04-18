@@ -1,19 +1,11 @@
-import { http } from './http';
-import type { Projeto, CreateProjetoPayload } from '@pdc/shared';
-
-export interface ProjetoFilters {
-  page?: number;
-  pageSize?: number;
-  alunoId?: string;
-  cursoId?: string;
-  tags?: string;
-}
+import { http } from './http.js';
+import type { Projeto, CriarProjetoPayload, ProjetoFilters } from '@pdc/shared';
 
 export const projetosApi = {
   list: (filters?: ProjetoFilters) => {
     const params = new URLSearchParams();
-    if (filters?.page) params.set('page', filters.page.toString());
-    if (filters?.pageSize) params.set('pageSize', filters.pageSize.toString());
+    if (filters?.page) params.set('page', String(filters.page));
+    if (filters?.pageSize) params.set('pageSize', String(filters.pageSize));
     if (filters?.alunoId) params.set('alunoId', filters.alunoId);
     if (filters?.cursoId) params.set('cursoId', filters.cursoId);
     if (filters?.tags) params.set('tags', filters.tags);
@@ -25,10 +17,10 @@ export const projetosApi = {
 
   getById: (id: string) => http.get<Projeto>(`/projetos/${id}`),
 
-  create: (payload: CreateProjetoPayload) =>
+  create: (payload: CriarProjetoPayload) =>
     http.post<Projeto>('/projetos', payload),
 
-  update: (id: string, payload: Partial<CreateProjetoPayload>) =>
+  update: (id: string, payload: Partial<CriarProjetoPayload>) =>
     http.put<Projeto>(`/projetos/${id}`, payload),
 
   remove: (id: string) => http.delete<{ ok: boolean }>(`/projetos/${id}`),

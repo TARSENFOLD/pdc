@@ -11,6 +11,7 @@ import {
 } from '@pdc/shared';
 import { getCookie } from 'hono/cookie';
 import { jwtVerify } from 'jose';
+import { env } from '../lib/env.js';
 
 export const ratingsRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -37,7 +38,7 @@ async function getOptionalUserId(c: Context): Promise<string | null> {
   try {
     const token = getCookie(c, 'access_token');
     if (!token) return null;
-    const JWT_SECRET = new TextEncoder().encode(process.env['JWT_SECRET'] || 'change-me-in-production-min-32-chars');
+    const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return payload.sub as string;
   } catch {

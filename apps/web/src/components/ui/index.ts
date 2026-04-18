@@ -14,3 +14,5 @@ export * from './BookmarkButton';
 export * from './RatingStars';
 export * from './ConectarButton';
 export * from './Skeleton';
+export * from './EmptyState';
+export * from './AppErrorBoundary';

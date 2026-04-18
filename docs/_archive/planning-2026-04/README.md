@@ -1,0 +1,1 @@
+# Archive: Planning 2026-04\n\nEste diretório contém o estado do planeamento anterior à migração para a taxonomia de 5 Waves (Abril 2026).\n\nFicheiros preservados para histórico de decisões e requisitos originais.

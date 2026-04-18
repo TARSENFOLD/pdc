@@ -4,15 +4,16 @@ import { TINA_KNOWLEDGE, type TinaKnowledgeItem } from './tina.knowledge.js';
 import { validarMensagem } from './tina.guardrails.js';
 import { verificarLimite } from './tina.ratelimit.js';
 import type { ChatMessage } from '@pdc/shared';
+import { env } from '../../lib/env.js';
 
-const redis = process.env['UPSTASH_REDIS_REST_URL']
+const redis = env.UPSTASH_REDIS_REST_URL
   ? new Redis({
-      url: process.env['UPSTASH_REDIS_REST_URL'],
-      token: process.env['UPSTASH_REDIS_REST_TOKEN'] ?? '',
+      url: env.UPSTASH_REDIS_REST_URL,
+      token: env.UPSTASH_REDIS_REST_TOKEN,
     })
   : null;
 
-const AI_PROVIDER = process.env['AI_PROVIDER'] || 'deepseek';
+const AI_PROVIDER = env.AI_PROVIDER;
 
 export const tinaService = {
   buildSystemPrompt(userContext: string, chunks: string): string {

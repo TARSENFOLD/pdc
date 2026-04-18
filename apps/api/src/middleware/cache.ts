@@ -18,6 +18,6 @@ export async function noStoreCache(c: Context, next: Next) {
 export function withPublicCache(maxAge = 60, swr = 300) {
   return async (c: Context, next: Next) => {
     await next();
-    c.header('Cache-Control', `public, max-age=${maxAge}, stale-while-revalidate=${swr}`);
+    c.header('Cache-Control', `public, max-age=${maxAge.toString()}, stale-while-revalidate=${swr.toString()}`);
   };
 }

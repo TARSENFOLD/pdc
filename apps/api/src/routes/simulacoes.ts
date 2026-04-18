@@ -1,11 +1,13 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import pino from 'pino';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { CriarSimulacaoPayloadSchema } from '@pdc/shared';
 
+const log = pino({ name: 'routes:simulacoes' });
 type Vars = { Variables: AuthVariables };
 
 const simQuerySchema = z.object({
@@ -194,10 +196,24 @@ simulacaoRoutes.post('/tentativas', checkRole(['aluno']), zValidator('json', ini
   const { id: alunoId } = c.get('user');
   const { simulacaoId } = c.req.valid('json');
   try {
+    // Buscar simulação para obter tipo
+    const sim = await strapiGet<{ data: { tipo: number } }>(`/simulacoes/${simulacaoId}`);
+    const tipo = sim.data.tipo;
+    
+    // Contar tentativas anteriores
+    const prevTentativas = await strapiGet<{ meta: { pagination: { total: number } } }>('/tentativas', {
+      'filters[alunoId][$eq]': alunoId,
+      'filters[simulacaoId][$eq]': simulacaoId,
+    });
+    const tentativaNum = prevTentativas.meta.pagination.total + 1;
+
     const data = await strapiPost<unknown>('/tentativas', {
       simulacaoId,
       alunoId,
       dataInicio: new Date().toISOString(),
+      tentativaNum,
+      executorTipo: `tipo${tipo}`,
+      status: 'em_progresso',
     });
     return c.json(data, 201);
   } catch (err) {
@@ -209,12 +225,32 @@ simulacaoRoutes.post('/tentativas', checkRole(['aluno']), zValidator('json', ini
 // PUT /simulacoes/tentativas/:id — concluir tentativa (aluno apenas)
 simulacaoRoutes.put('/tentativas/:id', checkRole(['aluno']), zValidator('json', concluirSchema), async (c) => {
   const tentativaId = c.req.param('id');
-  const body = c.req.valid('json');
+  const { score, metadata } = c.req.valid('json');
   try {
-    const data = await strapiPut<unknown>(`/tentativas/${tentativaId}`, {
-      ...body,
+    const data = await strapiPut<any>(`/tentativas/${tentativaId}`, {
+      score,
+      metadata,
+      status: 'concluida',
       dataFim: new Date().toISOString(),
+      duracaoSegundos: metadata?.duracaoSegundos ?? 0,
     });
+
+    // Grade Passback LTI (Ticket T1 Fix)
+    if (metadata?.ltiContext) {
+      try {
+        const { ltiAgsService } = await import('../modules/lti/lti.ags.service.js');
+        void ltiAgsService.sendScore(data.data.alunoId, {
+          scoreGiven: score || 0,
+          scoreMaximum: 10,
+          activityProgress: 'Completed',
+          gradingProgress: 'FullyGraded',
+          timestamp: new Date().toISOString(),
+        });
+      } catch (err) {
+        log.error({ err }, 'Falha no Grade Passback LTI');
+      }
+    }
+
     return c.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';

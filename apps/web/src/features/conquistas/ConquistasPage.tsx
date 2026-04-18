@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { conquistasApi } from '@/lib/api/conquistas';
-import { Spinner, Card } from '@/components/ui';
+import { Spinner, Card, EmptyState } from '@/components/ui';
 import type { Conquista } from '@pdc/shared';
 import { cn } from '@/lib/utils';
+import { Trophy } from 'lucide-react';
 
 function ConquistaCard({ conquista }: { conquista: Conquista }) {
   return (
@@ -62,9 +63,20 @@ export function ConquistasPage() {
           <Spinner size="lg" />
         </div>
       ) : isError ? (
-        <p className="py-12 text-center text-text-muted">Erro ao carregar conquistas.</p>
+        <EmptyState
+          icon={Trophy}
+          variant="error"
+          title="Erro ao carregar conquistas"
+          description="Não foi possível obter o teu quadro de medalhas. Tenta novamente mais tarde."
+        />
       ) : conquistas.length === 0 ? (
-        <p className="py-12 text-center text-text-muted">Nenhuma conquista encontrada.</p>
+        <EmptyState
+          icon={Trophy}
+          title="O Teu Prestígio Está à Espera"
+          description="Ainda não desbloqueaste nenhuma conquista. Realiza o teu primeiro desafio profissional ou conclui um curso para começares a construir a tua autoridade no mercado."
+          ctaLabel="Explorar Simulações"
+          ctaTo="/app/simulacoes"
+        />
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {conquistas.map((c) => (

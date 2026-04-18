@@ -1,15 +1,13 @@
 import { Server } from 'socket.io';
 import { jwtVerify } from 'jose';
 import pino from 'pino';
-
-const log = pino({ name: 'socket-service' });
 import type { Server as HttpServer } from 'node:http';
 import { strapiPost } from '../strapi/strapi.client.js';
 import type { NotificacaoRealtime } from '@pdc/shared';
+import { env } from '../../lib/env.js';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env['JWT_SECRET'] || 'change-me-in-production-min-32-chars'
-);
+const log = pino({ name: 'socket-service' });
+const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 
 let io: Server | undefined;
 
@@ -17,8 +15,9 @@ export const socketService = {
   init(httpServer: HttpServer): void {
     io = new Server(httpServer, {
       cors: {
-        origin: process.env['FRONTEND_URL'] ?? 'http://localhost:5173',
+        origin: [env.FRONTEND_URL, 'http://localhost:5173'],
         credentials: true,
+        methods: ['GET', 'POST'],
       },
     });
 

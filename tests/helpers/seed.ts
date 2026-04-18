@@ -31,7 +31,7 @@ function buildRegistrationRequest(account: TestAccount): { url: string; body: Re
     case 'mentor':
       return {
         url: `${API_URL}/auth/register/mentor`,
-        body: { ...base, nome: account.nome, areaEspecialidade: 'Engenharia de Software' },
+        body: { ...base, nome: account.nome, areaEspecialidade: 'ENGENHARIA' },
       };
     case 'instituicao':
       return {
@@ -43,7 +43,7 @@ function buildRegistrationRequest(account: TestAccount): { url: string; body: Re
     default:
       return {
         url: `${API_URL}/auth/register/estudante`,
-        body: { ...base, nome: account.nome, areaInteresse: 'Tecnologia', nivelEnsino: 'Secundário' },
+        body: { ...base, nome: account.nome, areaInteresse: 'TECNOLOGIA', nivelEnsino: 'Secundário' },
       };
   }
 }

@@ -38,18 +38,16 @@ propostasRoutes.post(
     const body = c.req.valid('json');
     try {
       // 1. Criar a proposta
-      const proposta = await strapiPost<any>('/propostas', {
+      const proposta = await strapiPost<unknown>('/propostas', {
         ...body,
         instituicaoId,
-        estado: 'pendente',
+        status: 'pendente', // Alinhado com o schema do Strapi (status em vez de estado)
       });
 
       // 2. Criar ou atualizar vínculo pendente se não existir
-      // Nota: No PDC v2, propostas e vínculos estão relacionados. 
-      // Se uma instituição faz uma proposta, ela quer se vincular ao aluno.
       await strapiPost<unknown>('/vinculos', {
         senderId: instituicaoId,
-        receiverId: body.estudanteId,
+        receiverId: body.targetId,
         connectionType: 'student-institution',
         estado: 'pending',
       }).catch(() => { /* Ignorar se já existe ou falhar, o foco é a proposta */ });
@@ -67,37 +65,36 @@ propostasRoutes.patch(
   '/:id',
   checkRole(['aluno', 'super_admin']),
   zValidator('json', z.object({
-    estado: z.enum(['aceite', 'recusada']),
+    estado: z.enum(['aceita', 'recusada']),
   })),
   async (c) => {
     const id = c.req.param('id');
     const { id: alunoId } = c.get('user');
     const { estado } = c.req.valid('json');
     try {
-      const proposta = await strapiGet<any>(`/propostas/${id}`);
-      if (!proposta?.data && !proposta?.id) {
-        return c.json({ error: 'Proposta não encontrada' }, 404);
-      }
+      const proposta = await strapiGet<{ data?: { attributes?: { estudanteId?: string; instituicaoId?: string } }; estudanteId?: string; instituicaoId?: string }>(`/propostas/${id}`);
       
       const targetId = proposta.data?.attributes?.estudanteId ?? proposta.estudanteId;
       if (targetId !== alunoId && c.get('user').role !== 'super_admin') {
         return c.json({ error: 'Sem permissão para responder a esta proposta' }, 403);
       }
 
-      const updated = await strapiPut<any>(`/propostas/${id}`, { estado });
+      const updated = await strapiPut<unknown>(`/propostas/${id}`, { status: estado });
 
       // Se aceite, atualizar o vínculo para connected
-      if (estado === 'aceite') {
+      if (estado === 'aceita') {
         const instId = proposta.data?.attributes?.instituicaoId ?? proposta.instituicaoId;
-        const vinculos = await strapiGet<any>('/vinculos', {
-          'filters[senderId][$eq]': instId,
-          'filters[receiverId][$eq]': alunoId,
-          'filters[connectionType][$eq]': 'student-institution',
-        });
-        
-        if (vinculos?.data?.length > 0) {
-          const vId = vinculos.data[0].id;
-          await strapiPut<unknown>(`/vinculos/${vId}`, { estado: 'connected' });
+        if (instId) {
+          const vinculos = await strapiGet<{ data: Array<{ id: string }> }>('/vinculos', {
+            'filters[senderId][$eq]': instId,
+            'filters[receiverId][$eq]': alunoId,
+            'filters[connectionType][$eq]': 'student-institution',
+          });
+          
+          if (vinculos.data.length > 0) {
+            const vId = vinculos.data[0]?.id;
+            if (vId) await strapiPut<unknown>(`/vinculos/${vId}`, { estado: 'connected' });
+          }
         }
       }
 

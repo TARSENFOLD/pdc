@@ -32,13 +32,13 @@ export function QuizPlayer({ perguntas, onConcluir }: QuizPlayerProps) {
   }
 
   const p = pergunta;
-  const isCorrect = selected === p.respostaCorreta;
+  const isCorrect = selected === p.respostaCorrecta;
   const answered = selected !== null;
 
   function handleSelect(index: number) {
     if (answered) return;
     setSelected(index);
-    if (index === p.respostaCorreta) {
+    if (index === p.respostaCorrecta) {
       setScore((s) => s + 1);
     }
   }
@@ -65,11 +65,11 @@ export function QuizPlayer({ perguntas, onConcluir }: QuizPlayerProps) {
 
       {/* Options */}
       <div className="mb-6 space-y-3">
-        {p.opcoes.map((opcao, i) => {
+        {p.opcoes.map((opcao: string, i: number) => {
           let classes = 'w-full rounded-lg border px-4 py-3 text-left text-sm transition-colors ';
           if (!answered) {
             classes += 'border-border text-text-secondary hover:border-amber hover:text-text-primary cursor-pointer';
-          } else if (i === p.respostaCorreta) {
+          } else if (i === p.respostaCorrecta) {
             classes += 'border-green-500 bg-green-500/10 text-green-400';
           } else if (i === selected) {
             classes += 'border-red-500 bg-red-500/10 text-red-400';

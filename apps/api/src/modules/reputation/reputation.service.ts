@@ -58,7 +58,7 @@ async function countItems(path: string, params?: Record<string, string>): Promis
       'pagination[pageSize]': '1',
       ...params,
     });
-    return res.meta?.pagination?.total ?? 0;
+    return res.meta.pagination.total;
   } catch {
     return 0;
   }
@@ -74,9 +74,9 @@ async function getAvgRating(perfilId: string): Promise<number> {
       'pagination[pageSize]': '100',
       'fields[0]': 'nota',
     });
-    const ratings = res.data ?? [];
+    const ratings = res.data;
     if (ratings.length === 0) return 0;
-    const sum = ratings.reduce((acc, r) => acc + (r.nota ?? 0), 0);
+    const sum = ratings.reduce((acc, r) => acc + r.nota, 0);
     return sum / ratings.length;
   } catch {
     return 0;
@@ -88,8 +88,6 @@ async function getAvgRating(perfilId: string): Promise<number> {
  * Invariant: returns 0 if profile not found.
  */
 export async function calcularReputacao(perfilId: string): Promise<number> {
-  const perfilIdStr = String(perfilId);
-
   // Parallel fetch all independent metrics
   const [
     avgRating,
@@ -100,16 +98,16 @@ export async function calcularReputacao(perfilId: string): Promise<number> {
     ratingsGiven,
     tempoScore,
   ] = await Promise.all([
-    getAvgRating(perfilIdStr),
-    countItems('/cursos', { 'filters[autor][$eq]': perfilIdStr }),
-    countItems('/simulacoes', { 'filters[autor][$eq]': perfilIdStr }),
-    countItems('/conquistas', { 'filters[perfis][id][$eq]': perfilIdStr }),
-    countItems('/comments', { 'filters[autor][$eq]': perfilIdStr }),
-    countItems('/ratings', { 'filters[autor][$eq]': perfilIdStr }),
-    strapiGet<{ data: StrapiPerfilBasic }>(`/perfis/${perfilIdStr}`, {
+    getAvgRating(perfilId),
+    countItems('/cursos', { 'filters[autor][$eq]': perfilId }),
+    countItems('/simulacoes', { 'filters[autor][$eq]': perfilId }),
+    countItems('/conquistas', { 'filters[perfis][id][$eq]': perfilId }),
+    countItems('/comments', { 'filters[autor][$eq]': perfilId }),
+    countItems('/ratings', { 'filters[autor][$eq]': perfilId }),
+    strapiGet<{ data: StrapiPerfilBasic }>(`/perfis/${perfilId}`, {
       'fields[0]': 'createdAt',
     }).then((perfil) => {
-      const created = new Date(perfil.data?.createdAt ?? Date.now());
+      const created = new Date(perfil.data.createdAt);
       const months = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24 * 30);
       return clamp(months / 24, 0, 1);
     }).catch(() => 0),
@@ -145,9 +143,10 @@ export async function persistirReputacao(perfilId: string): Promise<number> {
     'fields[1]': 'documentId',
   });
 
-  const docId = perfil.data?.documentId ?? perfilId;
+  const docId = perfil.data.documentId || perfilId;
   await strapiPut(`/perfis/${docId}`, { reputacao: score });
   log.info({ perfilId, score }, 'Reputação persistida');
+
   return score;
 }
 
@@ -178,7 +177,7 @@ export async function recalcularGlobal(): Promise<{ updated: number; errors: num
       'pagination[pageSize]': String(BATCH_SIZE),
     });
 
-    const perfis = res.data ?? [];
+    const perfis = res.data;
     for (const perfil of perfis) {
       try {
         await persistirReputacao(String(perfil.id));
@@ -189,7 +188,7 @@ export async function recalcularGlobal(): Promise<{ updated: number; errors: num
       }
     }
 
-    hasMore = page < (res.meta?.pagination?.pageCount ?? 0);
+    hasMore = page < res.meta.pagination.pageCount;
     page++;
   }
 
@@ -211,16 +210,89 @@ export async function getReputacao(perfilId: string): Promise<number> {
 
   const cacheKey = `reputation:${perfilId}`;
   const cached = await redis.get<number>(cacheKey);
-  if (cached !== null && cached !== undefined) return cached;
+  if (cached !== null) return cached;
 
   try {
     const res = await strapiGet<{ data: { reputacao?: number } }>(`/perfis/${perfilId}`, {
       'fields[0]': 'reputacao',
     });
-    const score = res.data?.reputacao ?? 0;
+    const score = res.data.reputacao ?? 0;
     await redis.set(cacheKey, score, { ex: 300 }); // cache 5 min
     return score;
   } catch {
     return 0;
   }
+}
+
+export interface ReputationBreakdown {
+  score: number;
+  dimensions: {
+    ratingsMedia: number;
+    cursosPublicados: number;
+    simulacoes: number;
+    conquistas: number;
+    tempoPlataforma: number;
+    engagement: number;
+  };
+}
+
+/**
+ * Get the full breakdown for a profile.
+ * Non-cached (used for personal reputation page).
+ */
+export async function getReputacaoBreakdown(perfilId: string): Promise<ReputationBreakdown> {
+  // Reutiliza a lógica do calcularReputacao mas retorna os valores crus
+  const [
+    avgRating,
+    cursosCount,
+    simCount,
+    conquistas,
+    comentarios,
+    ratingsGiven,
+    tempoScore,
+  ] = await Promise.all([
+    getAvgRating(perfilId),
+    countItems('/cursos', { 'filters[autor][$eq]': perfilId }),
+    countItems('/simulacoes', { 'filters[autor][$eq]': perfilId }),
+    countItems('/conquistas', { 'filters[perfis][id][$eq]': perfilId }),
+    countItems('/comments', { 'filters[autor][$eq]': perfilId }),
+    countItems('/ratings', { 'filters[autor][$eq]': perfilId }),
+    strapiGet<{ data: StrapiPerfilBasic }>(`/perfis/${perfilId}`, {
+      'fields[0]': 'createdAt',
+    }).then((perfil) => {
+      const created = new Date(perfil.data.createdAt);
+      const months = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24 * 30);
+      return clamp(months / 24, 0, 1);
+    }).catch(() => 0),
+  ]);
+
+  const ratingScore = clamp(avgRating / 5, 0, 1);
+  const cursosScore = clamp(cursosCount / 10, 0, 1);
+  const simScore = clamp(simCount / 20, 0, 1);
+  const conquistasScore = clamp(conquistas / 15, 0, 1);
+  const engagementScore = clamp((comentarios + ratingsGiven) / 50, 0, 1);
+
+  const score = Math.round(
+    clamp(
+      ratingScore * WEIGHTS.ratingsMedia +
+      cursosScore * WEIGHTS.cursosPublicados +
+      simScore * WEIGHTS.simulacoes +
+      conquistasScore * WEIGHTS.conquistas +
+      tempoScore * WEIGHTS.tempoPlataforma +
+      engagementScore * WEIGHTS.engagement,
+      0, 100
+    )
+  );
+
+  return {
+    score,
+    dimensions: {
+      ratingsMedia: Number(avgRating.toFixed(1)),
+      cursosPublicados: cursosCount,
+      simulacoes: simCount,
+      conquistas,
+      tempoPlataforma: Number((tempoScore * 24).toFixed(1)),
+      engagement: comentarios + ratingsGiven,
+    }
+  };
 }

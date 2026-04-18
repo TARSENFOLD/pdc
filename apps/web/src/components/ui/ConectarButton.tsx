@@ -26,7 +26,9 @@ export function ConectarButton({ targetId, connectionType, onConnected }: Conect
         setLoading(false);
       }
     };
-    fetchStatus();
+    void fetchStatus().catch((err: unknown) => {
+        console.error('Erro ao buscar status:', err);
+    });
   }, [targetId]);
 
   // Criar vínculo
@@ -44,7 +46,7 @@ export function ConectarButton({ targetId, connectionType, onConnected }: Conect
   // Aceitar/Rejeitar
   const aceitarRejeitar = useMutation({
     mutationFn: async (acao: 'aceitar' | 'rejeitar') => {
-      return http.patch(`/vinculos/${status?.vinculoId}`, { acao });
+      return http.patch(`/vinculos/${String(status?.vinculoId)}`, { acao });
     },
     onSuccess: (_, acao) => {
       setStatus((prev: VinculoStatus | null) => prev ? { ...prev, estado: acao === 'aceitar' ? 'connected' : 'declined' } : null);

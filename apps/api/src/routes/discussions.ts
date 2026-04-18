@@ -42,7 +42,7 @@ async function isEnrolled(userId: string, cursoId: number | string): Promise<boo
       'filters[user][$eq]': userId,
       'filters[curso][$eq]': String(cursoId),
     });
-    return (res.meta?.pagination?.total ?? 0) > 0;
+    return res.meta.pagination.total > 0;
   } catch {
     return false;
   }
@@ -53,7 +53,7 @@ async function isMentorOrAdmin(userId: string, cursoId: number | string): Promis
     const curso = await strapiGet<{ data: { autorId?: string } }>(`/cursos/${String(cursoId)}`, {
       'fields[0]': 'autorId',
     });
-    if (curso.data?.autorId === userId) return true;
+    if (curso.data.autorId === userId) return true;
   } catch { /* fall through */ }
   return false;
 }
@@ -67,7 +67,7 @@ async function getReplyDepth(paiId: number): Promise<number> {
         `/respostas-discussao/${String(currentId)}`,
         { 'populate': 'pai' },
       );
-      currentId = res.data?.pai?.id ?? null;
+      currentId = res.data.pai?.id ?? null;
       if (currentId) depth++;
     } catch {
       break;
@@ -184,7 +184,7 @@ discussionRoutes.post(
       `/discussoes/${discussaoId}`,
       { 'populate': 'curso' },
     );
-    const cursoId = discussion.data?.curso?.id;
+    const cursoId = discussion.data.curso?.id;
     if (!cursoId) return c.json({ error: 'Discussão não encontrada' }, 404);
 
     if (!(await isEnrolled(user.id, cursoId))) {
@@ -195,7 +195,7 @@ discussionRoutes.post(
     if (paiId) {
       const depth = await getReplyDepth(paiId);
       if (depth >= MAX_REPLY_DEPTH) {
-        return c.json({ error: `Profundidade máxima de ${MAX_REPLY_DEPTH} níveis atingida` }, 400);
+        return c.json({ error: `Profundidade máxima de ${String(MAX_REPLY_DEPTH)} níveis atingida` }, 400);
       }
     }
 
@@ -226,7 +226,7 @@ discussionRoutes.put(
       `/discussoes/${id}`,
       { 'populate': 'curso' },
     );
-    const cursoId = discussion.data?.curso?.id;
+    const cursoId = discussion.data.curso?.id;
     if (!cursoId) return c.json({ error: 'Discussão não encontrada' }, 404);
 
     const isAdmin = user.role === 'super_admin';
@@ -234,7 +234,7 @@ discussionRoutes.put(
       return c.json({ error: 'Apenas o mentor do curso ou admin pode fixar discussões' }, 403);
     }
 
-    const docId = discussion.data?.documentId ?? id;
+    const docId = discussion.data.documentId ?? id;
     await strapiPutRaw(`/discussoes/${docId}`, { data: { pinned } });
     return c.json({ success: true });
   },
@@ -255,7 +255,7 @@ discussionRoutes.put(
       `/discussoes/${id}`,
       { 'populate': 'curso' },
     );
-    const cursoId = discussion.data?.curso?.id;
+    const cursoId = discussion.data.curso?.id;
     if (!cursoId) return c.json({ error: 'Discussão não encontrada' }, 404);
 
     const isAdmin = user.role === 'super_admin';
@@ -263,7 +263,7 @@ discussionRoutes.put(
       return c.json({ error: 'Apenas o mentor do curso ou admin pode resolver discussões' }, 403);
     }
 
-    const docId = discussion.data?.documentId ?? id;
+    const docId = discussion.data.documentId ?? id;
     await strapiPutRaw(`/discussoes/${docId}`, { data: { resolved } });
     return c.json({ success: true });
   },

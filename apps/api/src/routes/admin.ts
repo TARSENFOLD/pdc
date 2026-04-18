@@ -137,14 +137,14 @@ adminRoutes.put(
   async (c) => {
     const id = c.req.param('id');
     try {
-      const data = await strapiPutRaw<unknown>(`/users/${id}`, {
+      const data = await strapiPutRaw<unknown>(`/users/${String(id)}`, {
         bloqueado: false,
         suspendidoEm: null,
       });
       await strapiPost('/audit-logs', {
         userId: c.get('user').id,
         accao: 'admin_reativar_utilizador',
-        recurso: `/users/${id}`,
+        recurso: `/users/${String(id)}`,
         ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
         timestamp: new Date().toISOString(),
       }).catch(() => {});

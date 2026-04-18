@@ -45,5 +45,5 @@ export const mentoriasApi = {
   getMentorados: () => http.get<AlunoMentorado[]>('/mentorias/mentorados'),
 
   getAlunosInscritos: (page?: number) =>
-    http.get<{ data: Inscricao[], pagination: Pagination }>(`/mentorias/alunos/inscritos?page=${page ?? 1}`),
+    http.get<{ data: Inscricao[], pagination: Pagination }>(`/mentorias/alunos/inscritos?page=${(page ?? 1).toString()}`),
 };

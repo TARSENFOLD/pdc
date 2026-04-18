@@ -6,6 +6,7 @@ import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { ltiService } from '../modules/lti/lti.service.js';
 import { getPublicJwks } from '../modules/lti/lti.jwks.js';
 import { authService } from '../modules/auth/auth.service.js';
+import { env } from '../lib/env.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { ltiAgs } from '../modules/lti/lti.ags.js';
 import { ltiNrps } from '../modules/lti/lti.nrps.js';
@@ -51,7 +52,7 @@ ltiRoutes.post('/login', zValidator('form', loginSchema), async (c) => {
   const nonce = await ltiService.generateNonce(state);
 
   // A URL de redirecionamento deve ser o endpoint de launch do BFF
-  const bffUrl = process.env['API_URL'] || 'http://localhost:3001';
+  const bffUrl = env.API_URL;
   const redirectUri = `${bffUrl}/lti/launch`;
 
   const authUrl = new URL(plataforma.authLoginUrl);
@@ -99,7 +100,7 @@ ltiRoutes.post('/launch', zValidator('form', launchSchema), async (c) => {
 
   setCookie(c, 'access_token', accessToken, {
     httpOnly: true,
-    secure: process.env['NODE_ENV'] === 'production',
+    secure: env.NODE_ENV === 'production',
     sameSite: 'Lax',
     path: '/',
     maxAge: 15 * 60,
@@ -107,13 +108,13 @@ ltiRoutes.post('/launch', zValidator('form', launchSchema), async (c) => {
 
   setCookie(c, 'refresh_token', refreshToken, {
     httpOnly: true,
-    secure: process.env['NODE_ENV'] === 'production',
+    secure: env.NODE_ENV === 'production',
     sameSite: 'Lax',
     path: '/',
     maxAge: 7 * 24 * 60 * 60,
   });
 
-  return c.redirect(`${process.env['FRONTEND_URL'] || 'http://localhost:5173'}/app/dashboard`);
+  return c.redirect(`${env.FRONTEND_URL}/app`);
 });
 
 // POST /lti/ags/scores

@@ -46,7 +46,7 @@ interface StrapiConversa {
 
 interface StrapiListResponse<T> {
   data: T[];
-  meta?: { pagination?: { total?: number; pageCount?: number } };
+  meta: { pagination: { total: number; pageCount: number } };
 }
 
 export const mensagensRoutes = new Hono<Vars>();
@@ -59,7 +59,6 @@ mensagensRoutes.get('/conversas', zValidator('query', mensagensQuerySchema), asy
   const { page, pageSize } = c.req.valid('query');
 
   try {
-    // Buscar conversas do utilizador
     const data = await strapiGet<StrapiListResponse<StrapiConversa>>('/conversas', {
       'filters[$or][0][participant1Id][$eq]': userId,
       'filters[$or][1][participant2Id][$eq]': userId,
@@ -69,7 +68,7 @@ mensagensRoutes.get('/conversas', zValidator('query', mensagensQuerySchema), asy
       sort: 'updatedAt:desc',
     });
 
-    const conversas = (data.data || []).map((conv: StrapiConversa) => {
+    const conversas = data.data.map((conv: StrapiConversa) => {
       const outroParticipante =
         conv.participant1Id === userId ? conv.participant2 : conv.participant1;
       return {
@@ -77,9 +76,9 @@ mensagensRoutes.get('/conversas', zValidator('query', mensagensQuerySchema), asy
         interlocutorId: outroParticipante?.id,
         interlocutorNome: outroParticipante?.nome,
         ultimaMensagem: conv.ultimaMensagem?.conteudo,
-        naoLidas: (conv.mensagens || []).filter(
-          (m: StrapiMensagem) => m.lida === false && m.remetenteId !== userId
-        ).length,
+        naoLidas: conv.mensagens?.filter(
+          (m: StrapiMensagem) => !m.lida && m.remetenteId !== userId
+        ).length ?? 0,
         updatedAt: conv.updatedAt,
       };
     });
@@ -103,13 +102,9 @@ mensagensRoutes.post(
 
     try {
       if (userId === destinatarioId) {
-        return c.json(
-          { error: 'Não podes criar conversa contigo próprio' },
-          400
-        );
+        return c.json({ error: 'Não podes criar conversa contigo próprio' }, 400);
       }
 
-      // Verificar se existe vínculo connected entre os utilizadores
       const vinculoData = await strapiGet<{ data: Array<{ id: string }> }>('/vinculos', {
         'filters[$or][0][senderId][$eq]': userId,
         'filters[$or][0][receiverId][$eq]': destinatarioId,
@@ -120,14 +115,10 @@ mensagensRoutes.post(
         'pagination[pageSize]': '1',
       });
 
-      if (!vinculoData.data || vinculoData.data.length === 0) {
-        return c.json(
-          { error: 'Só podes enviar mensagens a vínculos confirmados' },
-          403
-        );
+      if (vinculoData.data.length === 0) {
+        return c.json({ error: 'Só podes enviar mensagens a vínculos confirmados' }, 403);
       }
 
-      // Verificar se conversa já existe
       const conversaExistente = await strapiGet<StrapiListResponse<StrapiConversa>>('/conversas', {
         'filters[$or][0][participant1Id][$eq]': userId,
         'filters[$or][0][participant2Id][$eq]': destinatarioId,
@@ -136,11 +127,10 @@ mensagensRoutes.post(
         'pagination[pageSize]': '1',
       });
 
-      if (conversaExistente.data && conversaExistente.data.length > 0) {
+      if (conversaExistente.data.length > 0) {
         return c.json(conversaExistente.data[0], 200);
       }
 
-      // Criar conversa
       const novaConversa = await strapiPost<StrapiConversa>('/conversas', {
         participant1Id: userId,
         participant2Id: destinatarioId,
@@ -161,7 +151,6 @@ mensagensRoutes.get('/conversas/:conversaId', zValidator('query', mensagensQuery
   const { page, pageSize } = c.req.valid('query');
 
   try {
-    // Verificar se user é participante
     const conversa = await strapiGet<{ data: StrapiConversa | null }>(`/conversas/${conversaId}`, {
       populate: 'participant1,participant2,mensagens',
     });
@@ -170,14 +159,10 @@ mensagensRoutes.get('/conversas/:conversaId', zValidator('query', mensagensQuery
       return c.json({ error: 'Conversa não encontrada' }, 404);
     }
 
-    if (
-      conversa.data.participant1Id !== userId &&
-      conversa.data.participant2Id !== userId
-    ) {
+    if (conversa.data.participant1Id !== userId && conversa.data.participant2Id !== userId) {
       return c.json({ error: 'Acesso negado' }, 403);
     }
 
-    // Buscar mensagens
     const mensagens = await strapiGet<StrapiListResponse<StrapiMensagem>>('/mensagens', {
       'filters[conversaId][$eq]': conversaId,
       'pagination[page]': page.toString(),
@@ -186,17 +171,14 @@ mensagensRoutes.get('/conversas/:conversaId', zValidator('query', mensagensQuery
       populate: 'remetente',
     });
 
-    // Marcar mensagens como lidas
-    if (mensagens.data) {
-      for (const msg of mensagens.data) {
-        if (msg.lida === false && msg.remetenteId !== userId) {
-          await strapiPut<unknown>(`/mensagens/${msg.id}`, { lida: true });
-        }
+    for (const msg of mensagens.data) {
+      if (!msg.lida && msg.remetenteId !== userId) {
+        await strapiPut<unknown>(`/mensagens/${msg.id}`, { lida: true });
       }
     }
 
     return c.json({
-      data: mensagens.data || [],
+      data: mensagens.data,
       meta: mensagens.meta,
     });
   } catch (err) {
@@ -214,7 +196,6 @@ mensagensRoutes.post(
     const { conteudo } = c.req.valid('json');
 
     try {
-      // Verificar se user é participante
       const conversa = await strapiGet<{ data: StrapiConversa | null }>(`/conversas/${conversaId}`, {
         populate: 'participant1,participant2',
       });
@@ -223,18 +204,11 @@ mensagensRoutes.post(
         return c.json({ error: 'Conversa não encontrada' }, 404);
       }
 
-      if (
-        conversa.data.participant1Id !== userId &&
-        conversa.data.participant2Id !== userId
-      ) {
+      if (conversa.data.participant1Id !== userId && conversa.data.participant2Id !== userId) {
         return c.json({ error: 'Acesso negado' }, 403);
       }
 
-      // Verificar vínculo connected entre os participantes
-      const destinatarioId =
-        conversa.data.participant1Id === userId
-          ? (conversa.data.participant2Id as string)
-          : (conversa.data.participant1Id as string);
+      const destinatarioId = conversa.data.participant1Id === userId ? conversa.data.participant2Id : conversa.data.participant1Id;
 
       const vinculoCheck = await strapiGet<{ data: { id: number }[] }>('/vinculos', {
         'filters[$or][0][senderId][$eq]': userId,
@@ -246,14 +220,10 @@ mensagensRoutes.post(
         'pagination[pageSize]': '1',
       });
 
-      if (!vinculoCheck.data || vinculoCheck.data.length === 0) {
-        return c.json(
-          { error: 'O vínculo foi removido. Não é possível enviar novas mensagens.' },
-          403
-        );
+      if (vinculoCheck.data.length === 0) {
+        return c.json({ error: 'O vínculo foi removido. Não é possível enviar novas mensagens.' }, 403);
       }
 
-      // Criar mensagem
       const mensagem = await strapiPost<{ data: StrapiMensagem }>('/mensagens', {
         conversaId,
         remetenteId: userId,
@@ -261,24 +231,20 @@ mensagensRoutes.post(
         lida: false,
       });
 
-      // Atualizar ultima mensagem da conversa
       await strapiPut<unknown>(`/conversas/${conversaId}`, {
-        ultimaMensagem: mensagem.data?.id,
+        ultimaMensagem: mensagem.data.id,
         updatedAt: new Date().toISOString(),
       });
 
-      // Emitir via Socket.IO para o interlocutor
       try {
         socketService.emitirMensagem(destinatarioId, {
-          id: String(mensagem.data?.id ?? ''),
+          id: mensagem.data.id,
           conversaId,
           remetenteId: userId,
           conteudo,
           createdAt: new Date().toISOString(),
         });
-      } catch {
-        // Falha no socket não deve bloquear a resposta HTTP
-      }
+      } catch { /* ignore socket fail */ }
 
       return c.json(mensagem, 201);
     } catch (err) {

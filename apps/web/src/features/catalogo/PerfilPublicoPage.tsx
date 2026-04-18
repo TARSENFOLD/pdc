@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { Award, Lock, Globe, ExternalLink } from 'lucide-react';
+import { Award, Lock, Globe, ExternalLink, User } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Avatar, Badge } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface PublicPerfil {
   id: string;
@@ -28,7 +29,7 @@ export function PerfilPublicoPage() {
   });
 
   if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><Spinner size="lg" /></div>;
-  if (isError || !perfil) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="text-text-muted">Perfil não encontrado.</p></div>;
+  if (isError || !perfil) return <div className="flex min-h-screen items-center justify-center bg-background p-4"><EmptyState icon={User} title="Perfil não encontrado" description="Não foi possível carregar os dados deste perfil." /></div>;
 
   const roleBadge: Record<string, string> = {
     aluno: 'aluno', mentor: 'mentor', instituicao: 'instituicao',
@@ -41,7 +42,7 @@ export function PerfilPublicoPage() {
         title={perfil.nome}
         description={perfil.bio ?? `Perfil de ${perfil.nome} na plataforma PDC`}
         image={perfil.avatarUrl}
-        url={`https://usepdc.com/perfil/${id}`}
+        url={`https://usepdc.com/perfis/${id ?? ''}`}
         type="profile"
       />
       <div className="mx-auto max-w-3xl">

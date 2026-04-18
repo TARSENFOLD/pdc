@@ -31,7 +31,7 @@ export function BrandingPage() {
 const mutation = useMutation({
   mutationFn: (data: UpdatePerfilPayload) => perfisApi.update(data),
   onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['perfis', 'me'] });
+    void queryClient.invalidateQueries({ queryKey: ['perfis', 'me'] });
     toast({ title: 'Perfil atualizado com sucesso!' });
   },
   onError: (err: unknown) => {
@@ -40,21 +40,25 @@ const mutation = useMutation({
   }
 });
 
-const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0];
   if (!file) return;
 
-  try {
-    setIsUploading(true);
-    const result = await mediaApi.upload(file);
-    await perfisApi.update({ avatarUrl: result.url });
-    queryClient.invalidateQueries({ queryKey: ['perfis', 'me'] });
-    toast({ title: 'Logotipo atualizado!' });
-  } catch (err) {
-    toast({ title: 'Erro ao fazer upload', variant: 'error' });
-  } finally {
-    setIsUploading(false);
-  }
+  const upload = async () => {
+    try {
+      setIsUploading(true);
+      const result = await mediaApi.upload(file);
+      await perfisApi.update({ avatarUrl: result.url });
+      void queryClient.invalidateQueries({ queryKey: ['perfis', 'me'] });
+      toast({ title: 'Logotipo atualizado!' });
+    } catch {
+      toast({ title: 'Erro ao fazer upload', variant: 'error' });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  void upload();
 };
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
@@ -65,7 +69,7 @@ const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
       <Card className="p-6">
         <div className="flex flex-col items-center gap-4 mb-8">
-          <Avatar src={avatarUrl as string} fallback={user?.nome?.[0] ?? 'I'} size="lg" className="h-24 w-24" />
+          <Avatar src={avatarUrl || undefined} fallback={user?.nome[0] ?? 'I'} size="lg" className="h-24 w-24" />
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" asChild>
               <label className="cursor-pointer">
@@ -76,7 +80,7 @@ const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit((data: UpdatePerfilPayload) => { mutation.mutate(data); })} className="space-y-4">
+        <form onSubmit={(e) => { void handleSubmit((data: UpdatePerfilPayload) => { mutation.mutate(data); })(e); }} className="space-y-4">
           <Input 
             label="Nome da Instituição" 
             {...register('nome')}
@@ -98,18 +102,16 @@ const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
               label="Website" 
               placeholder="https://..."
               {...register('website')}
-              error={errors.website?.message || ''}
             />
             <Input 
               label="Telefone de Contacto" 
               {...register('telefone')}
-              error={errors.telefone?.message || ''}
             />
           </div>
 
           <div className="flex justify-end pt-4">
-            <Button type="submit" isLoading={mutation.isPending}>
-              Guardar Alterações
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? 'A guardar...' : 'Guardar Alterações'}
             </Button>
           </div>
         </form>

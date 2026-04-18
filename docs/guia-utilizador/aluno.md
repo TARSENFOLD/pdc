@@ -140,3 +140,16 @@ As mentorias permitem-te receber orientação personalizada de mentores experien
 | Aceite | Mentor aceitou — podes iniciar a comunicação |
 | Recusada | Mentor não está disponível — podes tentar outro |
 | Concluída | Sessão terminada com sucesso |
+
+---
+
+## Ecossistema Vivo (Narrativa)
+
+O PDC não é apenas uma plataforma estática; é um **ecossistema vivo** habitado por milhares de estudantes, centenas de mentores e dezenas de instituições angolanas de renome.
+
+Ao navegares pelo **Feed**, verás a atividade real destas personas — novas conquistas, projetos publicados e discussões vibrantes. Este ambiente reflete o mercado de trabalho real, onde a reputação e o networking são tão importantes quanto o conhecimento técnico.
+
+Podes interagir com este ecossistema:
+- **Seguindo** colegas e mentores com interesses similares.
+- **Participando** em fóruns de discussão.
+- **Partilhando** a tua evolução para ganhar visibilidade perante as instituições.

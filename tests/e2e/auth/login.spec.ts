@@ -30,7 +30,7 @@ test.describe('Autenticação - Login', () => {
     await page.getByRole('button', { name: /entrar|login|iniciar/i }).click();
 
     // With DEV_SKIP_OTP=true, should land on app without OTP step
-    await expect(page).toHaveURL(/\/(app|dashboard|verificar)/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/.*\/app(\/dashboard\/aluno)?$/, { timeout: 15_000 });
   });
 
   test('authenticated user is redirected away from login', async ({ alunoPage }) => {

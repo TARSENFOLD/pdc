@@ -1,6 +1,6 @@
 import type { VisibilitySettings, FieldVisibility } from '@pdc/shared';
 
-interface StrapiPerfil {
+export interface StrapiPerfil {
   id: string | number;
   nome?: string;
   tipo?: string;

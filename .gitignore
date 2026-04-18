@@ -6,9 +6,14 @@ build/
 .turbo/
 
 # Ambiente
+# ── ENVIRONMENT ──
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
+.env.example.production
+.env.example.staging
 apps/api/.env.production
 apps/api/.env.staging
 

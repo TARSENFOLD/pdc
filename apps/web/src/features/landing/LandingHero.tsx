@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { motion } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MicroDesafio } from './MicroDesafio';
+import { NeuralConstellation, ChoreographyState } from './NeuralConstellation';
 
 const STATS: Array<{ value: string; label: string }> = [
   { value: '7', label: 'áreas vocacionais' },
@@ -11,6 +13,9 @@ const STATS: Array<{ value: string; label: string }> = [
 
 export function LandingHero() {
   const reduced = useReducedMotion();
+  const navigate = useNavigate();
+  const [choreography, setChoreography] = useState<ChoreographyState>('idle');
+  const [isWarping, setIsWarping] = useState(false);
 
   const stagger = (i: number) =>
     reduced
@@ -22,63 +27,81 @@ export function LandingHero() {
         };
 
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 pt-24 pb-16 text-center sm:px-6">
+    <section 
+      className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 pt-24 pb-16 text-center sm:px-6"
+      style={{ WebkitTapHighlightColor: 'transparent' }}
+    >
       {/* Hero background image */}
-      <img
-        src="/images/hero/hero-students.jpg"
-        alt=""
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-      />
-      {/* Dark overlay for text readability */}
-      <div className="pointer-events-none absolute inset-0 bg-background/85" />
+      <NeuralConstellation choreography={choreography} />
+      {/* Dynamic overlay for text readability: adapts to Light or Dark background */}
+      <div className="pointer-events-none absolute inset-0 bg-background/80 backdrop-blur-[1px]" />
+      <div className="pointer-events-none absolute inset-0 opacity-50 dark:opacity-100 bg-[radial-gradient(circle_at_50%_0%,rgba(0,74,173,0.1)_0%,transparent_50%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(255,92,0,0.08)_0%,transparent_50%)]" />
 
-      <motion.div {...stagger(0)} className="relative z-10 mb-4">
-        <span className="inline-flex items-center gap-2 rounded-full border border-amber/30 bg-amber/10 px-4 py-1.5 text-xs font-medium text-amber">
-          Plataforma educacional angolana
-        </span>
+      <motion.div {...stagger(0)} className="relative z-10 mb-8">
+        <div className="inline-flex items-center gap-3 rounded-full border border-black/5 dark:border-white/10 bg-black/5 dark:bg-white/5 py-1.5 px-4 text-xs font-semibold tracking-wide text-text-secondary dark:text-white/80 backdrop-blur-md shadow-sm dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.5)]">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber opacity-75"></span>
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber"></span>
+          </span>
+          Plataforma Educacional Angolana
+        </div>
       </motion.div>
 
       <motion.h1
         {...stagger(1)}
-        className="relative z-10 mx-auto max-w-4xl text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
+        className="relative z-10 mx-auto max-w-5xl text-5xl font-medium tracking-tighter text-text-primary sm:text-6xl lg:text-7xl xl:text-[5.5rem] leading-[1.05]"
       >
-        Experimenta antes de{' '}
-        <span className="text-amber">escolher</span>
+        Experimenta a prática antes de{' '}
+        <span className="font-display italic text-amber drop-shadow-md dark:drop-shadow-[0_0_30px_rgba(255,92,0,0.3)]">escolher.</span>
       </motion.h1>
 
       <motion.p
         {...stagger(2)}
-        className="relative z-10 mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-text-secondary"
+        className="relative z-10 mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-text-secondary dark:text-white/50 font-light tracking-wide sm:text-xl"
       >
-        Simula profissões reais, descobre onde te encaixas e escolhe o teu curso
-        com base no teu comportamento — não em suposições.
+        A primeira simulação vocacional do mundo baseada em comportamento real. Descobre o teu caminho de carreira sem suposições.
       </motion.p>
 
       <motion.div {...stagger(3)} className="relative z-10 mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
         <Link
           to="/criar-conta"
-          className="w-full rounded-xl bg-amber px-8 py-3.5 text-base font-semibold text-black transition-all hover:bg-amber-hover hover:scale-[1.02] sm:w-auto"
+          onMouseEnter={() => setChoreography('swarm')}
+          onMouseLeave={() => setChoreography('idle')}
+          onClick={(e) => {
+            if (reduced) return;
+            e.preventDefault();
+            if (isWarping) return;
+            setIsWarping(true);
+            setChoreography('warp');
+            setTimeout(() => navigate('/criar-conta'), 600);
+          }}
+          className="group relative w-full rounded-2xl bg-amber px-8 py-4 text-sm font-bold tracking-widest uppercase text-white dark:text-black transition-all sm:w-auto overflow-hidden shadow-lg dark:shadow-[0_0_40px_-10px_rgba(255,92,0,0.5)] hover:shadow-xl dark:hover:shadow-[0_0_60px_-15px_rgba(255,92,0,0.7)] hover:scale-[1.02] active:scale-[0.98]"
         >
-          Começar — é grátis
+          {/* Brilho interno do botão para aspeto tátil */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none"></div>
+          <span className="relative z-10">Começar a Exploração</span>
         </Link>
         <a
           href="#como-funciona"
-          className="w-full rounded-xl border border-border bg-surface-raised px-8 py-3.5 text-base font-semibold text-text-primary transition-colors hover:bg-surface sm:w-auto"
+          className="group w-full rounded-2xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 backdrop-blur-lg px-8 py-4 text-sm font-bold tracking-widest uppercase text-text-secondary dark:text-white/80 transition-all hover:bg-black/10 dark:hover:bg-white/10 hover:text-text-primary dark:hover:text-white sm:w-auto active:scale-[0.98]"
         >
-          Ver como funciona
+          Ver como Funciona
         </a>
       </motion.div>
 
-      <div className="relative z-10">
+      <div 
+        className="relative z-10"
+        onMouseEnter={() => setChoreography('align')}
+        onMouseLeave={() => setChoreography('idle')}
+      >
         <MicroDesafio />
       </div>
 
-      <motion.div {...stagger(4)} className="relative z-10 mt-20 grid grid-cols-1 gap-8 sm:grid-cols-3">
+      <motion.div {...stagger(4)} className="relative z-10 mt-20 flex flex-col sm:flex-row items-center gap-8 sm:gap-16 border-y border-black/5 dark:border-white/5 py-8 backdrop-blur-sm">
         {STATS.map((stat) => (
-          <div key={stat.label} className="flex flex-col items-center gap-1">
-            <span className="text-3xl font-bold text-amber">{stat.value}</span>
-            <span className="text-sm text-text-muted">{stat.label}</span>
+          <div key={stat.label} className="flex flex-col items-center gap-2">
+            <span className="font-display text-4xl sm:text-5xl font-medium text-amber drop-shadow-sm dark:drop-shadow-[0_0_15px_rgba(255,92,0,0.3)]">{stat.value}</span>
+            <span className="text-xs font-medium tracking-widest uppercase text-text-muted dark:text-white/40">{stat.label}</span>
           </div>
         ))}
       </motion.div>

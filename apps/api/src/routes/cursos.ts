@@ -8,6 +8,27 @@ import { CriarCursoPayloadSchema } from '@pdc/shared';
 
 type Vars = { Variables: AuthVariables };
 
+// ── Strapi v5 Types ─────────────────────────────────────────────────────────
+
+interface StrapiSingleResponse<T> {
+  data: T & { id: number; documentId: string };
+  meta: Record<string, unknown>;
+}
+
+interface StrapiListResponse<T> {
+  data: Array<T & { id: number; documentId: string }>;
+  meta: { pagination: { page: number; pageSize: number; pageCount: number; total: number } };
+}
+
+interface Curso {
+  titulo: string;
+  autorId: string;
+  estado: 'draft' | 'review' | 'published' | 'archived';
+  categoria?: string;
+}
+
+// ── Route Schemas ───────────────────────────────────────────────────────────
+
 const cursoQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
@@ -34,9 +55,9 @@ cursoRoutes.get('/', zValidator('query', cursoQuerySchema), async (c) => {
   params['filters[estado][$eq]'] = 'published';
 
   try {
-    const data = await strapiGet<unknown>('/cursos', params);
+    const data = await strapiGet<StrapiListResponse<Curso>>('/cursos', params);
     return c.json(data);
-  } catch (err) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
   }
@@ -46,36 +67,18 @@ cursoRoutes.get('/', zValidator('query', cursoQuerySchema), async (c) => {
 cursoRoutes.get('/meus', checkRole(['mentor', 'instituicao', 'super_admin']), async (c) => {
   const { id } = c.get('user');
   const page = c.req.query('page') || '1';
-  interface StrapiData<T> {
-    id: number;
-    attributes: T;
-  }
-
-  interface StrapiListResponse<T> {
-    data: StrapiData<T>[];
-    meta: { pagination: { page: number; pageSize: number; pageCount: number; total: number } };
-  }
-
-  interface CursoAttributes {
-    titulo: string;
-    autorId: string;
-    estado: 'draft' | 'review' | 'published' | 'archived';
-    capa?: { data: unknown };
-    autor?: { data: unknown };
-    modulos?: { data: unknown };
-  }
 
   try {
-      const data = await strapiGet<StrapiListResponse<CursoAttributes>>('/cursos', {
+      const data = await strapiGet<StrapiListResponse<Curso>>('/cursos', {
         'filters[autorId][$eq]': id,
         populate: 'capa',
         'pagination[page]': page,
       });
       return c.json({
         data: data.data,
-        pagination: data.meta?.pagination
+        pagination: data.meta.pagination
       });
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro interno';
       return c.json({ error: message }, 502);
     }
@@ -85,12 +88,12 @@ cursoRoutes.get('/meus', checkRole(['mentor', 'instituicao', 'super_admin']), as
 cursoRoutes.get('/me/inscricoes', async (c) => {
   const { id } = c.get('user');
   try {
-    const data = await strapiGet<unknown>('/inscricoes', {
+    const data = await strapiGet<StrapiListResponse<unknown>>('/inscricoes', {
       'filters[alunoId][$eq]': id,
       populate: 'curso.capa',
     });
     return c.json(data);
-  } catch (err) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
   }
@@ -100,7 +103,7 @@ cursoRoutes.get('/me/inscricoes', async (c) => {
 cursoRoutes.get('/:id', async (c) => {
   const cursoId = c.req.param('id');
   try {
-    const data = await strapiGet<any>(`/cursos/${cursoId}`, {
+    const data = await strapiGet<StrapiSingleResponse<Curso>>(`/cursos/${cursoId}`, {
       populate: 'capa,autor,modulos.itens',
     });
     
@@ -111,7 +114,7 @@ cursoRoutes.get('/:id', async (c) => {
     }
 
     return c.json(data);
-  } catch (err) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
   }
@@ -123,14 +126,14 @@ cursoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zVali
   const { id: autorId } = c.get('user');
   
   try {
-    const data = await strapiPost<unknown>('/cursos', {
+    const data = await strapiPost<StrapiSingleResponse<Curso>>('/cursos', {
       ...payload,
       autorId,
       estado: 'draft',
       slug: payload.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
     });
     return c.json(data, 201);
-  } catch (err) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
   }
@@ -144,14 +147,14 @@ cursoRoutes.put('/:id', checkRole(['mentor', 'instituicao', 'super_admin']), zVa
 
   try {
     // Verificar se é o autor
-    const curso = await strapiGet<any>(`/cursos/${id}`);
+    const curso = await strapiGet<StrapiSingleResponse<Curso>>(`/cursos/${id}`);
     if (curso.data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
       return c.json({ error: 'Não tem permissão para editar este curso' }, 403);
     }
 
-    const data = await strapiPut<unknown>(`/cursos/${id}`, payload);
+    const data = await strapiPut<StrapiSingleResponse<Curso>>(`/cursos/${id}`, payload);
     return c.json(data);
-  } catch (err) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
   }
@@ -167,10 +170,7 @@ cursoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'moderador'
 
   try {
     // Buscar curso actual
-    const curso = await strapiGet<any>(`/cursos/${id}`);
-    if (!curso.data) {
-      return c.json({ error: 'Curso não encontrado' }, 404);
-    }
+    const curso = await strapiGet<StrapiSingleResponse<Curso>>(`/cursos/${id}`);
 
     const estadoActual = curso.data.estado;
 
@@ -200,13 +200,8 @@ cursoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'moderador'
     // Actualizar estado
     await strapiPut<unknown>(`/cursos/${id}`, { estado });
 
-    // Se draft→review, criar notificação para moderadores
-    if (estadoActual === 'draft' && estado === 'review') {
-      // Notificações para moderadores serão criadas por telemetria
-    }
-
     return c.json({ success: true });
-  } catch (err) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
   }
@@ -225,7 +220,7 @@ cursoRoutes.post('/:id/inscricao', checkRole(['aluno']), async (c) => {
       progressoPercentagem: 0,
     });
     return c.json(data, 201);
-  } catch (err) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
   }

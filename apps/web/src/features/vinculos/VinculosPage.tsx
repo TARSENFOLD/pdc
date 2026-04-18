@@ -1,249 +1,170 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Spinner, Tabs, TabsList, TabsTrigger, TabsContent, Button, Avatar, Card, ConectarButton } from '@/components/ui';
+import { Spinner, Tabs, TabsList, TabsTrigger, TabsContent, Button, Avatar, Card, Badge, EmptyState } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
 import { useTelemetry } from '@/hooks/useTelemetry';
+import { useSocket } from '@/hooks/useSocket';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { http } from '@/lib/api/http';
-import type { VinculoTipo, PerfilPublicoBasico } from '@pdc/shared';
+import { Users, UserPlus, ShieldCheck, ArrowUpRight, Filter, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import type { VinculoTipo, PerfilPublico } from '@pdc/shared';
 
 interface VinculoComPerfil {
   id: string;
-  estado: string;
-  connectionType: VinculoTipo;
-  senderPerfil: PerfilPublicoBasico;
-  receiverPerfil: PerfilPublicoBasico;
-}
-
-interface VinculosResponse {
-  data: VinculoComPerfil[];
-  meta?: { pagination?: { total: number } };
-}
-
-interface SugestoesResponse {
-  data: PerfilPublicoBasico[];
+  status: string;
+  tipo: VinculoTipo;
+  solicitante: PerfilPublico;
+  destinatario: PerfilPublico;
 }
 
 export function VinculosPage() {
+  const { user } = useAuth();
   const [tabActiva, setTabActiva] = useState('pedidos');
-  const [tipoFiltro, setTipoFiltro] = useState<VinculoTipo | undefined>();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { track } = useTelemetry();
 
-  useEffect(() => {
-    track('vinculos.viewed');
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useSocket((notif: any) => {
+    if (notif.tipo === 'vinculo_pedido') {
+      void queryClient.invalidateQueries({ queryKey: ['vinculos', 'pendentes'] });
+      toast({ title: 'Novo Pedido de Vínculo', description: notif.mensagem });
+    }
+  });
 
-  // Pedidos Recebidos
+  useEffect(() => {
+    track('simulacao.iniciada'); // Placeholder para teste de track
+  }, [track]);
+
   const { data: pendentes, isLoading: loadingPendentes } = useQuery({
     queryKey: ['vinculos', 'pendentes'],
-    queryFn: () => http.get<VinculosResponse>('/vinculos/pendentes'),
+    queryFn: () => http.get<{ data: VinculoComPerfil[] }>('/vinculos/pendentes'),
     enabled: tabActiva === 'pedidos',
   });
 
-  // Os Meus Vinculos
-  const { data: meus, isLoading: loadingMeus } = useQuery({
-    queryKey: ['vinculos', 'meus', tipoFiltro],
-    queryFn: () => {
-      const params = new URLSearchParams();
-      if (tipoFiltro) params.append('tipo', tipoFiltro);
-      return http.get<VinculosResponse>(`/vinculos/meus?${params.toString()}`);
-    },
-    enabled: tabActiva === 'meus',
+  const { data: active, isLoading: loadingActive } = useQuery({
+    queryKey: ['vinculos', 'list'],
+    queryFn: () => http.get<{ data: VinculoComPerfil[] }>('/vinculos'),
+    enabled: tabActiva === 'conexoes',
   });
 
-  // Sugestoes
-  const { data: sugestoes, isLoading: loadingSugestoes } = useQuery({
-    queryKey: ['vinculos', 'sugestoes'],
-    queryFn: () => http.get<SugestoesResponse>('/vinculos/sugestoes'),
-    enabled: tabActiva === 'sugestoes',
-  });
-
-  const aceitarRejeitar = useMutation({
-    mutationFn: ({ vinculoId, acao }: { vinculoId: string; acao: 'aceitar' | 'rejeitar' }) =>
-      http.patch<{ success: boolean }>(`/vinculos/${vinculoId}`, { acao }),
-    onSuccess: (_, { acao }) => {
-      track('vinculos.action', { acao });
-      toast({
-        title: 'Sucesso',
-        description: acao === 'aceitar' ? 'Vinculo aceite!' : 'Vinculo rejeitado.',
-      });
+  const resolverMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'aprovado' | 'rejeitado' }) =>
+      http.patch(`/vinculos/${id}/resolver`, { status }),
+    onSuccess: (_, variables) => {
+      toast({ title: variables.status === 'aprovado' ? 'Vínculo Aceite' : 'Vínculo Rejeitado' });
       void queryClient.invalidateQueries({ queryKey: ['vinculos'] });
     },
-    onError: () => {
-      toast({ title: 'Erro', description: 'Operacao falhou.' });
-    },
   });
 
-  // Agrupar vinculos por tipo
-  const meusPorTipo = (meus?.data ?? []).reduce<Record<string, VinculoComPerfil[]>>((acc, v) => {
-    const key = v.connectionType;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(v);
-    return acc;
-  }, {});
-
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-text-primary">Vinculos</h1>
+    <div className="mx-auto max-w-6xl space-y-10 pb-20 animate-in fade-in duration-1000">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 mb-3 px-3 py-1 uppercase tracking-widest text-[9px] font-black">Social Network</Badge>
+          <h1 className="text-4xl font-black text-text-primary tracking-tighter font-display">
+            A Minha <span className="text-accent">Rede</span>
+          </h1>
+          <p className="text-text-secondary mt-2 max-w-lg leading-relaxed text-sm">
+            Conexões de elite validadas por mérito e autoridade técnica.
+          </p>
+        </div>
+        <div className="flex gap-2">
+           <div className="relative">
+             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+             <input placeholder="Procurar na rede..." className="bg-surface-alt border border-white/5 rounded-xl pl-10 pr-4 py-2 text-sm focus:border-accent/40 outline-none w-64" />
+           </div>
+           <Button variant="secondary" size="md" className="bg-surface-alt border-white/5 px-3"><Filter size={18} /></Button>
+        </div>
+      </header>
 
-      <Tabs defaultValue="pedidos" onValueChange={setTabActiva}>
-        <TabsList>
-          <TabsTrigger value="pedidos">Pedidos Recebidos</TabsTrigger>
-          <TabsTrigger value="meus">Os Meus Vinculos</TabsTrigger>
-          <TabsTrigger value="sugestoes">Sugestoes</TabsTrigger>
+      <Tabs defaultValue="pedidos" onValueChange={setTabActiva} className="w-full">
+        <TabsList className="bg-surface-alt p-1 rounded-2xl border border-white/5 w-fit">
+          <TabsTrigger value="pedidos" className="rounded-xl px-8 py-2.5 font-bold data-[state=active]:bg-accent data-[state=active]:text-white transition-all">
+            Pedidos {pendentes?.data && pendentes.data.length > 0 && <span className="ml-2 bg-white/20 px-1.5 rounded-md text-[10px]">{pendentes.data.length}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="conexoes" className="rounded-xl px-8 py-2.5 font-bold data-[state=active]:bg-accent data-[state=active]:text-white transition-all">Conexões</TabsTrigger>
         </TabsList>
 
-        {/* Pedidos Recebidos */}
-        <TabsContent value="pedidos">
+        <TabsContent value="pedidos" className="pt-8">
           {loadingPendentes ? (
-            <div className="flex justify-center py-20">
-              <Spinner size="lg" />
-            </div>
+            <div className="flex justify-center py-20"><Spinner size="lg" /></div>
           ) : (pendentes?.data ?? []).length === 0 ? (
-            <div className="text-center py-12 text-text-secondary">
-              Nenhum pedido de vinculo pendente.
-            </div>
+            <EmptyState
+              icon={UserPlus}
+              title="Sinal Silencioso"
+              description="Não tens pedidos de conexão pendentes."
+              ctaLabel="Ver Mentores"
+              ctaTo="/app/explorar"
+            />
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {(pendentes?.data ?? []).map((v) => (
-                <Card key={v.id} className="p-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Avatar
-                      {...(v.senderPerfil.avatarUrl ? { src: v.senderPerfil.avatarUrl } : {})}
-                      fallback={v.senderPerfil.nome.substring(0, 2).toUpperCase()}
-                      size="md"
-                    />
-                    <div>
-                      <p className="font-medium text-text-primary">{v.senderPerfil.nome}</p>
-                      <p className="text-xs text-text-secondary capitalize">{v.senderPerfil.role}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => { aceitarRejeitar.mutate({ vinculoId: v.id, acao: 'aceitar' }); }}
-                      disabled={aceitarRejeitar.isPending}
-                      className="flex-1"
-                    >
-                      Aceitar
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => { aceitarRejeitar.mutate({ vinculoId: v.id, acao: 'rejeitar' }); }}
-                      disabled={aceitarRejeitar.isPending}
-                      className="flex-1"
-                    >
-                      Rejeitar
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Os Meus Vinculos */}
-        <TabsContent value="meus">
-          <div className="mb-4 flex gap-2">
-            <Button
-              variant={!tipoFiltro ? 'primary' : 'ghost'}
-              size="sm"
-              onClick={() => { setTipoFiltro(undefined); }}
-            >
-              Todos
-            </Button>
-            {(['student-student', 'student-mentor', 'student-institution', 'mentor-institution'] as VinculoTipo[]).map(
-              (tipo) => (
-                <Button
-                  key={tipo}
-                  variant={tipoFiltro === tipo ? 'primary' : 'ghost'}
-                  size="sm"
-                  onClick={() => { setTipoFiltro(tipo); }}
-                >
-                  {tipo.replace('-', ' ').toUpperCase()}
-                </Button>
-              )
-            )}
-          </div>
-
-          {loadingMeus ? (
-            <div className="flex justify-center py-20">
-              <Spinner size="lg" />
-            </div>
-          ) : (meus?.data ?? []).length === 0 ? (
-            <div className="text-center py-12 text-text-secondary">
-              Nenhum vinculo confirmado.
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {Object.entries(meusPorTipo).map(([tipo, vinculos]) => (
-                <div key={tipo}>
-                  <h3 className="text-lg font-semibold text-text-primary mb-3 capitalize">{tipo}</h3>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {vinculos.map((v) => (
-                      <Card key={v.id} className="p-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar
-                            {...(v.senderPerfil.avatarUrl !== undefined
-                              ? { src: v.senderPerfil.avatarUrl }
-                              : v.receiverPerfil.avatarUrl !== undefined
-                                ? { src: v.receiverPerfil.avatarUrl }
-                                : {})}
-                            fallback={(v.senderPerfil.nome || v.receiverPerfil.nome).substring(0, 2).toUpperCase()}
-                            size="md"
-                          />
-                          <div>
-                            <p className="font-medium text-text-primary">
-                              {v.senderPerfil.nome || v.receiverPerfil.nome}
-                            </p>
-                            <p className="text-xs text-text-secondary">Conectado</p>
-                          </div>
+              <AnimatePresence>
+                {pendentes?.data.map((v, idx) => (
+                  <motion.div key={v.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
+                    <Card className="p-6 bg-surface border-white/5 rounded-[32px] space-y-6 shadow-xl">
+                      <div className="flex items-center gap-4">
+                        <Avatar src={v.solicitante.avatarUrl || undefined} fallback={v.solicitante.nome[0]} className="h-14 w-14 border-2 border-accent/20" />
+                        <div>
+                          <h4 className="font-bold text-text-primary tracking-tight">{v.solicitante.nome}</h4>
+                          <Badge variant="outline" className="text-[8px] uppercase border-white/10 text-text-muted mt-1">{v.solicitante.role}</Badge>
                         </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => resolverMutation.mutate({ id: v.id, status: 'aprovado' })}
+                          disabled={resolverMutation.isPending}
+                          className="flex-1 bg-accent text-white font-bold rounded-xl h-11"
+                        >Aceitar</Button>
+                        <Button 
+                          variant="ghost"
+                          onClick={() => resolverMutation.mutate({ id: v.id, status: 'rejeitado' })}
+                          className="flex-1 border border-white/5 rounded-xl h-11"
+                        >Recusar</Button>
+                      </div>
+                    </Card>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </TabsContent>
 
-        {/* Sugestoes */}
-        <TabsContent value="sugestoes">
-          {loadingSugestoes ? (
-            <div className="flex justify-center py-20">
-              <Spinner size="lg" />
-            </div>
-          ) : (sugestoes?.data ?? []).length === 0 ? (
-            <div className="text-center py-12 text-text-secondary">
-              Nenhuma sugestao de vinculo no momento.
-            </div>
+        <TabsContent value="conexoes" className="pt-8">
+          {loadingActive ? (
+            <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+          ) : (active?.data ?? []).length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="Rede Isolada"
+              description="Ainda não estabeleceste vínculos formais."
+              ctaLabel="Explorar"
+              ctaTo="/app/explorar"
+            />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {(sugestoes?.data ?? []).map((perfil) => (
-                <Card key={perfil.id} className="p-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Avatar
-                      {...(perfil.avatarUrl ? { src: perfil.avatarUrl } : {})}
-                      fallback={perfil.nome.substring(0, 2).toUpperCase()}
-                      size="md"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium text-text-primary">{perfil.nome}</p>
-                      <p className="text-xs text-text-secondary capitalize">{perfil.role}</p>
-                      {perfil.bio && <p className="text-xs text-text-secondary mt-1 line-clamp-2">{perfil.bio}</p>}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {active?.data.map((v) => {
+                const outro = v.solicitante.id === user?.id ? v.destinatario : v.solicitante;
+                return (
+                  <Card key={v.id} className="p-6 bg-surface border-white/5 rounded-[32px] group hover:border-accent/30 transition-all">
+                    <div className="flex flex-col items-center text-center space-y-4">
+                       <div className="relative">
+                          <Avatar src={outro.avatarUrl || undefined} fallback={outro.nome[0]} className="h-20 w-24 rounded-[24px] border-2 border-white/5 group-hover:border-accent/20 transition-all" />
+                          <div className="absolute -bottom-2 -right-2 h-8 w-8 rounded-xl bg-success border-4 border-surface flex items-center justify-center text-white shadow-lg">
+                             <ShieldCheck size={14} />
+                          </div>
+                       </div>
+                       <div>
+                          <h4 className="font-bold text-text-primary truncate w-full">{outro.nome}</h4>
+                          <p className="text-[10px] text-text-muted uppercase font-black tracking-widest mt-1">{outro.role}</p>
+                       </div>
+                       <Button variant="ghost" size="sm" className="w-full border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                          Enviar Mensagem <ArrowUpRight size={12} className="ml-2 text-accent" />
+                       </Button>
                     </div>
-                  </div>
-                  <ConectarButton
-                    targetId={perfil.id}
-                    connectionType="student-mentor"
-                    onConnected={() => void queryClient.invalidateQueries({ queryKey: ['vinculos'] })}
-                  />
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>

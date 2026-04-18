@@ -13,12 +13,8 @@ Se tudo o resto falhar, o fluxo `Simulação → Score → Perfil Vocacional →
 ## Requirements
 
 ### Validated
-- Fase 0A — Monorepo foundations, Docker, npm workspaces ✅
-- Fase 1 — Auth Segura: JWT httpOnly, RBAC, Google OAuth, 2FA (BFF ✅)
-- Fase 2 — Design System: Tailwind v4, Motion, Shany/ui (vibrante/premium)
-- Fase 5 — LTI 1.3 Provider: OIDC, AGS, NRPS, JWKS (LMS compatível ✅)
-- Fase 6 — Moderação e Admin: Auditoria, denúncias, gestão de roles
-- Fase 7 — IA e Realtime: DeepSeek streaming, RAG, WebSockets (BFF ✅)
+
+*(Nenhum ainda — repositório novo, do zero)*
 
 ### Active
 
@@ -43,7 +39,7 @@ Se tudo o resto falhar, o fluxo `Simulação → Score → Perfil Vocacional →
 
 **Fase 2 — Design System e Frontend Base**
 
-- Design system premium: tipografia Inter + Sora, paleta escura com acentos âmbar
+- Design system premium: tipografia Inter + Instrument Serif + JetBrains Mono, tema CLARO como BASE com acento Terracota (#D2691E)
 - Componentes base com Radix UI + Motion (ex-Framer Motion)
 - TailwindCSS v4 com tokens de design
 - React Query v5 como único estado servidor (sem Redux, sem SWR)
@@ -53,7 +49,7 @@ Se tudo o resto falhar, o fluxo `Simulação → Score → Perfil Vocacional →
 
 **Fase 3 — API Layer Modular**
 
-- Módulos de API por domínio (max 200 linhas cada)
+- Módulos de API por domínio (max 300 linhas cada)
 - Zero mocks — erro explícito quando API falha
 - Cliente Strapi v5 tipado
 - Upload para Cloudflare R2 (ficheiros até 50MB direto; vídeos via YouTube/Vimeo)
@@ -87,7 +83,9 @@ Se tudo o resto falhar, o fluxo `Simulação → Score → Perfil Vocacional →
 
 **Fase 7 — IA e Realtime**
 
-- AI tutor com DeepSeek (streaming)
+- Tina: Assistente Global de Autoridade e Camada de Tradução Semântica (não tutor genérico)
+- IA de Apoio: Integração DeepSeek (streaming)
+
 - RAG com LangChain.js para contexto da plataforma
 - Geração automática de quizzes
 - WebSocket para notificações e mensagens em tempo real
@@ -120,7 +118,7 @@ Se tudo o resto falhar, o fluxo `Simulação → Score → Perfil Vocacional →
 - **Segurança:** JWT em httpOnly cookies obrigatório — nunca `localStorage` ou `sessionStorage` para tokens
 - **Sem mocks:** Zero dados falsos em qualquer ambiente — erro explícito ou dados reais
 - **TypeScript:** Sem `any` — tipagem estrita obrigatória em `apps/web` e `apps/api`
-- **Tamanho de ficheiros:** Nenhum ficheiro de API ou serviço com mais de 200 linhas (Violado: `auth.ts`, `LandingPage.tsx` — prioritário corrigir)
+- **Tamanho de ficheiros:** Nenhum ficheiro fonte com mais de 300 linhas (excepção Shared index)
 - **Uploads:** Ficheiros até 50MB via upload direto para R2; vídeos via YouTube/Vimeo embed
 - **Idioma:** Português para conceitos de negócio (perfil, conquista, vínculo); inglês para conceitos técnicos (hook, service, middleware)
 - **Domínio:** Não definido — usar `[dominio-pdc]` como placeholder em todas as configs
@@ -187,7 +185,12 @@ Se tudo o resto falhar, o fluxo `Simulação → Score → Perfil Vocacional →
 | --- | --- | --- |
 | Monorepo com npm workspaces | Frontend e BFF partilham tipos; um pipeline CI/CD; sem Turborepo (overhead) | ✅ Confirmado |
 | Hono em vez de Express | 3x menos overhead; TypeScript nativo; edge-ready; Railway-friendly | ✅ Confirmado |
+| Rejeição do Clerk | Preservar a soberania da Auth v2 com 6 roles personalizadas (aluno, mentor, instituicao, moderador, comite, super_admin) | ✅ Confirmado |
+| Design System Soberano | Tema Claro Base; Tipografia Inter + Instrument Serif + JetBrains Mono; Acento Terracota | ✅ Confirmado |
+| Limite de Ficheiros | Máximo 300 linhas por ficheiro para garantir granularidade (exceção: Shared index) | ✅ Confirmado |
 | TailwindCSS v4 | Novo motor CSS-first; melhor performance; tokens nativos | ✅ Confirmado |
+| Arquitetura Edge Híbrida (ADR-005) | Mover telemetria e fluxos públicos para Cloudflare Workers, preservando Railway como core de negócio. | 🔄 Parcial (Rascunho) |
+| Estratégia Mobile PWA-First | Adotar PWA primeiro; transição para Capacitor na Wave 6 se necessário. | ✅ Confirmado |
 | Strapi v5 apenas como CMS | Lógica de negócio no BFF; Strapi só gere conteúdo e dados | ✅ Confirmado |
 | JWT em httpOnly cookies | Elimina vulnerabilidade de sessionStorage/localStorage | ✅ Confirmado |
 | Upstash Redis para rate limiting | Sem estado em memória; funciona com múltiplas instâncias | ✅ Confirmado |

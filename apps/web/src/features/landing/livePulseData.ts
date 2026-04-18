@@ -80,7 +80,11 @@ const POOL_BY_AREA: Record<string, readonly string[]> = {
 export const PULSE_LIMIT = 6;
 
 function pickRandom<T>(arr: readonly T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]!;
+  const item = arr[Math.floor(Math.random() * arr.length)];
+  if (item === undefined) {
+    throw new Error('PickRandom: Array vazio');
+  }
+  return item;
 }
 
 function hydrateName(template: string): string {

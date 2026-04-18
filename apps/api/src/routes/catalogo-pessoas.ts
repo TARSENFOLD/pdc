@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { AreaVocacionalSchema } from '@pdc/shared';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
-import { serializePublicProfile } from '../modules/perfil/perfil.serializer.js';
+import { serializePublicProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
 import type {
   MentorPublico,
   InstituicaoPublica,
@@ -101,15 +102,19 @@ function publishedFilter(p: Record<string, string>): void {
 export const mentoresRoutes = new Hono();
 
 const mentorFilters = paginationQuery.extend({
-  area: z.string().optional(),
+  area: AreaVocacionalSchema.optional(),
   disponivel: z.coerce.boolean().optional(),
 });
 
 function mapMentor(d: StrapiMentor): MentorPublico {
   return {
-    id: sid(d.id), nome: d.nome ?? d.username ?? '',
-    avatarUrl: d.avatarUrl, bio: d.bio,
-    areaEspecialidade: d.areaEspecialidade, disponivel: d.disponivel,
+    id: sid(d.id), 
+    nome: d.nome ?? d.username ?? '',
+    especialidade: d.areaEspecialidade || 'Especialista',
+    avatarUrl: d.avatarUrl, 
+    bio: d.bio,
+    areaEspecialidade: d.areaEspecialidade, 
+    disponivel: d.disponivel,
   };
 }
 
@@ -143,7 +148,7 @@ const instFilters = paginationQuery.extend({
 function mapInst(d: StrapiInstituicao): InstituicaoPublica {
   return {
     id: sid(d.id), slug: d.slug, nome: d.nome,
-    descricao: d.descricao, logoUrl: d.logoUrl, tipo: d.tipo, regiao: d.regiao,
+    descricao: d.descricao, logoUrl: d.logoUrl || undefined, tipo: d.tipo, regiao: d.regiao,
   };
 }
 
@@ -175,34 +180,29 @@ export const perfilPublicoRoutes = new Hono();
 perfilPublicoRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
 
-  // Check feature flag — if active, use new perfil-based serialization
   let useV2 = false;
   try {
     const flags = await featureFlagService.getEffectiveFlags();
     useV2 = flags['PROFILE_V2_PUBLIC'] === true;
-  } catch {
-    // Flag service down → safe fallback to legacy
-  }
+  } catch { /* ignore */ }
 
   if (useV2) {
-    const perfil = await strapiGet<StrapiPerfilPublic>(`/perfis`, {
+    const res = await strapiGet<{ data: StrapiPerfilPublic[] }>(`/perfis`, {
       'filters[userId][$eq]': id,
       'pagination[pageSize]': '1',
       populate: 'foto',
     });
-    const data = Array.isArray(perfil) ? perfil : (perfil as unknown as { data: StrapiPerfilPublic[] }).data;
-    const first = data?.[0];
+    const first = res.data[0];
     if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);
-    return c.json({ data: serializePublicProfile(first) });
+    return c.json({ data: serializePublicProfile(first as unknown as StrapiPerfil) });
   }
 
-  // Legacy path — read from /users
   const d = await strapiGet<StrapiUserPublic>(`/users/${id}`, { populate: 'avatar,role' });
   const roleName = d.role?.name.toLowerCase() ?? 'aluno';
   const perfil: PerfilPublicoBasico = {
     id: sid(d.id),
     nome: d.nome ?? d.username ?? '',
-    avatarUrl: d.avatarUrl,
+    avatarUrl: d.avatarUrl || undefined,
     bio: d.bio,
     role: roleName as Role,
   };

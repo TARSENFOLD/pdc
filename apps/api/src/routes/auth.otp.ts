@@ -5,7 +5,7 @@ import { getCookie, deleteCookie, setCookie } from 'hono/cookie';
 import { authService } from '../modules/auth/auth.service.js';
 import { otpService } from '../modules/auth/otp.service.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import { redis } from '../lib/redis.js';
+import { redis, hasRedis } from '../lib/redis.js';
 import pino from 'pino';
 import { setAuthCookies, canSkipOtp } from '../modules/auth/auth.helper.js';
 import { randomUUID } from 'node:crypto';
@@ -23,7 +23,7 @@ export async function initiate2faChallenge(c: Context<{ Variables: AuthVariables
     return c.json(user);
   }
   const challengeId = randomUUID();
-  if (redis) await redis.set(`auth_challenge:${challengeId}`, user.id, { ex: 600 });
+  if (hasRedis) await redis.set(`auth_challenge:${challengeId}`, user.id, { ex: 600 });
   setCookie(c, 'auth_challenge', challengeId, { httpOnly: true, secure: false, sameSite: 'Strict', maxAge: 600, path: '/' });
   try {
     const otp = otpService.generateOtp();
@@ -47,7 +47,7 @@ const otpVerifySchema = z.object({
 
 async function getChallengeUserId(c: Context<{ Variables: AuthVariables }>): Promise<string | null> {
   const challengeId = getCookie(c, 'auth_challenge');
-  if (!challengeId || !redis) return null;
+  if (!challengeId || !hasRedis) return null;
   return redis.get<string>(`auth_challenge:${challengeId}`);
 }
 
@@ -55,7 +55,7 @@ otpRoutes.post('/send', zValidator('json', otpSendSchema), async (c) => {
   const userId = await getChallengeUserId(c);
   if (!userId) return c.json({ error: 'Sessão inválida' }, 401);
   const { canal, phone } = c.req.valid('json');
-  if (redis) {
+  if (hasRedis) {
     const rateKey = `otp_rate:${userId}`;
     const count = await redis.incr(rateKey);
     if (count === 1) await redis.expire(rateKey, 600);
@@ -81,7 +81,7 @@ otpRoutes.post('/send', zValidator('json', otpSendSchema), async (c) => {
 otpRoutes.post('/sms', verifyJwt, zValidator('json', z.object({ phone: z.string() })), async (c) => {
   const user = c.get('user');
   const { phone } = c.req.valid('json');
-  if (redis) {
+  if (hasRedis) {
     const rateKey = `otp_rate:${user.id}`;
     const count = await redis.incr(rateKey);
     if (count === 1) await redis.expire(rateKey, 600);
@@ -100,7 +100,7 @@ otpRoutes.post('/sms', verifyJwt, zValidator('json', z.object({ phone: z.string(
 
 otpRoutes.post('/verify', zValidator('json', otpVerifySchema), async (c) => {
   const challengeId = getCookie(c, 'auth_challenge');
-  if (!challengeId || !redis) return c.json({ error: 'Sessão inválida' }, 401);
+  if (!challengeId || !hasRedis) return c.json({ error: 'Sessão inválida' }, 401);
   const userId = await redis.get<string>(`auth_challenge:${challengeId}`);
   if (!userId) return c.json({ error: 'Sessão expirada' }, 401);
   const { otp, canal } = c.req.valid('json');

@@ -144,6 +144,12 @@
       "default": 0,
       "min": 0,
       "max": 100
+    },
+    "behavior_patterns": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::behavior-pattern.behavior-pattern",
+      "mappedBy": "perfil"
     }
   }
 }

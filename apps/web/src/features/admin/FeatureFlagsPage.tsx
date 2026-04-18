@@ -24,22 +24,22 @@ export function FeatureFlagsPage() {
   const toggleMutation = useMutation({
     mutationFn: ({ domain, enabled }: { domain: string; enabled: boolean }) =>
       http.put(`/feature-flags/defaults/${domain}`, { enabled }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-feature-flags'] }),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['admin-feature-flags'] }); },
   });
 
   const addOverrideMutation = useMutation({
     mutationFn: ({ domain, instituicaoId, enabled }: { domain: string; instituicaoId: number; enabled: boolean }) =>
-      http.put(`/feature-flags/institutions/${instituicaoId}/${domain}`, { enabled }),
+      http.put(`/feature-flags/institutions/${instituicaoId.toString()}/${domain}`, { enabled }),
     onSuccess: () => {
       setNewOverride(null);
-      qc.invalidateQueries({ queryKey: ['admin-feature-flags'] });
+      void qc.invalidateQueries({ queryKey: ['admin-feature-flags'] });
     },
   });
 
   const removeOverrideMutation = useMutation({
     mutationFn: ({ domain, instituicaoId }: { domain: string; instituicaoId: number }) =>
-      http.delete(`/feature-flags/institutions/${instituicaoId}/${domain}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-feature-flags'] }),
+      http.delete(`/feature-flags/institutions/${instituicaoId.toString()}/${domain}`),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['admin-feature-flags'] }); },
   });
 
   if (isLoading) return <div className="p-6">A carregar...</div>;
@@ -49,7 +49,7 @@ export function FeatureFlagsPage() {
       <h1 className="text-2xl font-bold">Feature Flags</h1>
 
       {flags.map((f) => (
-        <Card key={f.id} className="p-4 space-y-3">
+        <Card key={f.id.toString()} className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <span className="font-mono font-semibold">{f.domain}</span>
@@ -62,7 +62,7 @@ export function FeatureFlagsPage() {
               <Button
                 size="sm"
                 variant={f.enabled ? 'danger' : 'primary'}
-                onClick={() => toggleMutation.mutate({ domain: f.domain, enabled: !f.enabled })}
+                onClick={() => { toggleMutation.mutate({ domain: f.domain, enabled: !f.enabled }); }}
                 disabled={toggleMutation.isPending}
               >
                 {f.enabled ? 'Desligar' : 'Ligar'}
@@ -77,28 +77,30 @@ export function FeatureFlagsPage() {
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => setNewOverride({ domain: f.domain, instId: '' })}
+                onClick={() => { setNewOverride({ domain: f.domain, instId: '' }); }}
               >
                 + Override
               </Button>
             </div>
 
-            {f.overrides?.length > 0 ? (
+            {f.overrides.length > 0 ? (
               <div className="space-y-1">
                 {f.overrides.map((o) => (
-                  <div key={o.instituicaoId} className="flex items-center gap-2 text-sm">
-                    <span>Inst. #{o.instituicaoId}</span>
+                  <div key={o.instituicaoId.toString()} className="flex items-center gap-2 text-sm">
+                    <span>Inst. #{o.instituicaoId.toString()}</span>
                     <Badge variant={o.enabled ? 'success' : 'default'} className="text-xs">
                       {o.enabled ? 'ON' : 'OFF'}
                     </Badge>
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => addOverrideMutation.mutate({
-                        domain: f.domain,
-                        instituicaoId: o.instituicaoId,
-                        enabled: !o.enabled,
-                      })}
+                      onClick={() => {
+                        addOverrideMutation.mutate({
+                          domain: f.domain,
+                          instituicaoId: o.instituicaoId,
+                          enabled: !o.enabled,
+                        });
+                      }}
                     >
                       Toggle
                     </Button>
@@ -106,10 +108,12 @@ export function FeatureFlagsPage() {
                       size="sm"
                       variant="ghost"
                       className="text-red-500"
-                      onClick={() => removeOverrideMutation.mutate({
-                        domain: f.domain,
-                        instituicaoId: o.instituicaoId,
-                      })}
+                      onClick={() => {
+                        removeOverrideMutation.mutate({
+                          domain: f.domain,
+                          instituicaoId: o.instituicaoId,
+                        });
+                      }}
                     >
                       Remover
                     </Button>
@@ -126,7 +130,7 @@ export function FeatureFlagsPage() {
                   type="number"
                   placeholder="ID da instituição"
                   value={newOverride.instId}
-                  onChange={(e) => setNewOverride({ ...newOverride, instId: e.target.value })}
+                  onChange={(e) => { setNewOverride({ ...newOverride, instId: e.target.value }); }}
                   className="w-40"
                 />
                 <Button
@@ -141,7 +145,7 @@ export function FeatureFlagsPage() {
                 >
                   Adicionar
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setNewOverride(null)}>
+                <Button size="sm" variant="ghost" onClick={() => { setNewOverride(null); }}>
                   Cancelar
                 </Button>
               </div>
@@ -149,10 +153,6 @@ export function FeatureFlagsPage() {
           </div>
         </Card>
       ))}
-
-      {flags.length === 0 && (
-        <p className="text-muted-foreground">Nenhuma feature flag configurada.</p>
-      )}
     </div>
   );
 }

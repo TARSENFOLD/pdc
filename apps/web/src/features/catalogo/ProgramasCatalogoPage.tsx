@@ -24,7 +24,7 @@ export function ProgramasCatalogoPage() {
           {['', 'standard', 'shadowapro', 'eduvisit'].map((t) => (
             <button 
               key={t}
-              onClick={() => setTipo(t)}
+              onClick={() => { setTipo(t); }}
               className={`px-4 py-2 rounded-full text-sm font-medium ${tipo === t ? 'bg-amber text-black' : 'bg-surface text-text-secondary'}`}
             >
               {t === '' ? 'Todos' : t.toUpperCase()}

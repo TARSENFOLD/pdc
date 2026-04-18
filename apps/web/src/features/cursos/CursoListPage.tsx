@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { cursosApi } from '@/lib/api/cursos';
-import { Card, Pagination, Badge, CardGridSkeleton } from '@/components/ui';
+import { Card, Pagination, Badge, CardGridSkeleton, EmptyState } from '@/components/ui';
 import type { Curso } from '@pdc/shared';
+import { BookOpen, Search } from 'lucide-react';
 
 function CursoCard({ curso }: { curso: Curso }) {
   return (
@@ -68,10 +69,26 @@ export function CursoListPage() {
         </form>
       </div>
 
-      {isLoading ? <CardGridSkeleton /> : isError ? (
-        <p className="py-12 text-center text-text-muted">Ocorreu um erro ao carregar os cursos.</p>
+      {isLoading ? (
+        <CardGridSkeleton />
+      ) : isError ? (
+        <EmptyState
+          icon={BookOpen}
+          variant="error"
+          title="Erro ao carregar cursos"
+          description="Não foi possível obter o catálogo de cursos. Verifica a tua ligação à internet."
+          onRetry={() => { window.location.reload(); }}
+        />
       ) : cursos.length === 0 ? (
-        <p className="py-12 text-center text-text-muted">Nenhum curso encontrado.</p>
+        <EmptyState
+          icon={Search}
+          title={search ? "Nenhum resultado encontrado" : "Ainda não há cursos"}
+          description={search ? `Não encontramos cursos para "${search}". Tenta outros termos.` : "Fica atento, estamos a preparar novos conteúdos para ti."}
+          {...(search ? { 
+            ctaLabel: "Limpar Pesquisa", 
+            onRetry: () => { setSearch(''); setInputValue(''); } 
+          } : {})}
+        />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

@@ -1,10 +1,11 @@
 import { Redis } from '@upstash/redis';
 import { strapiGet } from '../strapi/strapi.client.js';
+import { env } from '../../lib/env.js';
 
-const redis = process.env['UPSTASH_REDIS_REST_URL']
+const redis = env.UPSTASH_REDIS_REST_URL
   ? new Redis({
-      url: process.env['UPSTASH_REDIS_REST_URL'],
-      token: process.env['UPSTASH_REDIS_REST_TOKEN'] ?? '',
+      url: env.UPSTASH_REDIS_REST_URL,
+      token: env.UPSTASH_REDIS_REST_TOKEN,
     })
   : null;
 

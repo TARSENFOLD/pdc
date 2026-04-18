@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { EstadoEditorialSchema } from './user.js';
-import { AreaVocacionalSchema } from './schemas/enums.js';
+import { AreaVocacionalSchema, ModalidadeSchema, type Modalidade } from './schemas/enums.js';
+
+export { ModalidadeSchema, type Modalidade };
 
 export const ExperienciaSchema = z.object({
   id: z.string(),
@@ -15,9 +17,6 @@ export const ExperienciaSchema = z.object({
 });
 
 export type Experiencia = z.infer<typeof ExperienciaSchema>;
-
-export const ModalidadeSchema = z.enum(['presencial', 'online', 'hibrido']);
-export type Modalidade = z.infer<typeof ModalidadeSchema>;
 
 export const CriarExperienciaPayloadSchema = z.object({
   titulo: z.string().min(3).max(200),

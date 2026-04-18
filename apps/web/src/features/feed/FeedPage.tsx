@@ -1,122 +1,118 @@
-import { useState, useEffect } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { useInView } from 'react-intersection-observer';
-import { feedApi } from '@/lib/api/feed';
-import { FeedCard } from './FeedCard';
-import { FeedCardSkeleton } from '@/components/ui';
-import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/lib/auth/AuthContext';
-import { Inbox, RefreshCcw } from 'lucide-react';
-import type { FeedResponse } from '@pdc/shared';
+import { useQuery } from '@tanstack/react-query';
+import { Card, Spinner, Avatar, Badge } from '@/components/ui';
+import { Heart, MessageSquare, Share2, Award, Zap, Clock, Bookmark } from 'lucide-react';
+import { http } from '@/lib/api/http';
+import { motion } from 'motion/react';
 
-type FeedTab = 'geral' | 'trending';
-
-export default function FeedPage() {
-  const { user } = useAuth();
-  const [tab, setTab] = useState<FeedTab>(user ? 'geral' : 'trending');
-  const { ref, inView } = useInView();
-
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    isError,
-    refetch,
-  } = useInfiniteQuery<FeedResponse>({
-    queryKey: ['feed', tab, user?.id],
-    queryFn: ({ pageParam }) => {
-      const page = pageParam as number;
-      return tab === 'geral'
-        ? feedApi.getGeral(page)
-        : feedApi.getTrending(page);
-    },
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) =>
-      lastPage.meta.hasMore ? lastPage.meta.page + 1 : undefined,
+export function FeedPage() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['feed', 'sovereign'],
+    queryFn: () => http.get<any>('/feed'),
   });
 
-  useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
-      void fetchNextPage();
-    }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  if (isLoading) return <div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>;
 
-  const items = data?.pages.flatMap((p) => p.data) ?? [];
+  const items = data?.data ?? [];
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl mx-auto">
-      <header className="space-y-4">
-        <h1 className="text-3xl font-bold text-text-primary tracking-tight">Feed</h1>
-
-        <div className="flex gap-1 bg-surface border border-border rounded-lg p-1">
-          {user && (
-            <button
-              onClick={() => { setTab('geral'); }}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                tab === 'geral'
-                  ? 'bg-amber text-black'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              Para Ti
-            </button>
-          )}
-          <button
-            onClick={() => { setTab('trending'); }}
-            className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              tab === 'trending'
-                ? 'bg-amber text-black'
-                : 'text-text-secondary hover:text-text-primary'
-            }`}
-          >
-            Em Alta
-          </button>
+    <div className="mx-auto max-w-4xl space-y-10 pb-20 animate-in fade-in duration-1000">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-4">
+        <div>
+          <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 mb-3 px-3 py-1 uppercase tracking-widest text-[9px] font-black">Social Pulse</Badge>
+          <h1 className="text-4xl font-black text-text-primary tracking-tighter font-display">
+            A Comunidade de <span className="text-accent">Mérito</span>
+          </h1>
+          <p className="text-text-secondary mt-2 max-w-lg leading-relaxed text-sm">
+            Factos, conquistas e actualizações em tempo real do ecossistema soberano.
+          </p>
         </div>
       </header>
 
-      {isLoading && (
-        <div className="flex flex-col gap-0">
-          {Array.from({ length: 3 }).map((_, i) => <FeedCardSkeleton key={i} />)}
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-8">
+        {items.length === 0 ? (
+          <Card className="p-20 text-center border-dashed border-white/10 bg-white/[0.01]">
+            <Zap size={48} className="mx-auto text-text-muted mb-4 opacity-20" />
+            <p className="text-sm text-text-muted uppercase font-black tracking-widest">O pulso social está silencioso...</p>
+          </Card>
+        ) : (
+          items.map((item: any, idx: number) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+            >
+              <Card className="group relative overflow-hidden bg-surface border-white/5 hover:border-accent/10 transition-all p-0 shadow-xl">
+                 
+                 {/* Feed Header */}
+                 <div className="p-6 flex items-center justify-between border-b border-white/5 bg-white/[0.01]">
+                    <div className="flex items-center gap-4">
+                       <Avatar src={item.avatar} fallback={item.autor[0]} className="h-10 w-10 border border-white/10" />
+                       <div>
+                          <h3 className="text-sm font-bold text-text-primary">{item.autor}</h3>
+                          <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest flex items-center gap-1.5">
+                             <Clock size={10} /> {new Date(item.createdAt).toLocaleDateString('pt-PT')}
+                          </p>
+                       </div>
+                    </div>
+                    {item.tipo === 'conquista' && (
+                       <Badge className="bg-success/10 text-success border-success/20 uppercase text-[9px] font-black tracking-widest">Conquista</Badge>
+                    )}
+                 </div>
 
-      {isError && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-8 text-center space-y-3">
-          <p className="text-red-500 font-medium">Erro ao carregar o feed.</p>
-          <Button variant="ghost" size="sm" className="gap-2" onClick={() => { void refetch(); }}>
-            <RefreshCcw className="w-4 h-4" /> Tentar novamente
-          </Button>
-        </div>
-      )}
+                 {/* Feed Content */}
+                 <div className="p-8 space-y-6">
+                    <div className="space-y-3">
+                       <h4 className="text-2xl font-bold text-text-primary tracking-tight leading-tight group-hover:text-accent transition-colors">
+                         {item.titulo}
+                       </h4>
+                       <p className="text-text-secondary text-sm leading-relaxed whitespace-pre-wrap">
+                         {item.corpo}
+                       </p>
+                    </div>
 
-      {!isLoading && !isError && items.length === 0 && (
-        <div className="bg-surface border border-border rounded-xl p-12 text-center space-y-3">
-          <Inbox className="w-10 h-10 mx-auto text-text-secondary/40" />
-          <p className="text-text-secondary">Ainda não há conteúdo disponível.</p>
-        </div>
-      )}
+                    {item.imagem && (
+                       <div className="rounded-[28px] overflow-hidden border border-white/5 aspect-video bg-surface-alt">
+                          <img src={item.imagem} alt="" className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-1000 opacity-80" />
+                       </div>
+                    )}
+                 </div>
 
-      {items.length > 0 && (
-        <div className="flex flex-col gap-6">
-          {items.map((item) => (
-            <FeedCard key={`${item.tipo}-${item.id}`} item={item} />
-          ))}
-        </div>
-      )}
+                 {/* Feed Footer Actions */}
+                 <div className="px-6 py-4 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                       <button className="flex items-center gap-2 text-text-muted hover:text-accent transition-colors group/btn">
+                          <Heart size={18} className="group-hover/btn:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold uppercase tracking-widest">Validar</span>
+                       </button>
+                       <button className="flex items-center gap-2 text-text-muted hover:text-accent transition-colors group/btn">
+                          <MessageSquare size={18} className="group-hover/btn:scale-110 transition-transform" />
+                          <span className="text-[10px] font-bold uppercase tracking-widest">Comentar</span>
+                       </button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                       <button className="p-2 text-text-muted hover:text-accent transition-all"><Bookmark size={18} /></button>
+                       <button className="p-2 text-text-muted hover:text-accent transition-all"><Share2 size={18} /></button>
+                    </div>
+                 </div>
 
-      <div ref={ref} className="flex justify-center py-4">
-        {isFetchingNextPage && <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber" />}
+                 {item.tipo === 'conquista' && (
+                    <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                       <Award size={140} className="text-accent" />
+                    </div>
+                 )}
+              </Card>
+            </motion.div>
+          ))
+        )}
       </div>
 
-      {hasNextPage && !isFetchingNextPage && (
-        <div className="flex justify-center">
-          <Button variant="ghost" size="sm" onClick={() => { void fetchNextPage(); }}>
-            Carregar mais
-          </Button>
-        </div>
-      )}
+      <footer className="pt-10 flex justify-center opacity-30 group hover:opacity-100 transition-opacity">
+         <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.3em] flex items-center gap-2">
+           <Zap size={14} className="text-accent" />
+           Fim do fluxo. Actualizado agora.
+         </p>
+      </footer>
     </div>
   );
 }

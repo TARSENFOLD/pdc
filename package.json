@@ -10,6 +10,7 @@
   "workspaces": [
     "apps/web",
     "apps/api",
+    "apps/edge",
     "packages/shared",
     "infra/strapi"
   ],
@@ -34,17 +35,33 @@
     "test:e2e:full": "playwright test --project=chromium --project=firefox",
     "test:e2e:docker": "docker run --rm --network host -v $(pwd):/work -w /work -e CI=true mcr.microsoft.com/playwright:v1.52.0-noble npx playwright test",
     "docker:load": "docker compose -f docker-compose.test.yml run --rm k6 run",
-    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'dist' -type d -prune -exec rm -rf '{}' +"
+    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'dist' -type d -prune -exec rm -rf '{}' +",
+    "test:e2e:a11y": "playwright test tests/e2e/a11y.spec.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
+    "ajv": "^8.18.0",
+    "ajv-formats": "^3.0.1",
+    "ajv-keywords": "^5.1.0",
+    "axios": "^1.7.4",
+    "esbuild": "^0.25.0",
     "eslint": "^9.0.0",
-    "prettier": "^3.3.0",
-    "typescript": "^5.5.0",
+    "hono": "^4.12.13",
     "husky": "^9.0.0",
-    "lint-staged": "^15.0.0"
+    "lint-staged": "^15.0.0",
+    "lodash": "^4.18.1",
+    "prettier": "^3.3.0",
+    "typescript": "^5.5.0"
+  },
+  "overrides": {
+    "lodash": "^4.18.1",
+    "esbuild": "^0.25.0",
+    "hono": "^4.12.13",
+    "@hono/node-server": "^1.19.13",
+    "axios": "^1.7.4",
+    "markdown-it": "^14.1.1"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -54,5 +71,8 @@
     "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
   }
 }

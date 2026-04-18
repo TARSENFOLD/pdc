@@ -2,7 +2,7 @@ import { exportJWK, importPKCS8, importSPKI } from 'jose';
 
 const PRIVATE_KEY = process.env['LTI_PRIVATE_KEY'] || '';
 const PUBLIC_KEY = process.env['LTI_PUBLIC_KEY'] || '';
-const KEY_ID = process.env['LTI_KEY_ID'] || 'pdc-lti-key-1';
+export const KEY_ID = process.env['LTI_KEY_ID'] || 'pdc-lti-key-1';
 
 export async function getPublicJwks() {
   if (!PUBLIC_KEY) {

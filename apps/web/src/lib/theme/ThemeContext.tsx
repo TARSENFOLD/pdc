@@ -13,10 +13,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     // Check localStorage, default to 'dark'
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('pdc-theme') as Theme) || 'dark';
-    }
-    return 'dark';
+    const stored = localStorage.getItem('pdc-theme');
+    return (stored as Theme) || 'dark';
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
@@ -46,9 +44,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
-      const listener = () => applyTheme('system');
+      const listener = () => { applyTheme('system'); };
       mediaQuery.addEventListener('change', listener);
-      return () => mediaQuery.removeEventListener('change', listener);
+      return () => { mediaQuery.removeEventListener('change', listener); };
     }
   }, [theme]);
 

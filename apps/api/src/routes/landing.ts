@@ -1,13 +1,14 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { AreaVocacionalSchema } from '@pdc/shared';
 import { Ratelimit } from '@upstash/ratelimit';
 import { redis } from '../lib/redis.js';
 import { pulseService } from '../modules/landing/pulse.service.js';
 
 const activitySchema = z.object({
   sessionId: z.string().min(1).max(64),
-  area: z.string().optional(),
+  area: AreaVocacionalSchema.optional(),
 });
 
 const pulseLimiter = new Ratelimit({

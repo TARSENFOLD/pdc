@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Badge } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { BookOpen } from 'lucide-react';
 
 export function CursoPublicoDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -14,7 +16,7 @@ export function CursoPublicoDetailPage() {
   });
 
   if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><Spinner size="lg" /></div>;
-  if (isError || !curso) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="text-text-muted">Curso não encontrado.</p></div>;
+  if (isError || !curso) return <div className="flex min-h-screen items-center justify-center bg-background p-4"><EmptyState icon={BookOpen} title="Curso não encontrado" description="Não foi possível carregar os dados deste curso." /></div>;
 
   return (
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
@@ -22,7 +24,7 @@ export function CursoPublicoDetailPage() {
         title={curso.titulo}
         description={curso.descricao}
         image={curso.capaUrl}
-        url={`https://usepdc.com/cursos/${slug}`}
+        url={`https://usepdc.com/cursos/${slug ?? ''}`}
         type="course"
         jsonLd={{
           '@type': 'Course',

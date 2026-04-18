@@ -1,11 +1,32 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+
 import { useAuth } from '@/lib/auth/AuthContext';
 import { authApi } from '@/lib/api/auth';
 import { useTelemetry } from '@/hooks/useTelemetry';
-import { Input, Button } from '@/components/ui';
+
+gsap.registerPlugin(useGSAP);
+
+// Configuração dos Blocos (Formas e Cores Low-Poly)
+const blockTypes = [
+  { shape: 'cube', color: 'var(--color-accent)' }, // Laranja ou Azul consoante o tema
+  { shape: 'pyramid', color: 'var(--color-accent-trust)' }, // Azul Claro
+  { shape: 'sphere', color: '#a855f7' }, // Purple
+  { shape: 'torus', color: '#10b981' }  // Green
+];
 
 export default function LoginPage() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const leftPaneRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const blocksRefs = useRef<HTMLDivElement[]>([]);
+  
+  const blockCount = 15; // Número de blocos a coreografar
+  const [loginStatus, setLoginStatus] = useState<'idle' | 'typing' | 'success' | 'failure'>('idle');
+
+  // Real Auth State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,9 +37,162 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/dashboard';
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/app';
 
-  async function handleSubmit(e: React.FormEvent) {
+  const { contextSafe } = useGSAP({ scope: leftPaneRef });
+
+  // 1. Estado: Idle/Entrada (Caos de Potencial)
+  useGSAP(() => {
+    // Animação de Entrada
+    gsap.fromTo(blocksRefs.current, 
+      { 
+        x: "-=300", 
+        y: () => gsap.utils.random(-100, 100),
+        rotate: () => gsap.utils.random(-180, 180),
+        scale: 0.5,
+        opacity: 0
+      },
+      {
+        x: () => gsap.utils.random(-50, 50),
+        y: () => gsap.utils.random(-150, 150),
+        rotate: 0,
+        scale: 1,
+        opacity: 0.7,
+        stagger: 0.1,
+        duration: 1.5,
+        ease: "elastic.out(1, 0.7)",
+        onComplete: startIdleAnimation
+      }
+    );
+
+    // Animação de flutuação magnética
+    function startIdleAnimation() {
+      if (loginStatus !== 'idle') return;
+      blocksRefs.current.forEach(block => {
+        gsap.to(block, {
+          y: "+=20",
+          x: "+=15",
+          rotate: "+=10",
+          duration: () => gsap.utils.random(2, 4),
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut"
+        });
+      });
+    }
+  });
+
+  // 2. Estado: Digitar (Empilhamento e Ginga Instável)
+  const handleTypingFocus = contextSafe(() => {
+    setLoginStatus('typing');
+    gsap.killTweensOf(blocksRefs.current);
+
+    // Coreografia de Empilhamento
+    blocksRefs.current.forEach((block, i) => {
+      const yPos = 120 - (i * 18); // Empilha no centro vertical (25%)
+      const rotation = i % 2 === 0 ? 5 : -5;
+
+      // Move para a pilha central
+      gsap.to(block, {
+        x: 0,
+        y: yPos,
+        scale: 1.2,
+        rotate: rotation,
+        opacity: 1,
+        duration: 0.6,
+        ease: "back.out(1.7)",
+        onComplete: startJiggle
+      });
+
+      // Começa a ginga de instabilidade
+      function startJiggle() {
+        if (loginStatus !== 'typing') return;
+        gsap.to(block, {
+          rotate: i % 2 === 0 ? -10 : 10,
+          y: "+=3",
+          duration: 0.1 + (i * 0.01), // Frequência varia para parecer caótico
+          repeat: -1,
+          yoyo: true,
+          ease: "power1.inOut"
+        });
+      }
+    });
+  });
+
+  // Resetar ao sair dos campos
+  const handleInputBlur = contextSafe(() => {
+    if (loginStatus === 'success' || loginStatus === 'failure') return;
+    setLoginStatus('idle');
+    gsap.killTweensOf(blocksRefs.current);
+    // Volta a flutuar aleatoriamente
+    gsap.to(blocksRefs.current, {
+      x: () => gsap.utils.random(-50, 50),
+      y: () => gsap.utils.random(-150, 150),
+      rotate: 0,
+      scale: 1,
+      opacity: 0.7,
+      duration: 1,
+      stagger: 0.05,
+      ease: "power2.inOut"
+    });
+  });
+
+  const simulateFailure = contextSafe(() => {
+    setLoginStatus('failure');
+    // Desmoronamento Violento
+    gsap.to(blocksRefs.current, {
+      y: "+=300",
+      x: () => gsap.utils.random(-200, 200),
+      rotate: () => gsap.utils.random(-180, 180),
+      scale: 0.6,
+      backgroundColor: "#404040", // Cor de metal/chumbo (desativado)
+      duration: 0.8,
+      stagger: 0.02,
+      ease: "power4.in",
+      onComplete: () => {
+        // Feedback visual de erro
+        gsap.fromTo(leftPaneRef.current, { x: -5 }, { x: 5, duration: 0.05, repeat: 10, yoyo: true });
+        
+        // Retoma o estado se o erro persistir apos a animacao
+        setTimeout(() => {
+            if (document.activeElement?.tagName === 'INPUT') {
+                handleTypingFocus();
+            } else {
+                handleInputBlur();
+            }
+        }, 1500);
+      }
+    });
+  });
+
+  const simulateSuccess = contextSafe(() => {
+    setLoginStatus('success');
+    gsap.to(formRef.current, { opacity: 0, x: 20, duration: 0.5 });
+    
+    // Solidificação e Metamorfose
+    gsap.to(blocksRefs.current, {
+      backgroundColor: "var(--color-accent, #FF5C00)", // Cor da marca
+      rotate: 0,
+      scale: 1.5,
+      opacity: 1,
+      duration: 0.4,
+      ease: "back.out(3)"
+    });
+
+    // Ocultar e expandir para Dashboard
+    gsap.to(blocksRefs.current, {
+      y: -500, // Dispara para cima
+      scale: 0.5,
+      duration: 0.8,
+      ease: "power4.in",
+      delay: 0.5,
+      onComplete: () => {
+        navigate(from, { replace: true });
+      }
+    });
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
@@ -29,92 +203,130 @@ export default function LoginPage() {
         navigate('/verificar', { state: { canal: result.canal, from }, replace: true });
       } else {
         track('login.success');
-        navigate(from, { replace: true });
+        simulateSuccess();
       }
     } catch (err: unknown) {
       const body = err instanceof Error && 'body' in err ? (err as { body?: Record<string, string> }).body : undefined;
       setError(body?.error ?? 'Erro ao iniciar sessão. Verifique as suas credenciais.');
+      simulateFailure();
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-2xl bg-surface p-8 shadow-2xl border border-border">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-text-primary mb-2">Bem-vindo</h1>
-          <p className="text-text-muted">Inicie sessão para continuar no PDC</p>
+    <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-background overflow-hidden font-sans">
+      
+      {/* LADO ESQUERDO: A Animação (50%) */}
+      <div 
+        ref={leftPaneRef}
+        className="relative flex items-center justify-center bg-surface-alt border-r border-border [perspective:1000px] hidden lg:flex"
+      >
+        {/* Renderização dos Blocos Geométricos Low-Poly */}
+        {Array.from({ length: blockCount }).map((_, i) => {
+          const config = blockTypes[i % blockTypes.length]!;
+          return (
+            <div 
+              key={i}
+              ref={(el) => { if (el) blocksRefs.current[i] = el; }}
+              className="absolute w-12 h-12 shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-transform preserve-3d"
+              style={{
+                backgroundColor: config.color,
+                borderRadius: config.shape === 'sphere' ? '50%' : config.shape === 'torus' ? '30%' : '4px',
+                clipPath: config.shape === 'pyramid' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : 'none'
+              }}
+            />
+          );
+        })}
+        
+        {/* Detalhes Estéticos */}
+        <div className="absolute bottom-10 left-10 text-text-muted text-xs font-mono tracking-tighter dark:mix-blend-screen">
+          SYSTEM: ACTIVE <br />
+          MORPHOLOGY: MULTI-BODY_STANCE
         </div>
+      </div>
 
-        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
+      {/* LADO DIREITO: O Login (50%) */}
+      <div className="flex items-center justify-center p-8 lg:p-12">
+        <div className="w-full max-w-sm">
+          <header className="mb-12">
+            <h1 className="text-4xl font-black text-text-primary tracking-tight mb-2">Login.</h1>
+            <p className="text-text-secondary font-medium">Bem-vindo de volta ao teu futuro.</p>
+          </header>
+
           {error && (
-            <div className="rounded-lg bg-error/10 p-3 text-sm text-error border border-error/20">
+            <div className="rounded-lg bg-red-500/10 p-4 font-medium text-sm text-red-500 border border-red-500/20 mb-6 backdrop-blur-md">
               {error}
             </div>
           )}
 
-          <Input 
-            label="Email" 
-            type="email"
-            required
-            placeholder="seu@email.com"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); }}
-            className="bg-surface-raised border-border focus:border-amber"
-          />
-
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-text-secondary">Palavra-passe</label>
-              <Link to="/forgot-password" replace className="text-sm text-amber hover:underline">
-                Esqueceu-se?
-              </Link>
+          <form ref={formRef} onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
+            <div>
+              <label className="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Identificação Académica</label>
+              <input 
+                type="email" 
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onFocus={handleTypingFocus}
+                onBlur={handleInputBlur}
+                placeholder="nome@exemplo.com"
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                className="w-full p-4 bg-surface-raised border border-border rounded-xl text-base text-text-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all placeholder:text-text-muted"
+              />
             </div>
-            <Input
-              type="password"
-              required
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); }}
-              className="bg-surface-raised border-border focus:border-amber"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            isLoading={isLoading}
-            className="w-full bg-amber text-black hover:bg-amber-hover transition-colors"
-          >
-            Entrar
-          </Button>
-        </form>
-
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border"></div>
+            
+            <div>
+              <label className="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Chave de Acesso</label>
+              <input 
+                type="password" 
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={handleTypingFocus}
+                onBlur={handleInputBlur}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                className="w-full p-4 bg-surface-raised border border-border rounded-xl text-base text-text-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all placeholder:text-text-muted"
+              />
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-surface px-2 text-text-muted">ou</span>
-            </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={() => { authApi.loginWithGoogle(); }}
-            className="mt-6 flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-surface-raised p-3 font-medium text-text-primary transition-colors hover:bg-surface-raised"
-          >
-            Continuar com Google
-          </button>
+            <button 
+              type="submit"
+              disabled={isLoading}
+              className="w-full p-4 bg-text-primary text-background font-black uppercase tracking-widest rounded-xl hover:bg-accent hover:text-white transition-colors duration-300 transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'A Processar...' : 'Aceder Plataforma'}
+            </button>
+
+            <div className="mt-8">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="bg-background px-4 text-text-muted font-mono tracking-widest text-xs uppercase">ou</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => { authApi.loginWithGoogle(); }}
+                className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface-raised p-4 font-bold text-text-primary transition-colors hover:bg-border active:scale-[0.98]"
+              >
+                Continuar com Google
+              </button>
+            </div>
+          </form>
+
+          <footer className="mt-12 pt-8 border-t border-border flex flex-col gap-4 sm:flex-row sm:justify-between text-sm text-text-muted font-medium">
+            <Link to="/forgot-password" replace className="hover:text-text-primary transition-colors">Esqueci-me da chave</Link>
+            <Link to="/criar-conta" replace className="hover:text-text-primary transition-colors">Criar conta académica</Link>
+          </footer>
         </div>
-
-        <p className="mt-8 text-center text-sm text-text-muted">
-          Não tem uma conta?{' '}
-          <Link to="/criar-conta" replace className="text-amber font-semibold hover:underline">
-            Registe-se
-          </Link>
-        </p>
       </div>
     </div>
   );

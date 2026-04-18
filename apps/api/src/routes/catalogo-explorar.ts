@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { AreaVocacionalSchema } from '@pdc/shared';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
-import type { ExplorarResultado } from '@pdc/shared';
+import type { ExplorarResultado, AreaVocacional } from '@pdc/shared';
 
 export const catalogoExplorarRoutes = new Hono();
 
@@ -40,7 +41,7 @@ interface StrapiGenericItem {
 const explorarQuery = z.object({
   q: z.string().min(1).max(200),
   tipo: z.enum(['curso', 'simulacao', 'experiencia', 'mentor', 'instituicao']).optional(),
-  area: z.string().optional(),
+  area: AreaVocacionalSchema.optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(12),
 });
@@ -105,7 +106,7 @@ catalogoExplorarRoutes.get('/', zValidator('query', explorarQuery), async (c) =>
         titulo: d[cfg.titleField] ?? '',
         descricao: d[cfg.descField],
         capaUrl: d[cfg.capaField],
-        area: d[cfg.areaField],
+        area: d[cfg.areaField] as AreaVocacional,
       }));
     } catch {
       return [];

@@ -9,13 +9,18 @@ import type { RegistoInstituicaoPayload } from '@pdc/shared';
 
 import { ArrowLeft } from 'lucide-react';
 
-const TIPOS = ['Universidade', 'Instituto', 'Escola Profissional', 'Centro de Formação', 'Outro'] as const;
+const TIPOS = [
+  { value: 'universidade', label: 'Universidade' },
+  { value: 'escola_tecnica', label: 'Escola Técnica' },
+  { value: 'centro_formacao', label: 'Centro de Formação' },
+  { value: 'outro', label: 'Outro' }
+] as const;
 const REGIOES = ['Luanda', 'Benguela', 'Huambo', 'Huíla', 'Cabinda', 'Lunda Norte', 'Lunda Sul', 'Malanje', 'Uíge'] as const;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 export function RegistoInstituicaoPage() {
   const [form, setForm] = useState({
-    nomeInstituicao: '', email: '', password: '', regiao: '', tipo: '',
+    nome: '', email: '', password: '', regiao: '', tipo: '' as any, nif: '',
   });
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docError, setDocError] = useState('');
@@ -48,7 +53,11 @@ export function RegistoInstituicaoPage() {
     e.preventDefault();
     setError('');
     // TODO: upload docFile to media endpoint and get URL
-    mutation.mutate(form);
+    mutation.mutate({
+      ...form,
+      nomeInstituicao: form.nome,
+      documentos: docFile ? [docFile.name] : [],
+    });
   }
 
   if (success) {
@@ -81,7 +90,8 @@ export function RegistoInstituicaoPage() {
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {error ? <div className="rounded-lg border border-error/20 bg-error/10 p-3 text-sm text-error">{error}</div> : null}
 
-          <Input label="Nome da instituição" required value={form.nomeInstituicao} onChange={(e) => { handleChange('nomeInstituicao', e.target.value); }} />
+          <Input label="Nome da instituição" required value={form.nome} onChange={(e) => { handleChange('nome', e.target.value); }} />
+          <Input label="NIF" required value={form.nif} onChange={(e) => { handleChange('nif', e.target.value); }} />
           <Input label="Email institucional" type="email" required value={form.email} onChange={(e) => { handleChange('email', e.target.value); }} />
           <Input label="Palavra-passe" type="password" required minLength={8} placeholder="Mínimo 8 caracteres" value={form.password} onChange={(e) => { handleChange('password', e.target.value); }} />
 
@@ -90,7 +100,7 @@ export function RegistoInstituicaoPage() {
             <select required value={form.tipo} onChange={(e) => { handleChange('tipo', e.target.value); }}
               className="flex h-10 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber">
               <option value="">Seleciona…</option>
-              {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
+              {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
 

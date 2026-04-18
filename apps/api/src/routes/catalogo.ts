@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { AreaVocacionalSchema } from '@pdc/shared';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { withPublicCache } from '../middleware/cache.js';
-import type { CursoPublico, SimulacaoPublica, ExperienciaPublica, CatalogoMeta } from '@pdc/shared';
+import type { CursoPublico, SimulacaoPublica, ExperienciaPublica, CatalogoMeta, AreaVocacional } from '@pdc/shared';
 import { catalogoExplorarRoutes } from './catalogo-explorar.js';
 import { mentoresRoutes, instituicoesRoutes, perfilPublicoRoutes } from './catalogo-pessoas.js';
 
@@ -57,20 +58,20 @@ function addPublished(p: Record<string, string>): void {
 function mapCurso(d: StrapiCurso): CursoPublico {
   return {
     id: sid(d.id), slug: d.slug, titulo: d.titulo, descricao: d.descricao,
-    capaUrl: d.capaUrl, area: d.area, nivel: d.nivel, idioma: d.idioma,
+    capaUrl: d.capaUrl, area: d.area as AreaVocacional, nivel: d.nivel, idioma: d.idioma,
     gratuito: d.gratuito, totalHoras: d.totalHoras ?? 0, autorNome: d.autorNome,
   };
 }
 function mapSim(d: StrapiSimulacao): SimulacaoPublica {
   return {
     id: sid(d.id), slug: d.slug, titulo: d.titulo, descricao: d.descricao,
-    capaUrl: d.capaUrl, area: d.area, tipo: d.tipo as 1 | 2 | 3, nivel: d.nivel,
+    capaUrl: d.capaUrl, area: d.area as AreaVocacional, tipo: d.tipo as 1 | 2 | 3, nivel: d.nivel,
   };
 }
 function mapExp(d: StrapiExperiencia): ExperienciaPublica {
   return {
     id: sid(d.id), slug: d.slug, titulo: d.titulo, descricao: d.descricao,
-    capaUrl: d.capaUrl, area: d.area, nivel: d.nivel,
+    capaUrl: d.capaUrl, area: d.area as AreaVocacional, nivel: d.nivel,
     instituicaoNome: d.instituicaoNome, dataInicio: d.dataInicio,
   };
 }
@@ -78,7 +79,7 @@ function mapExp(d: StrapiExperiencia): ExperienciaPublica {
 // ─── Cursos ───────────────────────────────────────────────────────────────────
 
 const cursoQ = pgQ.extend({
-  area: z.string().optional(), nivel: z.string().optional(),
+  area: AreaVocacionalSchema.optional(), nivel: z.string().optional(),
   idioma: z.string().optional(), gratuito: z.coerce.boolean().optional(),
 });
 
@@ -108,7 +109,7 @@ catalogoRoutes.get('/cursos/:slug', async (c) => {
 
 const simQ = pgQ.extend({
   sort: z.string().optional(),
-  area: z.string().optional(), tipo: z.coerce.number().int().min(1).max(3).optional(),
+  area: AreaVocacionalSchema.optional(), tipo: z.coerce.number().int().min(1).max(3).optional(),
   nivel: z.string().optional(),
 });
 
@@ -136,7 +137,7 @@ catalogoRoutes.get('/simulacoes/:slug', async (c) => {
 
 // ─── Experiências ─────────────────────────────────────────────────────────────
 
-const expQ = pgQ.extend({ area: z.string().optional(), nivel: z.string().optional() });
+const expQ = pgQ.extend({ area: AreaVocacionalSchema.optional(), nivel: z.string().optional() });
 
 catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
   const q = c.req.valid('query');

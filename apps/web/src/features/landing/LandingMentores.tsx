@@ -20,7 +20,7 @@ export function LandingMentores() {
   });
 
   // Se erro ou vazio, não renderiza seção (Regra zero mocks)
-  if (isError || !mentores?.data?.length) return null;
+  if (isError || !mentores?.data.length) return null;
 
   return (
     <section className="bg-surface-alt px-4 py-24 sm:px-6">

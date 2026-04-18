@@ -58,14 +58,14 @@ export function FeedCard({ item }: { item: FeedItem }) {
       <div className="flex items-center gap-4 mb-4 text-xs text-text-secondary">
         <div className="flex items-center gap-1.5">
           <Star className="w-3.5 h-3.5 text-amber fill-amber" />
-          <span className="font-medium text-text-primary">{item.stats.ratingMedia.toFixed(1)}</span>
-          <span>({String(item.stats.ratingTotal)})</span>
+          <span className="font-medium text-text-primary">{(item.stats?.ratingMedia ?? 0).toFixed(1)}</span>
+          <span>({String(item.stats?.ratingTotal ?? 0)})</span>
         </div>
         <div className="flex items-center gap-1.5">
           <ThumbsUp className="w-3.5 h-3.5" />
-          <span>{String(item.stats.likes)}</span>
+          <span>{String(item.stats?.likes ?? 0)}</span>
         </div>
-        {item.stats.completionRate != null && (
+        {item.stats?.completionRate != null && (
           <span>{String(Math.round(item.stats.completionRate * 100))}% completo</span>
         )}
         {item.autorNome && (
@@ -81,7 +81,7 @@ export function FeedCard({ item }: { item: FeedItem }) {
           <LikeButton
             targetType={item.tipo as InteractionTargetType}
             targetId={item.id}
-            initialCount={item.stats.likes}
+            initialCount={item.stats?.likes ?? 0}
           />
           <BookmarkButton
             targetType={item.tipo as InteractionTargetType}

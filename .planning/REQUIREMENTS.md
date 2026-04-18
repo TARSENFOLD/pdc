@@ -10,142 +10,68 @@
 
 ## Fase 0 — Fundação
 
-**Objetivo:** Repositório limpo, tooling configurado, CI/CD básico, ambiente de desenvolvimento funcional no Fedora 43.
+**Objetivo:** Repositório limpo, tooling configurado, CI/CD básico, ambiente de desenvolvimento funcional.
 
-| ID | Requisito | Prioridade | Estado | Critério de Verificação |
+| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
 | --- | --- | --- | --- | --- |
-| REQ-0-001 | Criar repositório `pdc-v2` com estrutura de monorepo npm workspaces | 🔴 | `[x]` | `npm install` na raiz instala dependências de todos os workspaces |
-| REQ-0-002 | Workspace `apps/web` com Vite + React 18 + TypeScript estrito | 🔴 | `[x]` | `npm run build` em `apps/web` sem erros ou warnings |
-| REQ-0-003 | Workspace `apps/api` com Hono + Node.js 24 + TypeScript estrito | 🔴 | `[x]` | `npm run build` em `apps/api` sem erros ou warnings |
-| REQ-0-004 | Strapi v5 instalado e funcional | 🔴 | `[~]` | `infra/strapi/package.json` v5.0 ✅; Config de prod ❌ |
-| REQ-0-005 | ESLint + Prettier configurados em todos os workspaces | 🟠 | `[x]` | `npm run lint` na raiz passa sem erros |
-| REQ-0-006 | Husky pre-commit: lint + type-check antes de cada commit | 🟠 | `[x]` | Commit com erro de lint é bloqueado automaticamente |
-| REQ-0-007 | GitHub Actions: pipeline CI com build + lint em cada PR | 🟠 | `[x]` | PR com erro de build falha o CI |
-| REQ-0-008 | Docker Compose para dev local (Strapi + PostgreSQL + Redis) | 🟠 | `[x]` | `docker compose up -d` inicia todos os serviços |
-| REQ-0-009 | Pasta `.planning/` com PROJECT.md, REQUIREMENTS.md, STATE.md | 🟡 | `[x]` | Ficheiros existem e são válidos |
-| REQ-0-010 | `.nvmrc` com Node.js 24 LTS | 🟡 | `[x]` | `nvm use` selecciona Node 24 automaticamente |
-| REQ-0-011 | Volumes Docker com flag `:Z` para compatibilidade SELinux (Fedora) | 🟡 | `[x]` | Containers iniciam sem erros de permissão no Fedora 43 |
+| REQ-0-001 | Estrutura de monorepo npm workspaces | 🔴 | `[x]` | `npm install` instala tudo |
+| REQ-0-002 | Workspace `apps/web` React 18 | 🔴 | `[x]` | Build limpo |
+| REQ-0-003 | Workspace `apps/api` Hono | 🔴 | `[x]` | Build limpo |
+| REQ-0-004 | Workspace `infra/strapi` Strapi v5 | 🔴 | `[~]` | Saneamento de tipos em progresso |
+| REQ-0-005 | ESLint + Prettier global | 🟠 | `[x]` | Lint passa na raiz |
+| REQ-0-006 | Husky pre-commit | 🟠 | `[x]` | Hook reactivado (W0-T9) |
+| REQ-0-007 | GitHub Actions CI | 🟠 | `[x]` | Build + Lint + A11y (warning) |
+| REQ-0-008 | Docker Compose (PG + Redis) | 🟠 | `[x]` | Infra sobe localmente |
+| REQ-0-012 | Dockerfile BFF multi-stage | 🔴 | `[x]` | Container funcional |
 
-## Fase 1 — Autenticação Segura
+## Fase 1 — Autenticação Segura e Edge
 
-**Objetivo:** Auth robusto com JWT httpOnly, 2FA, Google OAuth. Zero sessionStorage.
+**Objetivo:** Auth robusto com JWT httpOnly, 2FA e pipeline de Telemetria Edge.
 
-| ID | Requisito | Prioridade | Estado | Critério de Verificação |
+| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
 | --- | --- | --- | --- | --- |
-| REQ-1-001 | Endpoint `POST /auth/register` com validação Zod e bcrypt | 🔴 | `[x]` | Registo cria perfil no Strapi; password nunca retornada |
-| REQ-1-002 | Endpoint `POST /auth/login` com JWT em httpOnly cookie | 🔴 | `[x]` | Cookie `access_token` definido com `httpOnly`, `secure`, `sameSite=strict` |
-| REQ-1-003 | Access token com expiração de 15 minutos | 🔴 | `[x]` | Token expirado retorna 401; refresh token renova automaticamente |
-| REQ-1-004 | Refresh token com expiração de 7 dias e rotação | 🔴 | `[x]` | Cada uso do refresh token gera novo par de tokens |
-| REQ-1-005 | Endpoint `POST /auth/logout` revoga refresh token | 🔴 | `[x]` | Após logout, refresh token não funciona |
-| REQ-1-006 | RBAC no servidor — 6 roles verificados em cada rota protegida | 🔴 | `[x]` | Rota de admin retorna 403 para role `aluno` |
-| REQ-1-007 | Rate limiting via Upstash Redis em `/auth/*` (5 req/min por IP) | 🔴 | `[x]` | 6ª tentativa de login retorna 429 |
-| REQ-1-008 | Login social Google OAuth 2.0 | 🟠 | `[x]` | `apps/api/src/routes/auth.ts` (Passport ✅) |
-| REQ-1-009 | MFA/2FA via código 6 dígitos (Email/SMS) | 🟠 | `[x]` | `apps/api/src/routes/auth.ts` (BFF ✅) |
-| REQ-1-010 | OTP por SMS (Twilio) como alternativa ao email | 🟡 | `[-]` | Descartado para MVP; mantida apenas estrutura no BFF |
-| REQ-1-011 | Frontend: AuthContext sem sessionStorage — estado derivado do cookie | 🔴 | `[x]` | Refresh da página mantém sessão; DevTools não mostra token |
-| REQ-1-012 | Endpoint `GET /auth/me` retorna perfil do utilizador autenticado | 🔴 | `[x]` | Retorna perfil completo; 401 sem cookie válido |
-| REQ-1-013 | Mass assignment protection — apenas campos permitidos aceites | 🔴 | `[x]` | Campo `role` no body de registo é ignorado |
+| REQ-1-001 | Endpoint `POST /auth/register` | 🔴 | `[~]` | Refactor para Role SSOT pendente |
+| REQ-1-002 | JWT em httpOnly cookie | 🔴 | `[ ]` | Implementação parcial; rotação em falta |
+| REQ-1-007 | Rate limiting via Upstash | 🔴 | `[x]` | Middleware integrado |
+| REQ-1-010 | OTP por SMS (Twilio) | 🟡 | `[ ]` | Serviço mockado; integração real pendente |
+| REQ-1-011 | Telemetria Edge (ADR-005) | 🔴 | `[ ]` | Worker rascunho. Falta JWS verify, TelemetryToken, e BFF consumer |
 
 ## Fase 2 — Design System e Frontend Base
 
-**Objetivo:** Componentes unificados, premium, sem duplicação. React Query como único estado servidor.
-
-| ID | Requisito | Prioridade | Estado | Critério de Verificação |
+| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
 | --- | --- | --- | --- | --- |
-| REQ-2-001 | TailwindCSS v4 com tokens de design (cores, tipografia, espaçamento) | 🔴 | `[x]` | Tokens definidos em CSS; sem valores hardcoded |
-| REQ-2-002 | Componentes base: Button, Input, Card, Modal, Badge, Avatar, Spinner, Toast, Tabs, Table, Pagination | 🔴 | `[x]` | Cada componente tem variantes documentadas; sem duplicados |
-| REQ-2-003 | Radix UI como base de componentes acessíveis (headless) | 🟠 | `[x]` | Componentes passam em testes de acessibilidade básicos (labels, foco) |
-| REQ-2-004 | Motion v11+ para animações suaves (entrada, saída, hover, scroll) | 🟠 | `[x]` | Animações respeitam `prefers-reduced-motion` |
-| REQ-2-005 | React Query v5 como único estado servidor — sem Redux, sem SWR | 🔴 | `[x]` | Nenhum import de `redux`, `react-redux`, `swr` no projecto |
-| REQ-2-006 | Layout por role com sidebar adaptativa (6 roles diferentes) | 🔴 | `[x]` | Cada role vê apenas os itens de menu que lhe pertencem |
-| REQ-2-007 | Landing page com copy forte, espaços em branco, animações suaves | 🔴 | `[x]` | Lighthouse Performance ≥ 90 em mobile |
-| REQ-2-008 | Páginas de auth: login, registo, recuperação de password | 🔴 | `[x]` | Fluxo completo funcional com dados reais |
-| REQ-2-009 | Dashboards por role (Estudante, Mentor, Instituição, Moderador, Admin) | 🟠 | `[x]` | Cada dashboard mostra dados reais do utilizador autenticado |
-| REQ-2-010 | Design responsivo — mobile-first, funcional em ecrãs de 320px+ | 🟠 | `[x]` | Sem overflow horizontal em mobile; touch targets ≥ 44px |
-
-## Fase 3 — API Layer Modular
-
-**Objetivo:** Substituir o monolito `strapiApi.js` por módulos de API organizados por domínio.
-
-| ID | Requisito | Prioridade | Estado | Critério de Verificação |
-| --- | --- | --- | --- | --- |
-| REQ-3-001 | Módulo `lib/api/perfis.ts` — CRUD de perfis (max 200 linhas) | 🔴 | `[x]` | Ficheiro tem menos de 200 linhas; tipagem completa |
-| REQ-3-002 | Módulo `lib/api/cursos.ts` — catálogo, detalhe, inscrições | 🔴 | `[x]` | Idem |
-| REQ-3-003 | Módulo `lib/api/simulacoes.ts` — catálogo, tentativas, scores | 🔴 | `[x]` | Idem |
-| REQ-3-004 | Módulo `lib/api/experiencias.ts` — catálogo, detalhe | 🔴 | `[x]` | Idem |
-| REQ-3-005 | Módulo `lib/api/notificacoes.ts` — CRUD + realtime | 🟠 | `[x]` | Idem |
-| REQ-3-006 | Módulo `lib/api/mensagens.ts` — CRUD + realtime | 🟠 | `[x]` | Idem |
-| REQ-3-007 | Módulo `lib/api/media.ts` — upload para Cloudflare R2 | 🔴 | `[x]` | Upload de ficheiro até 50MB retorna URL pública |
-| REQ-3-008 | Zero mocks de dados (erro explícito) | 🔴 | `[~]` | BFF real ✅; UI esconde secções em erro em vez de avisar ❌ |
-| REQ-3-009 | Cliente Strapi v5 tipado com tipos gerados dos schemas | 🟠 | `[x]` | Tipos TypeScript correspondem aos schemas Strapi |
-| REQ-3-010 | Limites de input em todas as rotas BFF (Zod) | 🔴 | `[x]` | Input com campo extra é rejeitado com 400 |
+| REQ-2-001 | TailwindCSS v4 soberano | 🔴 | `[~]` | Purga de cores hardcoded em progresso |
+| REQ-2-002 | Component Registry | 🔴 | `[ ]` | Registry ausente/desalinhado do approach |
+| REQ-2-005 | React Query v5 SSOT | 🔴 | `[x]` | Único estado servidor |
+| REQ-2-010 | Design responsivo | 🟠 | `[~]` | Touch targets em auditoria (W0-T9) |
+| REQ-2-011 | SSOT/Shared Types | 🔴 | `[ ]` | Faltam `bootstrap.ts`, `heuristics.ts`, `registry/features.ts` |
 
 ## Fase 4 — Core do Produto
 
-**Objetivo:** Fluxos principais funcionais com dados 100% reais.
-
-| ID | Requisito | Prioridade | Estado | Critério de Verificação |
+| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
 | --- | --- | --- | --- | --- |
-| REQ-4-001 | Simulação Tipo 1: vídeo guiado + checklist + avaliação por critérios | 🔴 | `[x]` | Estudante completa simulação; score guardado no Strapi |
-| REQ-4-002 | Simulação Tipo 2: iframe de laboratório externo + tracking de tentativas | 🔴 | `[x]` | Tentativa registada com `eventId` UUID único |
-| REQ-4-003 | Simulação Tipo 3: ambiente interativo com feedback em tempo real | 🟠 | `[ ]` | Feedback gerado e guardado após conclusão |
-| REQ-4-004 | Telemetria: todos os eventos com `eventId` UUID (idempotência) | 🔴 | `[x]` | Evento duplicado com mesmo `eventId` é ignorado |
-| REQ-4-005 | Perfil Vocacional calculado automaticamente a partir de telemetria | 🔴 | `[x]` | Score actualizado após cada simulação concluída |
-| REQ-4-006 | Relatório vocacional do estudante com recomendações | 🔴 | `[x]` | Relatório gerado com dados reais; sem texto genérico |
-| REQ-4-007 | Cursos: módulos, itens (vídeo/pdf/texto/quiz/tarefa/iframe), submissões | 🔴 | `[x]` | Estudante completa módulo; progresso actualizado |
-| REQ-4-008 | Experiências institucionais: sempre gratuitas, fluxo editorial completo | 🔴 | `[x]` | Experiência publicada visível sem login |
-| REQ-4-009 | Programas: criação, inscrição, gestão de participantes | 🟠 | `[x]` | Estudante inscreve-se; instituição vê lista de inscritos |
-| REQ-4-010 | Projetos: abstract público + core privado com ACL por grant | 🔴 | `[x]` | Utilizador sem grant não acede ao core; owner sempre acede |
-| REQ-4-011 | Projetos: 4 modos (portfolio, collaboration, mentorship, sponsorship) | 🟠 | `[x]` | Modo definido na criação; visível na listagem |
-| REQ-4-012 | Vínculos: pedido, aprovação, rejeição, cancelamento | 🔴 | `[x]` | Vínculo duplicado é rejeitado (índice único) |
-| REQ-4-013 | Conquistas: automáticas (trigger por evento) + manuais + institucionais | 🟠 | `[x]` | Conquista automática criada após primeira simulação concluída |
-| REQ-4-014 | Feed: algoritmo de ranking com sinais de telemetria | 🟠 | `[x]` | Feed ordenado por score de relevância, não apenas por data |
-
-## Fase 5 — LTI 1.3 Provider
-
-**Objetivo:** PDC como ferramenta LTI integrável em qualquer LMS universitário.
-
-| ID | Requisito | Prioridade | Estado | Critério de Verificação |
-| --- | --- | --- | --- | --- |
-| REQ-5-001 | OIDC login flow completo (initiation → callback → session) | 🔴 | `[x]` | Launch LTI de Canvas cria sessão PDC válida |
-| REQ-5-002 | JWKS endpoint público (`/.well-known/jwks.json`) | 🔴 | `[x]` | Canvas consegue verificar assinatura do PDC |
-| REQ-5-003 | AGS: grade passback para LMS externo | 🟠 | `[x]` | Score de simulação enviado para gradebook do Canvas |
-| REQ-5-004 | NRPS: roster sync (lista de alunos do LMS) | 🟡 | `[x]` | Lista de alunos importada do Canvas |
-| REQ-5-005 | Configuração de plataformas LTI via painel admin | 🟠 | `[x]` | Admin adiciona nova plataforma sem deploy |
-
-## Fase 6 — Moderação, Admin e Segurança
-
-| ID | Requisito | Prioridade | Estado | Critério de Verificação |
-| --- | --- | --- | --- | --- |
-| REQ-6-001 | Denúncias persistidas no Strapi (não localStorage) | 🔴 | `[x]` | Moderador vê denúncias reais no painel |
-| REQ-6-002 | Fila de moderação com estados: pendente → em_análise → resolvida/rejeitada | 🔴 | `[x]` | Transição de estado registada no audit trail |
-| REQ-6-003 | Painel admin: utilizadores, permissões, estatísticas, telemetria | 🟠 | `[x]` | Admin vê métricas reais da plataforma |
-| REQ-6-004 | Audit trail completo com `ipHash`, `actorRole`, `serverTimestamp` | 🔴 | `[x]` | Cada acção sensível tem registo auditável |
-| REQ-6-005 | CSP headers configurados no BFF | 🔴 | `[x]` | `Content-Security-Policy` presente em todas as respostas |
-| REQ-6-006 | Sentry integrado em `apps/web` e `apps/api` | 🟠 | `[x]` | Erro não tratado aparece no Sentry |
+| REQ-4-002 | Simulação Tipo 2 | 🔴 | `[ ]` | Score hardcoded = 8.5; tracking real pendente |
+| REQ-4-003 | Simulação Tipo 3 | 🔴 | `[ ]` | Ausente (`Tipo3Player.tsx` não existe) |
+| REQ-4-004 | Telemetria Idempotente | 🔴 | `[ ]` | Precision timestamps não normalizados |
+| REQ-4-005 | Perfil Vocacional Auto | 🔴 | `[ ]` | Fórmulas determinísticas em falta no BFF |
+| REQ-4-009 | Programas: gestão | 🟠 | `[~]` | UI de gestão pendente |
+| REQ-4-013 | Conquistas automáticas | 🟠 | `[ ]` | Motor existe mas sem triggers de eventos/event-bus ausente |
+| REQ-4-014 | Feed: ranking soberano | 🟠 | `[~]` | Algoritmo funcional; cache Redis pendente |
+| REQ-4-015 | Reputação Contract | 🔴 | `[ ]` | Frontend e Backend dessincronizados (`/reputacao` vs `/reputation`) |
 
 ## Fase 7 — IA e Realtime
 
-| ID | Requisito | Prioridade | Estado | Critério de Verificação |
+| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
 | --- | --- | --- | --- | --- |
-| REQ-7-001 | AI tutor com DeepSeek em modo streaming | 🔴 | `[x]` | Resposta aparece progressivamente no chat |
-| REQ-7-002 | RAG com LangChain.js — contexto da plataforma e do estudante | 🟠 | `[x]` | Tutor responde com base no conteúdo real do PDC |
-| REQ-7-003 | Geração automática de quizzes a partir de conteúdo de cursos | 🟠 | `[x]` | Quiz gerado tem perguntas relevantes ao conteúdo |
-| REQ-7-004 | WebSocket para notificações em tempo real | 🔴 | `[x]` | Notificação aparece sem refresh da página |
-| REQ-7-005 | Mensagens em tempo real entre utilizadores | 🟠 | `[x]` | Mensagem enviada aparece instantaneamente no destinatário |
-| REQ-7-006 | Fallback Ollama quando DeepSeek indisponível | 🟡 | `[x]` | Tutor continua a funcionar com Ollama local |
+| REQ-7-001 | AI tutor streaming | 🔴 | `[~]` | Modo streaming instável |
+| REQ-7-005 | Mensagens Realtime | 🟠 | `[ ]` | Rota inbox/lista comentada; UI ausente |
 
-## Requisitos Não Funcionais (Transversais)
+## Requisitos Não Funcionais
 
-| ID | Requisito | Prioridade | Estado | Critério de Verificação |
+| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
 | --- | --- | --- | --- | --- |
-| REQ-NF-001 | Lighthouse Performance ≥ 90 em mobile na landing page | 🔴 | `[ ]` | Medido com Lighthouse CI |
-| REQ-NF-002 | Tempo de resposta do BFF ≤ 200ms para endpoints de leitura | 🟠 | `[ ]` | Medido com k6 ou Artillery |
-| REQ-NF-003 | Zero erros de lint/TypeScript (sem `any`) | 🔴 | `[~]` | `z.any()` resolvido ✅; `tsc --noEmit` pendente de verificação |
-| REQ-NF-004 | Zero `console.log` (usar `pino` logger) | 🟠 | `[x]` | `apps/api/src/index.ts` e `auth.ts` (pino) |
-| REQ-NF-005 | Acessibilidade básica — labels, alt text, foco de teclado | 🟠 | `[ ]` | axe-core sem erros críticos |
-| REQ-NF-006 | Funcional em conectividade lenta (2G/3G) — assets optimizados | 🟠 | `[ ]` | Lighthouse em modo "Slow 3G" |
-| REQ-NF-007 | Modularidade (ficheiros < 200 linhas) | 🟡 | `[~]` | `LandingPage.tsx` extraído para 9 componentes ✅; múltiplos route files ainda > 200L |
-| REQ-NF-008 | SEO: OG Head dinâmico em todas as páginas públicas | 🔴 | `[x]` | SEOHead implementado e verificado com metadados reais |
+| REQ-NF-003 | Zero `any` em TS | 🔴 | `[~]` | Lint reports indicam ~23 ocorrências residuais (honest pass) |
+| REQ-NF-005 | Acessibilidade Total | 🔴 | `[ ]` | Contraste e touch targets pendentes validação |
+| REQ-NF-007 | Rule of 300 (linhas) | 🟡 | `[~]` | Shared index ainda excede limite |
 
-*Last updated: Abril 2026 — Auditoria técnica concluída; estado real sincronizado.*
+*Last updated: Abril 2026 — Governance Reset (W0-T2)*

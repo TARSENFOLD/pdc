@@ -9,6 +9,8 @@ const VARIANT_MAP: Record<NotificacaoRealtime['tipo'], ToastVariant> = {
   sucesso: 'success',
   aviso: 'warning',
   erro: 'error',
+  vinculo_pedido: 'info',
+  vinculo_aprovado: 'success',
 };
 
 export function useNotificacoes() {

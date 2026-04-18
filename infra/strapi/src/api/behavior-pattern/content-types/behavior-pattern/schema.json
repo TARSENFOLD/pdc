@@ -1,0 +1,60 @@
+{
+  "kind": "collectionType",
+  "collectionName": "behavior_patterns",
+  "info": {
+    "singularName": "behavior-pattern",
+    "pluralName": "behavior-patterns",
+    "displayName": "Behavior Pattern",
+    "description": "Motor de heurísticas e padrões comportamentais por domínio técnico"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "perfil": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "inversedBy": "behavior_patterns"
+    },
+    "domainId": {
+      "type": "string",
+      "required": true
+    },
+    "successRate": {
+      "type": "decimal",
+      "min": 0,
+      "max": 1
+    },
+    "technicalScore": {
+      "type": "decimal",
+      "min": 0,
+      "max": 10
+    },
+    "cognitiveFluidity": {
+      "type": "decimal",
+      "min": 0,
+      "max": 10
+    },
+    "resilienceIndex": {
+      "type": "decimal",
+      "min": 0,
+      "max": 10
+    },
+    "focusStability": {
+      "type": "decimal",
+      "min": 0,
+      "max": 10
+    },
+    "decisionSpeedAvg": {
+      "type": "integer"
+    },
+    "tinaSummary": {
+      "type": "json"
+    },
+    "lastUpdatedAt": {
+      "type": "datetime"
+    }
+  }
+}

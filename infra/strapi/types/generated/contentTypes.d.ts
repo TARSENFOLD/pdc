@@ -504,6 +504,80 @@ export interface ApiAuditLogAuditLog extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiBehaviorPatternBehaviorPattern
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'behavior_patterns';
+  info: {
+    description: 'Motor de heur\u00EDsticas e padr\u00F5es comportamentais por dom\u00EDnio t\u00E9cnico';
+    displayName: 'Behavior Pattern';
+    pluralName: 'behavior-patterns';
+    singularName: 'behavior-pattern';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    cognitiveFluidity: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 10;
+          min: 0;
+        },
+        number
+      >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    decisionSpeedAvg: Schema.Attribute.Integer;
+    domainId: Schema.Attribute.String & Schema.Attribute.Required;
+    focusStability: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 10;
+          min: 0;
+        },
+        number
+      >;
+    lastUpdatedAt: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::behavior-pattern.behavior-pattern'
+    > &
+      Schema.Attribute.Private;
+    perfil: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
+    publishedAt: Schema.Attribute.DateTime;
+    resilienceIndex: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 10;
+          min: 0;
+        },
+        number
+      >;
+    successRate: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 1;
+          min: 0;
+        },
+        number
+      >;
+    technicalScore: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 10;
+          min: 0;
+        },
+        number
+      >;
+    tinaSummary: Schema.Attribute.JSON;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiBookmarkBookmark extends Struct.CollectionTypeSchema {
   collectionName: 'bookmarks';
   info: {
@@ -853,6 +927,7 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    curso: Schema.Attribute.Relation<'manyToOne', 'api::curso.curso'>;
     descricao: Schema.Attribute.Text;
     estado: Schema.Attribute.Enumeration<
       ['draft', 'review', 'approved', 'published', 'archived']
@@ -1362,6 +1437,10 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     areaFormacao: Schema.Attribute.String;
     areasInteresse: Schema.Attribute.JSON;
     ativo: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    behavior_patterns: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::behavior-pattern.behavior-pattern'
+    >;
     bio: Schema.Attribute.Text &
       Schema.Attribute.SetMinMaxLength<{
         maxLength: 1000;
@@ -2503,6 +2582,7 @@ declare module '@strapi/strapi' {
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
       'api::audit-log.audit-log': ApiAuditLogAuditLog;
+      'api::behavior-pattern.behavior-pattern': ApiBehaviorPatternBehaviorPattern;
       'api::bookmark.bookmark': ApiBookmarkBookmark;
       'api::certificado.certificado': ApiCertificadoCertificado;
       'api::comment.comment': ApiCommentComment;

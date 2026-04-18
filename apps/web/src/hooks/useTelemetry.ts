@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { TelemetriaTipo, TelemetriaEvento } from '@pdc/shared';
 import { telemetriaService } from '../lib/telemetria/telemetria.service.js';
+import { useBootstrap } from '../lib/bootstrap/BootstrapContext.js';
 
 const BUFFER_LIMIT = 10;
-const FLUSH_INTERVAL = 30000; // 30 seconds
+const FLUSH_INTERVAL = 30000;
+const EDGE_URL = (import.meta.env.VITE_EDGE_URL as string | undefined) ?? 'http://localhost:8787';
 
 export function useTelemetry() {
   const buffer = useRef<TelemetriaEvento[]>([]);
   const timer = useRef<NodeJS.Timeout | null>(null);
+  
+  // W1-T3/W1-T4: O Token é assinado e trazido de forma segura durante a carga da aplicação
+  const { data } = useBootstrap();
+  const token = data?.security?.telemetryToken;
 
   const flush = useCallback(async () => {
     if (buffer.current.length === 0) return;
@@ -16,13 +22,14 @@ export function useTelemetry() {
     buffer.current = [];
 
     try {
-      await telemetriaService.registarBatch(eventsToFlush);
+      // Passamos o token para utilizar o Edge de preferência, ou o Fallback do BFF
+      await telemetriaService.registarBatch(eventsToFlush, token);
     } catch (error) {
-      console.error('Falha ao enviar telemetria em batch:', error);
-      // Optional: Put back in buffer with retry limit
+      console.error('Falha ao enviar telemetria:', error);
+      // Fallback original: devolver ao buffer (limitado)
       buffer.current = [...eventsToFlush, ...buffer.current].slice(0, 50);
     }
-  }, []);
+  }, [token]);
 
   const track = useCallback((tipo: TelemetriaTipo, payload: Record<string, unknown> = {}) => {
     const event: TelemetriaEvento = {
@@ -35,21 +42,45 @@ export function useTelemetry() {
     buffer.current.push(event);
 
     if (buffer.current.length >= BUFFER_LIMIT) {
-      flush();
+      void flush();
     }
   }, [flush]);
 
   useEffect(() => {
-    timer.current = setInterval(flush, FLUSH_INTERVAL);
+    timer.current = setInterval(() => { void flush(); }, FLUSH_INTERVAL);
 
     const handleBeforeUnload = () => {
       if (buffer.current.length > 0) {
-        // use fetch with keepalive as a fallback for sendBeacon
-        const events = JSON.stringify({ events: buffer.current });
-        const url = `${import.meta.env.VITE_API_URL || '/api'}/telemetria/batch`;
+        const payload = JSON.stringify({ events: buffer.current });
         
-        // We can't use our standard http service here as it's async
-        navigator.sendBeacon(url, new Blob([events], { type: 'application/json' }));
+        if (token) {
+          // sendBeacon() não aceita custom headers. Usamos a fetch API com keepalive.
+          fetch(`${EDGE_URL}/telemetria/batch`, {
+            method: 'POST',
+            body: payload,
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Telemetry-Token': token 
+            },
+            keepalive: true,
+          }).catch(() => {
+            // Em caso de falha imediata, enviar para BFF
+            fetch(`${import.meta.env.VITE_API_URL || '/api'}/telemetria/batch`, {
+              method: 'POST',
+              body: payload,
+              headers: { 'Content-Type': 'application/json' },
+              keepalive: true,
+            }).catch(() => {});
+          });
+        } else {
+          // Visitantes Anónimos: Fallback apenas via BFF sem Token (a rota permite injecção relaxada)
+          fetch(`${import.meta.env.VITE_API_URL || '/api'}/telemetria/batch`, {
+            method: 'POST',
+            body: payload,
+            headers: { 'Content-Type': 'application/json' },
+            keepalive: true,
+          }).catch(() => {});
+        }
       }
     };
 
@@ -58,9 +89,9 @@ export function useTelemetry() {
     return () => {
       if (timer.current) clearInterval(timer.current);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      flush();
+      void flush();
     };
-  }, [flush]);
+  }, [flush, token]);
 
   return { track, flush };
 }

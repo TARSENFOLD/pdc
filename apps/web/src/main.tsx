@@ -6,14 +6,15 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './router';
 import { AuthProvider } from './lib/auth/AuthContext';
+import { BootstrapProvider } from './lib/bootstrap/BootstrapContext';
 import { ThemeProvider } from './lib/theme/ThemeContext';
 import './index.css';
 
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN,
+    dsn: import.meta.env.VITE_SENTRY_DSN as string,
     environment: import.meta.env.MODE,
-    release: import.meta.env.VITE_APP_VERSION ?? '0.0.0',
+    release: (import.meta.env.VITE_APP_VERSION as string | undefined) ?? '0.0.0',
     integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
     tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
     replaysSessionSampleRate: 0.1,
@@ -23,7 +24,7 @@ if (import.meta.env.VITE_SENTRY_DSN) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js');
+    void navigator.serviceWorker.register('/sw.js');
   });
 }
 
@@ -45,10 +46,12 @@ ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <RouterProvider router={router} />
-          <ReactQueryDevtools initialIsOpen={false} />
-        </AuthProvider>
+        <BootstrapProvider>
+          <AuthProvider>
+            <RouterProvider router={router} />
+            <ReactQueryDevtools initialIsOpen={false} />
+          </AuthProvider>
+        </BootstrapProvider>
       </QueryClientProvider>
     </ThemeProvider>
   </React.StrictMode>

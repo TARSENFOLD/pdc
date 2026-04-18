@@ -6,6 +6,7 @@ import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { redis } from '../lib/redis.js';
 import { calcRecencyScore, calcScore, type FeedFeatures } from '../modules/feed/feed.scoring.js';
 import type { FeedItem, FeedItemTipo } from '@pdc/shared';
+import { env } from '../lib/env.js';
 
 // ── Strapi interfaces ───────────────────────────────────────────────────────
 
@@ -37,9 +38,7 @@ export interface StrapiUserProfile {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env['JWT_SECRET'] ?? 'change-me-in-production-min-32-chars'
-);
+const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 
 export async function getOptionalUserId(c: Context): Promise<string | undefined> {
   try {
@@ -127,21 +126,28 @@ export async function mapConcurrent<T, R>(items: T[], fn: (item: T) => Promise<R
   return results;
 }
 
+/**
+ * toFeedItem (Sovereign Mapping)
+ * Converte entidades Strapi para o FeedItem do Shared.
+ */
 export function toFeedItem(c: StrapiEntity & { tipo: FeedItemTipo }, stats: ItemStats, score: number, recencyScore: number): FeedItem {
   return {
-    tipo: c.tipo,
     id: String(c.id),
-    slug: c.slug,
+    tipo: c.tipo,
+    userId: c.autorId ?? 'system',
+    timestamp: c.publishedAt ?? c.createdAt,
+    payload: {},
     titulo: c.titulo ?? '',
-    descricao: c.descricao ?? '',
+    corpo: c.descricao ?? '',
+    createdAt: c.publishedAt ?? c.createdAt,
+    // Metadados flexíveis via Record<string, any>
+    slug: c.slug,
     capaUrl: c.capaUrl,
-    area: c.area,
+    area: c.area || undefined,
     autorNome: c.autorNome ?? c.instituicaoNome ?? c.aluno?.nome,
-    autorId: c.autorId,
     score,
     recencyScore,
-    stats: { likes: stats.likes, ratingMedia: stats.ratingMedia, ratingTotal: stats.ratingTotal },
-    publicadoEm: c.publishedAt ?? c.createdAt,
+    stats: { likes: stats.likes, ratingMedia: stats.ratingMedia, ratingTotal: stats.ratingTotal }
   };
 }
 

@@ -16,7 +16,7 @@ export default function TwoFactorPage() {
   const location = useLocation();
   const state = location.state as { canal?: 'email' | 'sms'; from?: string } | null;
   const canal = state?.canal ?? 'email';
-  const from = state?.from ?? '/app/dashboard';
+  const from = state?.from ?? '/app';
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;

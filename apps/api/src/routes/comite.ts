@@ -63,7 +63,7 @@ comiteRoutes.get(
         }),
       ]);
 
-      const lista = (items.data ?? []).map((item) => ({
+      const lista = items.data.map((item) => ({
         id: item.id,
         titulo: item.titulo,
         autorNome: item.autor?.nome ?? item.autorId?.nome ?? 'Desconhecido',

@@ -1,23 +1,42 @@
 import { Hono } from 'hono';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import { checkRole } from '../modules/auth/rbac.middleware.js';
-import { recalcularGlobal, persistirReputacao } from '../modules/reputation/reputation.service.js';
+import * as reputationService from '../modules/reputation/reputation.service.js';
 
 type Vars = { Variables: AuthVariables };
+
 export const reputationRoutes = new Hono<Vars>();
 
-// All reputation admin routes require super_admin
-reputationRoutes.use('*', verifyJwt, checkRole(['super_admin']));
+reputationRoutes.use('*', verifyJwt);
 
-// POST /admin/reputation/recalcular — recálculo global
-reputationRoutes.post('/recalcular', async (c) => {
-  const result = await recalcularGlobal();
-  return c.json({ success: true, ...result });
+// GET /reputation/me — retorna score + breakdown do utilizador autenticado
+reputationRoutes.get('/me', async (c) => {
+  const user = c.get('user');
+  try {
+    const breakdown = await reputationService.getReputacaoBreakdown(user.id);
+    return c.json(breakdown);
+  } catch {
+    return c.json({ error: 'Erro ao obter reputação' }, 500);
+  }
 });
 
-// POST /admin/reputation/recalcular/:perfilId — recálculo individual
-reputationRoutes.post('/recalcular/:perfilId', async (c) => {
+// GET /reputation/:perfilId — retorna score de qualquer perfil
+reputationRoutes.get('/:perfilId', async (c) => {
   const perfilId = c.req.param('perfilId');
-  const score = await persistirReputacao(perfilId);
-  return c.json({ success: true, perfilId, score });
+  try {
+    const score = await reputationService.getReputacao(perfilId);
+    return c.json({ score });
+  } catch {
+    return c.json({ score: 0 });
+  }
+});
+
+// GET /reputation/:perfilId/breakdown — retorna as 6 dimensões individuais
+reputationRoutes.get('/:perfilId/breakdown', async (c) => {
+  const perfilId = c.req.param('perfilId');
+  try {
+    const breakdown = await reputationService.getReputacaoBreakdown(perfilId);
+    return c.json(breakdown);
+  } catch {
+    return c.json({ error: 'Erro ao obter breakdown' }, 500);
+  }
 });

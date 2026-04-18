@@ -218,7 +218,7 @@ async function unlock(userId: string, rule: ConquistaRule): Promise<void> {
         conquista: conquistaId,
         desbloqueadaEm: new Date().toISOString(),
       });
-    } catch (err) {
+    } catch (err: unknown) {
       log.warn({ err, userId, slug: rule.slug }, 'Falha ao criar conquista-utilizador (registo principal já criado)');
     }
   }
@@ -265,7 +265,7 @@ export async function verificarConquistas(
       });
 
       log.info({ userId, slug: rule.slug }, 'Conquista desbloqueada');
-    } catch (err) {
+    } catch (err: unknown) {
       log.error({ err, userId, slug: rule.slug }, 'Erro ao verificar/desbloquear conquista');
     }
   }

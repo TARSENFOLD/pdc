@@ -5,6 +5,8 @@ import { Spinner, Badge, Button, Card } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useToast } from '@/hooks/useToast';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Search } from 'lucide-react';
 
 export function ProgramaDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,7 +31,7 @@ export function ProgramaDetailPage() {
   });
 
   if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><Spinner size="lg" /></div>;
-  if (isError || !prog) return <div className="flex min-h-screen items-center justify-center bg-background"><p className="text-text-muted">Programa não encontrado.</p></div>;
+  if (isError || !prog) return <div className="flex min-h-screen items-center justify-center bg-background p-4"><EmptyState icon={Search} title="Programa não encontrado" description="Não foi possível carregar os dados deste programa." /></div>;
 
   const handleInscrever = () => {
     if (!user) {
@@ -44,7 +46,7 @@ export function ProgramaDetailPage() {
       <SEOHead 
         title={prog.titulo}
         description={prog.descricao}
-        url={`https://usepdc.com/programas/${id}`}
+        url={`https://usepdc.com/programas/${id ?? ''}`}
       />
       <div className="mx-auto max-w-3xl">
         <h1 className="text-3xl font-bold text-text-primary mb-4">{prog.titulo}</h1>

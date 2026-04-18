@@ -3,36 +3,38 @@ import { AreaVocacionalSchema } from './enums.js';
 
 export const ProjetoSchema = z.object({
   id: z.string(),
-  slug: z.string(),
   titulo: z.string(),
   descricao: z.string(),
-  area: AreaVocacionalSchema.optional(),
-  autorId: z.string(),
+  area: AreaVocacionalSchema,
   alunoId: z.string(),
-  cursoId: z.string().optional(),
-  tags: z.array(z.string()),
-  mediaUrls: z.array(z.string()).optional(),
-  imagemUrl: z.string().url().optional(),
+  capaUrl: z.string().url().optional(),
+  imagemUrl: z.string().url().optional(), // Alias para capaUrl usado em alguns componentes
   repoUrl: z.string().url().optional(),
   demoUrl: z.string().url().optional(),
-  repositorioUrl: z.string().url().optional(),
-  buscandoParceiros: z.boolean().optional(),
-  visibilidade: z.enum(['publico', 'privado']).optional(),
+  tags: z.array(z.string()).default([]),
+  links: z.array(z.string().url()).optional(),
+  estado: z.enum(['draft', 'aprovado', 'publicado']),
   createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime(),
 });
 
 export type Projeto = z.infer<typeof ProjetoSchema>;
 
-export const CriarProjetoPayloadSchema = z.object({
-  titulo: z.string().min(3).max(120),
-  descricao: z.string().min(10).max(2000),
-  cursoId: z.string().optional(),
-  tags: z.array(z.string()).max(10).optional(),
-  imagemUrl: z.string().url().optional(),
-  repoUrl: z.string().url().optional(),
-  demoUrl: z.string().url().optional(),
+export const CriarProjetoPayloadSchema = ProjetoSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  alunoId: true,
 });
 
 export type CriarProjetoPayload = z.infer<typeof CriarProjetoPayloadSchema>;
-export type CreateProjetoPayload = CriarProjetoPayload; // Alias for backward compatibility if needed
+
+export const ProjetoFiltersSchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(12),
+  alunoId: z.string().optional(),
+  cursoId: z.string().optional(),
+  tags: z.string().optional(),
+});
+
+export type ProjetoFilters = z.infer<typeof ProjetoFiltersSchema>;

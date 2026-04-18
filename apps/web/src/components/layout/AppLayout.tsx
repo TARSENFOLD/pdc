@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { SidebarContent } from './Sidebar';
+import { TopBar } from './TopBar';
+import { AppErrorBoundary } from '../ui/AppErrorBoundary';
 import { TinaChat } from '@/features/tina/TinaChat';
 import { useNotificacoes } from '@/lib/realtime/useNotificacoes';
 
-const SIDEBAR_WIDTH = 240;
+const SIDEBAR_WIDTH = 260;
 
 export function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -27,23 +29,25 @@ export function AppLayout() {
         style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
       >
         <div
-          className="fixed top-0 bottom-0 flex flex-col border-r border-border bg-surface-alt"
+          className="fixed top-0 bottom-0 flex flex-col border-r border-border bg-surface-alt shadow-2xl"
           style={{ width: SIDEBAR_WIDTH }}
         >
           <SidebarContent />
         </div>
       </aside>
 
-      {/* ── Mobile: hamburger button ── */}
-      <button
-        onClick={() => { setDrawerOpen(true); }}
-        className="fixed left-4 top-4 z-30 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-alt text-text-secondary transition-colors hover:text-text-primary lg:hidden"
-        aria-label="Abrir menu"
-      >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+      {/* ── Main content area ── */}
+      <div className="flex flex-1 flex-col min-w-0">
+        <TopBar onOpenMobileMenu={() => { setDrawerOpen(true); }} />
+
+        <main className="flex-1">
+          <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
+            <AppErrorBoundary>
+              <Outlet />
+            </AppErrorBoundary>
+          </div>
+        </main>
+      </div>
 
       {/* ── Mobile drawer ── */}
       <AnimatePresence>
@@ -70,30 +74,11 @@ export function AppLayout() {
               className="fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface-alt lg:hidden"
               style={{ width: SIDEBAR_WIDTH }}
             >
-              {/* Close button */}
-              <button
-                onClick={() => { setDrawerOpen(false); }}
-                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:text-text-primary"
-                aria-label="Fechar menu"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-
               <SidebarContent onNavigate={() => { setDrawerOpen(false); }} />
             </motion.div>
           </>
         )}
       </AnimatePresence>
-
-      {/* ── Main content ── */}
-      <main className="flex-1 overflow-y-auto">
-        {/* Mobile top padding for hamburger */}
-        <div className="px-4 pt-16 pb-8 sm:px-6 lg:px-8 lg:pt-8">
-          <Outlet />
-        </div>
-      </main>
 
       <TinaChat />
     </div>

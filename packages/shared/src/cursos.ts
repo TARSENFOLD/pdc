@@ -68,3 +68,40 @@ export const CursoMeuSchema = z.object({
 });
 
 export type CursoMeu = z.infer<typeof CursoMeuSchema>;
+
+export const InscricaoSchema = z.object({
+  id: z.string(),
+  cursoId: z.string(),
+  alunoId: z.string(),
+  dataInscricao: z.string().datetime(),
+  concluido: z.boolean(),
+  dataConclusao: z.string().datetime().optional(),
+  progressoPercentagem: z.number().min(0).max(100),
+});
+
+export type Inscricao = z.infer<typeof InscricaoSchema>;
+
+export const InscricaoComCursoSchema = InscricaoSchema.extend({
+  curso: CursoSchema.optional(),
+});
+
+export type InscricaoComCurso = z.infer<typeof InscricaoComCursoSchema>;
+
+export interface CursoFilters {
+  search?: string;
+  area?: string;
+  nivel?: string;
+  categoria?: string;
+  autorId?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export const ProgressoItemSchema = z.object({
+  itemId: z.string(),
+  concluido: z.boolean(),
+  dataConclusao: z.string().datetime().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export type ProgressoItem = z.infer<typeof ProgressoItemSchema>;
