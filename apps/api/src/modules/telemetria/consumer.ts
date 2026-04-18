@@ -3,6 +3,7 @@ import { redis } from '../../lib/redis.js';
 import { strapiPost } from '../strapi/strapi.client.js';
 import { telemetriaProcessor } from './telemetria.processor.js';
 import type { TelemetriaEvento } from '@pdc/shared';
+import { applySanityRules, BFF_SANITY_RULES } from '@pdc/shared';
 
 const log = pino({ name: 'telemetry-consumer' });
 
@@ -28,12 +29,25 @@ export async function processEvent(eventRaw: string) {
     }
     await redis.expire(idempKey, TTL_7_DAYS);
 
+    // 1.5 Sanity full audit pre-persist (BFF layer)
+    const sanity = applySanityRules(event, BFF_SANITY_RULES);
+    let invalidated = false;
+    if (!sanity.valid) {
+      log.warn({ eventId: event.eventId, reason: sanity.reason, rule: sanity.ruleName }, 'Evento invalidado pelo Sanity BFF (Anti-cheat)');
+      invalidated = true;
+    }
+
+    const securePayload = { 
+      ...(event.payload || {}), 
+      ...(invalidated ? { invalidated: true, sanityReason: sanity.reason } : {}) 
+    };
+
     // 2. Persistência no Strapi
     await strapiPost('/telemetrias', {
       data: {
         eventId: event.eventId,
         tipo: event.tipo,
-        payload: event.payload,
+        payload: securePayload,
         clientTimestamp: event.timestamp,
         sessionId: (event as any).sessionId,
         url: (event as any).url,
@@ -43,7 +57,8 @@ export async function processEvent(eventRaw: string) {
     });
 
     // 3. Heurísticas Eventuais
-    if (event.perfilId && event.tipo.startsWith('simulacao.')) {
+    // Ignorar eventos inválidos para o cálculo das heurísticas (anti-cheat blindado)
+    if (!invalidated && event.perfilId && event.tipo.startsWith('simulacao.')) {
       // Background worker não bloqueia a ingestão do próximo
       telemetriaProcessor.processUserDomain(event.perfilId, 'simulacao').catch(err => {
         log.error({ err, perfilId: event.perfilId }, 'Falha na avaliação de Heurísticas Eventuais');

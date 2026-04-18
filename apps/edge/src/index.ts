@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { jwsVerifyMiddleware } from './middleware/jws-verify';
+import { applySanityRules, EDGE_SANITY_RULES } from '@pdc/shared';
 
 type Bindings = {
   UPSTASH_REDIS_REST_URL: string;
@@ -38,17 +39,31 @@ app.post('/telemetria/batch', async (c) => {
 
   if (events.length === 0) return c.json({ success: true });
 
+  const validEvents: unknown[] = [];
+  for (const rawEvent of events) {
+    if (typeof rawEvent === 'object' && rawEvent !== null && 'eventId' in rawEvent && 'timestamp' in rawEvent) {
+      const sanity = applySanityRules(rawEvent as any, EDGE_SANITY_RULES);
+      if (sanity.valid) {
+        validEvents.push(rawEvent);
+      } else {
+        console.warn(`Evento rejeitado no Edge (Sanity ${sanity.ruleName}):`, sanity.reason);
+      }
+    }
+  }
+
+  if (validEvents.length === 0) return c.json({ success: true, count: 0 }, 202);
+
   // Push para Upstash Redis (Queue)
   try {
     const response = await fetch(`${c.env.UPSTASH_REDIS_REST_URL}/lpush/telemetry_queue`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${c.env.UPSTASH_REDIS_REST_TOKEN}` },
-      body: JSON.stringify(events.map((e: unknown) => JSON.stringify(e))),
+      body: JSON.stringify(validEvents.map((e: unknown) => JSON.stringify(e))),
     });
 
     if (!response.ok) throw new Error('Falha no buffer Redis');
 
-    return c.json({ success: true, count: events.length }, 202);
+    return c.json({ success: true, count: validEvents.length }, 202);
   } catch {
     return c.json({ error: 'Buffer Indisponível' }, 503);
   }

@@ -35,6 +35,7 @@ A auditoria real revelou que a base de código NÃO corresponde à documentaçã
 
 ## O que foi feito recentemente (Wave 0 — Fundação Soberana)
 
+- [x] **Design PWA "Herança Invisível":** Landing v2 (World-class + DNA Africano), Apple PWA Safári compliance e CSS Tema Claro perfeito.
 - [x] **Characterization Tests:** useTelemetry, heuristics.engine, vocacional.service e lti.ags blindados.
 - [x] **Zero Type Errors:** Typecheck 100% verde em todo o monorepo.
 - [x] **Tooling:** Axe-core integrado, Husky pre-commit com testes otimizados (--changed).
@@ -42,9 +43,9 @@ A auditoria real revelou que a base de código NÃO corresponde à documentaçã
 
 ## Próximos passos imediatos
 
-1. **Seed Monumental (W1-T5):** Injeção das 100 personas e 9k eventos para povoar o Oráculo.
-2. **Auth v2 Reset (W1-T2):** Implementação de JWT httpOnly e Role SSOT.
-3. **Refactor Design System (W3-T2):** Iniciar Component Registry com Glassmorphism.
+1. **Suite E2E Playwright (T11):** Montar a infraestrutura de testes para validar a Landing e Auth agora cravadas.
+2. **Seed Monumental (W1-T5):** Injeção das 100 personas e 9k eventos para povoar o Oráculo.
+3. **Auth v2 Reset (W1-T2):** Implementação de JWT httpOnly e Role SSOT.
 
 ## Decisions Log (Consolidado)
 

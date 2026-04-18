@@ -43,7 +43,7 @@
 | REQ-2-001 | TailwindCSS v4 soberano | 🔴 | `[~]` | Purga de cores hardcoded em progresso |
 | REQ-2-002 | Component Registry | 🔴 | `[ ]` | Registry ausente/desalinhado do approach |
 | REQ-2-005 | React Query v5 SSOT | 🔴 | `[x]` | Único estado servidor |
-| REQ-2-010 | Design responsivo | 🟠 | `[~]` | Touch targets em auditoria (W0-T9) |
+| REQ-2-010 | Design responsivo | 🟠 | `[x]` | Refatoração PWA / "Herança Invisível" concluída |
 | REQ-2-011 | SSOT/Shared Types | 🔴 | `[ ]` | Faltam `bootstrap.ts`, `heuristics.ts`, `registry/features.ts` |
 
 ## Fase 4 — Core do Produto
@@ -71,7 +71,7 @@
 | ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
 | --- | --- | --- | --- | --- |
 | REQ-NF-003 | Zero `any` em TS | 🔴 | `[~]` | Lint reports indicam ~23 ocorrências residuais (honest pass) |
-| REQ-NF-005 | Acessibilidade Total | 🔴 | `[ ]` | Contraste e touch targets pendentes validação |
+| REQ-NF-005 | Acessibilidade Total | 🔴 | `[x]` | PWA + Contraste Tema Claro resolvidos, botões > 44px e iOS autocomplete fix. |
 | REQ-NF-007 | Rule of 300 (linhas) | 🟡 | `[~]` | Shared index ainda excede limite |
 
 *Last updated: Abril 2026 — Governance Reset (W0-T2)*

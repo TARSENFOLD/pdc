@@ -8,6 +8,8 @@ export * from './experiencias.js';
 export * from './telemetry.js';
 export * from './behavior-patterns.js';
 export * from './core.js';
+export * from './heuristics.js';
+export * from './sanity/index.js';
 
 // Schemas Modulares
 export * from './schemas/enums.js';
