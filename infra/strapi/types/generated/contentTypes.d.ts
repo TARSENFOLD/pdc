@@ -898,6 +898,41 @@ export interface ApiDenunciaDenuncia extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiDomainEventDomainEvent extends Struct.CollectionTypeSchema {
+  collectionName: 'domain_events';
+  info: {
+    description: 'Registro do Outbox Pattern para garantia de eventos';
+    displayName: 'Domain Event';
+    pluralName: 'domain-events';
+    singularName: 'domain-event';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    correlationId: Schema.Attribute.UID & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::domain-event.domain-event'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    payload: Schema.Attribute.JSON & Schema.Attribute.Required;
+    processed: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    processedAt: Schema.Attribute.DateTime;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
   collectionName: 'experiencias';
   info: {
@@ -928,29 +963,38 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     curso: Schema.Attribute.Relation<'manyToOne', 'api::curso.curso'>;
+    dataFim: Schema.Attribute.DateTime;
+    dataInicio: Schema.Attribute.DateTime;
     descricao: Schema.Attribute.Text;
     estado: Schema.Attribute.Enumeration<
       ['draft', 'review', 'approved', 'published', 'archived']
     > &
       Schema.Attribute.DefaultTo<'draft'>;
+    gradeDestaque: Schema.Attribute.JSON;
     instituicao: Schema.Attribute.Relation<
       'manyToOne',
       'api::instituicao.instituicao'
     >;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizacao: Schema.Attribute.String;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
       'api::experiencia.experiencia'
     > &
       Schema.Attribute.Private;
+    modalidade: Schema.Attribute.Enumeration<
+      ['presencial', 'online', 'hibrido']
+    >;
     nivel: Schema.Attribute.Enumeration<['basico', 'medio', 'avancado']>;
     publishedAt: Schema.Attribute.DateTime;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
+    telemetriaConfig: Schema.Attribute.JSON;
     titulo: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    vagas: Schema.Attribute.Integer;
     validadoAcademicamente: Schema.Attribute.Boolean &
       Schema.Attribute.DefaultTo<false>;
     visibilidade: Schema.Attribute.Enumeration<
@@ -1586,6 +1630,8 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    dataFim: Schema.Attribute.DateTime;
+    dataInicio: Schema.Attribute.DateTime;
     descricao: Schema.Attribute.Text;
     duracao: Schema.Attribute.String;
     estado: Schema.Attribute.Enumeration<['draft', 'published', 'archived']> &
@@ -1600,6 +1646,7 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
       'api::programa.programa'
     > &
       Schema.Attribute.Private;
+    metadata: Schema.Attribute.JSON;
     modalidade: Schema.Attribute.Enumeration<
       ['presencial', 'online', 'hibrido']
     >;
@@ -1607,6 +1654,8 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
     requisitos: Schema.Attribute.Text;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
+    tipo: Schema.Attribute.Enumeration<['standard', 'shadowapro', 'eduvisit']> &
+      Schema.Attribute.DefaultTo<'standard'>;
     titulo: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -2590,6 +2639,7 @@ declare module '@strapi/strapi' {
       'api::conquista.conquista': ApiConquistaConquista;
       'api::curso.curso': ApiCursoCurso;
       'api::denuncia.denuncia': ApiDenunciaDenuncia;
+      'api::domain-event.domain-event': ApiDomainEventDomainEvent;
       'api::experiencia.experiencia': ApiExperienciaExperiencia;
       'api::feature-flag.feature-flag': ApiFeatureFlagFeatureFlag;
       'api::inscricao.inscricao': ApiInscricaoInscricao;

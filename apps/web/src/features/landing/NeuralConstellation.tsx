@@ -46,11 +46,15 @@ export function NeuralConstellation({
     let baseRgb = isDark ? '255, 107, 0' : '0, 93, 232';
 
     const resize = () => {
+      const el = containerRef.current;
+      if (!el) return;
       dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      canvas.style.width = `${window.innerWidth}px`;
-      canvas.style.height = `${window.innerHeight}px`;
+      const rect = el.getBoundingClientRect();
+      // Em vez da altura da janela estática inicial, cobrimos TUDO o que o section empurra. Isto resolve o corte invisível do Canvas em scrool longo!
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
       ctx.scale(dpr, dpr);
     };
 
@@ -61,7 +65,7 @@ export function NeuralConstellation({
       constructor(width: number, height: number, index: number, totalCount: number) {
         this.x = Math.random() * width;
         this.y = Math.random() * height;
-        // Velocidade base suave
+        // Velocidade base suave flutuante
         this.vx = (Math.random() - 0.5) * 0.4;
         this.vy = (Math.random() - 0.5) * 0.4;
         this.size = Math.random() * 1.0 + 0.6; // Pontos ultra finos e subtis
@@ -99,19 +103,45 @@ export function NeuralConstellation({
         }
 
         if (choreoRef.current === 'swarm') {
-          // Foco "Swarm": Segue 100% o rato organicamente, para flutuar à volta de cada botão ou card exato que estiver a tocar
+          // Foco "Swarm" Orgânico (Dinâmica de Fluidos/Boids)
           const targetX = mouse.x >= 0 ? mouse.x : cx;
           const targetY = mouse.y >= 0 ? mouse.y : cy;
-          const noiseAngle = time * 0.0015 + this.index;
           
-          // Ao invés de o esmagar por trás do rato, usa um raio intermédio [140 a 340px] para formar uma Coroa que extravasa o botão
-          const pulseRadius = 140 + (this.index % 200); 
-          const swarmX = targetX + Math.cos(noiseAngle) * pulseRadius;
-          const swarmY = targetY + Math.sin(noiseAngle) * (pulseRadius * 0.75); 
+          const dx = targetX - this.x;
+          const dy = targetY - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          
+          // Cria zonas de conforto variadas para cada neurónio (pulsação natural densa) 
+          // 40 a 300px forma uma neblina maciça ao redor do card e botoes, sem vazio no meio
+          const comfortZone = 40 + (this.index % 260); 
+          
+          let accelX = 0;
+          let accelY = 0;
 
-          this.vx += (swarmX - this.x) * 0.004;
-          this.vy += (swarmY - this.y) * 0.004;
-          this.vx *= 0.94; 
+          if (dist > comfortZone) {
+            // Atração elástica hiper suave se estão fora da órbita
+            accelX = (dx / dist) * 0.04;
+            accelY = (dy / dist) * 0.04;
+          } else if (dist < comfortZone * 0.6) {
+            // Repulsão magnética suave (abrem espaço natural p/ os botões se respirar)
+            accelX = -(dx / dist) * 0.09;
+            accelY = -(dy / dist) * 0.09;
+          } else {
+            // Dentro do Sweet-spot: Flutuação pulsante! (Respiração celular da rede)
+            const noise = Math.sin(time * 0.002 + this.index) * 0.06;
+            accelX = Math.cos(this.index) * noise;
+            accelY = Math.sin(this.index) * noise;
+          }
+
+          // Orbitam lindamente as bordas 
+          const orbitX = (-dy / dist) * 0.015;
+          const orbitY = (dx / dist) * 0.015;
+
+          this.vx += accelX + orbitX;
+          this.vy += accelY + orbitY;
+          
+          // Fricção de líquido viscoso para fluidez super estruturada e elegante (não caótica)
+          this.vx *= 0.94;
           this.vy *= 0.94;
         } else {
           // Idle Natural Bound Checking
@@ -155,10 +185,12 @@ export function NeuralConstellation({
     }
 
     const init = () => {
+      if (!containerRef.current) return;
       particles = [];
+      const rect = containerRef.current.getBoundingClientRect();
       const count = window.innerWidth < 768 ? particleCount / 2 : particleCount;
       for (let i = 0; i < count; i++) {
-        particles.push(new Particle(window.innerWidth, window.innerHeight, i, count));
+        particles.push(new Particle(rect.width, rect.height, i, count));
       }
     };
 
@@ -168,11 +200,12 @@ export function NeuralConstellation({
 
     // A função animate central limpa 100% o canvas, removendo qualquer sensação de "névoa"
     const animate = (timestamp: number) => {
-      if (!isVisible) return;
+      if (!isVisible || !containerRef.current) return;
 
       const time = timestamp - startTime;
-      const w = window.innerWidth;
-      const h = window.innerHeight;
+      const rect = containerRef.current.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
 
       // Limpeza Total do Frame
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -193,8 +226,9 @@ export function NeuralConstellation({
           
           if (d < dynDistance) {
             const opacity = 1 - (d / dynDistance);
-            ctx.strokeStyle = `rgba(${baseRgb}, ${opacity * 0.95})`; // Nítido e contrastado (Quase 100%)
-            ctx.lineWidth = 0.6; // Fio nítido
+            // Renderização nítida mas estruturada como malha bonita
+            ctx.strokeStyle = `rgba(${baseRgb}, ${opacity * 0.85})`; 
+            ctx.lineWidth = 0.5; // Fio altamente nítido
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);

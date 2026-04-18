@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "domain_events",
+  "info": {
+    "singularName": "domain-event",
+    "pluralName": "domain-events",
+    "displayName": "Domain Event",
+    "description": "Registro do Outbox Pattern para garantia de eventos"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "payload": {
+      "type": "json",
+      "required": true
+    },
+    "correlationId": {
+      "type": "uid",
+      "required": true
+    },
+    "processed": {
+      "type": "boolean",
+      "default": false,
+      "required": true
+    },
+    "processedAt": {
+      "type": "datetime"
+    }
+  }
+}

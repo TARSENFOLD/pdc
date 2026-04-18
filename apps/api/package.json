@@ -10,6 +10,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "start:consumer": "node dist/modules/telemetria/consumer.js",
+    "replay-outbox": "node dist/modules/events/outbox-replay.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit"
