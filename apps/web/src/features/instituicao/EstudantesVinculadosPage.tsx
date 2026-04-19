@@ -8,7 +8,8 @@ import type { PerfilCompleto, PropostaTipo } from '@pdc/shared';
 export function EstudantesVinculadosPage() {
   const [selectedStudent, setSelectedStudent] = useState<PerfilCompleto | null>(null);
   const [mensagem, setMensagem] = useState('');
-  const [tipo, setTipo] = useState<PropostaTipo>('experiencia');
+  const [titulo, setTitulo] = useState('');
+  const [tipo, setTipo] = useState<PropostaTipo>('estagio');
   
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
@@ -18,7 +19,8 @@ export function EstudantesVinculadosPage() {
 
   const mutation = useMutation({
     mutationFn: () => propostasApi.criar({
-      estudanteId: selectedStudent?.id ?? '',
+      targetId: selectedStudent?.id ?? '',
+      titulo: titulo || `Proposta de ${tipo}`,
       mensagem,
       tipo,
     }),
@@ -26,7 +28,7 @@ export function EstudantesVinculadosPage() {
       toast({ title: 'Proposta enviada!' });
       setSelectedStudent(null);
       setMensagem('');
-      queryClient.invalidateQueries({ queryKey: ['propostas'] });
+      void queryClient.invalidateQueries({ queryKey: ['propostas'] });
     },
     onError: (err: unknown) => {
       const msg = err instanceof Error ? err.message : 'Erro ao enviar proposta';
@@ -43,7 +45,7 @@ export function EstudantesVinculadosPage() {
       header: 'Estudante', 
       accessor: (aluno: PerfilCompleto) => (
         <div className="flex items-center gap-3">
-          <Avatar src={aluno.avatarUrl as string} fallback={aluno.nome?.[0] || 'E'} />
+          <Avatar src={aluno.avatarUrl || undefined} fallback={aluno.nome[0] || 'E'} />
           <div>
             <div className="font-medium">{aluno.nome}</div>
             <div className="text-xs text-muted-foreground">{aluno.email}</div>
@@ -51,7 +53,7 @@ export function EstudantesVinculadosPage() {
         </div>
       )
     },
-    { header: 'Área de Interesse', accessor: (aluno: PerfilCompleto) => ('areaInteresse' in aluno ? String((aluno as Record<string, unknown>).areaInteresse) : 'N/A') },
+    { header: 'Área de Interesse', accessor: (aluno: PerfilCompleto) => String((aluno as any).areasInteresse?.[0] || 'N/A') },
     { 
       header: 'Ações', 
       accessor: (aluno: PerfilCompleto) => (
@@ -80,28 +82,39 @@ export function EstudantesVinculadosPage() {
 
       <Modal 
         open={!!selectedStudent} 
-        onOpenChange={(open: boolean) => !open && setSelectedStudent(null)}
+        onOpenChange={(open: boolean) => { if (!open) setSelectedStudent(null); }}
       >
-        <div className="space-y-4 pt-4">
+        <div className="space-y-4 pt-4 text-text-primary">
           <h2 className="text-xl font-bold">Nova Proposta para {selectedStudent?.nome}</h2>
           
           <div className="space-y-1">
+            <label className="text-sm font-medium">Título da Proposta</label>
+            <input 
+              className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              placeholder="Ex: Convite para Estágio de Verão"
+              value={titulo}
+              onChange={(e) => { setTitulo(e.target.value); }}
+            />
+          </div>
+
+          <div className="space-y-1">
             <label className="text-sm font-medium">Tipo de Proposta</label>
             <select 
-              className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background"
+              className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background focus:ring-accent"
               value={tipo}
               onChange={(e) => { setTipo(e.target.value as PropostaTipo); }}
             >
-              <option value="experiencia">Experiência</option>
-              <option value="programa">Programa</option>
+              <option value="estagio">Estágio</option>
+              <option value="emprego">Emprego</option>
               <option value="bolsa">Bolsa de Estudo</option>
+              <option value="parceria">Parceria</option>
             </select>
           </div>
 
           <div className="space-y-1">
             <label className="text-sm font-medium">Mensagem Personalizada</label>
             <textarea 
-              className="flex min-h-[120px] w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
+              className="flex min-h-[120px] w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               placeholder="Explique por que este estudante é um bom match..."
               value={mensagem}
               onChange={(e) => { setMensagem(e.target.value); }}

@@ -144,6 +144,15 @@
       "default": 0,
       "min": 0,
       "max": 100
+    },
+    "lti_context": {
+      "type": "json"
+    },
+    "behavior_patterns": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::behavior-pattern.behavior-pattern",
+      "mappedBy": "perfil"
     }
   }
 }

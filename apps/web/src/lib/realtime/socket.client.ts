@@ -1,10 +1,13 @@
 import { io, type Socket } from 'socket.io-client';
 
-const URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3001';
+// In dev, Vite proxies /socket.io → localhost:3001/socket.io
+// In prod, VITE_API_URL points to the real API domain
+const URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
 const socket: Socket = io(URL, {
   withCredentials: true,
   autoConnect: false,
+  path: '/socket.io',
 });
 
 export function connect() {

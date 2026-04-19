@@ -13,7 +13,7 @@ export const denunciasApi = {
     if (params.page) q.set('page', params.page.toString());
     if (params.pageSize) q.set('pageSize', params.pageSize.toString());
     if (params.estado) q.set('estado', params.estado);
-    if (params.tipo) q.set('tipo', params.tipo);
+    if (params.conteudoTipo) q.set('tipo', params.conteudoTipo);
     return http.get<{ data: Denuncia[]; pagination: Pagination }>(`/denuncias?${q.toString()}`);
   },
 

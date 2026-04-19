@@ -8,32 +8,32 @@ const FEATURES: Array<{ icon: ComponentType<LucideProps>; titulo: string; descri
   {
     icon: FlaskConical,
     titulo: 'Simulações práticas',
-    descricao: 'Três tipos de simulação — vídeo guiado, laboratório externo e ambiente interativo — para cada área profissional.',
+    descricao: 'Vídeo guiado, laboratório externo ou ambiente interativo — experimenta o dia a dia real de cada profissão.',
   },
   {
     icon: BarChart3,
-    titulo: 'Perfil Vocacional',
-    descricao: 'Calculado automaticamente a partir do teu comportamento real em cada simulação, não de questionários.',
+    titulo: 'Perfil vocacional',
+    descricao: 'Gerado a partir do teu comportamento nas simulações. Sem questionários genéricos.',
   },
   {
     icon: GraduationCap,
     titulo: 'Cursos com certificado',
-    descricao: 'Módulos, tarefas, submissões e certificados emitidos pelas instituições parceiras.',
+    descricao: 'Módulos, tarefas e certificados emitidos por instituições parceiras.',
   },
   {
     icon: Building2,
     titulo: 'Experiências institucionais',
-    descricao: 'Programas e experiências publicadas por universidades e escolas — gratuitas e abertas.',
+    descricao: 'Programas publicados por universidades e escolas angolanas — abertos e gratuitos.',
   },
   {
     icon: Users,
-    titulo: 'Mentorias reais',
-    descricao: 'Conecta-te com mentores da indústria angolana para orientação personalizada na tua área.',
+    titulo: 'Mentoria real',
+    descricao: 'Profissionais da indústria angolana disponíveis para orientação personalizada.',
   },
   {
     icon: Bot,
-    titulo: 'AI Tutor',
-    descricao: 'Tutor com IA que responde às tuas dúvidas com contexto do teu perfil e do conteúdo da plataforma.',
+    titulo: 'Tutor IA',
+    descricao: 'Responde às tuas dúvidas com contexto do teu perfil e do conteúdo da plataforma.',
   },
 ];
 

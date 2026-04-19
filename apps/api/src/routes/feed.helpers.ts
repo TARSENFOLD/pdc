@@ -5,9 +5,10 @@ import { z } from 'zod';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { redis } from '../lib/redis.js';
 import { calcRecencyScore, calcScore, type FeedFeatures } from '../modules/feed/feed.scoring.js';
-import type { FeedItem, FeedItemTipo } from '@pdc/shared';
+import type { FeedItem, FeedItemTipo, AreaVocacional } from '@pdc/shared';
+import { env } from '../lib/env.js';
 
-// ── Strapi interfaces ───────────────────────────────────────────────────────
+// ── Strapi interfaces (Flat v5) ──────────────────────────────────────────────
 
 export interface StrapiEntity {
   id: string | number;
@@ -26,20 +27,13 @@ export interface StrapiEntity {
   createdAt: string;
 }
 
-export interface StrapiList<T> {
-  data: T[];
-  meta: { pagination: { page: number; pageSize: number; pageCount: number; total: number } };
-}
-
 export interface StrapiUserProfile {
   areaInteresse?: string;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env['JWT_SECRET'] ?? 'change-me-in-production-min-32-chars'
-);
+const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 
 export async function getOptionalUserId(c: Context): Promise<string | undefined> {
   try {
@@ -61,12 +55,12 @@ export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<Item
 
   try {
     const [likes, ratings] = await Promise.all([
-      strapiGet<{ meta: { pagination: { total: number } } }>('/likes', {
+      strapiGet<any>('/likes', {
         'filters[targetType][$eq]': tipo,
         'filters[targetId][$eq]': id,
         'pagination[limit]': '1',
       }),
-      strapiGet<StrapiList<{ valor: number }>>('/ratings', {
+      strapiGet<{ valor: number }>('/ratings', {
         'filters[targetType][$eq]': tipo,
         'filters[targetId][$eq]': id,
         'pagination[limit]': '100',
@@ -87,28 +81,30 @@ export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<Item
 
 export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: FeedItemTipo }>> {
   const [cursos, simulacoes, experiencias] = await Promise.all([
-    strapiGet<StrapiList<StrapiEntity>>('/cursos', {
+    strapiGet<StrapiEntity>('/cursos', {
       'pagination[limit]': '100',
       sort: 'publishedAt:desc',
       populate: 'capa,autor',
     }),
-    strapiGet<StrapiList<StrapiEntity>>('/simulacoes', {
+    strapiGet<StrapiEntity>('/simulacoes', {
       'pagination[limit]': '100',
       sort: 'publishedAt:desc',
       populate: 'capa',
     }),
-    strapiGet<StrapiList<StrapiEntity>>('/experiencias', {
+    strapiGet<StrapiEntity>('/experiencias', {
       'pagination[limit]': '100',
       sort: 'publishedAt:desc',
       populate: 'capa,instituicao',
     }),
   ]);
 
-  return [
+  const all = [
     ...cursos.data.map(d => ({ ...d, tipo: 'curso' as const })),
     ...simulacoes.data.map(d => ({ ...d, tipo: 'simulacao' as const })),
     ...experiencias.data.map(d => ({ ...d, tipo: 'experiencia' as const })),
-  ].filter(c => {
+  ] as Array<StrapiEntity & { tipo: FeedItemTipo }>;
+
+  return all.filter(c => {
     const estado = c.estado ?? 'published';
     const vis = c.visibilidade ?? 'publico';
     return estado === 'published' && vis === 'publico';
@@ -127,21 +123,27 @@ export async function mapConcurrent<T, R>(items: T[], fn: (item: T) => Promise<R
   return results;
 }
 
+/**
+ * toFeedItem (Sovereign Mapping)
+ * Converte entidades Strapi para o FeedItem do Shared.
+ */
 export function toFeedItem(c: StrapiEntity & { tipo: FeedItemTipo }, stats: ItemStats, score: number, recencyScore: number): FeedItem {
   return {
-    tipo: c.tipo,
     id: String(c.id),
-    slug: c.slug,
+    tipo: c.tipo,
+    userId: c.autorId ?? 'system',
+    timestamp: c.publishedAt ?? c.createdAt,
     titulo: c.titulo ?? '',
-    descricao: c.descricao ?? '',
+    corpo: c.descricao ?? '',
+    createdAt: c.publishedAt ?? c.createdAt,
+    // Metadados flexíveis via Record<string, any>
+    slug: c.slug,
     capaUrl: c.capaUrl,
-    area: c.area,
+    area: (c.area as AreaVocacional) || undefined,
     autorNome: c.autorNome ?? c.instituicaoNome ?? c.aluno?.nome,
-    autorId: c.autorId,
     score,
     recencyScore,
-    stats: { likes: stats.likes, ratingMedia: stats.ratingMedia, ratingTotal: stats.ratingTotal },
-    publicadoEm: c.publishedAt ?? c.createdAt,
+    stats: { likes: stats.likes, ratingMedia: stats.ratingMedia, ratingTotal: stats.ratingTotal }
   };
 }
 

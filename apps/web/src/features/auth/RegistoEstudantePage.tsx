@@ -1,37 +1,77 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { authApi, type LoginResponse } from '@/lib/api/auth';
+import { ApiError } from '@/lib/api/http';
 import { Button, Input } from '@/components/ui';
 import { AuthSplitLayout } from './AuthSplitLayout';
-import type { RegistoEstudantePayload } from '@pdc/shared';
+import type { RegistoEstudantePayload, AreaVocacional } from '@pdc/shared';
 import { ArrowLeft } from 'lucide-react';
 
-const AREAS = ['Tecnologia', 'Saúde', 'Direito', 'Engenharia', 'Artes', 'Ciências', 'Educação'] as const;
+const AREAS: Array<{ value: AreaVocacional; label: string }> = [
+  { value: 'SAUDE', label: 'Saúde' },
+  { value: 'ENGENHARIA', label: 'Engenharia' },
+  { value: 'TECNOLOGIA', label: 'Tecnologia' },
+  { value: 'DIREITO', label: 'Direito' },
+  { value: 'GESTAO', label: 'Gestão' },
+  { value: 'EDUCACAO', label: 'Educação' },
+  { value: 'ARTES', label: 'Artes' },
+  { value: 'CIENCIAS_AGRARIAS', label: 'Ciências Agrárias' },
+  { value: 'CIENCIAS_SOCIAIS', label: 'Ciências Sociais' },
+  { value: 'COMUNICACAO', label: 'Comunicação' },
+  { value: 'CIENCIAS_NATURAIS', label: 'Ciências Naturais' },
+  { value: 'ARQUITETURA', label: 'Arquitetura' },
+  { value: 'TURISMO_HOTELARIA', label: 'Turismo e Hotelaria' },
+  { value: 'DESPORTO', label: 'Desporto' },
+  { value: 'OUTRA', label: 'Geral' },
+];
+
 const NIVEIS = ['Secundário', 'Licenciatura', 'Mestrado', 'Doutoramento'] as const;
 
 export function RegistoEstudantePage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    nome: '', email: '', password: '', areaInteresse: '', nivelEnsino: '',
+  const [searchParams] = useSearchParams();
+  const suggestedArea = searchParams.get('area')?.toUpperCase() as AreaVocacional | null;
+
+  const [form, setForm] = useState<RegistoEstudantePayload>({
+    nome: '',
+    email: '',
+    password: '',
+    areaInteresse: 'OUTRA',
+    nivelEnsino: '',
   });
+
   const [error, setError] = useState('');
+
+  // Sincronizar área sugerida vinda do Micro Desafio
+  useEffect(() => {
+    if (suggestedArea && AREAS.some(a => a.value === suggestedArea)) {
+      setForm(prev => ({ ...prev, areaInteresse: suggestedArea }));
+    }
+  }, [suggestedArea]);
 
   const mutation = useMutation({
     mutationFn: (payload: RegistoEstudantePayload) => authApi.registarEstudante(payload),
     onSuccess: (result: LoginResponse) => { 
       if ('requiresOtp' in result) {
-        navigate('/verificar', { state: { canal: result.canal, from: '/app/dashboard' }, replace: true }); 
+        navigate('/verificar', { state: { canal: result.canal, from: '/app' }, replace: true }); 
       } else {
-        navigate('/app/dashboard', { replace: true });
+        navigate('/app', { replace: true });
       }
     },
-    onError: (err: Error & { body?: { error?: string } }) => {
-      setError(err.body?.error ?? 'Erro ao criar conta.');
+    onError: (err: unknown) => {
+      let message = 'Erro ao criar conta.';
+      if (err instanceof ApiError) {
+        const body = err.body as Record<string, unknown> | undefined;
+        if (typeof body?.error === 'string') message = body.error;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setError(message);
     },
   });
 
-  function handleChange(key: keyof RegistoEstudantePayload, value: string) {
+  function handleChange<K extends keyof RegistoEstudantePayload>(key: K, value: RegistoEstudantePayload[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -43,9 +83,9 @@ export function RegistoEstudantePage() {
 
   return (
     <AuthSplitLayout role="estudante">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-text-primary">Conta de Estudante</h1>
-        <p className="mt-1 text-sm text-text-secondary">Preenche os dados para começar.</p>
+        <p className="mt-1 text-sm text-text-secondary">Preenche os dados para desbloquear o teu <span className="text-amber font-bold">Perfil Vocacional Completo</span>.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {error ? <div className="rounded-lg border border-error/20 bg-error/10 p-3 text-sm text-error">{error}</div> : null}
@@ -56,10 +96,9 @@ export function RegistoEstudantePage() {
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-text-secondary">Área de interesse</label>
-            <select required value={form.areaInteresse} onChange={(e) => { handleChange('areaInteresse', e.target.value); }}
+            <select required value={form.areaInteresse} onChange={(e) => { handleChange('areaInteresse', e.target.value as AreaVocacional); }}
               className="flex h-10 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber">
-              <option value="">Seleciona…</option>
-              {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
+              {AREAS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
             </select>
           </div>
 
@@ -72,13 +111,13 @@ export function RegistoEstudantePage() {
             </select>
           </div>
 
-          <Button type="submit" className="w-full" isLoading={mutation.isPending}>Criar conta</Button>
+          <Button type="submit" className="w-full" isLoading={mutation.isPending}>Registar e Continuar →</Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-text-muted lg:block hidden">
+        <p className="mt-6 text-center text-sm text-text-muted">
           <Link to="/criar-conta" className="inline-flex items-center gap-1 text-amber hover:underline">
             <ArrowLeft size={16} aria-hidden={true} />
-            Voltar
+            Voltar para escolha de perfil
           </Link>
         </p>
       </div>

@@ -1,0 +1,21 @@
+name = "pdc-v2-edge-ingestor"
+main = "src/index.ts"
+compatibility_date = "2024-04-03"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+UPSTASH_REDIS_REST_URL = "https://your-upstash-url.upstash.io"
+BFF_URL = "http://localhost:3000"
+
+# Rotas de execução do Edge
+# Descomentar quando o [dominio-pdc] for estabelecido
+# routes = [
+#   { pattern = "edge.[dominio-pdc]/*", custom_domain = true }
+# ]
+
+# Bindings de segredo devem ser configurados EXCLUSIVAMENTE via:
+# wrangler secret put TELEMETRY_SECRET
+# wrangler secret put UPSTASH_REDIS_REST_TOKEN
+
+[observability]
+enabled = true

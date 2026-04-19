@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useSocket } from './useSocket';
 import { useToast } from '@/hooks/useToast';
+import { useQueryClient } from '@tanstack/react-query';
 import type { NotificacaoRealtime } from '@pdc/shared';
 import type { ToastVariant } from '@/components/ui/Toast';
 
@@ -9,11 +10,14 @@ const VARIANT_MAP: Record<NotificacaoRealtime['tipo'], ToastVariant> = {
   sucesso: 'success',
   aviso: 'warning',
   erro: 'error',
+  vinculo_pedido: 'info',
+  vinculo_aprovado: 'success',
 };
 
 export function useNotificacoes() {
   const { on } = useSocket();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const cleanup = on<NotificacaoRealtime>('notificacao', (notif) => {
@@ -25,4 +29,18 @@ export function useNotificacoes() {
     });
     return cleanup;
   }, [on, toast]);
+
+  useEffect(() => {
+    const cleanup = on<{ slug: string; titulo: string; descricao: string }>('conquista_desbloqueada', (conquista) => {
+      toast({
+        title: `🏆 Conquista Desbloqueada: ${conquista.titulo}`,
+        description: conquista.descricao,
+        variant: 'success',
+      });
+      // Invalidate relevant queries to update UI
+      void queryClient.invalidateQueries({ queryKey: ['conquistas', 'minhas'] });
+      void queryClient.invalidateQueries({ queryKey: ['perfis', 'me'] });
+    });
+    return cleanup;
+  }, [on, toast, queryClient]);
 }

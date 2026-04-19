@@ -132,6 +132,9 @@ export function ItemPlayer() {
   );
 }
 
+import { EmptyState } from '@/components/ui/EmptyState';
+import { AlertCircle } from 'lucide-react';
+
 function QuizSection({ cursoId, moduloId }: { cursoId: string; moduloId: string }) {
   const { data: perguntas, isLoading, isError } = useQuery({
     queryKey: ['quiz', cursoId, moduloId],
@@ -140,7 +143,7 @@ function QuizSection({ cursoId, moduloId }: { cursoId: string; moduloId: string 
 
   if (isLoading) return <div className="flex justify-center py-8"><Spinner size="lg" /></div>;
   if (isError || !perguntas?.length) {
-    return <p className="text-center text-text-muted py-8">Não foi possível gerar o quiz.</p>;
+    return <EmptyState icon={AlertCircle} title="Quiz indisponível" description="Não foi possível gerar o quiz para este módulo." />;
   }
   return <QuizPlayer perguntas={perguntas} />;
 }

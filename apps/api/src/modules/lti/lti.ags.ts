@@ -1,6 +1,6 @@
 import type { LtiScore } from '@pdc/shared';
 
-export const ltiAgs = {
+export const ltiAgsService = {
   async sendScore(lineitemUrl: string, score: LtiScore, accessToken: string) {
     const res = await fetch(`${lineitemUrl}/scores`, {
       method: 'POST',

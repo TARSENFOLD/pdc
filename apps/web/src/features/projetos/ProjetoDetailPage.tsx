@@ -3,6 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projetosApi } from '@/lib/api/projetos';
 import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Search } from 'lucide-react';
+
 import { Spinner, Badge, Button, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
 import { DenunciarButton } from '@/components/ui/DenunciarButton';
 import { SEOHead } from '@/components/layout/SEOHead';
@@ -55,7 +58,7 @@ export function ProjetoDetailPage() {
   }
 
   if (isError || !projeto) {
-    return <p className="py-12 text-center text-error">Erro ao carregar o projeto.</p>;
+    return <div className="flex min-h-screen items-center justify-center bg-background p-4"><EmptyState icon={Search} variant="error" title="Erro ao carregar o projeto" description="Não foi possível carregar os dados deste projeto." /></div>;
   }
 
   const isOwner = user?.id === projeto.alunoId;

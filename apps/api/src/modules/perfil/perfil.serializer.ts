@@ -1,6 +1,6 @@
-import type { VisibilitySettings, FieldVisibility } from '@pdc/shared';
+import type { VisibilitySettings, FieldVisibility, ReputacaoTier } from '@pdc/shared';
 
-interface StrapiPerfil {
+export interface StrapiPerfil {
   id: string | number;
   nome?: string;
   tipo?: string;
@@ -11,15 +11,16 @@ interface StrapiPerfil {
   socialLinks?: unknown;
   areasInteresse?: unknown;
   competencias?: unknown;
+  reputacao?: number;
+  reputacaoTier?: ReputacaoTier;
   avatarUrl?: string;
   foto?: { url?: string } | null;
   visibilitySettings?: VisibilitySettings | null;
   notificationPreferences?: unknown;
   email?: string;
+  userId?: string;
   [key: string]: unknown;
 }
-
-const PRIVATE_FIELDS = ['email', 'telefone', 'notificationPreferences', 'preferenciasUi', 'documentos'] as const;
 
 function sid(val: string | number): string {
   return typeof val === 'number' ? val.toString() : val;
@@ -34,14 +35,15 @@ function isVisible(setting: FieldVisibility | undefined, isConnected: boolean): 
 export interface PublicProfileResult {
   id: string;
   nome: string;
-  avatarUrl?: string;
-  bio?: string;
+  avatarUrl: string | null | undefined;
+  bio: string | null | undefined;
   role: string;
-  headline?: string;
-  website?: string;
-  socialLinks?: unknown;
-  areasInteresse?: unknown;
-  competencias?: unknown;
+  reputacaoTier: ReputacaoTier | null | undefined;
+  headline: string | null | undefined;
+  website: string | null | undefined;
+  socialLinks: any;
+  areasInteresse: any;
+  competencias: any;
 }
 
 /**
@@ -58,28 +60,16 @@ export function serializePublicProfile(
   const result: PublicProfileResult = {
     id: sid(perfil.id),
     nome: perfil.nome ?? '',
-    avatarUrl: perfil.foto?.url ?? perfil.avatarUrl,
     role: perfil.tipo ?? 'aluno',
+    reputacaoTier: perfil.reputacaoTier,
+    avatarUrl: perfil.foto?.url ?? perfil.avatarUrl,
+    headline: perfil.headline,
+    bio: isVisible(vis.bio, isConnected) ? perfil.bio : undefined,
+    website: isVisible(vis.socialLinks, isConnected) ? perfil.website : undefined,
+    socialLinks: isVisible(vis.socialLinks, isConnected) ? perfil.socialLinks : undefined,
+    areasInteresse: isVisible(vis.areasInteresse, isConnected) ? perfil.areasInteresse : undefined,
+    competencias: isVisible(vis.competencias, isConnected) ? perfil.competencias : undefined,
   };
-
-  if (perfil.headline) result.headline = perfil.headline;
-
-  if (isVisible(vis.bio, isConnected) && perfil.bio) {
-    result.bio = perfil.bio;
-  }
-
-  if (isVisible(vis.socialLinks, isConnected)) {
-    if (perfil.website) result.website = perfil.website;
-    if (perfil.socialLinks) result.socialLinks = perfil.socialLinks;
-  }
-
-  if (isVisible(vis.areasInteresse, isConnected) && perfil.areasInteresse) {
-    result.areasInteresse = perfil.areasInteresse;
-  }
-
-  if (isVisible(vis.competencias, isConnected) && perfil.competencias) {
-    result.competencias = perfil.competencias;
-  }
 
   return result;
 }
@@ -99,6 +89,8 @@ export function serializePrivateProfile(perfil: StrapiPerfil) {
     socialLinks: perfil.socialLinks,
     avatarUrl: perfil.foto?.url ?? perfil.avatarUrl,
     role: perfil.tipo ?? 'aluno',
+    reputacao: perfil.reputacao ?? 0,
+    reputacaoTier: perfil.reputacaoTier,
     areasInteresse: perfil.areasInteresse,
     competencias: perfil.competencias,
     visibilitySettings: perfil.visibilitySettings ?? {},

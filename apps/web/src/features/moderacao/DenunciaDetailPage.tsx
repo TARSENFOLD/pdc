@@ -16,7 +16,7 @@ export function DenunciaDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [accao, setAccao] = useState<DenunciaAccao>('remover');
+  const [accao, setAccao] = useState<DenunciaAccao>('remover_conteudo');
   const [nota, setNota] = useState('');
 
   const { data: denuncia, isLoading } = useQuery({
@@ -26,7 +26,11 @@ export function DenunciaDetailPage() {
   });
 
   const resolveMutation = useMutation({
-    mutationFn: () => denunciasApi.resolver(id ?? '', { accao, nota }),
+    mutationFn: () => denunciasApi.resolver(id ?? '', { 
+      estado: 'resolvida',
+      accaoTomada: accao, 
+      notasModerador: nota 
+    }),
     onSuccess: () => {
       toast({ title: 'Denúncia resolvida', description: 'A ação foi aplicada com sucesso.' });
       void queryClient.invalidateQueries({ queryKey: ['denuncias'] });
@@ -92,11 +96,12 @@ export function DenunciaDetailPage() {
               <select
                 value={accao}
                 onChange={(e) => { setAccao(e.target.value as DenunciaAccao); }}
-                className="w-full max-w-xs rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber"
+                className="w-full max-w-xs rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus-outline-none focus:ring-2 focus:ring-amber"
               >
-                <option value="remover">Remover conteúdo</option>
-                <option value="avisar">Avisar utilizador</option>
+                <option value="remover_conteudo">Remover conteúdo</option>
+                <option value="advertir">Avisar utilizador</option>
                 <option value="ignorar">Ignorar denúncia</option>
+                <option value="banir_utilizador">Banir Utilizador</option>
               </select>
             </div>
             <div className="grid gap-2">

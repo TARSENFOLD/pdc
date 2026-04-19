@@ -31,7 +31,7 @@ export function CriarSimulacaoPage() {
     defaultValues: {
       titulo: '',
       descricao: '',
-      area: '',
+      area: 'TECNOLOGIA',
       tipo: 1,
       capaUrl: '',
       iframeUrl: '',
@@ -41,12 +41,12 @@ export function CriarSimulacaoPage() {
   const selectedTipo = watch('tipo');
 
   useEffect(() => {
-    if (simData) {
-      const sim = simData as unknown as SimulacaoDetail;
+    const sim = simData as unknown as SimulacaoDetail | undefined;
+    if (sim) {
       reset({
         titulo: sim.titulo,
         descricao: sim.descricao,
-        area: sim.area || '',
+        area: sim.area || 'TECNOLOGIA',
         tipo: sim.tipo,
         capaUrl: sim.capaUrl || '',
         iframeUrl: sim.iframeUrl || '',
@@ -58,7 +58,7 @@ export function CriarSimulacaoPage() {
     mutationFn: (data: CriarSimulacaoPayload) => 
       isEditing ? simulacoesApi.editar(id, data) : simulacoesApi.criar(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['simulacoes', 'minhas'] }).catch(() => {});
+      void queryClient.invalidateQueries({ queryKey: ['simulacoes', 'minhas'] });
       toast({ title: isEditing ? 'Simulação atualizada!' : 'Simulação criada com sucesso!' });
       navigate('/app/mentor/simulacoes');
     },
@@ -70,8 +70,8 @@ export function CriarSimulacaoPage() {
   const reviewMutation = useMutation({
     mutationFn: () => simulacoesApi.updateEstado(id as string, 'review'),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['simulacoes', id] }).catch(() => {});
-      queryClient.invalidateQueries({ queryKey: ['simulacoes', 'minhas'] }).catch(() => {});
+      void queryClient.invalidateQueries({ queryKey: ['simulacoes', id] });
+      void queryClient.invalidateQueries({ queryKey: ['simulacoes', 'minhas'] });
       toast({ title: 'Enviada para revisão!' });
       navigate('/app/mentor/simulacoes');
     },
@@ -125,12 +125,21 @@ export function CriarSimulacaoPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-text-secondary">Área</label>
-              <Input 
-                placeholder="Ex: Engenharia"
+              <select 
+                className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
                 {...register('area')}
-                error={errors.area?.message}
-              />
+              >
+                <option value="TECNOLOGIA">Tecnologia</option>
+                <option value="SAUDE">Saúde</option>
+                <option value="ENGENHARIA">Engenharia</option>
+                <option value="GESTAO">Gestão</option>
+                <option value="EDUCACAO">Educação</option>
+                <option value="DIREITO">Direito</option>
+                <option value="CIENCIAS_SOCIAIS">Ciências Sociais</option>
+                <option value="ARTES">Artes</option>
+                <option value="AGRONOMIA">Agronomia</option>
+                <option value="OUTRO">Outro</option>
+              </select>
             </div>
 
             <div className="space-y-1">

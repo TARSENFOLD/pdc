@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { AreaVocacionalSchema } from '@pdc/shared';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
-import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
-import { serializePublicProfile } from '../modules/perfil/perfil.serializer.js';
+import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
+import { serializePublicProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
 import type {
   MentorPublico,
   InstituicaoPublica,
@@ -11,20 +12,9 @@ import type {
   CatalogoMeta,
   Role,
 } from '@pdc/shared';
+import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
 
-// ─── Strapi shapes ───────────────────────────────────────────────────────────
-
-interface StrapiPagination {
-  page: number;
-  pageSize: number;
-  pageCount: number;
-  total: number;
-}
-
-interface StrapiList<T> {
-  data: T[];
-  meta: { pagination: StrapiPagination };
-}
+// ─── Strapi shapes (Flat v5) ──────────────────────────────────────────────────
 
 interface StrapiMentor {
   id: string | number;
@@ -82,7 +72,8 @@ function sid(val: string | number): string {
   return typeof val === 'number' ? val.toString() : val;
 }
 
-function toMeta(p: StrapiPagination): CatalogoMeta {
+function toMeta(meta: StrapiListResponse<any>['meta']): CatalogoMeta {
+  const p = meta.pagination;
   return { page: p.page, pageSize: p.pageSize, total: p.total, pageCount: p.pageCount };
 }
 
@@ -101,15 +92,19 @@ function publishedFilter(p: Record<string, string>): void {
 export const mentoresRoutes = new Hono();
 
 const mentorFilters = paginationQuery.extend({
-  area: z.string().optional(),
+  area: AreaVocacionalSchema.optional(),
   disponivel: z.coerce.boolean().optional(),
 });
 
 function mapMentor(d: StrapiMentor): MentorPublico {
   return {
-    id: sid(d.id), nome: d.nome ?? d.username ?? '',
-    avatarUrl: d.avatarUrl, bio: d.bio,
-    areaEspecialidade: d.areaEspecialidade, disponivel: d.disponivel,
+    id: sid(d.id), 
+    nome: d.nome ?? d.username ?? '',
+    especialidade: d.areaEspecialidade || 'Especialista',
+    avatarUrl: d.avatarUrl, 
+    bio: d.bio,
+    areaEspecialidade: d.areaEspecialidade, 
+    disponivel: d.disponivel,
   };
 }
 
@@ -121,13 +116,15 @@ mentoresRoutes.get('/', zValidator('query', mentorFilters), async (c) => {
   p['filters[aprovado][$eq]'] = 'true';
   if (q.area) p['filters[areaEspecialidade][$eq]'] = q.area;
   if (q.disponivel !== undefined) p['filters[disponivel][$eq]'] = String(q.disponivel);
-  const res = await strapiGet<StrapiList<StrapiMentor>>('/users', p);
-  return c.json({ data: res.data.map(mapMentor), meta: toMeta(res.meta.pagination) });
+  const res = await strapiGet<StrapiMentor>('/users', p);
+  return c.json({ data: res.data.map(mapMentor), meta: toMeta(res.meta) });
 });
 
 mentoresRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
-  const d = await strapiGet<StrapiMentor>(`/users/${id}`, { populate: 'avatar' });
+  const res = await strapiGet<StrapiMentor>(`/users/${id}`, { populate: 'avatar' });
+  const d = res.data[0];
+  if (!d) return c.json({ error: 'Mentor não encontrado' }, 404);
   return c.json({ data: mapMentor(d) });
 });
 
@@ -143,7 +140,7 @@ const instFilters = paginationQuery.extend({
 function mapInst(d: StrapiInstituicao): InstituicaoPublica {
   return {
     id: sid(d.id), slug: d.slug, nome: d.nome,
-    descricao: d.descricao, logoUrl: d.logoUrl, tipo: d.tipo, regiao: d.regiao,
+    descricao: d.descricao, logoUrl: d.logoUrl || undefined, tipo: d.tipo, regiao: d.regiao,
   };
 }
 
@@ -154,15 +151,15 @@ instituicoesRoutes.get('/', zValidator('query', instFilters), async (c) => {
   buildPagination(p, q.page, q.limit);
   if (q.tipo) p['filters[tipo][$eq]'] = q.tipo;
   if (q.regiao) p['filters[regiao][$eq]'] = q.regiao;
-  const res = await strapiGet<StrapiList<StrapiInstituicao>>('/instituicoes', p);
-  return c.json({ data: res.data.map(mapInst), meta: toMeta(res.meta.pagination) });
+  const res = await strapiGet<StrapiInstituicao>('/instituicoes', p);
+  return c.json({ data: res.data.map(mapInst), meta: toMeta(res.meta) });
 });
 
 instituicoesRoutes.get('/:slug', async (c) => {
   const slug = c.req.param('slug');
   const p: Record<string, string> = { 'filters[slug][$eq]': slug, populate: 'logo' };
   publishedFilter(p);
-  const res = await strapiGet<StrapiList<StrapiInstituicao>>('/instituicoes', p);
+  const res = await strapiGet<StrapiInstituicao>('/instituicoes', p);
   const first = res.data[0];
   if (!first) return c.json({ error: 'Instituição não encontrada' }, 404);
   return c.json({ data: mapInst(first) });
@@ -175,34 +172,32 @@ export const perfilPublicoRoutes = new Hono();
 perfilPublicoRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
 
-  // Check feature flag — if active, use new perfil-based serialization
   let useV2 = false;
   try {
     const flags = await featureFlagService.getEffectiveFlags();
     useV2 = flags['PROFILE_V2_PUBLIC'] === true;
-  } catch {
-    // Flag service down → safe fallback to legacy
-  }
+  } catch { /* ignore */ }
 
   if (useV2) {
-    const perfil = await strapiGet<StrapiPerfilPublic>(`/perfis`, {
+    const res = await strapiGet<StrapiPerfilPublic>(`/perfis`, {
       'filters[userId][$eq]': id,
       'pagination[pageSize]': '1',
       populate: 'foto',
     });
-    const data = Array.isArray(perfil) ? perfil : (perfil as unknown as { data: StrapiPerfilPublic[] }).data;
-    const first = data?.[0];
+    const first = res.data[0];
     if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);
-    return c.json({ data: serializePublicProfile(first) });
+    return c.json({ data: serializePublicProfile(first as unknown as StrapiPerfil) });
   }
 
-  // Legacy path — read from /users
-  const d = await strapiGet<StrapiUserPublic>(`/users/${id}`, { populate: 'avatar,role' });
+  const res = await strapiGet<StrapiUserPublic>(`/users/${id}`, { populate: 'avatar,role' });
+  const d = res.data[0];
+  if (!d) return c.json({ error: 'Utilizador não encontrado' }, 404);
+
   const roleName = d.role?.name.toLowerCase() ?? 'aluno';
   const perfil: PerfilPublicoBasico = {
     id: sid(d.id),
     nome: d.nome ?? d.username ?? '',
-    avatarUrl: d.avatarUrl,
+    avatarUrl: d.avatarUrl || undefined,
     bio: d.bio,
     role: roleName as Role,
   };

@@ -1,15 +1,16 @@
 import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
+import { env } from '../../lib/env.js';
 
-const redis = process.env['UPSTASH_REDIS_REST_URL']
+const redis = env.UPSTASH_REDIS_REST_URL
   ? new Redis({
-      url: process.env['UPSTASH_REDIS_REST_URL'],
-      token: process.env['UPSTASH_REDIS_REST_TOKEN'] ?? '',
+      url: env.UPSTASH_REDIS_REST_URL,
+      token: env.UPSTASH_REDIS_REST_TOKEN,
     })
   : null;
 
-const TINA_LIMIT_PER_USER = Number(process.env['TINA_RATE_LIMIT_PER_USER'] || 20);
-const TINA_LIMIT_GLOBAL = Number(process.env['TINA_RATE_LIMIT_GLOBAL'] || 500);
+const TINA_LIMIT_PER_USER = Number(env.TINA_RATE_LIMIT_PER_USER);
+const TINA_LIMIT_GLOBAL = Number(env.TINA_RATE_LIMIT_GLOBAL);
 
 // Limites: 
 // Autenticado: 20/h (default) e 5/min

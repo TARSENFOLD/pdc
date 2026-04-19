@@ -1,37 +1,39 @@
 import pino from 'pino';
-
-const log = pino({ name: 'ai-service' });
 import { strapiGet } from '../strapi/strapi.client.js';
 import { vocacionalService } from '../vocacional/vocacional.service.js';
 import type { ChatMessage, QuizPergunta } from '@pdc/shared';
+import { env } from '../../lib/env.js';
 
-const DEEPSEEK_API_KEY = process.env['DEEPSEEK_API_KEY'] || '';
-const DEEPSEEK_BASE_URL = process.env['DEEPSEEK_BASE_URL'] || 'https://api.deepseek.com';
-const DEEPSEEK_MODEL = process.env['DEEPSEEK_MODEL'] || 'deepseek-chat';
-const OLLAMA_BASE_URL = process.env['OLLAMA_BASE_URL'] || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env['OLLAMA_MODEL'] || 'llama3.2';
+const log = pino({ name: 'ai-service' });
+
+const DEEPSEEK_API_KEY = env.DEEPSEEK_API_KEY || '';
+const DEEPSEEK_BASE_URL = env.DEEPSEEK_BASE_URL;
+const DEEPSEEK_MODEL = env.DEEPSEEK_MODEL;
+const OLLAMA_BASE_URL = env.OLLAMA_BASE_URL;
+const OLLAMA_MODEL = env.OLLAMA_MODEL;
 
 export const aiService = {
   async buildContexto(alunoId: string): Promise<string> {
     const perfil = await vocacionalService.calcularPerfil(alunoId);
     
-    const tentativasRes = await strapiGet<{ data: Array<{ id: number; simulacao?: { data?: { titulo: string } } }> }>('/tentativas', {
+    // Fix: Strapi client already flattens. Removed nested { data: ... }
+    const tentativasRes = await strapiGet<{ id: number; simulacao?: { titulo: string } }>('/tentativas', {
       'filters[alunoId][$eq]': alunoId,
       'filters[dataFim][$notNull]': 'true',
       'populate': 'simulacao',
     });
     
-    const inscricoesRes = await strapiGet<{ data: Array<{ id: number; curso?: { data?: { titulo: string } } }> }>('/inscricoes', {
+    const inscricoesRes = await strapiGet<{ id: number; curso?: { titulo: string } }>('/inscricoes', {
       'filters[alunoId][$eq]': alunoId,
       'populate': 'curso',
     });
 
     const sims = tentativasRes.data.map(t => {
-      return t.simulacao?.data?.titulo;
+      return t.simulacao?.titulo;
     }).filter(Boolean).join(', ');
 
     const cursos = inscricoesRes.data.map(i => {
-      return i.curso?.data?.titulo;
+      return i.curso?.titulo;
     }).filter(Boolean).join(', ');
 
     return `Perfil Vocacional: Score Global ${perfil.scoreGlobal.toString()}, Aptidão ${perfil.aptidao.toString()}, Dedicação ${perfil.dedicacao.toString()}. Simulações concluídas: ${sims || 'Nenhuma'}. Cursos inscritos: ${cursos || 'Nenhum'}.`;

@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'motion/react';
-import { Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { http } from '@/lib/api/http';
 import type { MentorPublico, CatalogoResponse } from '@pdc/shared';
@@ -21,7 +20,7 @@ export function LandingMentores() {
   });
 
   // Se erro ou vazio, não renderiza seção (Regra zero mocks)
-  if (isError || !mentores?.data?.length) return null;
+  if (isError || !mentores?.data.length) return null;
 
   return (
     <section className="bg-surface-alt px-4 py-24 sm:px-6">
@@ -47,7 +46,7 @@ export function LandingMentores() {
                 {m.avatarUrl ? (
                   <img src={m.avatarUrl} alt={m.nome} className="h-full w-full rounded-full object-cover" />
                 ) : (
-                  <Users size={32} />
+                  <img src="/images/perfis/avatar-mentor.svg" alt="" className="h-8 w-8" />
                 )}
               </div>
               <h3 className="font-bold text-text-primary">{m.nome}</h3>

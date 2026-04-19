@@ -14,10 +14,10 @@ export const programasApi = {
   getMeus: () =>
     http.get<{ data: Programa[] }>('/programas/meus'),
 
-  criar: (payload: CriarProgramaPayload) =>
+  create: (payload: CriarProgramaPayload) =>
     http.post<Programa>('/programas', payload),
 
-  atualizar: (id: string, payload: Partial<CriarProgramaPayload>) =>
+  update: (id: string, payload: Partial<CriarProgramaPayload>) =>
     http.put<Programa>(`/programas/${id}`, payload),
 
   getById: (id: string) => http.get<Programa>(`/programas/${id}`),

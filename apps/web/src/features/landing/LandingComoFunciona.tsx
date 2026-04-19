@@ -1,21 +1,24 @@
 import { motion } from 'motion/react';
 import { useFadeUp } from './useFadeUp';
 
-const PASSOS: Array<{ titulo: string; descricao: string }> = [
+const PASSOS: Array<{ num: string; titulo: string; descricao: string }> = [
   {
-    titulo: 'Explora e simula',
+    num: '1',
+    titulo: 'Simula uma profissão',
     descricao:
-      'Escolhe uma área de interesse e faz simulações práticas que replicam o dia a dia real da profissão.',
+      'Escolhe uma área e entra numa simulação prática que replica situações reais do dia a dia profissional.',
   },
   {
-    titulo: 'O sistema aprende',
+    num: '2',
+    titulo: 'A plataforma analisa',
     descricao:
-      'Cada acção tua — tempo, escolhas, resultados — gera um perfil vocacional baseado em comportamento real.',
+      'As tuas acções, tempo e decisões geram um perfil vocacional único — baseado em comportamento, não em respostas a questionários.',
   },
   {
-    titulo: 'Decides com evidência',
+    num: '3',
+    titulo: 'Decides com clareza',
     descricao:
-      'Recebes um relatório vocacional personalizado com recomendações de cursos alinhadas ao teu perfil.',
+      'Recebes recomendações de cursos e áreas alinhadas ao teu perfil real. Sem adivinhação.',
   },
 ];
 
@@ -25,34 +28,35 @@ export function LandingComoFunciona() {
   return (
     <section id="como-funciona" className="px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-5xl">
-        <motion.div {...fadeUp} className="text-center">
+        <motion.div {...fadeUp} className="mb-16 text-center">
           <span className="text-xs font-semibold uppercase tracking-widest text-amber">
             Como funciona
           </span>
           <h2 className="mt-4 text-3xl font-bold text-text-primary sm:text-4xl">
-            Três passos para uma decisão segura
+            Três passos. Uma decisão segura.
           </h2>
+          <div className="mx-auto mt-8 h-px w-2/3 bg-linear-to-r from-transparent via-amber/30 to-transparent" />
         </motion.div>
 
-        <div className="relative mt-16">
-          <div className="absolute left-1/2 top-8 hidden h-px w-[66%] -translate-x-1/2 bg-linear-to-r from-transparent via-amber/30 to-transparent lg:block" />
-
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-3">
-            {PASSOS.map((passo, i) => (
-              <motion.div
-                key={passo.titulo}
-                {...fadeUp}
-                transition={{ duration: 0.5, delay: i * 0.15, ease: 'easeOut' }}
-                className="flex flex-col items-center text-center"
-              >
-                <div className="relative mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber/30 bg-amber/10 text-2xl font-bold text-amber">
-                  {i + 1}
-                </div>
-                <h3 className="mb-3 text-lg font-semibold text-text-primary">{passo.titulo}</h3>
-                <p className="text-sm leading-relaxed text-text-secondary">{passo.descricao}</p>
-              </motion.div>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-3">
+          {PASSOS.map((passo, i) => (
+            <motion.div
+              key={passo.num}
+              {...fadeUp}
+              transition={{ duration: 0.5, delay: i * 0.12, ease: 'easeOut' }}
+              className="flex flex-col items-center text-center"
+            >
+              <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-xl border border-amber/20 bg-amber/10 text-2xl font-bold text-amber">
+                {passo.num}
+              </div>
+              <h3 className="text-lg font-semibold tracking-tight text-text-primary">
+                {passo.titulo}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-text-secondary">
+                {passo.descricao}
+              </p>
+            </motion.div>
+          ))}
         </div>
       </div>
     </section>

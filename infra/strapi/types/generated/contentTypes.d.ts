@@ -504,6 +504,80 @@ export interface ApiAuditLogAuditLog extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiBehaviorPatternBehaviorPattern
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'behavior_patterns';
+  info: {
+    description: 'Motor de heur\u00EDsticas e padr\u00F5es comportamentais por dom\u00EDnio t\u00E9cnico';
+    displayName: 'Behavior Pattern';
+    pluralName: 'behavior-patterns';
+    singularName: 'behavior-pattern';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    cognitiveFluidity: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 10;
+          min: 0;
+        },
+        number
+      >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    decisionSpeedAvg: Schema.Attribute.Integer;
+    domainId: Schema.Attribute.String & Schema.Attribute.Required;
+    focusStability: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 10;
+          min: 0;
+        },
+        number
+      >;
+    lastUpdatedAt: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::behavior-pattern.behavior-pattern'
+    > &
+      Schema.Attribute.Private;
+    perfil: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
+    publishedAt: Schema.Attribute.DateTime;
+    resilienceIndex: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 10;
+          min: 0;
+        },
+        number
+      >;
+    successRate: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 1;
+          min: 0;
+        },
+        number
+      >;
+    technicalScore: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 10;
+          min: 0;
+        },
+        number
+      >;
+    tinaSummary: Schema.Attribute.JSON;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiBookmarkBookmark extends Struct.CollectionTypeSchema {
   collectionName: 'bookmarks';
   info: {
@@ -824,6 +898,41 @@ export interface ApiDenunciaDenuncia extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiDomainEventDomainEvent extends Struct.CollectionTypeSchema {
+  collectionName: 'domain_events';
+  info: {
+    description: 'Registro do Outbox Pattern para garantia de eventos';
+    displayName: 'Domain Event';
+    pluralName: 'domain-events';
+    singularName: 'domain-event';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    correlationId: Schema.Attribute.UID & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::domain-event.domain-event'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    payload: Schema.Attribute.JSON & Schema.Attribute.Required;
+    processed: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    processedAt: Schema.Attribute.DateTime;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
   collectionName: 'experiencias';
   info: {
@@ -853,35 +962,87 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    curso: Schema.Attribute.Relation<'manyToOne', 'api::curso.curso'>;
+    dataFim: Schema.Attribute.DateTime;
+    dataInicio: Schema.Attribute.DateTime;
     descricao: Schema.Attribute.Text;
     estado: Schema.Attribute.Enumeration<
       ['draft', 'review', 'approved', 'published', 'archived']
     > &
       Schema.Attribute.DefaultTo<'draft'>;
+    gradeDestaque: Schema.Attribute.JSON;
     instituicao: Schema.Attribute.Relation<
       'manyToOne',
       'api::instituicao.instituicao'
     >;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizacao: Schema.Attribute.String;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
       'api::experiencia.experiencia'
     > &
       Schema.Attribute.Private;
+    modalidade: Schema.Attribute.Enumeration<
+      ['presencial', 'online', 'hibrido']
+    >;
     nivel: Schema.Attribute.Enumeration<['basico', 'medio', 'avancado']>;
     publishedAt: Schema.Attribute.DateTime;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
+    telemetriaConfig: Schema.Attribute.JSON;
     titulo: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    vagas: Schema.Attribute.Integer;
     validadoAcademicamente: Schema.Attribute.Boolean &
       Schema.Attribute.DefaultTo<false>;
     visibilidade: Schema.Attribute.Enumeration<
       ['publico', 'privado', 'institucional']
     > &
       Schema.Attribute.DefaultTo<'publico'>;
+  };
+}
+
+export interface ApiFeatureFlagFeatureFlag extends Struct.CollectionTypeSchema {
+  collectionName: 'feature_flags';
+  info: {
+    displayName: 'Feature Flag';
+    pluralName: 'feature-flags';
+    singularName: 'feature-flag';
+  };
+  options: {
+    draftAndPublish: false;
+    indexes: [
+      {
+        columns: ['domain'];
+        name: 'unique_feature_flag_domain';
+        type: 'unique';
+      },
+    ];
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    domain: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    enabled: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::feature-flag.feature-flag'
+    > &
+      Schema.Attribute.Private;
+    overrides: Schema.Attribute.JSON;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
   };
 }
 
@@ -1320,6 +1481,10 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     areaFormacao: Schema.Attribute.String;
     areasInteresse: Schema.Attribute.JSON;
     ativo: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    behavior_patterns: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::behavior-pattern.behavior-pattern'
+    >;
     bio: Schema.Attribute.Text &
       Schema.Attribute.SetMinMaxLength<{
         maxLength: 1000;
@@ -1353,6 +1518,7 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
       'api::perfil.perfil'
     > &
       Schema.Attribute.Private;
+    lti_context: Schema.Attribute.JSON;
     modalidadeCusto: Schema.Attribute.String;
     modoAcesso: Schema.Attribute.Enumeration<['individual', 'institucional']> &
       Schema.Attribute.DefaultTo<'individual'>;
@@ -1364,6 +1530,15 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     preferenciasUi: Schema.Attribute.JSON;
     publishedAt: Schema.Attribute.DateTime;
     regiao: Schema.Attribute.String;
+    reputacao: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 100;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
     socialLinks: Schema.Attribute.JSON;
     suspensaAte: Schema.Attribute.DateTime;
     telefone: Schema.Attribute.String;
@@ -1456,6 +1631,8 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    dataFim: Schema.Attribute.DateTime;
+    dataInicio: Schema.Attribute.DateTime;
     descricao: Schema.Attribute.Text;
     duracao: Schema.Attribute.String;
     estado: Schema.Attribute.Enumeration<['draft', 'published', 'archived']> &
@@ -1470,6 +1647,7 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
       'api::programa.programa'
     > &
       Schema.Attribute.Private;
+    metadata: Schema.Attribute.JSON;
     modalidade: Schema.Attribute.Enumeration<
       ['presencial', 'online', 'hibrido']
     >;
@@ -1477,6 +1655,8 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
     requisitos: Schema.Attribute.Text;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
+    tipo: Schema.Attribute.Enumeration<['standard', 'shadowapro', 'eduvisit']> &
+      Schema.Attribute.DefaultTo<'standard'>;
     titulo: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -2452,6 +2632,7 @@ declare module '@strapi/strapi' {
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
       'api::audit-log.audit-log': ApiAuditLogAuditLog;
+      'api::behavior-pattern.behavior-pattern': ApiBehaviorPatternBehaviorPattern;
       'api::bookmark.bookmark': ApiBookmarkBookmark;
       'api::certificado.certificado': ApiCertificadoCertificado;
       'api::comment.comment': ApiCommentComment;
@@ -2459,7 +2640,9 @@ declare module '@strapi/strapi' {
       'api::conquista.conquista': ApiConquistaConquista;
       'api::curso.curso': ApiCursoCurso;
       'api::denuncia.denuncia': ApiDenunciaDenuncia;
+      'api::domain-event.domain-event': ApiDomainEventDomainEvent;
       'api::experiencia.experiencia': ApiExperienciaExperiencia;
+      'api::feature-flag.feature-flag': ApiFeatureFlagFeatureFlag;
       'api::inscricao.inscricao': ApiInscricaoInscricao;
       'api::instituicao.instituicao': ApiInstituicaoInstituicao;
       'api::like.like': ApiLikeLike;

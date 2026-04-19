@@ -1,7 +1,8 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode, useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { authApi, type LoginPayload, type LoginResponse, type RegisterPayload } from '@/lib/api/auth';
 import type { User } from '@pdc/shared';
+import { telemetriaService } from '../telemetria/telemetria.service';
 
 interface AuthContextValue {
   user: User | null;
@@ -18,12 +19,25 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
-  const { data: user = null, isLoading } = useQuery({
+  const { data: user = null, isLoading, isFetched } = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => authApi.me().catch(() => null),
-    retry: false,
+    queryFn: () => authApi.me().catch((err) => {
+      console.warn('[AUTH] Falha ao recuperar sessão:', err);
+      return null;
+    }),
+    retry: (failureCount, error: any) => {
+      // Não repetir se for 401 ou 403 (Sessão inválida/expirada)
+      if (error?.status === 401 || error?.status === 403) return false;
+      return failureCount < 1;
+    },
     staleTime: 5 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (isFetched && user) {
+      void telemetriaService.syncPending();
+    }
+  }, [isFetched, user]);
 
   const loginMutation = useMutation({
     mutationFn: (payload: LoginPayload) => authApi.login(payload),
@@ -38,6 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: ({ otp, canal }: { otp: string; canal: 'email' | 'sms' }) =>
       authApi.verifyOtp(otp, canal),
     onSuccess: (verifiedUser) => {
+      // Invalida e força refetch para garantir integridade total
+      void queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       queryClient.setQueryData(['auth', 'me'], verifiedUser);
     },
   });
@@ -60,7 +76,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function register(payload: RegisterPayload): Promise<LoginResponse> {
-    // Both login and register now return LoginResponse (requiresOtp: true)
     return registerMutation.mutateAsync(payload);
   }
 
@@ -75,8 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
-        isLoading,
-        isAuthenticated: user !== null,
+        isLoading: isLoading && !isFetched,
+        isAuthenticated: !!user,
         login,
         completeOtp,
         register,

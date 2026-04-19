@@ -1,118 +1,182 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { projetosApi } from '@/lib/api/projetos';
-import { useAuth } from '@/lib/auth/AuthContext';
-import { Spinner, Card, Pagination, Badge } from '@/components/ui';
+import { Card, Button, Avatar, EmptyState } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
+import { 
+  Rocket, 
+  Star, 
+  Plus, 
+  ShieldCheck, 
+  Search,
+  ChevronRight,
+  Layers
+} from 'lucide-react';
+import { http } from '@/lib/api/http';
+import { motion } from 'motion/react';
 import type { Projeto } from '@pdc/shared';
 
-function ProjetoCard({ projeto }: { projeto: Projeto }) {
-  const abierto = !!projeto.repoUrl;
+function ProjetoCard({ proj, index }: { proj: Projeto; index: number }) {
+  // Ajuste do mapping para o novo contrato
+  const p = proj as any; // TODO: Strict type check after BFF sync
+
   return (
-    <Link to={`/projetos/${projeto.id}`}>
-      <Card interactive className="overflow-hidden">
-        {projeto.imagemUrl ? (
-          <img src={projeto.imagemUrl} alt={projeto.titulo} className="h-36 w-full object-cover" />
-        ) : (
-          <div className="h-36 w-full bg-surface-raised" />
-        )}
-        <div className="p-4">
-          <div className="mb-2 flex items-center gap-2">
-            <Badge variant={abierto ? 'success' : 'outline'}>
-              {abierto ? 'Aberto para colaboração' : 'Apenas exposição'}
-            </Badge>
-          </div>
-          <h3 className="font-semibold text-text-primary line-clamp-1">{projeto.titulo}</h3>
-          <p className="mt-1 text-xs text-text-muted line-clamp-2">{projeto.descricao}</p>
-          {projeto.tags.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1">
-              {projeto.tags.slice(0, 3).map((tag) => (
-                <Badge key={tag} variant="outline">{tag}</Badge>
-              ))}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+    >
+      <Link to={`/app/projetos/${p.id}`} className="block group">
+        <Card className="h-full bg-surface-raised/40 backdrop-blur-md border-white/5 overflow-hidden flex flex-col hover:bg-white/[0.02] hover:border-white/10 transition-all duration-500 rounded-[32px] shadow-2xl">
+          <div className="aspect-[16/10] w-full bg-[#0A0A0A] overflow-hidden relative">
+            {p.mediaUrls?.[0] ? (
+              <img 
+                src={p.mediaUrls[0]} 
+                alt={p.titulo} 
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" 
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface to-background">
+                <Layers size={48} className="text-text-muted/20" />
+              </div>
+            )}
+            
+            <div className="absolute top-4 left-4">
+              <div className="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[9px] font-black uppercase tracking-widest text-accent">
+                {p.area || 'Inovação'}
+              </div>
             </div>
-          )}
-          <div className="mt-3 text-right">
-            <span className="text-xs font-medium text-amber">{abierto ? 'Conectar →' : 'Ver projecto →'}</span>
           </div>
-        </div>
-      </Card>
-    </Link>
+          
+          <div className="p-8 flex-1 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+               <Avatar src={p.autor?.foto?.url} fallback={p.autor?.nome?.[0] || 'T'} className="h-7 w-7 border border-accent/20" />
+               <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{p.autor?.nome || 'Talento PDC'}</span>
+            </div>
+
+            <h3 className="text-2xl font-black text-text-primary tracking-tighter group-hover:text-accent transition-colors duration-300 font-display line-clamp-1">
+              {p.titulo}
+            </h3>
+            
+            <p className="text-text-secondary text-sm font-medium line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
+              {p.descricao}
+            </p>
+            
+            <div className="mt-auto pt-6 flex items-center justify-between border-t border-white/5">
+              <div className="flex items-center gap-4 text-text-muted">
+                <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+                    <Star size={14} className="text-accent" /> 12
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+                    <ShieldCheck size={14} className="text-success" /> Validado
+                </div>
+              </div>
+              
+              <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all shadow-lg">
+                  <ChevronRight size={18} strokeWidth={3} />
+              </div>
+            </div>
+          </div>
+        </Card>
+      </Link>
+    </motion.div>
   );
 }
 
 export function ProjetoListPage() {
-  const { user } = useAuth();
   const [search, setSearch] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const [page, setPage] = useState(1);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['projetos', search, page],
-    queryFn: () =>
-      projetosApi.list({ page, pageSize: 12, ...(search ? { tags: search } : {}) }),
+    queryKey: ['projetos', 'list', search],
+    queryFn: () => http.get<Projeto[]>('/projetos'),
   });
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setSearch(inputValue);
-    setPage(1);
-  }
+  if (isLoading) return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-20 sm:px-6">
+      <div className="w-full max-w-7xl">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {Array.from({length: 6}).map((_, i) => <div key={i} className="h-96 bg-surface-raised/20 animate-pulse rounded-[32px]" />)}
+        </div>
+      </div>
+    </div>
+  );
 
-  const projetos = data?.data ?? [];
-  const pageCount = data?.pagination.pageCount ?? 1;
+  const projetos = (data || []).filter(p => 
+    p.titulo.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div>
-      <SEOHead title="Projetos" description="Descobre projetos de estudantes e profissionais angolanos." url="https://usepdc.com/projetos" />
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-text-primary">Projetos</h1>
-        <div className="flex items-center gap-3">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input
-              value={inputValue}
-              onChange={(e) => { setInputValue(e.target.value); }}
-              placeholder="Filtrar por tag…"
-              className="h-9 rounded-md border border-border bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-amber"
-            />
-            <button
-              type="submit"
-              className="h-9 rounded-md bg-amber px-4 text-sm font-semibold text-background hover:bg-amber-hover"
-            >
-              Filtrar
-            </button>
-          </form>
-          {(['aluno', 'mentor', 'instituicao'] as string[]).includes(user?.role ?? '') && (
-            <Link
-              to="/app/projetos/novo"
-              className="inline-flex h-8 items-center rounded-md bg-amber px-3 text-xs font-semibold text-background hover:bg-amber-hover"
-            >
-              Novo Projeto
+    <div className="min-h-screen bg-[#050505] px-4 py-20 sm:px-6 lg:px-8 font-sans relative">
+      <SEOHead title="Portfólio de Evidências" description="Explora ativos reais de mérito validados por mentores de elite." />
+      
+      {/* Camada de Profundidade */}
+      <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('/images/pattern-afro.svg')] bg-repeat" />
+
+      <div className="mx-auto max-w-7xl relative">
+        {/* Header Soberano */}
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/5 pb-16">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+               <Rocket size={12} /> Laboratório de Mérito
+            </div>
+            <h1 className="text-4xl font-black text-text-primary tracking-tighter sm:text-7xl font-display leading-[0.9]">
+              Ativos em <span className="text-accent italic">Órbita.</span>
+            </h1>
+            <p className="text-text-secondary mt-8 text-xl font-medium leading-relaxed max-w-lg">
+              Evidência real de execução técnica. Projectos validados que alimentam a autoridade do teu Perfil Vocacional.
+            </p>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+            <div className="relative group w-full md:w-80">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-accent transition-colors" size={18} />
+              <input 
+                type="text"
+                placeholder="Procurar ativo..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-surface-raised/20 backdrop-blur-md border border-white/5 rounded-2xl text-text-primary outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/50 transition-all font-medium"
+              />
+            </div>
+            <Link to="/app/projetos/novo" className="w-full sm:w-auto">
+              <Button className="w-full h-14 rounded-2xl bg-text-primary text-background font-black uppercase tracking-widest text-[11px] px-8 hover:bg-accent hover:text-white transition-all shadow-xl">
+                <Plus size={16} className="mr-2" /> Lançar Projeto
+              </Button>
             </Link>
+          </div>
+        </header>
+
+        <div className="mt-16">
+          {isError ? (
+            <EmptyState
+              icon={Layers}
+              variant="error"
+              title="Erro de Sincronização"
+              description="Não foi possível aceder ao laboratório de projetos. O Oráculo está a ser estabilizado."
+              onRetry={() => { window.location.reload(); }}
+            />
+          ) : projetos.length === 0 ? (
+            <EmptyState
+              icon={Rocket}
+              title={search ? "Sem ativos localizados" : "Laboratório em Silêncio"}
+              description={search ? `Não encontrámos projetos para "${search}".` : "Sê o primeiro a lançar um ativo de mérito para validação do Comitê Científico."}
+              {...(search ? { 
+                ctaLabel: "Ver Todos", 
+                onRetry: () => { setSearch(''); } 
+              } : {
+                ctaLabel: "Lançar Ativo",
+                onRetry: () => { window.location.href = '/app/projetos/novo'; }
+              })}
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
+              {projetos.map((p, i) => (
+                <ProjetoCard key={p.id} proj={p} index={i} />
+              ))}
+            </div>
           )}
         </div>
       </div>
-
-      {isLoading ? (
-        <div className="flex justify-center py-20">
-          <Spinner size="lg" />
-        </div>
-      ) : isError ? (
-        <p className="py-12 text-center text-text-muted">Ocorreu um erro ao carregar os projetos.</p>
-      ) : projetos.length === 0 ? (
-        <p className="py-12 text-center text-text-muted">Nenhum projeto encontrado.</p>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {projetos.map((projeto) => (
-              <ProjetoCard key={projeto.id} projeto={projeto} />
-            ))}
-          </div>
-          {pageCount > 1 && (
-            <Pagination page={page} pageCount={pageCount} onPageChange={setPage} className="mt-8" />
-          )}
-        </>
-      )}
     </div>
   );
 }

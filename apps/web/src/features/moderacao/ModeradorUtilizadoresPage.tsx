@@ -23,7 +23,7 @@ export function ModeradorUtilizadoresPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'utilizadores', page],
     queryFn: () =>
-      http.get<UtilizadoresResponse>(`/admin/utilizadores?page=${page}&pageSize=10`),
+      http.get<UtilizadoresResponse>(`/admin/utilizadores?page=${page.toString()}&pageSize=10`),
   });
 
   const suspendMutation = useMutation({

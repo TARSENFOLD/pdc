@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { Button, Spinner, Badge, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
+import { Button, Spinner, Badge, LikeButton, BookmarkButton, RatingStars, EmptyState } from '@/components/ui';
+import { BookOpen } from 'lucide-react';
 import { cursosApi } from '@/lib/api/cursos';
 import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
@@ -14,11 +15,11 @@ import type { ProgressoItem } from '@pdc/shared';
 export function CursoDetailPage() {
   const { id } = useParams<{ id: string }>();
   const qc = useQueryClient();
-  const flags = useFeatureFlags();
+  const { isEnabled } = useFeatureFlags();
   const { user } = useAuth();
   const { track } = useTelemetry();
-  const discussionsEnabled = !!flags['DISCUSSIONS_ENABLED'];
-  const isMentorOrAdmin = user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'mentor';
+  const discussionsEnabled = isEnabled('DISCUSSIONS_ENABLED');
+  const isMentorOrAdmin = user?.role === 'super_admin' || user?.role === 'mentor';
 
   useEffect(() => {
     if (id) track('curso.detail_viewed', { cursoId: id });
@@ -73,7 +74,7 @@ export function CursoDetailPage() {
     );
   }
   if (isError || !curso) {
-    return <p className="py-12 text-center text-error">Erro ao carregar o curso.</p>;
+    return <div className="flex min-h-screen items-center justify-center bg-background p-4"><EmptyState icon={BookOpen} variant="error" title="Erro ao carregar o curso" description="Não foi possível carregar os dados deste curso." /></div>;
   }
 
   const isEnrolled = progresso.length > 0;

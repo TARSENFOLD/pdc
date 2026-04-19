@@ -1,0 +1,24 @@
+{
+  "name": "@pdc/edge",
+  "version": "1.0.0",
+  "description": "Worker de Ingestão de Telemetria PDC v2 (ADR-005)",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir=dist",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "hono": "^4.12.14"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260417.1",
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.4",
+    "wrangler": "^3.0.0"
+  }
+}

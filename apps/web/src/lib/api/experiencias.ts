@@ -25,9 +25,9 @@ export const experienciasApi = {
   getMinhas: () =>
     http.get<{ data: ExperienciaMinha[] }>('/experiencias/minhas'),
 
-  criar: (payload: CriarExperienciaPayload) =>
+  create: (payload: CriarExperienciaPayload) =>
     http.post<Experiencia>('/experiencias', payload),
 
-  atualizar: (id: string, payload: Partial<CriarExperienciaPayload>) =>
+  update: (id: string, payload: Partial<CriarExperienciaPayload>) =>
     http.put<Experiencia>(`/experiencias/${id}`, payload),
 };

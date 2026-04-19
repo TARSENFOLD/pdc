@@ -25,7 +25,7 @@ export const simulacoesApi = {
     http.get<Simulacao>(`/simulacoes/${id}`),
 
   getMinhas: (page?: number) =>
-    http.get<{ data: SimulacaoMinha[], pagination: Pagination }>(`/simulacoes/minhas?page=${page ?? 1}`),
+    http.get<{ data: SimulacaoMinha[], pagination: Pagination }>(`/simulacoes/minhas?page=${(page ?? 1).toString()}`),
 
   criar: (payload: CriarSimulacaoPayload) =>
     http.post<SimulacaoMinha>('/simulacoes', payload),

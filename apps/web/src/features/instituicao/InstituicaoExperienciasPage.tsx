@@ -21,7 +21,7 @@ export function InstituicaoExperienciasPage() {
       header: 'Estado', 
       accessor: (exp: ExperienciaMinha) => (
         <Badge variant={exp.estado === 'published' ? 'success' : exp.estado === 'review' ? 'warning' : 'default'}>
-          {exp.estado?.toUpperCase() ?? 'DRAFT'}
+          {exp.estado.toUpperCase()}
         </Badge>
       )
     },

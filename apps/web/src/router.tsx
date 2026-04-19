@@ -17,6 +17,8 @@ import { Spinner } from '@/components/ui';
 import { TermosPage } from '@/pages/TermosPage';
 import { PrivacidadePage } from '@/pages/PrivacidadePage';
 
+const ReputacaoPage = React.lazy(() => import('@/features/reputacao/ReputacaoPage').then(m => ({ default: m.ReputacaoPage })));
+
 // --- Lazy-loaded /app/* pages ---
 const AlunoDashboard = React.lazy(() => import('@/pages/dashboard/AlunoDashboard').then(m => ({ default: m.AlunoDashboard })));
 const MentorDashboard = React.lazy(() => import('@/pages/dashboard/MentorDashboard').then(m => ({ default: m.MentorDashboard })));
@@ -46,7 +48,7 @@ const SimulacaoDetailPage = React.lazy(() => import('@/features/simulacoes/Simul
 const SimulacaoPlayerPage = React.lazy(() => import('@/features/simulacoes/SimulacaoPlayerPage').then(m => ({ default: m.SimulacaoPlayerPage })));
 const RelatorioVocacional = React.lazy(() => import('@/features/simulacoes/RelatorioVocacional').then(m => ({ default: m.RelatorioVocacional })));
 
-const FeedPage = React.lazy(() => import('@/features/feed/FeedPage'));
+const FeedPage = React.lazy(() => import('@/features/feed/FeedPage').then(m => ({ default: m.FeedPage })));
 
 const DenunciaListPage = React.lazy(() => import('@/features/moderacao/DenunciaListPage').then(m => ({ default: m.DenunciaListPage })));
 const DenunciaDetailPage = React.lazy(() => import('@/features/moderacao/DenunciaDetailPage').then(m => ({ default: m.DenunciaDetailPage })));
@@ -56,6 +58,7 @@ const ModeradorUtilizadoresPage = React.lazy(() => import('@/features/moderacao/
 const VinculosPage = React.lazy(() => import('@/features/vinculos/VinculosPage').then(m => ({ default: m.VinculosPage })));
 const MensagensPage = React.lazy(() => import('@/features/mensagens/MensagensPage').then(m => ({ default: m.MensagensPage })));
 const ConversaPage = React.lazy(() => import('@/features/mensagens/ConversaPage').then(m => ({ default: m.ConversaPage })));
+
 
 const AdminUtilizadoresPage = React.lazy(() => import('@/features/admin/AdminUtilizadoresPage').then(m => ({ default: m.AdminUtilizadoresPage })));
 const AdminStatsPage = React.lazy(() => import('@/features/admin/AdminStatsPage').then(m => ({ default: m.AdminStatsPage })));
@@ -116,9 +119,20 @@ const ROLE_DASHBOARD: Record<Role, string> = {
 };
 
 function DashboardRedirect() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
   if (!user) return <Navigate to="/login" replace />;
-  return <Navigate to={ROLE_DASHBOARD[user.role]} replace />;
+  
+  const target = ROLE_DASHBOARD[user.role] ?? '/app/dashboard/aluno';
+  return <Navigate to={target} replace />;
 }
 
 function RoleGuard({ allowed, children }: { allowed: Role[]; children: React.ReactNode }) {
@@ -204,12 +218,11 @@ export const router = createBrowserRouter([
       },
 
       // Vínculos
+      { path: 'reputacao', element: <ReputacaoPage /> },
       {
         path: 'vinculos',
         element: <ProtectedRoute><VinculosPage /></ProtectedRoute>
       },
-
-      // Mensagens
       {
         path: 'mensagens',
         element: <ProtectedRoute><MensagensPage /></ProtectedRoute>

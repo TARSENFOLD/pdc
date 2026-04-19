@@ -1,16 +1,15 @@
+import { useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { motion } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MicroDesafio } from './MicroDesafio';
-
-const STATS: Array<{ value: string; label: string }> = [
-  { value: '~60%', label: 'taxa de evasão no 1.º ano' },
-  { value: '3 tipos', label: 'de simulações disponíveis' },
-  { value: '6 roles', label: 'para todo o ecossistema' },
-];
+import { NeuralConstellation, ChoreographyState } from './NeuralConstellation';
 
 export function LandingHero() {
   const reduced = useReducedMotion();
+  const navigate = useNavigate();
+  const [choreography, setChoreography] = useState<ChoreographyState>('idle');
+  const [isWarping, setIsWarping] = useState(false);
 
   const stagger = (i: number) =>
     reduced
@@ -22,57 +21,102 @@ export function LandingHero() {
         };
 
   return (
-    <section className="flex min-h-screen flex-col items-center justify-center px-4 pt-24 pb-16 text-center sm:px-6">
-      <motion.div {...stagger(0)} className="mb-4">
-        <span className="inline-flex items-center gap-2 rounded-full border border-amber/30 bg-amber/10 px-4 py-1.5 text-xs font-medium text-amber">
-          Plataforma educacional angolana
-        </span>
+    <section 
+      className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 pt-24 pb-16 text-center sm:px-6"
+      style={{ WebkitTapHighlightColor: 'transparent' }}
+    >
+      {/* Imagem Hero nítida (camada mais profunda) */}
+      <div className="pointer-events-none absolute inset-0 z-0">
+        <img
+          src="/images/hero/hero-students.jpg"
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover"
+        />
+        {/* Sobreposição do tema para legibilidade */}
+        <div className="absolute inset-0 bg-background/60 dark:bg-background/70" />
+      </div>
+
+      {/* Neural Constellation (sobre a imagem) */}
+      <NeuralConstellation choreography={choreography} />
+      {/* Heritage Fractal Base Pattern Overlay (Adinkra inspired geometry) */}
+      <div className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06] mix-blend-multiply dark:mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20Z' fill='%23C1440E'/%3E%3Cpath d='M0 0h10v10H0zM30 30h10v10H30z' fill='%23C1440E'/%3E%3C/svg%3E")`, backgroundSize: '40px 40px' }} />
+
+
+      <motion.div {...stagger(0)} className="relative z-10 mb-8">
+        <div className="inline-flex items-center gap-3 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 py-1.5 px-4 text-xs font-semibold tracking-wide text-text-secondary dark:text-white/80 backdrop-blur-lg shadow-md dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.6)]">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber opacity-75"></span>
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber"></span>
+          </span>
+          A tua comunidade educacional
+        </div>
       </motion.div>
 
       <motion.h1
         {...stagger(1)}
-        className="mx-auto max-w-4xl text-4xl font-bold leading-tight tracking-tight text-text-primary sm:text-5xl lg:text-6xl"
+        className="relative z-10 mx-auto max-w-4xl text-5xl font-medium tracking-tight text-text-primary sm:text-6xl lg:text-7xl leading-[1.1]"
       >
-        Escolhe a tua carreira com{' '}
-        <span className="text-amber">evidência real</span>
+        Experimenta uma profissão antes de{' '}
+        <span className="font-display italic text-amber drop-shadow-md dark:drop-shadow-[0_0_30px_rgba(193,68,14,0.3)]">escolher.</span>
       </motion.h1>
 
       <motion.p
         {...stagger(2)}
-        className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-text-secondary"
+        className="relative z-10 mx-auto mt-6 max-w-xl text-lg text-text-secondary dark:text-white/70"
       >
-        Experimenta profissões e cursos através de simulações práticas antes de te matriculares.
-        Toma a decisão certa com base no teu próprio comportamento — não em suposições.
+        Descubra como é o dia a dia de um estudante do curso que você quer fazendo atividades práticas virtuais. Junta-te a nós e decide o teu futuro com segurança.
       </motion.p>
 
-      <motion.div {...stagger(3)} className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+      <motion.div {...stagger(3)} className="relative z-10 mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
         <Link
           to="/criar-conta"
-          className="w-full rounded-xl bg-amber px-8 py-3.5 text-base font-semibold text-black transition-all hover:bg-amber-hover hover:scale-[1.02] sm:w-auto"
+          onMouseEnter={() => setChoreography('swarm')}
+          onMouseLeave={() => setChoreography('idle')}
+          onClick={(e) => {
+            if (reduced) return;
+            e.preventDefault();
+            if (isWarping) return;
+            setIsWarping(true);
+            setChoreography('warp');
+            setTimeout(() => navigate('/criar-conta'), 600);
+          }}
+          className="relative w-full rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-amber px-8 py-4 text-sm font-bold text-background transition-colors sm:w-auto overflow-hidden shadow-md active:scale-[0.98] hover:bg-amber-hover"
         >
-          Começa agora — é grátis
+          Vamos descobrir a tua vocação
         </Link>
         <a
           href="#como-funciona"
-          className="w-full rounded-xl border border-border bg-surface-raised px-8 py-3.5 text-base font-semibold text-text-primary transition-colors hover:bg-surface sm:w-auto"
+          onMouseEnter={() => setChoreography('swarm')}
+          onMouseLeave={() => setChoreography('idle')}
+          className="w-full rounded-tr-sm rounded-bl-sm rounded-tl-2xl rounded-br-2xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 backdrop-blur-lg px-8 py-4 text-sm font-bold text-text-primary transition-all hover:bg-black/10 dark:hover:bg-white/10 hover:text-text-primary dark:hover:text-white sm:w-auto active:scale-[0.98]"
         >
-          Ver como funciona
+          Entenda como funciona
         </a>
       </motion.div>
 
-      <MicroDesafio />
+      <div 
+        className="relative z-10"
+        onMouseEnter={() => setChoreography('swarm')}
+        onMouseLeave={() => setChoreography('idle')}
+      >
+        <MicroDesafio />
+      </div>
 
-      <motion.div {...stagger(4)} className="mt-20 grid grid-cols-1 gap-8 sm:grid-cols-3">
-        {STATS.map((stat) => (
-          <div key={stat.label} className="flex flex-col items-center gap-1">
-            <span className="text-3xl font-bold text-amber">{stat.value}</span>
-            <span className="text-sm text-text-muted">{stat.label}</span>
-          </div>
-        ))}
+      <motion.div {...stagger(4)} className="relative z-10 mt-16 max-w-lg w-full">
+        {/* Subtle geometric divider inspired by traditional woven patterns */}
+        <div className="flex justify-center items-center gap-4 opacity-40">
+           <div className="h-px bg-text-primary/20 flex-1"></div>
+           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-amber">
+              <path d="M12 2L2 12L12 22L22 12L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="miter"/>
+              <path d="M12 8L8 12L12 16L16 12L12 8Z" fill="currentColor"/>
+           </svg>
+           <div className="h-px bg-text-primary/20 flex-1"></div>
+        </div>
       </motion.div>
 
       <motion.div
-        className="mt-16"
+        className="relative z-10 mt-16"
         animate={reduced ? {} : { y: [0, 8, 0] }}
         transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
       >

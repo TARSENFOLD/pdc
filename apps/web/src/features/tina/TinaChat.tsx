@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback } from 'react';
 import { DeepChat } from 'deep-chat-react';
+import { Sparkles, X, MessageSquareText, Cpu } from 'lucide-react';
 import type { Response as DeepChatResponse } from 'deep-chat/dist/types/response';
 
-const API_URL: string = (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:3001';
+const API_URL: string = (import.meta.env['VITE_API_URL'] as string | undefined) ?? '/api';
 const AI_PROVIDER: string = (import.meta.env['VITE_AI_PROVIDER'] as string | undefined) ?? 'deepseek';
 
 const SUGGESTIONS = [
@@ -25,43 +26,52 @@ export function TinaChat() {
     return (
       <button
         onClick={() => { setOpen(true); }}
-        className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-1"
+        className="fixed bottom-8 right-8 z-50 flex flex-col items-center gap-2 group"
         aria-label="Abrir Tina"
       >
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-amber text-background shadow-lg transition-transform hover:scale-105">
-          <span className="text-xl" role="img" aria-label="sparkles">✨</span>
-        </span>
-        <span className="text-[10px] font-bold tracking-wider text-amber">TINA</span>
+        <div className="relative">
+          <div className="absolute -inset-2 bg-accent/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+          <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-raised border border-white/10 shadow-2xl text-accent transition-all group-hover:scale-110 group-hover:-translate-y-1">
+            <Sparkles size={24} strokeWidth={2.5} className="animate-pulse-subtle" />
+          </span>
+        </div>
+        <span className="text-[10px] font-black tracking-[0.2em] text-accent uppercase opacity-60 group-hover:opacity-100 transition-opacity">Tina</span>
       </button>
     );
   }
 
   return (
     <div
-      className="fixed bottom-6 right-6 z-50 flex flex-col overflow-hidden shadow-2xl"
-      style={{ width: 360, height: 520, borderRadius: 16, background: 'var(--surface)' }}
+      className="fixed bottom-8 right-8 z-50 flex flex-col overflow-hidden shadow-2xl border border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-300"
+      style={{ 
+        width: 380, 
+        height: 560, 
+        borderRadius: 24, 
+        background: 'rgba(10, 10, 10, 0.8)',
+        backdropFilter: 'blur(24px)'
+      }}
     >
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber text-background text-sm font-bold">
-          T
-        </span>
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold text-text-primary">Tina</span>
-          <span className="text-[10px] text-text-muted">{AI_PROVIDER}</span>
+      {/* Header (Glass) */}
+      <div className="flex items-center gap-3 bg-white/5 px-5 py-4">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/20 text-accent border border-accent/30">
+          <Cpu size={18} strokeWidth={2.5} />
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex flex-col">
+          <span className="text-sm font-black tracking-tight text-text-primary">Tina Intelligence</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-accent/60">System Active • {AI_PROVIDER}</span>
+        </div>
+        <div className="ml-auto flex items-center gap-3">
           {remaining !== null && (
-            <span className="text-[10px] text-text-muted">{remaining} restantes</span>
+            <div className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-mono text-text-muted">
+              {remaining} OPS
+            </div>
           )}
           <button
             onClick={() => { setOpen(false); }}
-            className="text-text-muted hover:text-text-primary"
+            className="p-1 rounded-lg hover:bg-white/10 text-text-muted transition-colors"
             aria-label="Fechar Tina"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X size={16} />
           </button>
         </div>
       </div>
@@ -75,7 +85,7 @@ export function TinaChat() {
             stream: true,
           }}
           history={[
-            { role: 'ai', text: 'Olá! Sou a Tina, a tua assistente vocacional. Em que posso ajudar?' },
+            { role: 'ai', text: 'Saudações. Sou a Tina, o teu oráculo de percurso vocacional. Como posso processar o teu futuro hoje?' },
           ]}
           responseInterceptor={(response: unknown) => {
             const res = response as Record<string, unknown>;
@@ -84,48 +94,58 @@ export function TinaChat() {
             if (val) setRemaining(Number(val));
             return res as DeepChatResponse;
           }}
-          inputAreaStyle={{ backgroundColor: 'var(--surface-raised)', borderTop: '1px solid var(--border)' }}
+          inputAreaStyle={{ backgroundColor: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}
           messageStyles={{
             default: {
-              shared: { bubble: { backgroundColor: 'transparent', color: 'var(--text-primary)', fontSize: '0.875rem' } },
-              ai: { bubble: { backgroundColor: 'var(--surface-raised)', borderRadius: '12px', padding: '8px 12px' } },
-              user: { bubble: { backgroundColor: '#d4a017', color: '#0a0a0f', borderRadius: '12px', padding: '8px 12px' } },
+              shared: { bubble: { backgroundColor: 'transparent', color: 'var(--text-primary)', fontSize: '0.85rem', lineHeight: '1.5' } },
+              ai: { bubble: { backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '12px 16px' } },
+              user: { bubble: { backgroundColor: 'var(--color-accent)', color: '#000', borderRadius: '16px', padding: '12px 16px', fontWeight: '600' } },
             },
           }}
           textInput={{
-            placeholder: { text: 'Escreve aqui...' },
+            placeholder: { text: 'Submeter consulta...' },
             styles: {
               container: {
-                backgroundColor: 'var(--surface-raised)',
-                borderRadius: '8px',
+                backgroundColor: 'rgba(0,0,0,0.2)',
+                borderRadius: '12px',
                 color: 'var(--text-primary)',
-                border: 'none',
+                border: '1px solid rgba(255,255,255,0.1)',
+                padding: '4px 8px'
               },
-              focus: { border: '1px solid #d4a017' },
+              focus: { border: '1px solid var(--color-accent)' },
             },
           }}
           submitButtonStyles={{
-            submit: { container: { default: { backgroundColor: '#d4a017', borderRadius: '8px' } } },
+            submit: { 
+              container: { 
+                default: { 
+                  backgroundColor: 'var(--color-accent)', 
+                  borderRadius: '10px',
+                  padding: '6px'
+                } 
+              } 
+            },
           }}
           chatStyle={{
-            backgroundColor: 'var(--surface)',
+            backgroundColor: 'transparent',
             height: '100%',
             width: '100%',
             border: 'none',
             borderRadius: '0',
           }}
-          auxiliaryStyle="::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }"
+          auxiliaryStyle="::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }"
         />
       </div>
 
       {/* Suggestion chips */}
-      <div className="flex flex-wrap gap-2 border-t border-border px-3 py-2">
+      <div className="flex flex-wrap gap-2 bg-white/2 px-4 py-4 border-t border-white/5">
         {SUGGESTIONS.map((text) => (
           <button
             key={text}
             onClick={() => { handleSuggestion(text); }}
-            className="rounded-full border border-border px-3 py-1 text-[11px] text-text-muted transition-colors hover:border-amber hover:text-amber"
+            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-bold text-text-secondary transition-all hover:bg-accent/10 hover:border-accent/30 hover:text-accent"
           >
+            <MessageSquareText size={10} />
             {text}
           </button>
         ))}

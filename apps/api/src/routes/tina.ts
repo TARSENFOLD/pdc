@@ -8,10 +8,9 @@ import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { tinaService } from '../modules/tina/tina.service.js';
 import { ChatPayloadSchema } from '@pdc/shared';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { env } from '../lib/env.js';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'change-me-in-production-min-32-chars'
-);
+const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 
 export const tinaRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -68,7 +67,7 @@ tinaRoutes.get('/stats', verifyJwt, checkRole(['super_admin']), (c) => {
   // Stats básicas (placeholder)
   return c.json({
     status: 'active',
-    provider: process.env.AI_PROVIDER || 'deepseek',
-    limitPerUser: process.env.TINA_RATE_LIMIT_PER_USER || 20,
+    provider: env.AI_PROVIDER,
+    limitPerUser: env.TINA_RATE_LIMIT_PER_USER,
   });
 });

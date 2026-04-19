@@ -24,10 +24,6 @@ interface StrapiEntity {
   createdAt: string;
 }
 
-interface StrapiList<T> {
-  data: T[];
-}
-
 // ─── LIKES ────────────────────────────────────────────────────────────────────
 
 interactionRoutes.post('/like', zValidator('json', ToggleLikePayloadSchema), async (c) => {
@@ -40,11 +36,12 @@ interactionRoutes.post('/like', zValidator('json', ToggleLikePayloadSchema), asy
     'filters[targetId][$eq]': targetId,
   };
 
-  const existants = await strapiGet<StrapiList<StrapiEntity>>('/likes', p);
+  // Fix: Generic type already represents the item.
+  const res = await strapiGet<StrapiEntity>('/likes', p);
 
-  if (existants.data.length > 0) {
+  if (res.data.length > 0) {
     // Apaga se já existe
-    const idToDelete = existants.data[0]?.id;
+    const idToDelete = res.data[0]?.id;
     if (idToDelete) await strapiDelete(`/likes/${idToDelete.toString()}`);
     return c.json({ liked: false });
   } else {
@@ -66,14 +63,14 @@ interactionRoutes.get('/like/status', zValidator('query', z.object({
   const user = c.get('user');
   const { targetType, targetId } = c.req.valid('query');
 
-  const countReq = await strapiGet<{ meta: { pagination: { total: number } } }>('/likes', {
+  const countReq = await strapiGet<any>('/likes', {
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
     'pagination[withCount]': 'true',
     'pagination[limit]': '1',
   });
 
-  const exactUserReq = await strapiGet<StrapiList<StrapiEntity>>('/likes', {
+  const exactUserReq = await strapiGet<StrapiEntity>('/likes', {
     'filters[userId][$eq]': user.id,
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
@@ -99,10 +96,10 @@ interactionRoutes.post('/bookmark', zValidator('json', ToggleBookmarkPayloadSche
     'filters[targetId][$eq]': targetId,
   };
 
-  const existants = await strapiGet<StrapiList<StrapiEntity>>('/bookmarks', p);
+  const res = await strapiGet<StrapiEntity>('/bookmarks', p);
 
-  if (existants.data.length > 0) {
-    const idToDelete = existants.data[0]?.id;
+  if (res.data.length > 0) {
+    const idToDelete = res.data[0]?.id;
     if (idToDelete) await strapiDelete(`/bookmarks/${idToDelete.toString()}`);
     return c.json({ bookmarked: false });
   } else {
@@ -119,7 +116,7 @@ interactionRoutes.post('/bookmark', zValidator('json', ToggleBookmarkPayloadSche
 interactionRoutes.get('/bookmarks', async (c) => {
   const user = c.get('user');
 
-  const req = await strapiGet<StrapiList<StrapiEntity>>('/bookmarks', {
+  const req = await strapiGet<StrapiEntity>('/bookmarks', {
     'filters[userId][$eq]': user.id,
   });
 

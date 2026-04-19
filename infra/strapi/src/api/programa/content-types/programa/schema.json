@@ -37,6 +37,14 @@
     "duracao": { "type": "string" },
     "vagas": { "type": "integer" },
     "requisitos": { "type": "text" },
-    "tags": { "type": "json" }
+    "tags": { "type": "json" },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["standard", "shadowapro", "eduvisit"],
+      "default": "standard"
+    },
+    "dataInicio": { "type": "datetime" },
+    "dataFim": { "type": "datetime" },
+    "metadata": { "type": "json" }
   }
 }

@@ -4,21 +4,18 @@ import { z } from 'zod';
 import { deleteCookie, getCookie } from 'hono/cookie';
 import { authService } from '../modules/auth/auth.service.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import { rateLimit, rateLimitRegisto } from '../middleware/rateLimit.js';
-import {
-  RegistoEstudantePayloadSchema,
-  RegistoMentorPayloadSchema,
-  RegistoInstituicaoPayloadSchema,
-} from '@pdc/shared';
+import { rateLimit } from '../middleware/rateLimit.js';
 import { setAuthCookies } from '../modules/auth/auth.helper.js';
 import { initiate2faChallenge } from './auth.otp.js';
 import { otpRoutes } from './auth.otp.js';
 import { oauthRoutes } from './auth.oauth.js';
+import { registerRoutes } from './auth.register.js';
 
 export const authRoutes = new Hono<{ Variables: AuthVariables }>();
 
 // Montar sub-routers
 authRoutes.route('/otp', otpRoutes);
+authRoutes.route('/register', registerRoutes);
 authRoutes.route('/', oauthRoutes);
 
 const loginSchema = z.object({
@@ -91,42 +88,5 @@ authRoutes.get('/me', verifyJwt, async (c) => {
     return c.json(user);
   } catch {
     return c.json({ error: 'User not found' }, 404);
-  }
-});
-
-authRoutes.use('/register/estudante', rateLimitRegisto);
-authRoutes.use('/register/mentor', rateLimitRegisto);
-authRoutes.use('/register/instituicao', rateLimitRegisto);
-
-authRoutes.post('/register/estudante', zValidator('json', RegistoEstudantePayloadSchema), async (c) => {
-  const { email, password, nome, areaInteresse, nivelEnsino } = c.req.valid('json');
-  try {
-    const user = await authService.registerWithRole(email, password, nome, 'aluno', { areaInteresse, nivelEnsino });
-    return await initiate2faChallenge(c, user);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erro desconhecido';
-    return c.json({ error: message }, 400);
-  }
-});
-
-authRoutes.post('/register/mentor', zValidator('json', RegistoMentorPayloadSchema), async (c) => {
-  const { email, password, nome, areaEspecialidade, documentos } = c.req.valid('json');
-  try {
-    const user = await authService.registerWithRole(email, password, nome, 'mentor', { areaEspecialidade, documentos: documentos ?? [], aprovado: false });
-    return await initiate2faChallenge(c, user);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erro desconhecido';
-    return c.json({ error: message }, 400);
-  }
-});
-
-authRoutes.post('/register/instituicao', zValidator('json', RegistoInstituicaoPayloadSchema), async (c) => {
-  const { nomeInstituicao, email, password, regiao, tipo, documentos } = c.req.valid('json');
-  try {
-    const user = await authService.registerWithRole(email, password, nomeInstituicao, 'instituicao', { regiao, tipo, documentos: documentos ?? [], aprovado: false });
-    return await initiate2faChallenge(c, user);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erro desconhecido';
-    return c.json({ error: message }, 400);
   }
 });

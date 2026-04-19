@@ -39,7 +39,11 @@ BASE_URL=https://api-staging.usepdc.com k6 run tests/k6/feed-load.js
 
 ### Com Docker
 ```bash
-docker run --rm -i grafana/k6 run - <tests/k6/auth-flow.js
+# Executa o auth-flow por defeito
+npm run docker:load /scripts/auth-flow.js
+
+# Executa qualquer outro script
+npm run docker:load /scripts/telemetry-parallel.js
 ```
 
 ## 📊 Scripts Disponíveis
@@ -50,7 +54,11 @@ docker run --rm -i grafana/k6 run - <tests/k6/auth-flow.js
 | `feed-load.js` | Feed, Scroll, Tabs | 100 VUs sustained | < 500ms |
 | `catalogo-browse.js` | Navegação pública | 200 VUs sustained | < 300ms |
 | `full-journey.js` | Registo -> Curso -> Telemetria | 50 VUs sustained | < 800ms |
+| `discussions-load.js` | Fóruns, Threads, Replies | 50 VUs sustained | < 600ms |
+| `telemetry-parallel.js` | Batches de 50 eventos (T9) | 50 VUs sustained | < 1000ms |
+| `spike-test.js` | Resiliência a picos | Ramp 0 -> 500 VUs (30s) | N/A |
 | `stress-test.js` | Breaking Point | Ramp 0 -> 500 VUs | N/A |
+| `soak-test.js` | Estabilidade / Leaks | 50 VUs (30 min) | < 1000ms |
 
 ## 📈 Interpretando os Resultados
 

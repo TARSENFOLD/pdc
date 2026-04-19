@@ -6,30 +6,42 @@ import { Spinner, Card, Pagination, Badge } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
 import type { InstituicaoPublica } from '@pdc/shared';
 
-const TIPOS = ['Universidade', 'Instituto', 'Escola', 'Centro de Formação'];
-const REGIOES = ['Luanda', 'Benguela', 'Huambo', 'Huíla', 'Cabinda', 'Lunda Norte', 'Lunda Sul', 'Malanje', 'Uíge'];
+const TIPOS = [
+  { value: 'universidade', label: 'Universidade' },
+  { value: 'escola_tecnica', label: 'Escola Técnica' },
+  { value: 'centro_formacao', label: 'Centro de Formação' },
+  { value: 'outro', label: 'Outro' }
+];
+
+const REGIOES = [
+  'Bengo', 'Benguela', 'Bié', 'Cabinda', 'Cuando Cubango', 'Cuanza Norte', 
+  'Cuanza Sul', 'Cunene', 'Huambo', 'Huíla', 'Luanda', 'Lunda Norte', 
+  'Lunda Sul', 'Malanje', 'Moxico', 'Namibe', 'Uíge', 'Zaire'
+];
 
 function InstCard({ inst }: { inst: InstituicaoPublica }) {
   return (
-    <Link to={`/instituicoes/${inst.slug ?? inst.id}`}>
-      <Card interactive className="p-5">
-        <div className="flex items-center gap-3">
-          {inst.logoUrl ? (
-            <img src={inst.logoUrl} alt={inst.nome} className="h-12 w-12 rounded-xl object-contain" />
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber/10 text-amber"><Building2 size={24} aria-hidden={true} /></div>
-          )}
+    <Link to={`/instituicoes/${inst.slug ?? inst.id}`} className="group">
+      <Card interactive className="p-6 border-border bg-surface hover:border-amber/30 transition-all h-full flex flex-col">
+        <div className="flex items-center gap-4">
+          <div className="h-16 w-16 shrink-0 flex items-center justify-center rounded-2xl bg-surface-raised border border-border group-hover:border-amber/20 transition-all overflow-hidden">
+            {inst.logoUrl ? (
+              <img src={inst.logoUrl} alt={inst.nome} className="h-full w-full object-contain p-2" />
+            ) : (
+              <Building2 size={32} className="text-text-muted group-hover:text-amber transition-colors" />
+            )}
+          </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-text-primary line-clamp-1">{inst.nome}</h3>
-            <div className="flex gap-2">
-              {inst.tipo ? <Badge variant="info">{inst.tipo}</Badge> : null}
-              {inst.regiao ? <Badge variant="outline">{inst.regiao}</Badge> : null}
+            <h3 className="font-bold text-text-primary group-hover:text-amber transition-colors line-clamp-1 text-lg leading-tight">{inst.nome}</h3>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {inst.tipo ? <Badge variant="info" className="text-[9px] uppercase font-bold px-2 py-0">{inst.tipo}</Badge> : null}
+              {inst.regiao ? <Badge variant="outline" className="text-[9px] uppercase font-bold px-2 py-0 border-border text-text-muted">{inst.regiao}</Badge> : null}
             </div>
           </div>
         </div>
-        {inst.descricao ? <p className="mt-3 text-xs text-text-muted line-clamp-2">{inst.descricao}</p> : null}
-        <div className="mt-3 text-right">
-          <span className="text-xs font-medium text-amber">Ver instituição →</span>
+        {inst.descricao ? <p className="mt-4 text-sm text-text-muted line-clamp-3 leading-relaxed flex-1">{inst.descricao}</p> : <div className="flex-1" />}
+        <div className="mt-6 flex items-center justify-end border-t border-border pt-4">
+          <span className="text-xs font-bold text-amber group-hover:translate-x-1 transition-transform">Ver instituição →</span>
         </div>
       </Card>
     </Link>
@@ -47,12 +59,13 @@ export function InstituicoesCatalogoPage() {
     queryFn: () => catalogoApi.getInstituicoes({
       ...(tipo ? { tipo } : {}),
       ...(regiao ? { regiao } : {}),
-      page, pageSize: 12,
+      page,
+      pageSize: 12,
     }),
   });
 
   const insts = data?.data ?? [];
-  const pageCount = data?.meta.pageCount ?? 1;
+  const pageCount = data?.meta?.pageCount ?? 1;
 
   const set = (k: string, v: string) => {
     const next = new URLSearchParams(sp);
@@ -62,40 +75,75 @@ export function InstituicoesCatalogoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
-      <SEOHead title="Instituições" description="Instituições de ensino parceiras da plataforma PDC." url="https://usepdc.com/instituicoes" />
-      <div className="mx-auto max-w-6xl">
-        <h1 className="text-3xl font-bold text-text-primary sm:text-4xl">Instituições</h1>
-        <p className="mt-2 text-text-muted">Instituições de ensino parceiras da plataforma.</p>
+    <div className="min-h-screen bg-background px-4 py-20 sm:px-8">
+      <SEOHead 
+        title="Instituições de Ensino" 
+        description="Explora as melhores universidades, institutos e centros de formação parceiros do PDC." 
+        url="https://usepdc.com/instituicoes" 
+      />
+      
+      <div className="mx-auto max-w-7xl">
+        <header className="mb-12">
+          <div className="inline-flex items-center rounded-full bg-surface-raised px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber border border-border mb-4">
+            🏛️ Ecossistema Académico
+          </div>
+          <h1 className="text-4xl font-black tracking-tight text-text-primary sm:text-5xl">Parceiros de Futuro.</h1>
+          <p className="mt-4 text-lg text-text-secondary max-w-2xl">
+            A PDC colabora com as instituições mais inovadoras para garantir que o teu percurso académico seja validado e reconhecido.
+          </p>
+        </header>
 
-        <div className="mt-6 flex flex-wrap gap-2">
-          {TIPOS.map((t) => (
-            <button key={t} onClick={() => { set('tipo', tipo === t ? '' : t); }}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${tipo === t ? 'bg-amber text-black' : 'bg-surface-raised text-text-secondary hover:text-text-primary'}`}
-            >{t}</button>
-          ))}
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {REGIOES.map((r) => (
-            <button key={r} onClick={() => { set('regiao', regiao === r ? '' : r); }}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${regiao === r ? 'bg-info text-white' : 'bg-surface-raised text-text-secondary hover:text-text-primary'}`}
-            >{r}</button>
-          ))}
+        <div className="sticky top-20 z-10 bg-background/80 backdrop-blur-xl pt-2 pb-6 border-b border-border/50 mb-8 overflow-hidden">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              <span className="text-[10px] font-black uppercase tracking-tighter text-text-muted mr-2">Tipo:</span>
+              {TIPOS.map((t) => (
+                <button 
+                  key={t.value} 
+                  onClick={() => { set('tipo', tipo === t.value ? '' : t.value); }}
+                  className={`flex-none rounded-full border px-4 py-1.5 text-xs font-bold transition-all ${tipo === t.value ? 'bg-amber border-amber text-white shadow-lg shadow-amber/20' : 'bg-surface-raised border-border text-text-secondary hover:border-amber/30'}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              <span className="text-[10px] font-black uppercase tracking-tighter text-text-muted mr-2">Província:</span>
+              {REGIOES.map((r) => (
+                <button 
+                  key={r} 
+                  onClick={() => { set('regiao', regiao === r ? '' : r); }}
+                  className={`flex-none rounded-full border px-4 py-1.5 text-xs font-bold transition-all ${regiao === r ? 'bg-info border-info text-white shadow-lg shadow-info/20' : 'bg-surface-raised border-border text-text-secondary hover:border-amber/30'}`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+          <div className="flex flex-col items-center justify-center py-32 gap-4">
+            <Spinner size="lg" />
+            <p className="text-sm font-mono uppercase tracking-widest text-amber animate-pulse">Mapeando Instituições...</p>
+          </div>
         ) : insts.length === 0 ? (
-          <div className="py-16 text-center">
-            <p className="text-text-muted">Nenhuma instituição encontrada.</p>
-            <Link to="/criar-conta" className="mt-4 inline-block text-sm text-amber hover:underline">Criar conta gratuita</Link>
+          <div className="py-24 text-center rounded-3xl border border-dashed border-border bg-surface-alt">
+            <h3 className="text-lg font-bold text-text-primary">Nenhuma instituição encontrada nestas condições</h3>
+            <p className="mt-2 text-sm text-text-secondary">Tenta expandir a tua pesquisa para outras regiões ou tipos.</p>
+            <button onClick={() => setSp(new URLSearchParams())} className="mt-6 text-xs font-bold uppercase tracking-widest text-amber hover:underline">Remover Filtros</button>
           </div>
         ) : (
           <>
-            <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {insts.map((i) => <InstCard key={i.id} inst={i} />)}
             </div>
-            {pageCount > 1 && <Pagination page={page} pageCount={pageCount} onPageChange={(p) => { set('page', String(p)); }} className="mt-10" />}
+            {pageCount > 1 && (
+              <div className="mt-16 flex justify-center border-t border-border pt-10">
+                <Pagination page={page} pageCount={pageCount} onPageChange={(p) => { set('page', String(p)); }} />
+              </div>
+            )}
           </>
         )}
       </div>

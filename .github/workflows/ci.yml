@@ -148,6 +148,16 @@ jobs:
           REDIS_URL: redis://localhost:6379
           FRONTEND_URL: http://localhost:5173
 
+      - name: Run A11y Audit (Axe-Core)
+        continue-on-error: true # Warning level for W0; will be hardened in W3
+        run: npm run test:e2e:a11y --if-present
+        env:
+          DEV_SKIP_OTP: "true"
+          NODE_ENV: test
+          STRAPI_URL: http://localhost:1337
+          REDIS_URL: redis://localhost:6379
+          FRONTEND_URL: http://localhost:5173
+
       - name: Stop test infrastructure
         if: always()
         run: docker compose -f docker-compose.test.yml down -v

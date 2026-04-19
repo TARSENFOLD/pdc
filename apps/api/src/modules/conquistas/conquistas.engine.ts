@@ -156,14 +156,14 @@ export interface UnlockedConquista {
 
 /**
  * Check if a conquista has already been unlocked for this user.
- * Uses the conquistas collection (userId + titulo) for compatibility with GET /minhas.
+ * Uses the conquistas collection (userId + slug) for stable identification.
  */
-async function isAlreadyUnlocked(userId: string, titulo: string): Promise<boolean> {
+async function isAlreadyUnlocked(userId: string, slug: string): Promise<boolean> {
   try {
     const res = await strapiGet<StrapiCountMeta>('/conquistas', {
       'pagination[pageSize]': '1',
       'filters[userId][$eq]': userId,
-      'filters[titulo][$eq]': titulo,
+      'filters[slug][$eq]': slug,
     });
     return (res.meta?.pagination?.total ?? 0) > 0;
   } catch {
@@ -176,12 +176,12 @@ async function isAlreadyUnlocked(userId: string, titulo: string): Promise<boolea
  */
 async function getPerfilId(userId: string): Promise<number | null> {
   try {
-    const res = await strapiGet<{ data: StrapiPerfilRecord[] }>('/perfis', {
+    const res = await strapiGet<StrapiPerfilRecord>('/perfis', {
       'filters[userId][$eq]': userId,
       'pagination[pageSize]': '1',
       'fields[0]': 'id',
     });
-    return res.data?.[0]?.id ?? null;
+    return res.data[0]?.id ?? null;
   } catch {
     return null;
   }
@@ -193,10 +193,11 @@ async function getPerfilId(userId: string): Promise<number | null> {
  */
 async function unlock(userId: string, rule: ConquistaRule): Promise<void> {
   // 1. Create conquista record (so GET /conquistas/minhas picks it up)
-  const conquistaRes = await strapiPost<{ data: StrapiConquistaRecord }>(
+  const conquistaRes = await strapiPost<StrapiConquistaRecord>(
     '/conquistas',
     {
       userId,
+      slug: rule.slug,
       titulo: rule.titulo,
       descricao: rule.descricao,
       desbloqueada: true,
@@ -217,7 +218,7 @@ async function unlock(userId: string, rule: ConquistaRule): Promise<void> {
         conquista: conquistaId,
         desbloqueadaEm: new Date().toISOString(),
       });
-    } catch (err) {
+    } catch (err: unknown) {
       log.warn({ err, userId, slug: rule.slug }, 'Falha ao criar conquista-utilizador (registo principal já criado)');
     }
   }
@@ -249,7 +250,7 @@ export async function verificarConquistas(
   for (const rule of matchingRules) {
     try {
       // Idempotency — already unlocked?
-      if (await isAlreadyUnlocked(userId, rule.titulo)) continue;
+      if (await isAlreadyUnlocked(userId, rule.slug)) continue;
 
       // Evaluate condition
       const passes = await rule.condition(userId, referencia);
@@ -264,10 +265,14 @@ export async function verificarConquistas(
       });
 
       log.info({ userId, slug: rule.slug }, 'Conquista desbloqueada');
-    } catch (err) {
+    } catch (err: unknown) {
       log.error({ err, userId, slug: rule.slug }, 'Erro ao verificar/desbloquear conquista');
     }
   }
 
   return unlocked;
 }
+
+export const conquistaEngine = {
+  verificarConquistas,
+};

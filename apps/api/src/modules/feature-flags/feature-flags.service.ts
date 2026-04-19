@@ -9,6 +9,7 @@ const CACHE_TTL = 60; // seconds
 
 export interface FeatureFlag {
   id: number;
+  documentId?: string;
   domain: string;
   enabled: boolean;
   description: string | null;
@@ -20,24 +21,16 @@ export interface FlagOverride {
   enabled: boolean;
 }
 
-interface StrapiFeatureFlagResponse {
-  data: FeatureFlag[];
-  meta?: unknown;
-}
-
-interface StrapiSingleResponse {
-  data: FeatureFlag;
-}
-
 async function getAllFlags(): Promise<FeatureFlag[]> {
   const cached = await redis.get<FeatureFlag[]>(CACHE_KEY);
   if (cached) return cached;
 
-  const res = await strapiGet<StrapiFeatureFlagResponse>('/feature-flags', {
+  // Fix: Generic type already represents the item.
+  const res = await strapiGet<FeatureFlag>('/feature-flags', {
     'pagination[pageSize]': '100',
   });
 
-  const flags = res.data ?? [];
+  const flags = res.data;
   await redis.set(CACHE_KEY, flags, { ex: CACHE_TTL });
   return flags;
 }
@@ -52,7 +45,6 @@ async function invalidateCache(): Promise<void> {
  * Invariant: institution override takes precedence over global default.
  */
 export async function getEffectiveFlags(
-  _perfilTipo: string,
   instituicaoId?: number,
 ): Promise<Record<string, boolean>> {
   const flags = await getAllFlags();
@@ -92,13 +84,14 @@ export async function upsertDefault(
   if (existing) {
     const body: Record<string, unknown> = { enabled };
     if (description !== undefined) body['description'] = description;
-    const res = await strapiPut<StrapiSingleResponse>(
-      `/feature-flags/${String(existing.id)}`,
+    // Fix: StrapiSingleResponse already provides res.data as the T type.
+    const res = await strapiPut<FeatureFlag>(
+      `/feature-flags/${existing.documentId ?? String(existing.id)}`,
       body,
     );
     result = res.data;
   } else {
-    const res = await strapiPost<StrapiSingleResponse>('/feature-flags', {
+    const res = await strapiPost<FeatureFlag>('/feature-flags', {
       domain,
       enabled,
       description: description ?? null,
@@ -113,26 +106,43 @@ export async function upsertDefault(
 }
 
 /**
+ * Update global default, strictly if exists (returns null otherwise).
+ */
+export async function updateDefaultStrict(
+  domain: string,
+  enabled: boolean,
+): Promise<FeatureFlag | null> {
+  const all = await getAllFlags();
+  const existing = all.find((f) => f.domain === domain);
+  if (!existing) return null;
+
+  const res = await strapiPut<FeatureFlag>(
+    `/feature-flags/${existing.documentId ?? String(existing.id)}`,
+    { enabled },
+  );
+  await invalidateCache();
+  return res.data;
+}
+
+/**
  * Set an institution-level override for a flag.
  */
 export async function setInstitutionOverride(
   domain: string,
   instituicaoId: number,
   enabled: boolean,
-): Promise<FeatureFlag> {
+): Promise<FeatureFlag | null> {
   const all = await getAllFlags();
   const flag = all.find((f) => f.domain === domain);
-  if (!flag) {
-    throw new Error(`Flag '${domain}' not found`);
-  }
+  if (!flag) return null;
 
   const overrides: FlagOverride[] = Array.isArray(flag.overrides)
     ? flag.overrides.filter((o) => o.instituicaoId !== instituicaoId)
     : [];
   overrides.push({ instituicaoId, enabled });
 
-  const res = await strapiPut<StrapiSingleResponse>(
-    `/feature-flags/${String(flag.id)}`,
+  const res = await strapiPut<FeatureFlag>(
+    `/feature-flags/${flag.documentId ?? String(flag.id)}`,
     { overrides },
   );
 
@@ -147,19 +157,17 @@ export async function setInstitutionOverride(
 export async function removeInstitutionOverride(
   domain: string,
   instituicaoId: number,
-): Promise<FeatureFlag> {
+): Promise<FeatureFlag | null> {
   const all = await getAllFlags();
   const flag = all.find((f) => f.domain === domain);
-  if (!flag) {
-    throw new Error(`Flag '${domain}' not found`);
-  }
+  if (!flag) return null;
 
   const overrides: FlagOverride[] = Array.isArray(flag.overrides)
     ? flag.overrides.filter((o) => o.instituicaoId !== instituicaoId)
     : [];
 
-  const res = await strapiPut<StrapiSingleResponse>(
-    `/feature-flags/${String(flag.id)}`,
+  const res = await strapiPut<FeatureFlag>(
+    `/feature-flags/${flag.documentId ?? String(flag.id)}`,
     { overrides },
   );
 
@@ -183,7 +191,17 @@ export async function deleteFlag(domain: string): Promise<void> {
   const flag = all.find((f) => f.domain === domain);
   if (!flag) return;
 
-  await strapiDelete<unknown>(`/feature-flags/${String(flag.id)}`);
+  await strapiDelete<unknown>(`/feature-flags/${flag.documentId ?? String(flag.id)}`);
   await invalidateCache();
   log.info({ domain }, 'Flag deleted');
 }
+
+export const featureFlagService = {
+  getEffectiveFlags,
+  upsertDefault,
+  updateDefaultStrict,
+  setInstitutionOverride,
+  removeInstitutionOverride,
+  listAll,
+  deleteFlag,
+};

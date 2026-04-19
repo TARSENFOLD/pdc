@@ -15,7 +15,6 @@ interface Props {
 
 export function DiscussionThread({ discussion, isMentorOrAdmin, onBack, onPin, onResolve }: Props) {
   const { user } = useAuth();
-  const qc = useQueryClient();
   const discussionId = String(discussion.id);
 
   const { data, isLoading } = useQuery({
@@ -27,24 +26,22 @@ export function DiscussionThread({ discussion, isMentorOrAdmin, onBack, onPin, o
 
   return (
     <div className="mt-4 space-y-4">
-      {/* Header */}
       <div className="flex items-center gap-2">
-        <Button size="sm" variant="secondary" onClick={onBack}>
+        <Button size="sm" variant="secondary" onClick={() => { onBack(); }}>
           ← Voltar
         </Button>
         {isMentorOrAdmin && (
           <>
-            <Button size="sm" variant="secondary" onClick={() => onPin(!discussion.pinned)}>
+            <Button size="sm" variant="secondary" onClick={() => { onPin(!discussion.pinned); }}>
               {discussion.pinned ? 'Desafixar' : 'Fixar'}
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => onResolve(!discussion.resolved)}>
+            <Button size="sm" variant="secondary" onClick={() => { onResolve(!discussion.resolved); }}>
               {discussion.resolved ? 'Reabrir' : 'Resolver'}
             </Button>
           </>
         )}
       </div>
 
-      {/* Thread body */}
       <div className="rounded-lg border border-border p-4">
         <div className="flex items-center gap-2 mb-2">
           {discussion.pinned && <Badge variant="warning">Fixado</Badge>}
@@ -57,9 +54,8 @@ export function DiscussionThread({ discussion, isMentorOrAdmin, onBack, onPin, o
         </p>
       </div>
 
-      {/* Replies */}
       <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider">
-        Respostas {replies.length > 0 && `(${replies.length})`}
+        Respostas {replies.length > 0 && `(${replies.length.toString()})`}
       </h3>
 
       {isLoading ? (
@@ -70,15 +66,12 @@ export function DiscussionThread({ discussion, isMentorOrAdmin, onBack, onPin, o
         <ReplyTree replies={replies} discussionId={discussionId} />
       )}
 
-      {/* Reply form */}
       {user && (
         <ReplyForm discussionId={discussionId} />
       )}
     </div>
   );
 }
-
-// ── Reply tree (nested up to 3 levels) ──────────────────────────────────────
 
 function ReplyTree({ replies, discussionId }: { replies: DiscussionReply[]; discussionId: string }) {
   const topLevel = replies.filter((r) => !r.pai);
@@ -97,7 +90,7 @@ function ReplyTree({ replies, discussionId }: { replies: DiscussionReply[]; disc
     <div className="space-y-3">
       {topLevel.map((r) => (
         <ReplyNode
-          key={r.id}
+          key={r.id.toString()}
           reply={r}
           childrenMap={childrenMap}
           depth={0}
@@ -122,7 +115,7 @@ function ReplyNode({
   const { user } = useAuth();
   const [showReplyForm, setShowReplyForm] = useState(false);
   const children = childrenMap.get(reply.id) ?? [];
-  const canReply = depth < 2; // max 3 levels (0, 1, 2)
+  const canReply = depth < 2;
 
   return (
     <div className={depth > 0 ? 'ml-6 border-l-2 border-border pl-4' : ''}>
@@ -136,7 +129,7 @@ function ReplyNode({
             <button
               type="button"
               className="text-xs text-accent hover:underline"
-              onClick={() => setShowReplyForm(!showReplyForm)}
+              onClick={() => { setShowReplyForm(!showReplyForm); }}
             >
               Responder
             </button>
@@ -149,16 +142,16 @@ function ReplyNode({
           <ReplyForm
             discussionId={discussionId}
             paiId={reply.id}
-            onSuccess={() => setShowReplyForm(false)}
+            onSuccess={() => { setShowReplyForm(false); }}
           />
         </div>
       )}
 
       {children.length > 0 && (
-        <div className="mt-2 space-y-2">
+        <div className="mt-3">
           {children.map((child) => (
             <ReplyNode
-              key={child.id}
+              key={child.id.toString()}
               reply={child}
               childrenMap={childrenMap}
               depth={depth + 1}
@@ -171,8 +164,6 @@ function ReplyNode({
   );
 }
 
-// ── Reply form ──────────────────────────────────────────────────────────────
-
 function ReplyForm({
   discussionId,
   paiId,
@@ -182,47 +173,43 @@ function ReplyForm({
   paiId?: number;
   onSuccess?: () => void;
 }) {
-  const qc = useQueryClient();
   const [texto, setTexto] = useState('');
+  const qc = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: () =>
-      discussionsApi.postReply(discussionId, {
-        texto,
-        ...(paiId ? { paiId } : {}),
-      }),
+    mutationFn: (data: { texto: string; paiId?: number }) =>
+      discussionsApi.reply(discussionId, data),
     onSuccess: () => {
       setTexto('');
       void qc.invalidateQueries({ queryKey: ['discussion-replies', discussionId] });
-      onSuccess?.();
+      if (onSuccess) onSuccess();
     },
   });
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!texto.trim()) return;
+    
+    const payload: { texto: string; paiId?: number } = { texto };
+    if (paiId !== undefined) payload.paiId = paiId;
+    
+    mutation.mutate(payload);
+  };
+
   return (
-    <form
-      className="flex gap-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        mutation.mutate();
-      }}
-    >
+    <form onSubmit={handleSubmit} className="mt-4 space-y-3">
       <textarea
-        className="flex-1 rounded border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted"
+        className="w-full rounded-lg border border-border bg-surface p-3 text-sm"
         placeholder="Escreve a tua resposta..."
+        rows={3}
         value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-        required
-        rows={2}
-        maxLength={5000}
+        onChange={(e) => { setTexto(e.target.value); }}
       />
-      <Button
-        type="submit"
-        size="sm"
-        isLoading={mutation.isPending}
-        disabled={!texto.trim()}
-      >
-        Enviar
-      </Button>
+      <div className="flex justify-end">
+        <Button size="sm" type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? 'A enviar...' : 'Enviar resposta'}
+        </Button>
+      </div>
     </form>
   );
 }

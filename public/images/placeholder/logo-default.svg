@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+  <rect width="200" height="60" rx="8" fill="#0f172a"/>
+  <rect width="200" height="60" rx="8" fill="none" stroke="#334155" stroke-width="1.5"/>
+  <!-- Stylised "PDC" logo mark -->
+  <circle cx="30" cy="30" r="16" fill="none" stroke="#0ea5e9" stroke-width="2.5"/>
+  <path d="M24,23 L24,37 M24,23 Q34,23 34,30 Q34,37 24,37" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round"/>
+  <text x="56" y="34" font-family="system-ui, sans-serif" font-size="16" font-weight="700" fill="white" dominant-baseline="middle">PDC Platform</text>
+  <text x="56" y="46" font-family="system-ui, sans-serif" font-size="9" fill="#64748b" dominant-baseline="middle">Plataforma de Desenvolvimento de Carreira</text>
+</svg>

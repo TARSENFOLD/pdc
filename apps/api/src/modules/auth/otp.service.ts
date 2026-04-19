@@ -1,6 +1,7 @@
 import { randomInt, createHash } from 'node:crypto';
-import { redis } from '../../lib/redis.js';
+import { redis, hasRedis } from '../../lib/redis.js';
 import pino from 'pino';
+import { env } from '../../lib/env.js';
 
 const log = pino({ name: 'otp-service' });
 
@@ -10,7 +11,7 @@ export const otpService = {
   },
 
   async storeOtp(userId: string, otp: string, canal: 'email' | 'sms'): Promise<void> {
-    if (!redis) {
+    if (!hasRedis) {
       throw new Error('OTP requer Redis (não configurado)');
     }
     const hash = createHash('sha256').update(otp).digest('hex');
@@ -20,16 +21,16 @@ export const otpService = {
   async verifyOtp(userId: string, otp: string, canal: 'email' | 'sms'): Promise<boolean> {
     // 3 Camadas de Protecção para Dev
     const canSkip =
-      process.env.NODE_ENV !== 'production' &&
-      process.env.DEV_SKIP_OTP === 'true' &&
-      !process.env.STRAPI_URL?.includes('pdc-strapi.railway.app');
+      env.NODE_ENV !== 'production' &&
+      env.DEV_SKIP_OTP === 'true' &&
+      !env.STRAPI_URL?.includes('pdc-strapi.railway.app');
 
     if (canSkip && otp === '000000') {
       log.warn({ userId }, 'OTP verification bypassed in dev mode with 000000');
       return true;
     }
 
-    if (!redis) {
+    if (!hasRedis) {
       throw new Error('OTP requer Redis (não configurado)');
     }
     const key = `otp:${userId}:${canal}`;
@@ -45,12 +46,12 @@ export const otpService = {
   },
 
   async sendOtpEmail(email: string, otp: string): Promise<void> {
-    const apiKey = process.env.SENDGRID_API_KEY;
+    const apiKey = env.SENDGRID_API_KEY;
     if (!apiKey) {
       throw new Error('SENDGRID_API_KEY não configurada');
     }
 
-    const fromEmail = process.env.SENDGRID_FROM_EMAIL;
+    const fromEmail = env.SENDGRID_FROM_EMAIL;
     if (!fromEmail) {
       throw new Error('SENDGRID_FROM_EMAIL não configurada');
     }
@@ -82,9 +83,9 @@ export const otpService = {
   },
 
   async sendOtpSms(phone: string, otp: string): Promise<void> {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const from = process.env.TWILIO_PHONE_NUMBER;
+    const accountSid = env.TWILIO_ACCOUNT_SID;
+    const authToken = env.TWILIO_AUTH_TOKEN;
+    const from = env.TWILIO_PHONE_NUMBER;
 
     if (!accountSid || !authToken || !from) {
       throw new Error('Variáveis Twilio (SID, AUTH_TOKEN, PHONE_NUMBER) não configuradas');

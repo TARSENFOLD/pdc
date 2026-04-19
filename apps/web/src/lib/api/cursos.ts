@@ -29,12 +29,18 @@ export const cursosApi = {
     http.get<Curso>(`/cursos/slug/${slug}`),
 
   getMeus: (page?: number) =>
-    http.get<{ data: CursoMeu[], pagination: Pagination }>(`/cursos/meus?page=${page ?? 1}`),
+    http.get<{ data: CursoMeu[], pagination: Pagination }>(`/cursos/meus?page=${(page ?? 1).toString()}`),
 
   criar: (payload: CriarCursoPayload) =>
     http.post<CursoMeu>('/cursos', payload),
 
+  create: (payload: CriarCursoPayload) =>
+    http.post<CursoMeu>('/cursos', payload),
+
   editar: (id: string, payload: Partial<CriarCursoPayload>) =>
+    http.put<CursoMeu>(`/cursos/${id}`, payload),
+
+  update: (id: string, payload: Partial<CriarCursoPayload>) =>
     http.put<CursoMeu>(`/cursos/${id}`, payload),
 
   inscrever: (cursoId: string) => 

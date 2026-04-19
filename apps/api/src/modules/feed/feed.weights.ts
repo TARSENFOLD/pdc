@@ -1,4 +1,4 @@
-import { redis } from '../../lib/redis.js';
+import { redis, hasRedis } from '../../lib/redis.js';
 import type { FeedWeights } from '@pdc/shared';
 
 export const DEFAULT_WEIGHTS_GERAL: FeedWeights = {
@@ -22,7 +22,7 @@ export const DEFAULT_WEIGHTS_TRENDING: FeedWeights = {
 };
 
 export async function getWeights(tipo: 'geral' | 'trending'): Promise<FeedWeights> {
-  if (redis) {
+  if (hasRedis) {
     const cached = await redis.get<FeedWeights>(`feed:weights:${tipo}`);
     if (cached) return cached;
   }
@@ -30,6 +30,6 @@ export async function getWeights(tipo: 'geral' | 'trending'): Promise<FeedWeight
 }
 
 export async function setWeights(tipo: 'geral' | 'trending', weights: FeedWeights): Promise<void> {
-  if (!redis) return;
+  if (!hasRedis) return;
   await redis.set(`feed:weights:${tipo}`, weights);
 }

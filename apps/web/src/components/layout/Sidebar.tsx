@@ -1,13 +1,16 @@
-import { useState, useEffect, type ComponentType } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { useState, type ComponentType } from 'react';
+import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { Avatar } from '../ui/Avatar';
 import type { Role } from '@/config/roles';
 import {
-  LayoutDashboard, Rss, BookOpen, FlaskConical, BarChart3, Trophy,
-  GraduationCap, Bookmark, Users, Award, Link2, MessageSquare,
-  UserCircle, TrendingUp, Upload, Shield, CheckCircle, Flag,
-  Settings, LogOut, BookOpenText, PenSquare, ClipboardList, Building2,
-  MapPin, Mail, Star, Microscope, ScrollText, Plug, Scale, ChevronRight,
+  LayoutDashboard, Rss, BookOpen, FlaskConical, Trophy,
+  GraduationCap, Award, Link2, MessageSquare,
+  Shield, CheckCircle,
+  Settings, BookOpenText, PenSquare,
+  MapPin, Star, Microscope, ScrollText, ChevronRight,
+  Brain, Zap, Building2,
   type LucideProps,
 } from 'lucide-react';
 
@@ -21,6 +24,7 @@ interface NavLeaf {
   to: string;
   icon: LucideIcon;
   roles: Role[];
+  domain?: string;
 }
 
 interface NavGroup {
@@ -29,166 +33,116 @@ interface NavGroup {
   icon: LucideIcon;
   roles: Role[];
   children: NavLeaf[];
+  domain?: string;
 }
 
 type SidebarItem = NavLeaf | NavGroup;
 
 const ALL_ROLES: Role[] = [
-  'aluno',
-  'mentor',
-  'instituicao',
-  'moderador',
-  'comite_cientifico',
-  'super_admin',
+  'aluno', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin',
 ];
 
+/**
+ * SIDEBAR_CONFIG (Wave 4 - Elite Hubs)
+ * Sincronizado com as Feature Flags (Ticket T6 Fix)
+ */
 const SIDEBAR_CONFIG: SidebarItem[] = [
-  { type: 'leaf', label: 'Dashboard', to: '/app', icon: LayoutDashboard, roles: ALL_ROLES },
-  { type: 'leaf', label: 'Feed', to: '/app/feed', icon: Rss, roles: ALL_ROLES },
-
-  // Aluno
+  { type: 'leaf', label: 'Início', to: '/app', icon: LayoutDashboard, roles: ALL_ROLES },
+  
+  // HUB: APRENDER (Músculo Técnico)
   {
-    type: 'group', label: 'Aprendizagem', icon: BookOpen, roles: ['aluno'],
+    type: 'group', label: 'Aprender', icon: BookOpenText, roles: ['aluno'],
+    domain: 'HUB_LEARN',
     children: [
       { type: 'leaf', label: 'Simulações', to: '/app/simulacoes', icon: FlaskConical, roles: ['aluno'] },
-      { type: 'leaf', label: 'Cursos', to: '/app/cursos', icon: BookOpenText, roles: ['aluno'] },
-      { type: 'leaf', label: 'Meus Cursos', to: '/app/meus-cursos', icon: BookOpen, roles: ['aluno'] },
-      { type: 'leaf', label: 'Relatório Vocacional', to: '/app/perfil-vocacional', icon: BarChart3, roles: ['aluno'] },
-      { type: 'leaf', label: 'Ranking', to: '/app/ranking', icon: Trophy, roles: ['aluno'] },
-      { type: 'leaf', label: 'Certificados', to: '/app/certificados', icon: GraduationCap, roles: ['aluno'] },
-      { type: 'leaf', label: 'Guardados', to: '/app/guardados', icon: Bookmark, roles: ['aluno'] },
+      { type: 'leaf', label: 'Cursos', to: '/app/cursos', icon: BookOpen, roles: ['aluno'] },
+      { type: 'leaf', label: 'Meus Cursos', to: '/app/meus-cursos', icon: CheckCircle, roles: ['aluno'] },
     ],
   },
 
-  // Mentor
+  // HUB: EXPLORAR (Músculo Institucional)
   {
-    type: 'group', label: 'Conteúdo', icon: PenSquare, roles: ['mentor'],
+    type: 'group', label: 'Explorar', icon: Building2, roles: ['aluno'],
+    domain: 'HUB_EXPLORE',
     children: [
-      { type: 'leaf', label: 'Cursos', to: '/app/mentor/cursos', icon: BookOpen, roles: ['mentor'] },
-      { type: 'leaf', label: 'Simulações', to: '/app/mentor/simulacoes', icon: FlaskConical, roles: ['mentor'] },
-      { type: 'leaf', label: 'Upload', to: '/app/mentor/upload', icon: Upload, roles: ['mentor'] },
-    ],
-  },
-  {
-    type: 'group', label: 'Alunos', icon: GraduationCap, roles: ['mentor'],
-    children: [
-      { type: 'leaf', label: 'Inscritos', to: '/app/mentor/alunos/inscritos', icon: ClipboardList, roles: ['mentor'] },
-      { type: 'leaf', label: 'Mentorados', to: '/app/mentor/mentorados', icon: Users, roles: ['mentor'] },
-    ],
-  },
-  { type: 'leaf', label: 'Analytics', to: '/app/mentor/analytics', icon: TrendingUp, roles: ['mentor'] },
-
-  // Instituição
-  {
-    type: 'group', label: 'Conteúdo', icon: PenSquare, roles: ['instituicao'],
-    children: [
-      { type: 'leaf', label: 'Experiências', to: '/app/instituicao/experiencias', icon: Building2, roles: ['instituicao'] },
-      { type: 'leaf', label: 'Programas', to: '/app/instituicao/programas', icon: MapPin, roles: ['instituicao'] },
-    ],
-  },
-  {
-    type: 'group', label: 'Pessoas', icon: Users, roles: ['instituicao'],
-    children: [
-      { type: 'leaf', label: 'Estudantes Vinculados', to: '/app/instituicao/estudantes-vinculados', icon: Link2, roles: ['instituicao'] },
-      { type: 'leaf', label: 'Propostas', to: '/app/instituicao/propostas', icon: Mail, roles: ['instituicao'] },
-    ],
-  },
-  { type: 'leaf', label: 'Relatórios', to: '/app/instituicao/relatorios', icon: BarChart3, roles: ['instituicao'] },
-
-  // Moderação
-  {
-    type: 'group', label: 'Moderação', icon: Shield, roles: ['moderador', 'super_admin'],
-    children: [
-      { type: 'leaf', label: 'Aprovações', to: '/app/moderacao/aprovacoes', icon: CheckCircle, roles: ['moderador', 'super_admin'] },
-      { type: 'leaf', label: 'Denúncias', to: '/app/moderacao/denuncias', icon: Flag, roles: ['moderador', 'super_admin'] },
-    ],
-  },
-  {
-    type: 'group', label: 'Gestão', icon: Settings, roles: ['moderador', 'super_admin'],
-    children: [
-      { type: 'leaf', label: 'Utilizadores', to: '/app/moderador/utilizadores', icon: UserCircle, roles: ['moderador', 'super_admin'] },
-      { type: 'leaf', label: 'Reputação', to: '/app/moderador/reputacao', icon: Star, roles: ['moderador', 'super_admin'] },
+      { type: 'leaf', label: 'Experiências', to: '/app/instituicao/experiencias', icon: MapPin, roles: ['aluno'] },
+      { type: 'leaf', label: 'Programas', to: '/app/instituicao/programas', icon: GraduationCap, roles: ['aluno'] },
+      { type: 'leaf', label: 'Catálogo', to: '/app/explorar', icon: ScrollText, roles: ['aluno'] },
     ],
   },
 
-  // Comité Científico
-  { type: 'leaf', label: 'Validação Científica', to: '/app/comite/validacao', icon: Microscope, roles: ['comite_cientifico'] },
-
-  // Admin
+  // HUB: MEU FUTURO (A Joia da Coroa)
   {
-    type: 'group', label: 'Admin', icon: Settings, roles: ['super_admin'],
+    type: 'group', label: 'Meu Futuro', icon: Star, roles: ['aluno'],
+    domain: 'HUB_FUTURE',
     children: [
-      { type: 'leaf', label: 'Stats', to: '/app/admin/stats', icon: BarChart3, roles: ['super_admin'] },
-      { type: 'leaf', label: 'Utilizadores', to: '/app/admin/utilizadores', icon: UserCircle, roles: ['super_admin'] },
-      { type: 'leaf', label: 'Audit', to: '/app/admin/audit', icon: ScrollText, roles: ['super_admin'] },
-      { type: 'leaf', label: 'LTI', to: '/app/admin/lti', icon: Plug, roles: ['super_admin'] },
-      { type: 'leaf', label: 'Feed Weights', to: '/app/admin/feed-weights', icon: Scale, roles: ['super_admin'] },
+      { type: 'leaf', label: 'Relatório Vocacional', to: '/app/perfil-vocacional', icon: Brain, roles: ['aluno'] },
+      { type: 'leaf', label: 'Reputação', to: '/app/reputacao', icon: Star, roles: ['aluno'] },
+      { type: 'leaf', label: 'Certificados', to: '/app/certificados', icon: Award, roles: ['aluno'] },
     ],
   },
 
-  // Transversal
-  { type: 'leaf', label: 'Mentorias', to: '/app/mentorias', icon: Users, roles: ['aluno', 'mentor', 'super_admin'] },
-  { type: 'leaf', label: 'Conquistas', to: '/app/conquistas', icon: Award, roles: ['aluno', 'super_admin'] },
-  { type: 'leaf', label: 'Vínculos', to: '/app/vinculos', icon: Link2, roles: ALL_ROLES },
-  { type: 'leaf', label: 'Mensagens', to: '/app/mensagens', icon: MessageSquare, roles: ALL_ROLES },
-  { type: 'leaf', label: 'Perfil', to: '/app/perfil', icon: UserCircle, roles: ALL_ROLES },
-  { type: 'leaf', label: 'Configurações', to: '/app/configuracoes', icon: Settings, roles: ALL_ROLES },
+  // HUB: COMUNIDADE (O Pulso Social)
+  {
+    type: 'group', label: 'Comunidade', icon: Rss, roles: ALL_ROLES,
+    domain: 'HUB_COMMUNITY',
+    children: [
+      { type: 'leaf', label: 'Feed de Mérito', to: '/app/feed', icon: Zap, roles: ALL_ROLES },
+      { type: 'leaf', label: 'Ranking', to: '/app/ranking', icon: Trophy, roles: ALL_ROLES },
+      { type: 'leaf', label: 'Rede e Vínculos', to: '/app/vinculos', icon: Link2, roles: ALL_ROLES },
+      { type: 'leaf', label: 'Mensagens', to: '/app/mensagens', icon: MessageSquare, roles: ALL_ROLES },
+    ],
+  },
+
+  // MENTOR HUB
+  {
+    type: 'group', label: 'Estúdio Mentor', icon: PenSquare, roles: ['mentor'],
+    domain: 'HUB_MENTOR',
+    children: [
+      { type: 'leaf', label: 'Gestão de Cursos', to: '/app/mentor/cursos', icon: BookOpen, roles: ['mentor'] },
+      { type: 'leaf', label: 'Laboratórios', to: '/app/mentor/simulacoes', icon: FlaskConical, roles: ['mentor'] },
+    ],
+  },
+
+  // INSTITUIÇÃO HUB
+  {
+    type: 'group', label: 'Gestão Institucional', icon: Building2, roles: ['instituicao'],
+    domain: 'HUB_INSTITUTION',
+    children: [
+      { type: 'leaf', label: 'Vitrinas Curriculares', to: '/app/instituicao/experiencias', icon: MapPin, roles: ['instituicao'] },
+      { type: 'leaf', label: 'Roteiros (Programas)', to: '/app/instituicao/programas', icon: GraduationCap, roles: ['instituicao'] },
+    ],
+  },
+
+  // ADMIN / MODERAÇÃO (Rigor)
+  {
+    type: 'group', label: 'Autoridade', icon: Shield, roles: ['moderador', 'super_admin', 'comite_cientifico'],
+    children: [
+      { type: 'leaf', label: 'Auditoria Científica', to: '/app/comite/validacao', icon: Microscope, roles: ['comite_cientifico', 'super_admin'] },
+      { type: 'leaf', label: 'Fila de Aprovações', to: '/app/moderacao/aprovacoes', icon: CheckCircle, roles: ['moderador', 'super_admin'] },
+      { type: 'leaf', label: 'Painel Admin', to: '/app/admin/stats', icon: Settings, roles: ['super_admin'] },
+    ],
+  },
 ];
 
-// ─── Role label ───────────────────────────────────────────────────────────────
-
-const ROLE_LABELS: Record<Role, string> = {
-  aluno: 'Aluno',
-  mentor: 'Mentor',
-  instituicao: 'Instituição',
-  moderador: 'Moderador',
-  comite_cientifico: 'Comité Científico',
-  super_admin: 'Super Admin',
-};
-
-// ─── Sidebar content ──────────────────────────────────────────────────────────
-
-interface SidebarContentProps {
-  onNavigate?: () => void;
-}
-
-function getStorageKey(role: Role): string {
-  return `sidebar:groups:${role}`;
-}
-
-function loadGroupState(role: Role): Record<string, boolean> {
-  try {
-    const raw = localStorage.getItem(getStorageKey(role));
-    if (raw) return JSON.parse(raw) as Record<string, boolean>;
-  } catch {
-    // ignore
-  }
-  return {};
-}
-
-function saveGroupState(role: Role, state: Record<string, boolean>): void {
-  try {
-    localStorage.setItem(getStorageKey(role), JSON.stringify(state));
-  } catch {
-    // ignore
-  }
-}
-
 export function SidebarContent({ onNavigate }: SidebarContentProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const { isEnabled } = useFeatureFlags();
   const navigate = useNavigate();
   const role = user?.role;
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    if (role) {
-      setOpenGroups(loadGroupState(role));
-    }
-  }, [role]);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+     if (role) return loadGroupState(role);
+     return {};
+  });
 
   const visibleItems = role
-    ? SIDEBAR_CONFIG.filter((item) => item.roles.includes(role))
+    ? SIDEBAR_CONFIG.filter((item) => {
+        const hasRole = item.roles.includes(role);
+        if (!hasRole) return false;
+        if (item.domain && !isEnabled(item.domain)) return false;
+        return true;
+      })
     : [];
 
   function toggleGroup(label: string) {
@@ -199,11 +153,6 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
     });
   }
 
-  async function handleLogout() {
-    await logout();
-    navigate('/login', { replace: true });
-  }
-
   function renderLeaf(item: NavLeaf) {
     return (
       <li key={item.to}>
@@ -212,9 +161,9 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
           onClick={onNavigate}
           className={({ isActive }) =>
             [
-              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
+              'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition-all duration-300',
               isActive
-                ? 'bg-amber/10 text-amber font-medium'
+                ? 'bg-accent text-white font-bold shadow-lg shadow-accent/20 scale-[1.02]'
                 : 'text-text-secondary hover:bg-surface-raised hover:text-text-primary',
             ].join(' ')
           }
@@ -230,21 +179,28 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
     const groupKey = `${item.label}:${item.roles.join(',')}`;
     const isOpen = openGroups[groupKey] ?? false;
     const visibleChildren = role
-      ? item.children.filter((child) => child.roles.includes(role))
+      ? item.children.filter((child) => {
+          const hasRole = child.roles.includes(role);
+          if (!hasRole) return false;
+          if (child.domain && !isEnabled(child.domain)) return false;
+          return true;
+        })
       : [];
 
+    if (visibleChildren.length === 0) return null;
+
     return (
-      <li key={groupKey}>
+      <li key={groupKey} className="space-y-1">
         <button
           onClick={() => { toggleGroup(groupKey); }}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+          className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-xs font-black uppercase tracking-[0.2em] text-text-muted transition-all hover:text-text-primary"
         >
-          <item.icon size={18} aria-hidden={true} className="shrink-0" />
+          <item.icon size={16} aria-hidden={true} className="shrink-0 text-accent/40" />
           <span className="flex-1 text-left">{item.label}</span>
-          <ChevronRight size={14} aria-hidden={true} className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+          <ChevronRight size={14} aria-hidden={true} className={`transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
         </button>
         {isOpen && (
-          <ul className="ml-4 mt-0.5 space-y-0.5 border-l border-border pl-2">
+          <ul className="ml-4 space-y-1 border-l border-white/5 pl-2 animate-in slide-in-from-left-1 duration-300">
             {visibleChildren.map(renderLeaf)}
           </ul>
         )}
@@ -253,46 +209,83 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Logo */}
-      <div className="flex items-center gap-2 px-5 py-5 border-b border-border">
-        <span className="text-lg font-bold text-amber">PDC</span>
-        <span className="text-xs text-text-muted">Por Dentro do Curso</span>
+    <div className="flex h-full flex-col bg-surface border-r border-white/5">
+      <div className="flex items-center gap-4 px-8 py-10 border-b border-white/5 bg-white/[0.01]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-accent shadow-xl shadow-accent/20">
+          <span className="font-display font-black text-white text-xl">P</span>
+        </div>
+        <div>
+          <span className="block text-lg font-black text-text-primary tracking-tighter">PDC v2</span>
+          <span className="block text-[8px] text-accent font-black uppercase tracking-[0.4em]">Sovereign Engine</span>
+        </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4">
-        <ul className="space-y-0.5 px-2">
+      <nav className="flex-1 overflow-y-auto py-8 scrollbar-none">
+        <ul className="space-y-4 px-4">
           {visibleItems.map((item) =>
             item.type === 'group' ? renderGroup(item) : renderLeaf(item)
           )}
         </ul>
       </nav>
 
-      {/* User footer */}
-      {user && (
-        <div className="border-t border-border p-4">
-          <div className="mb-3 flex items-center gap-3 rounded-lg bg-surface-raised px-3 py-2.5">
-            {/* Avatar initials */}
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber/20 text-xs font-bold text-amber">
-              {user.nome.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-text-primary">{user.nome}</p>
-              <p className="truncate text-xs text-text-muted">
-                {role ? ROLE_LABELS[role] : ''}
-              </p>
-            </div>
+      <div className="p-6 border-t border-white/5 bg-white/[0.01] space-y-4">
+        {/* User Quick Profile (R2.T6 Integrity) */}
+        <Link 
+          to="/app/perfil"
+          onClick={onNavigate}
+          className="flex items-center gap-3 p-3 rounded-2xl bg-surface-alt border border-white/5 hover:bg-surface-raised transition-all group"
+        >
+          <Avatar 
+            size="sm" 
+            src={user?.avatarUrl || undefined} 
+            alt={user?.nome} 
+            tier={user?.reputacaoTier}
+            className="border-none"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-black text-text-primary truncate">{user?.nome}</p>
+            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">{user?.reputacaoTier || 'Bronze'}</p>
           </div>
-          <button
-            onClick={() => void handleLogout()}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+          <ChevronRight size={14} className="text-text-muted group-hover:text-accent transition-colors" />
+        </Link>
+
+        <div className="rounded-[24px] bg-surface-raised p-5 border border-accent/10 relative overflow-hidden group">
+          <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+             <Brain size={80} />
+          </div>
+          <p className="text-[10px] font-black text-accent uppercase tracking-widest mb-1">Assistência Soberana</p>
+          <p className="text-[10px] text-text-secondary leading-relaxed mb-4">A Tina está pronta para analisar a tua jornada.</p>
+          <button 
+             onClick={() => { navigate('/app/explorar'); onNavigate?.(); }}
+             className="w-full py-2.5 bg-accent/10 border border-accent/20 rounded-xl text-[9px] font-black text-accent uppercase tracking-widest hover:bg-accent hover:text-white transition-all"
           >
-            <LogOut size={18} aria-hidden={true} className="shrink-0" />
-            Sair
+            Falar com o Oráculo
           </button>
         </div>
-      )}
+      </div>
     </div>
   );
+}
+
+function getStorageKey(role: Role): string {
+  return `sidebar:groups:${role}`;
+}
+
+function loadGroupState(role: Role): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(getStorageKey(role));
+    if (raw) return JSON.parse(raw) as Record<string, boolean>;
+  } catch { /* ignore */ }
+  // Por defeito, os hubs principais de aluno estão abertos
+  return { 'Aprender:aluno': true, 'Meu Futuro:aluno': true };
+}
+
+function saveGroupState(role: Role, state: Record<string, boolean>): void {
+  try {
+    localStorage.setItem(getStorageKey(role), JSON.stringify(state));
+  } catch { /* ignore */ }
+}
+
+interface SidebarContentProps {
+  onNavigate?: () => void;
 }

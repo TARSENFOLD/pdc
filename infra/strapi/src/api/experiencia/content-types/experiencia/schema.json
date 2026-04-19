@@ -34,6 +34,11 @@
       "enum": ["publico", "privado", "institucional"],
       "default": "publico"
     },
+    "curso": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::curso.curso"
+    },
     "autor": {
       "type": "relation",
       "relation": "manyToOne",
@@ -45,6 +50,16 @@
       "target": "api::instituicao.instituicao"
     },
     "validadoAcademicamente": { "type": "boolean", "default": false },
-    "tags": { "type": "json" }
+    "tags": { "type": "json" },
+    "gradeDestaque": { "type": "json" },
+    "telemetriaConfig": { "type": "json" },
+    "vagas": { "type": "integer" },
+    "dataInicio": { "type": "datetime" },
+    "dataFim": { "type": "datetime" },
+    "localizacao": { "type": "string" },
+    "modalidade": {
+      "type": "enumeration",
+      "enum": ["presencial", "online", "hibrido"]
+    }
   }
 }

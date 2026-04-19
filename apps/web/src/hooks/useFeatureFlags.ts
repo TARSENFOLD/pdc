@@ -1,18 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
-import { http } from '../api/http';
+import { featureFlagsApi } from '../lib/api/feature-flags.js';
 
-/**
- * Fetch effective feature flags from the BFF.
- * Returns an empty object if the user is not authenticated or on error.
- */
 export function useFeatureFlags() {
-  const { data: flags = {} } = useQuery<Record<string, boolean>>({
+  const { data: flags = {}, isLoading } = useQuery({
     queryKey: ['feature-flags', 'effective'],
-    queryFn: () =>
-      http.get<Record<string, boolean>>('/feature-flags/effective').catch(() => ({})),
-    staleTime: 60_000,
-    retry: false,
+    queryFn: () => featureFlagsApi.getEffective(),
+    staleTime: 5 * 60 * 1000, 
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
   });
 
-  return flags;
+  /**
+   * isEnabled (Fail-Safe)
+   * No patamar mundial, se a flag não existe ou o sistema falha, 
+   * a feature é DESATIVADA para proteger a experiência estável.
+   */
+  const isEnabled = (flag: string): boolean => {
+    if (!flags) return false;
+    return !!flags[flag];
+  };
+
+  return { flags, isEnabled, isLoading };
 }

@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import pino from 'pino';
 import { TelemetriaEventoSchema, TelemetriaBatchSchema, type TelemetriaEvento } from '@pdc/shared';
@@ -8,55 +7,59 @@ const log = pino({ name: 'telemetria-routes' });
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { redis } from '../lib/redis.js';
 import { strapiPost, strapiGet } from '../modules/strapi/strapi.client.js';
-import { verificarConquistas } from '../modules/conquistas/conquistas.engine.js';
 
-// ─── Concurrency helper ──────────────────────────────────────────────────────
 const CONCURRENCY = 5;
 
-async function mapConcurrent<T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<R>,
-): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = [];
-  for (let i = 0; i < items.length; i += limit) {
-    const chunk = items.slice(i, i + limit);
-    const settled = await Promise.allSettled(chunk.map(fn));
-    results.push(...settled);
+// ─── Profile resolver with Redis cache ───────────────────────────────────────
+async function resolvePerfilId(userId: string): Promise<string | null> {
+  const cacheKey = `cache:perfil_map:${userId}`;
+  const cached = await redis.get(cacheKey);
+  if (typeof cached === 'string') return cached === 'null' ? null : cached;
+
+  try {
+    const res = await strapiGet<{ id: number }>('/perfis', {
+      'filters[userId][$eq]': userId,
+      'fields[0]': 'id',
+      'pagination[pageSize]': '1',
+    });
+    const perfilId = res.data[0]?.id ? String(res.data[0].id) : null;
+    await redis.set(cacheKey, perfilId || 'null', { ex: 300 });
+    return perfilId;
+  } catch (err) {
+    log.error({ err, userId }, 'Erro ao resolver perfilId');
+    return null;
   }
-  return results;
 }
 
-// ─── Process single event (shared between single + batch) ────────────────────
+// ─── Process single event ────────────────────────────────────────────────────
 async function processEvent(
   evt: TelemetriaEvento,
   userId: string,
 ): Promise<{ eventId: string; ok: boolean; duplicado?: boolean }> {
   const redisKey = `telemetria:event:${evt.eventId}`;
 
-  if (redis) {
-    const exists = await redis.get(redisKey);
-    if (exists) {
-      return { eventId: evt.eventId, ok: true, duplicado: true };
-    }
-  }
+  // Idempotência (Ticket T4 Fix)
+  const exists = await redis.get(redisKey);
+  if (exists) return { eventId: evt.eventId, ok: true, duplicado: true };
+
+  const perfilId = await resolvePerfilId(userId);
 
   await strapiPost('/telemetrias', {
     eventId: evt.eventId,
     tipo: evt.tipo,
-    payload: evt.payload,
-    timestamp: evt.timestamp,
-    user: userId,
+    dados: evt.payload,
+    timestamp: evt.timestamp, // Server-side reference
+    clientTimestamp: evt.clientTimestamp, // Precision for Algorithm Phi
+    perfil: perfilId,
+    sessionId: evt.sessionId,
+    correlationId: evt.correlationId,
+    url: evt.url,
+    targetType: evt.targetType,
+    targetId: evt.targetId,
+    visibilityState: evt.visibilityState,
   });
 
-  if (redis) {
-    await redis.set(redisKey, 'true', { ex: 24 * 60 * 60 });
-  }
-
-  // Auto-trigger conquistas engine (fire-and-forget)
-  verificarConquistas(userId, evt.tipo).catch((err) =>
-    log.error({ err, tipo: evt.tipo }, 'Conquistas auto-trigger falhou'),
-  );
+  await redis.set(redisKey, 'true', { ex: 24 * 60 * 60 });
 
   return { eventId: evt.eventId, ok: true };
 }
@@ -66,89 +69,76 @@ export const telemetriaRoutes = new Hono<Vars>();
 
 telemetriaRoutes.use('*', verifyJwt);
 
-// ─── POST / — single event ───────────────────────────────────────────────────
+// POST / — single event
 telemetriaRoutes.post('/', zValidator('json', TelemetriaEventoSchema), async (c) => {
   const user = c.get('user');
   const body = c.req.valid('json');
-
   try {
-    const result = await processEvent(body, String(user.id));
+    const result = await processEvent(body, user.id);
     return c.json(result);
-  } catch (err) {
-    log.error({ err }, 'Erro ao processar telemetria');
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    return c.json({ error: message }, 500);
+  } catch (err: unknown) {
+    log.error({ err }, 'Erro telemetria');
+    return c.json({ error: 'Erro interno' }, 500);
   }
 });
 
-// ─── POST /batch — parallel in chunks of CONCURRENCY ─────────────────────────
+// POST /batch — parallel in chunks
 telemetriaRoutes.post('/batch', zValidator('json', TelemetriaBatchSchema), async (c) => {
   const user = c.get('user');
   const { events } = c.req.valid('json');
 
-  const settled = await mapConcurrent(events, CONCURRENCY, (evt) =>
-    processEvent(evt, String(user.id)),
-  );
-
-  const results = settled.map((s, i) => {
-    if (s.status === 'fulfilled') return s.value;
-    log.error({ err: s.reason, eventId: events[i].eventId }, 'Erro ao processar evento batch');
-    return { eventId: events[i].eventId, ok: false };
-  });
-
-  const hasFailures = results.some((r) => !r.ok);
-  if (hasFailures) {
-    return c.json({ ok: false, results }, 207);
+  const results: any[] = [];
+  for (let i = 0; i < events.length; i += CONCURRENCY) {
+    const chunk = events.slice(i, i + CONCURRENCY);
+    const settled = await Promise.allSettled(chunk.map(evt => processEvent(evt, user.id)));
+    
+    settled.forEach((s, idx) => {
+      const evt = chunk[idx];
+      if (s.status === 'fulfilled') {
+        results.push(s.value);
+      } else {
+        const reason = s.status === 'rejected' ? s.reason : 'Erro desconhecido';
+        log.error({ err: reason, eventId: evt?.eventId }, 'Erro batch event');
+        results.push({ eventId: evt?.eventId ?? 'unknown', ok: false });
+      }
+    });
   }
-  return c.json({ ok: true, results });
+
+  return c.json({ ok: results.every(r => r.ok), results }, results.some(r => !r.ok) ? 207 : 200);
 });
 
-// ─── GET /summary — counts by type for a user ────────────────────────────────
-const SummaryQuerySchema = z.object({
-  userId: z.string().min(1),
-});
-
-telemetriaRoutes.get('/summary', zValidator('query', SummaryQuerySchema), async (c) => {
-  const { userId } = c.req.valid('query');
+// GET /summary
+telemetriaRoutes.get('/summary', async (c) => {
+  const { userId } = c.req.query();
   const user = c.get('user');
 
-  // Users can only query their own summary (admins can query any)
-  if (String(user.id) !== userId && user.role !== 'super_admin') {
+  if (userId && user.id !== userId && user.role !== 'super_admin') {
     return c.json({ error: 'Sem permissão' }, 403);
   }
 
+  const targetUserId = userId || user.id;
+
   try {
-    // Fetch all telemetria for user (paginated by Strapi, grab up to 1000)
-    const res = await strapiGet<{
-      data: Array<{ tipo: string; timestamp: string }>;
-      meta?: { pagination?: { total: number } };
-    }>('/telemetrias', {
-      'filters[user][$eq]': userId,
-      'fields[0]': 'tipo',
-      'fields[1]': 'timestamp',
+    const perfilId = await resolvePerfilId(targetUserId);
+    if (!perfilId) return c.json({ totalEventos: 0, porTipo: {}, ultimoEvento: null });
+
+    const res = await strapiGet<{ tipo: string; clientTimestamp: number | string }>('/telemetrias', {
+      'filters[perfil][id][$eq]': perfilId,
       'pagination[pageSize]': '1000',
-      'sort': 'timestamp:desc',
+      'sort': 'createdAt:desc',
     });
 
-    const items = res?.data ?? [];
     const porTipo: Record<string, number> = {};
-    let ultimoEvento: string | null = null;
-
-    for (const item of items) {
+    res.data.forEach(item => {
       porTipo[item.tipo] = (porTipo[item.tipo] ?? 0) + 1;
-      if (!ultimoEvento && item.timestamp) {
-        ultimoEvento = item.timestamp;
-      }
-    }
+    });
 
     return c.json({
-      totalEventos: res?.meta?.pagination?.total ?? items.length,
+      totalEventos: res.meta.pagination.total,
       porTipo,
-      ultimoEvento,
+      ultimoEvento: res.data[0]?.clientTimestamp || null,
     });
-  } catch (err) {
-    log.error({ err }, 'Erro ao obter summary');
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    return c.json({ error: message }, 500);
+  } catch (err: unknown) {
+    return c.json({ error: 'Erro summary' }, 500);
   }
 });

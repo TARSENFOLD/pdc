@@ -2,12 +2,9 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPutRaw } from '../modules/strapi/strapi.client.js';
-import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
-import pino from 'pino';
-
-const log = pino({ name: 'discussions' });
+import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
+import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
 
 type Vars = { Variables: AuthVariables };
 export const discussionRoutes = new Hono<Vars>();
@@ -37,11 +34,14 @@ const resolveSchema = z.object({ resolved: z.boolean() });
 
 const MAX_REPLY_DEPTH = 3;
 
-interface StrapiCountMeta { meta: { pagination: { total: number } } }
+interface StrapiReply {
+  id: number;
+  pai?: { id: number };
+}
 
 async function isEnrolled(userId: string, cursoId: number | string): Promise<boolean> {
   try {
-    const res = await strapiGet<StrapiCountMeta>('/inscricoes', {
+    const res = await strapiGet<any>('/inscricoes', {
       'pagination[pageSize]': '1',
       'filters[user][$eq]': userId,
       'filters[curso][$eq]': String(cursoId),
@@ -54,10 +54,11 @@ async function isEnrolled(userId: string, cursoId: number | string): Promise<boo
 
 async function isMentorOrAdmin(userId: string, cursoId: number | string): Promise<boolean> {
   try {
-    const curso = await strapiGet<{ data: { autorId?: string } }>(`/cursos/${String(cursoId)}`, {
+    const res = await strapiGet<{ autorId?: string }>(`/cursos/${String(cursoId)}`, {
       'fields[0]': 'autorId',
     });
-    if (curso.data?.autorId === userId) return true;
+    const curso = res.data[0];
+    if (curso?.autorId === userId) return true;
   } catch { /* fall through */ }
   return false;
 }
@@ -67,11 +68,12 @@ async function getReplyDepth(paiId: number): Promise<number> {
   let currentId: number | null = paiId;
   while (currentId && depth < MAX_REPLY_DEPTH + 1) {
     try {
-      const res = await strapiGet<{ data: { pai?: { id: number } } }>(
+      const res: StrapiListResponse<StrapiReply> = await strapiGet<StrapiReply>(
         `/respostas-discussao/${String(currentId)}`,
         { 'populate': 'pai' },
       );
-      currentId = res.data?.pai?.id ?? null;
+      const item = res.data[0];
+      currentId = item?.pai?.id ?? null;
       if (currentId) depth++;
     } catch {
       break;
@@ -102,12 +104,18 @@ discussionRoutes.use('*', async (c, next) => {
 
 discussionRoutes.get(
   '/course/:cursoId',
+  verifyJwt,
   zValidator('query', paginationSchema),
   async (c) => {
     const cursoId = c.req.param('cursoId');
+    const user = c.get('user');
     const { page, limit } = c.req.valid('query');
 
-    const res = await strapiGet<{ data: unknown[]; meta: unknown }>('/discussoes', {
+    if (!(await isEnrolled(user.id, cursoId))) {
+      return c.json({ error: 'Tens de estar inscrito no curso para ver discussões' }, 403);
+    }
+
+    const res = await strapiGet<any>('/discussoes', {
       'filters[curso][id][$eq]': cursoId,
       'sort[0]': 'pinned:desc',
       'sort[1]': 'createdAt:desc',
@@ -116,7 +124,7 @@ discussionRoutes.get(
       'populate': 'curso',
     });
 
-    return c.json({ data: res.data, meta: res.meta });
+    return c.json(res);
   },
 );
 
@@ -134,14 +142,14 @@ discussionRoutes.post(
       return c.json({ error: 'Tens de estar inscrito no curso para criar discussões' }, 403);
     }
 
-    const res = await strapiPost<{ data: unknown }>('/discussoes', {
+    const res = await strapiPost<any>('/discussoes', {
       titulo,
       corpo,
       curso: cursoId,
       autorId: user.id,
     });
 
-    return c.json({ data: res.data }, 201);
+    return c.json(res, 201);
   },
 );
 
@@ -154,7 +162,7 @@ discussionRoutes.get(
     const id = c.req.param('id');
     const { page, limit } = c.req.valid('query');
 
-    const res = await strapiGet<{ data: unknown[]; meta: unknown }>('/respostas-discussao', {
+    const res = await strapiGet<any>('/respostas-discussao', {
       'filters[discussao][id][$eq]': id,
       'sort': 'createdAt:asc',
       'populate': 'pai',
@@ -162,7 +170,7 @@ discussionRoutes.get(
       'pagination[pageSize]': String(limit),
     });
 
-    return c.json({ data: res.data, meta: res.meta });
+    return c.json(res);
   },
 );
 
@@ -178,11 +186,12 @@ discussionRoutes.post(
     const { texto, paiId } = c.req.valid('json');
 
     // Get the discussion to find the course
-    const discussion = await strapiGet<{ data: { curso?: { id: number } } }>(
+    const resGet = await strapiGet<{ curso?: { id: number } }>(
       `/discussoes/${discussaoId}`,
       { 'populate': 'curso' },
     );
-    const cursoId = discussion.data?.curso?.id;
+    const discussion = resGet.data[0];
+    const cursoId = discussion?.curso?.id;
     if (!cursoId) return c.json({ error: 'Discussão não encontrada' }, 404);
 
     if (!(await isEnrolled(user.id, cursoId))) {
@@ -193,18 +202,18 @@ discussionRoutes.post(
     if (paiId) {
       const depth = await getReplyDepth(paiId);
       if (depth >= MAX_REPLY_DEPTH) {
-        return c.json({ error: `Profundidade máxima de ${MAX_REPLY_DEPTH} níveis atingida` }, 400);
+        return c.json({ error: `Profundidade máxima de ${String(MAX_REPLY_DEPTH)} níveis atingida` }, 400);
       }
     }
 
-    const res = await strapiPost<{ data: unknown }>('/respostas-discussao', {
+    const resPost = await strapiPost<any>('/respostas-discussao', {
       texto,
       discussao: Number(discussaoId),
       autorId: user.id,
       ...(paiId ? { pai: paiId } : {}),
     });
 
-    return c.json({ data: res.data }, 201);
+    return c.json(resPost, 201);
   },
 );
 
@@ -220,19 +229,20 @@ discussionRoutes.put(
     const { pinned } = c.req.valid('json');
 
     // Get discussion to find the course
-    const discussion = await strapiGet<{ data: { curso?: { id: number }; documentId?: string } }>(
+    const resGet = await strapiGet<{ curso?: { id: number }; documentId?: string }>(
       `/discussoes/${id}`,
       { 'populate': 'curso' },
     );
-    const cursoId = discussion.data?.curso?.id;
+    const discussion = resGet.data[0];
+    const cursoId = discussion?.curso?.id;
     if (!cursoId) return c.json({ error: 'Discussão não encontrada' }, 404);
 
-    const isAdmin = user.role === 'super_admin' || user.role === 'admin';
+    const isAdmin = user.role === 'super_admin';
     if (!isAdmin && !(await isMentorOrAdmin(user.id, cursoId))) {
       return c.json({ error: 'Apenas o mentor do curso ou admin pode fixar discussões' }, 403);
     }
 
-    const docId = discussion.data?.documentId ?? id;
+    const docId = discussion?.documentId ?? id;
     await strapiPutRaw(`/discussoes/${docId}`, { data: { pinned } });
     return c.json({ success: true });
   },
@@ -249,19 +259,20 @@ discussionRoutes.put(
     const user = c.get('user');
     const { resolved } = c.req.valid('json');
 
-    const discussion = await strapiGet<{ data: { curso?: { id: number }; documentId?: string } }>(
+    const resGet = await strapiGet<{ curso?: { id: number }; documentId?: string }>(
       `/discussoes/${id}`,
       { 'populate': 'curso' },
     );
-    const cursoId = discussion.data?.curso?.id;
+    const discussion = resGet.data[0];
+    const cursoId = discussion?.curso?.id;
     if (!cursoId) return c.json({ error: 'Discussão não encontrada' }, 404);
 
-    const isAdmin = user.role === 'super_admin' || user.role === 'admin';
+    const isAdmin = user.role === 'super_admin';
     if (!isAdmin && !(await isMentorOrAdmin(user.id, cursoId))) {
       return c.json({ error: 'Apenas o mentor do curso ou admin pode resolver discussões' }, 403);
     }
 
-    const docId = discussion.data?.documentId ?? id;
+    const docId = discussion?.documentId ?? id;
     await strapiPutRaw(`/discussoes/${docId}`, { data: { resolved } });
     return c.json({ success: true });
   },

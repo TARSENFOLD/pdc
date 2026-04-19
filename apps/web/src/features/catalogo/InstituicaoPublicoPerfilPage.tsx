@@ -23,13 +23,13 @@ export function InstituicaoPublicoPerfilPage() {
         title={inst.nome}
         description={inst.descricao ?? `Instituição de ensino${inst.regiao ? ` na região de ${inst.regiao}` : ''}`}
         image={inst.logoUrl}
-        url={`https://usepdc.com/instituicoes/${slug}`}
+        url={`https://usepdc.com/instituicoes/${slug ?? ''}`}
         type="profile"
         jsonLd={{
           '@type': 'EducationalOrganization',
           name: inst.nome,
           description: inst.descricao,
-          url: `https://usepdc.com/instituicoes/${slug}`,
+          url: `https://usepdc.com/instituicoes/${slug ?? ''}`,
         }}
       />
       <div className="mx-auto max-w-3xl">

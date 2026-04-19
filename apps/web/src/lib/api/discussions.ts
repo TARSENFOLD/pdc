@@ -27,16 +27,16 @@ interface PaginatedResponse<T> {
 }
 
 export const discussionsApi = {
-  getCourseDiscussions: (cursoId: string, page = 1, limit = 20) =>
-    http.get<PaginatedResponse<Discussion>>(`/discussions/course/${cursoId}?page=${page}&limit=${limit}`),
+  list: (cursoId: string, page = 1, limit = 20) =>
+    http.get<PaginatedResponse<Discussion>>(`/discussions/course/${cursoId}?page=${page.toString()}&limit=${limit.toString()}`),
 
-  createDiscussion: (data: { titulo: string; corpo: string; cursoId: number }) =>
-    http.post<{ data: Discussion }>('/discussions', data),
+  create: (cursoId: string, titulo: string, corpo: string) =>
+    http.post<{ data: Discussion }>('/discussions', { titulo, corpo, cursoId: parseInt(cursoId, 10) }),
 
   getReplies: (id: string, page = 1, limit = 50) =>
-    http.get<PaginatedResponse<DiscussionReply>>(`/discussions/${id}/replies?page=${page}&limit=${limit}`),
+    http.get<PaginatedResponse<DiscussionReply>>(`/discussions/${id}/replies?page=${page.toString()}&limit=${limit.toString()}`),
 
-  postReply: (id: string, data: { texto: string; paiId?: number }) =>
+  reply: (id: string, data: { texto: string; paiId?: number }) =>
     http.post<{ data: DiscussionReply }>(`/discussions/${id}/replies`, data),
 
   pin: (id: string, pinned: boolean) =>

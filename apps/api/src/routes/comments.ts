@@ -20,10 +20,6 @@ interface StrapiEntity {
   createdAt: string;
 }
 
-interface StrapiList<T> {
-  data: T[];
-}
-
 interface StrapiComment extends StrapiEntity {
   conteudo: string;
   estado: 'pendente'|'aprovado'|'rejeitado';
@@ -33,7 +29,8 @@ commentsRoutes.post('/', verifyJwt, zValidator('json', CreateCommentPayloadSchem
   const user = c.get('user');
   const { targetType, targetId, conteudo } = c.req.valid('json');
 
-  const res = await strapiPost<{ data: StrapiComment }>('/comments', {
+  // Fix: StrapiSingleResponse already provides res.data as the T type.
+  const res = await strapiPost<StrapiComment>('/comments', {
     userId: user.id,
     targetType,
     targetId,
@@ -61,7 +58,8 @@ commentsRoutes.get('/list', zValidator('query', z.object({
 })), async (c) => {
   const { targetType, targetId } = c.req.valid('query');
 
-  const req = await strapiGet<StrapiList<StrapiComment>>('/comments', {
+  // Fix: StrapiListResponse already has res.data as StrapiComment[].
+  const req = await strapiGet<StrapiComment>('/comments', {
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
     'filters[estado][$eq]': 'aprovado',

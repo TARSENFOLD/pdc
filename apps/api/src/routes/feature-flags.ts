@@ -1,69 +1,95 @@
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
-import { strapiGet, strapiPutRaw } from '../modules/strapi/strapi.client.js';
 
 type Vars = { Variables: AuthVariables };
-export const featureFlagRoutes = new Hono<Vars>();
 
-// GET /effective — Acessível por qualquer user autenticado
-featureFlagRoutes.get('/effective', verifyJwt, async (c) => {
-  const user = c.get('user');
-  const instituicaoId = user.role === 'instituicao' ? (user as any).instituicaoId : undefined;
-  const flags = await featureFlagService.getEffectiveFlags(instituicaoId);
-  return c.json(flags);
+export const featureFlagsRoutes = new Hono<Vars>();
+
+featureFlagsRoutes.use('*', verifyJwt);
+
+// GET /feature-flags
+featureFlagsRoutes.get('/', async (c) => {
+  const flags = await featureFlagService.listAll();
+  return c.json({ data: flags });
 });
 
-// Admin Routes (super_admin only)
-featureFlagRoutes.use('*', verifyJwt, checkRole(['super_admin']));
+// PUT /feature-flags/defaults/:domain
+featureFlagsRoutes.put(
+  '/defaults/:domain',
+  checkRole(['super_admin']),
+  zValidator('json', z.object({ enabled: z.boolean() })),
+  async (c) => {
+    const domain = c.req.param('domain');
+    if (!domain) return c.json({ error: 'Domínio obrigatório' }, 400);
+    const { enabled } = c.req.valid('json');
 
-// GET / — Lista todas as flags (admin)
-featureFlagRoutes.get('/', async (c) => {
-  const { data } = await strapiGet<{ data: any[] }>('/feature-flags');
-  return c.json(data);
-});
+    const flag = await featureFlagService.updateDefaultStrict(domain, enabled);
+    if (!flag) {
+      return c.json({ error: 'Flag não encontrada' }, 404);
+    }
 
-featureFlagRoutes.put('/defaults/:domain', async (c) => {
-  const domain = c.req.param('domain');
-  const body = await c.req.json();
-  const { data: existing } = await strapiGet<{ data: any[] }>(`/feature-flags?filters[domain][$eq]=${domain}`);
-  
-  if (existing.length === 0) return c.json({ error: 'Flag não encontrada' }, 404);
-  
-  await strapiPutRaw(`/feature-flags/${existing[0].documentId ?? existing[0].id}`, { data: { enabled: body.enabled } });
-  return c.json({ success: true });
-});
+    return c.json(flag);
+  }
+);
 
-featureFlagRoutes.put('/institutions/:id/:domain', async (c) => {
-  const domain = c.req.param('domain');
-  const instituicaoId = parseInt(c.req.param('id'));
-  const body = await c.req.json();
-  
-  const { data: existing } = await strapiGet<{ data: any[] }>(`/feature-flags?filters[domain][$eq]=${domain}`);
-  if (existing.length === 0) return c.json({ error: 'Flag não encontrada' }, 404);
-  
-  const flag = existing[0];
-  const overrides = flag.overrides || [];
-  const idx = overrides.findIndex((o: any) => o.instituicaoId === instituicaoId);
-  
-  if (idx > -1) overrides[idx].enabled = body.enabled;
-  else overrides.push({ instituicaoId, enabled: body.enabled });
-  
-  await strapiPutRaw(`/feature-flags/${flag.documentId ?? flag.id}`, { data: { overrides } });
-  return c.json({ success: true });
-});
+// PUT /feature-flags/institutions/:instituicaoId/:domain
+featureFlagsRoutes.put(
+  '/institutions/:instituicaoId/:domain',
+  checkRole(['instituicao', 'super_admin']),
+  zValidator('json', z.object({ enabled: z.boolean() })),
+  async (c) => {
+    const domain = c.req.param('domain');
+    const instituicaoIdParam = c.req.param('instituicaoId');
+    
+    if (!domain || !instituicaoIdParam) {
+      return c.json({ error: 'Parâmetros inválidos' }, 400);
+    }
 
-featureFlagRoutes.delete('/institutions/:id/:domain', async (c) => {
-  const domain = c.req.param('domain');
-  const instituicaoId = parseInt(c.req.param('id'));
-  
-  const { data: existing } = await strapiGet<{ data: any[] }>(`/feature-flags?filters[domain][$eq]=${domain}`);
-  if (existing.length === 0) return c.json({ error: 'Flag não encontrada' }, 404);
-  
-  const flag = existing[0];
-  const overrides = (flag.overrides || []).filter((o: any) => o.instituicaoId !== instituicaoId);
-  
-  await strapiPutRaw(`/feature-flags/${flag.documentId ?? flag.id}`, { data: { overrides } });
-  return c.json({ success: true });
-});
+    const instituicaoId = parseInt(instituicaoIdParam, 10);
+    const { enabled } = c.req.valid('json');
+
+    const user = c.get('user');
+    if (user.role === 'instituicao' && user.instituicaoId !== instituicaoIdParam) {
+      return c.json({ error: 'Sem permissão' }, 403);
+    }
+
+    const flag = await featureFlagService.setInstitutionOverride(domain, instituicaoId, enabled);
+    if (!flag) {
+      return c.json({ error: 'Flag não encontrada' }, 404);
+    }
+
+    return c.json(flag);
+  }
+);
+
+// DELETE /feature-flags/institutions/:instituicaoId/:domain
+featureFlagsRoutes.delete(
+  '/institutions/:instituicaoId/:domain',
+  checkRole(['instituicao', 'super_admin']),
+  async (c) => {
+    const domain = c.req.param('domain');
+    const instituicaoIdParam = c.req.param('instituicaoId');
+
+    if (!domain || !instituicaoIdParam) {
+      return c.json({ error: 'Parâmetros inválidos' }, 400);
+    }
+
+    const instituicaoId = parseInt(instituicaoIdParam, 10);
+
+    const user = c.get('user');
+    if (user.role === 'instituicao' && user.instituicaoId !== instituicaoIdParam) {
+      return c.json({ error: 'Sem permissão' }, 403);
+    }
+
+    const flag = await featureFlagService.removeInstitutionOverride(domain, instituicaoId);
+    if (!flag) {
+      return c.json({ error: 'Flag não encontrada' }, 404);
+    }
+
+    return c.json(flag);
+  }
+);

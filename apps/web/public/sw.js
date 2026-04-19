@@ -1,25 +1,31 @@
-const CACHE_NAME = 'pdc-v1';
+const CACHE_NAME = 'pdc-v2';
 const ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/manifest.json'
 ];
 
-self.addEventListener('install', (event: any) => {
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
 });
 
-self.addEventListener('fetch', (event: any) => {
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
+});
+
+self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith('/api')) {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request) as Promise<Response>)
-    );
-  } else {
-    event.respondWith(
-      caches.match(event.request).then((response) => response || fetch(event.request))
-    );
+
+  // Não interceptar requisições para o BFF (porta 3001 ou qualquer origem diferente)
+  if (url.origin !== self.location.origin) {
+    return; 
   }
+
+  // Apenas cachear assets estáticos da mesma origem
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
+    })
+  );
 });

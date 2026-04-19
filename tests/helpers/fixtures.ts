@@ -6,8 +6,7 @@ export type Role = 'aluno' | 'mentor' | 'instituicao' | 'moderador' | 'super_adm
 const BFF = 'http://localhost:3001';
 
 /**
- * Login via API and save browser storage state for a given role.
- * Reuses cached storageState files created in setup.auth.ts.
+ * Reuses cached storageState files created in setup.auth.ts (via UI login).
  */
 export async function loginAs(page: Page, role: Role) {
   const storageFile = path.resolve(__dirname, `../.auth/${role}.json`);

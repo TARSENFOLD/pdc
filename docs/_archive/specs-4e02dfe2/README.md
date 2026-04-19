@@ -1,0 +1,1 @@
+# Archive: Specs 4e02dfe2\n\nEste diretório contém as especificações e tickets da epic anterior à transição para o modelo de 5 Waves.\n\nAs tarefas relevantes foram migradas para o novo roadmap em .planning/roadmap.md.

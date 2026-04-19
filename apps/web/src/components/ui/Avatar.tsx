@@ -1,6 +1,7 @@
 import * as AvatarPrimitive from '@radix-ui/react-avatar';
 import { forwardRef, type ElementRef, type ComponentPropsWithoutRef } from 'react';
 import { cn } from '@/lib/utils';
+import type { ReputacaoTier } from '@pdc/shared';
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
@@ -9,10 +10,11 @@ export interface AvatarProps extends ComponentPropsWithoutRef<typeof AvatarPrimi
   src?: string | undefined;
   alt?: string | undefined;
   fallback?: string | undefined;
+  tier?: ReputacaoTier | null | undefined;
 }
 
 const Avatar = forwardRef<ElementRef<typeof AvatarPrimitive.Root>, AvatarProps>(
-  ({ className, size = 'md', src, alt, fallback, ...props }, ref) => {
+  ({ className, size = 'md', src, alt, fallback, tier, ...props }, ref) => {
     const sizes: Record<AvatarSize, string> = {
       xs: 'h-6 w-6 text-[10px]',
       sm: 'h-8 w-8 text-xs',
@@ -21,12 +23,20 @@ const Avatar = forwardRef<ElementRef<typeof AvatarPrimitive.Root>, AvatarProps>(
       xl: 'h-16 w-16 text-xl',
     };
 
+    const tierStyles: Record<string, string> = {
+      BRONZE: 'border-amber-700/50',
+      PRATA: 'border-slate-400/50',
+      OURO: 'border-accent shadow-[0_0_10px_rgba(210,105,30,0.2)]',
+      DIAMANTE: 'border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.3)] animate-pulse-slow',
+    };
+
     return (
       <AvatarPrimitive.Root
         ref={ref}
         className={cn(
-          'relative flex shrink-0 overflow-hidden rounded-full border border-border bg-surface-raised',
+          'relative flex shrink-0 overflow-hidden rounded-full border border-border bg-surface-raised transition-all duration-500',
           sizes[size],
+          tier && tierStyles[tier],
           className
         )}
         {...props}

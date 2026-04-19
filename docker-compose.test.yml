@@ -1,0 +1,97 @@
+services:
+  # ─── PostgreSQL 16 (test — ephemeral) ──────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: pdc-test-postgres
+    environment:
+      POSTGRES_DB: pdc_strapi_test
+      POSTGRES_USER: pdc
+      POSTGRES_PASSWORD: pdc_test_password
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pdc -d pdc_strapi_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── Redis 7 (test — ephemeral) ────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: pdc-test-redis
+    command: redis-server --save ""
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ─── Strapi (test) ─────────────────────────────────────────────────────────
+  strapi:
+    build: ./infra/strapi
+    container_name: pdc-test-strapi
+    ports:
+      - "1338:1337"
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: pdc_strapi_test
+      DATABASE_USERNAME: pdc
+      DATABASE_PASSWORD: pdc_test_password
+      DATABASE_SSL: "false"
+      NODE_ENV: test
+      APP_KEYS: testkey1,testkey2
+      API_TOKEN_SALT: testTokenSalt
+      ADMIN_JWT_SECRET: testAdminJwtSecret
+      TRANSFER_TOKEN_SALT: testTransferSalt
+      JWT_SECRET: testJwtSecret
+      STRAPI_API_TOKEN: ${STRAPI_API_TOKEN:-test-strapi-token}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:1337/_health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ─── k6 load tests (optional — run manually) ───────────────────────────────
+  k6:
+    image: grafana/k6:latest
+    profiles:
+      - load
+    volumes:
+      - ./tests/k6:/scripts
+    environment:
+      - BASE_URL=${BASE_URL:-http://host.docker.internal:3001}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: run /scripts/auth-flow.js
+
+  # ─── Playwright E2E (optional — run manually) ────────────────────────────────
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.52.0-noble
+    profiles:
+      - e2e
+    volumes:
+      - .:/work
+    working_dir: /work
+    environment:
+      - CI=true
+      - DEV_SKIP_OTP=true
+      - NODE_ENV=test
+      - STRAPI_URL=http://strapi:1337
+      - REDIS_URL=redis://redis:6379
+      - API_URL=http://host.docker.internal:3001
+      - FRONTEND_URL=http://host.docker.internal:5173
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: npx playwright test
+    depends_on:
+      strapi:
+        condition: service_healthy

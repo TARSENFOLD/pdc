@@ -36,7 +36,7 @@ export function FilaAprovacaoPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['moderacao', 'fila', tipoAtual, page],
     queryFn: () =>
-      http.get<FilaResponse>(`/moderacao/fila?tipo=${tipoAtual}&page=${page}&pageSize=10`),
+      http.get<FilaResponse>(`/moderacao/fila?tipo=${tipoAtual}&page=${page.toString()}&pageSize=10`),
   });
 
   const aprovarMutation = useMutation({
@@ -102,7 +102,6 @@ export function FilaAprovacaoPage() {
             variant="primary"
             size="sm"
             onClick={() => { aprovarMutation.mutate(item); }}
-            isLoading={aprovarMutation.isPending && aprovarMutation.variables?.id === item.id}
             className="h-8 px-3 text-xs"
           >
             Aprovar
@@ -161,12 +160,12 @@ export function FilaAprovacaoPage() {
                 <div className="flex justify-center gap-2">
                   {Array.from({ length: data.pagination.pageCount }).map((_, i) => (
                     <Button
-                      key={i + 1}
+                      key={(i + 1).toString()}
                       variant={page === i + 1 ? 'primary' : 'ghost'}
                       size="sm"
                       onClick={() => { setPage(i + 1); }}
                     >
-                      {i + 1}
+                      {(i + 1).toString()}
                     </Button>
                   ))}
                 </div>
@@ -205,7 +204,7 @@ export function FilaAprovacaoPage() {
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber resize-none"
             />
             <p className="text-xs text-text-secondary mt-2">
-              {motivo.length}/500
+              {motivo.length.toString()}/500
             </p>
           </div>
         </div>

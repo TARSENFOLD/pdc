@@ -66,7 +66,10 @@ DEV_SKIP_OTP=true
 
 # JWT
 JWT_SECRET=muda-isto-em-producao-min-32-chars
-JWT_REFRESH_SECRET=muda-isto-em-producao-tambem-32
+
+# URLs
+API_URL=http://localhost:3001
+OAUTH_REDIRECT_BASE_URL=http://localhost:5173
 
 # Strapi
 STRAPI_URL=http://localhost:1337
@@ -131,7 +134,21 @@ cd infra/strapi && npm run develop
 
 ---
 
-## 7. Arrancar o BFF
+## 7. Povoar o Oráculo (Seed)
+
+Para validar o sistema com dados reais e múltiplas roles, execute o script de sementeira:
+
+```bash
+# Na raiz do monorepo
+npx tsx tests/helpers/seed.ts
+```
+
+**⚠️ AVISO DE AUTORIDADE:** 
+Nunca registe utilizadores directamente no painel admin do Strapi. O PDC v2 exige a criação de um **Perfil** associado ao utilizador para o funcionamento do motor de mérito. Use sempre o frontend ou o script de seed.
+
+---
+
+## 8. Arrancar o BFF
 
 ```bash
 npm run dev --workspace=apps/api
@@ -141,7 +158,7 @@ npm run dev --workspace=apps/api
 
 ---
 
-## 8. Arrancar o Frontend
+## 9. Arrancar o Frontend
 
 ```bash
 npm run dev --workspace=apps/web

@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import pino from 'pino';
-
-const log = pino({ name: 'seo-routes' });
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { redis } from '../lib/redis.js';
+import { env } from '../lib/env.js';
+
+const log = pino({ name: 'seo-routes' });
 
 export const seoRoutes = new Hono();
 
@@ -18,10 +19,9 @@ const counters = {
   botRender: 0,
 };
 
-const SEO_BOT_RENDER_ENABLED = () =>
-  (process.env['SEO_BOT_RENDER_ENABLED'] ?? 'true') === 'true';
+const SEO_BOT_RENDER_ENABLED = () => env.SEO_BOT_RENDER_ENABLED === 'true';
 
-// ─── Strapi flat data shapes (consistent with catalogo routes) ────────────────
+// ─── Strapi flat data shapes (consistent with v5 normalization) ───────────────
 
 interface StrapiItem {
   id: string | number;
@@ -35,10 +35,6 @@ interface StrapiItem {
   logoUrl?: string;
   areaEspecialidade?: string;
   updatedAt?: string;
-}
-
-interface StrapiList {
-  data: StrapiItem[];
 }
 
 // ─── Static fallback URLs ─────────────────────────────────────────────────────
@@ -62,11 +58,11 @@ function buildStaticSitemap(): string {
 seoRoutes.get('/sitemap.xml', async (c) => {
   try {
     const [cursos, simulacoes, experiencias, mentores, instituicoes] = await Promise.all([
-      strapiGet<StrapiList>('/cursos', { 'filters[estado][$eq]': 'published', 'pagination[pageSize]': '1000' }),
-      strapiGet<StrapiList>('/simulacoes', { 'filters[estado][$eq]': 'published', 'pagination[pageSize]': '1000' }),
-      strapiGet<StrapiList>('/experiencias', { 'filters[estado][$eq]': 'published', 'pagination[pageSize]': '1000' }),
-      strapiGet<StrapiList>('/mentores', { 'pagination[pageSize]': '1000' }).catch(() => ({ data: [] })),
-      strapiGet<StrapiList>('/instituicoes', { 'pagination[pageSize]': '1000' }).catch(() => ({ data: [] })),
+      strapiGet<StrapiItem>('/cursos', { 'filters[estado][$eq]': 'published', 'pagination[pageSize]': '1000' }),
+      strapiGet<StrapiItem>('/simulacoes', { 'filters[estado][$eq]': 'published', 'pagination[pageSize]': '1000' }),
+      strapiGet<StrapiItem>('/experiencias', { 'filters[estado][$eq]': 'published', 'pagination[pageSize]': '1000' }),
+      strapiGet<StrapiItem>('/mentores', { 'pagination[pageSize]': '1000' }).catch(() => ({ data: [], meta: { pagination: { page: 1, pageSize: 1000, pageCount: 0, total: 0 } } })),
+      strapiGet<StrapiItem>('/instituicoes', { 'pagination[pageSize]': '1000' }).catch(() => ({ data: [], meta: { pagination: { page: 1, pageSize: 1000, pageCount: 0, total: 0 } } })),
     ]);
 
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
@@ -87,7 +83,6 @@ seoRoutes.get('/sitemap.xml', async (c) => {
       xml += `  <url><loc>${BASE_URL}/simulacoes/${slug}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}</url>\n`;
     });
 
-    // Experiencias use :id (not slug) per router.tsx
     experiencias.data.forEach(item => {
       const lastmod = item.updatedAt ? item.updatedAt.split('T')[0] : undefined;
       xml += `  <url><loc>${BASE_URL}/experiencias/${String(item.id)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}</url>\n`;
@@ -132,17 +127,15 @@ seoRoutes.get('/health', async (c) => {
   let redisOk = false;
 
   try {
-    const res = await strapiGet('/users', { 'pagination[pageSize]': '1' });
-    dbOk = !!res;
+    await strapiGet('/users', { 'pagination[pageSize]': '1' });
+    dbOk = true;
   } catch {
     counters.strapiTimeout++;
   }
 
   try {
-    if (redis) {
-      await redis.ping();
-      redisOk = true;
-    }
+    await redis.ping();
+    redisOk = true;
   } catch { /* redis down */ }
 
   return c.json({
@@ -154,8 +147,6 @@ seoRoutes.get('/health', async (c) => {
 });
 
 // ─── GET /meta — Server-side OG meta for social bots ──────────────────────────
-
-// Removido BOT_UA temporariamente se não utilizado
 
 seoRoutes.get('/meta', async (c) => {
   if (!SEO_BOT_RENDER_ENABLED()) {
@@ -180,12 +171,13 @@ seoRoutes.get('/meta', async (c) => {
     const projetoMatch = path.match(/^\/projetos\/(.+)$/);
 
     if (cursoMatch) {
-      const slug = cursoMatch[1];
-      const curso = await strapiGet<{ data: StrapiItem }>(`/cursos/${slug}`).catch(() => null);
-      if (curso?.data) {
-        title = curso.data.titulo ?? title;
-        description = curso.data.descricao ?? description;
-        image = curso.data.capaUrl || OG_DEFAULT;
+      const slug = cursoMatch[1] ?? '';
+      const res = await strapiGet<StrapiItem>('/cursos', { 'filters[slug][$eq]': slug, 'pagination[pageSize]': '1' }).catch(() => null);
+      const curso = res?.data[0];
+      if (curso) {
+        title = curso.titulo ?? title;
+        description = curso.descricao ?? description;
+        image = curso.capaUrl || OG_DEFAULT;
         ogType = 'article';
         jsonLd = JSON.stringify({
           '@context': 'https://schema.org',
@@ -197,38 +189,41 @@ seoRoutes.get('/meta', async (c) => {
         });
       }
     } else if (simMatch) {
-      const slug = simMatch[1];
-      const sim = await strapiGet<{ data: StrapiItem }>(`/simulacoes/${slug}`).catch(() => null);
-      if (sim?.data) {
-        title = sim.data.titulo ?? title;
-        description = sim.data.descricao ?? description;
-        image = sim.data.capaUrl || OG_DEFAULT;
+      const slug = simMatch[1] ?? '';
+      const res = await strapiGet<StrapiItem>('/simulacoes', { 'filters[slug][$eq]': slug, 'pagination[pageSize]': '1' }).catch(() => null);
+      const sim = res?.data[0];
+      if (sim) {
+        title = sim.titulo ?? title;
+        description = sim.descricao ?? description;
+        image = sim.capaUrl || OG_DEFAULT;
         ogType = 'article';
       }
     } else if (mentorMatch) {
-      const id = mentorMatch[1];
-      const mentor = await strapiGet<{ data: StrapiItem }>(`/mentores/${id}`).catch(() => null);
-      if (mentor?.data) {
-        title = mentor.data.nome ?? title;
-        description = mentor.data.bio ?? description;
-        image = mentor.data.avatarUrl || OG_DEFAULT;
+      const id = mentorMatch[1] ?? '';
+      const res = await strapiGet<StrapiItem>(`/users/${id}`).catch(() => null);
+      const mentor = res?.data[0];
+      if (mentor) {
+        title = mentor.nome ?? title;
+        description = mentor.bio ?? description;
+        image = mentor.avatarUrl || OG_DEFAULT;
         ogType = 'profile';
         jsonLd = JSON.stringify({
           '@context': 'https://schema.org',
           '@type': 'Person',
           name: title,
           description,
-          jobTitle: mentor.data.areaEspecialidade,
+          jobTitle: mentor.areaEspecialidade,
           url: `${BASE_URL}/mentores/${id}`,
         });
       }
     } else if (instMatch) {
-      const slug = instMatch[1];
-      const inst = await strapiGet<{ data: StrapiItem }>(`/instituicoes/${slug}`).catch(() => null);
-      if (inst?.data) {
-        title = inst.data.nome ?? title;
-        description = inst.data.descricao ?? description;
-        image = inst.data.logoUrl || OG_DEFAULT;
+      const slug = instMatch[1] ?? '';
+      const res = await strapiGet<StrapiItem>('/instituicoes', { 'filters[slug][$eq]': slug, 'pagination[pageSize]': '1' }).catch(() => null);
+      const inst = res?.data[0];
+      if (inst) {
+        title = inst.nome ?? title;
+        description = inst.descricao ?? description;
+        image = inst.logoUrl || OG_DEFAULT;
         ogType = 'profile';
         jsonLd = JSON.stringify({
           '@context': 'https://schema.org',
@@ -239,16 +234,16 @@ seoRoutes.get('/meta', async (c) => {
         });
       }
     } else if (expMatch) {
-      const id = expMatch[1];
-      const exp = await strapiGet<{ data: StrapiItem }>(`/experiencias/${id}`).catch(() => null);
-      if (exp?.data) {
-        title = exp.data.titulo ?? title;
-        description = exp.data.descricao ?? description;
-        image = exp.data.capaUrl || OG_DEFAULT;
+      const id = expMatch[1] ?? '';
+      const res = await strapiGet<StrapiItem>(`/experiencias/${id}`).catch(() => null);
+      const exp = res?.data[0];
+      if (exp) {
+        title = exp.titulo ?? title;
+        description = exp.descricao ?? description;
+        image = exp.capaUrl || OG_DEFAULT;
         ogType = 'article';
       }
     } else if (projetoMatch) {
-      // Projects may not be in Strapi — return defaults
       ogType = 'article';
     }
   } catch (err) {

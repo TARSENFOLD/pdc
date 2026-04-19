@@ -22,7 +22,7 @@ export function MentorPublicoPerfilPage() {
         title={mentor.nome}
         description={mentor.bio ?? `Mentor especializado em ${mentor.areaEspecialidade ?? 'diversas áreas'}`}
         image={mentor.avatarUrl}
-        url={`https://usepdc.com/mentores/${id}`}
+        url={`https://usepdc.com/mentores/${id ?? ''}`}
         type="profile"
         jsonLd={{
           '@type': 'Person',

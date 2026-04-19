@@ -1,107 +1,66 @@
 import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import { checkRole } from '../modules/auth/rbac.middleware.js';
-import { strapiGet, strapiPost, strapiPut, strapiDelete } from '../modules/strapi/strapi.client.js';
+import { strapiGet, strapiDelete } from '../modules/strapi/strapi.client.js';
+import { type Projeto } from '@pdc/shared';
 
 type Vars = { Variables: AuthVariables };
-
-const listQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional(),
-  pageSize: z.coerce.number().int().min(1).max(100).optional(),
-  alunoId: z.string().optional(),
-  cursoId: z.string().optional(),
-  tags: z.string().optional(), // comma-separated
-});
-
-const createSchema = z.object({
-  titulo: z.string().min(3).max(120),
-  descricao: z.string().min(10).max(2000),
-  cursoId: z.string().optional(),
-  tags: z.array(z.string().max(30)).max(10).optional(),
-  imagemUrl: z.string().url().optional(),
-  repoUrl: z.string().url().optional(),
-  demoUrl: z.string().url().optional(),
-});
-
-const updateSchema = createSchema.partial();
-
 export const projetoRoutes = new Hono<Vars>();
 
-// GET /projetos — público
-projetoRoutes.get('/', zValidator('query', listQuerySchema), async (c) => {
-  const q = c.req.valid('query');
-  const params: Record<string, string> = { populate: 'imagem,aluno' };
-  if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
-  if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
-  if (q.alunoId !== undefined) params['filters[alunoId][$eq]'] = q.alunoId;
-  if (q.cursoId !== undefined) params['filters[cursoId][$eq]'] = q.cursoId;
-  if (q.tags !== undefined) params['filters[tags][$containsi]'] = q.tags;
+projetoRoutes.use('*', verifyJwt);
+
+// GET /projetos
+projetoRoutes.get('/', async (c) => {
   try {
-    return c.json(await strapiGet<unknown>('/projetos', params));
+    const res = await strapiGet<Projeto>('/projetos', {
+      populate: 'autor,media',
+      sort: 'createdAt:desc'
+    });
+    return c.json(res);
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    return c.json({ error: 'Falha ao sincronizar o ecossistema de projetos' }, 502);
   }
 });
 
-// GET /projetos/:id — público
-projetoRoutes.get('/:id', async (c) => {
+// GET /projetos/meus
+projetoRoutes.get('/meus', async (c) => {
+  const { id: userId } = c.get('user');
   try {
-    return c.json(await strapiGet<unknown>(`/projetos/${c.req.param('id')}`, { populate: 'imagem,aluno' }));
+    const resPerfil = await strapiGet<{ id: string }>('/perfis', {
+      'filters[userId][$eq]': userId,
+      'fields[0]': 'id'
+    });
+    const perfilId = resPerfil.data[0]?.id;
+    if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
+
+    const res = await strapiGet<Projeto>('/projetos', {
+      'filters[autor][id][$eq]': String(perfilId),
+      populate: 'media',
+    });
+    return c.json(res);
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    return c.json({ error: 'Erro ao recuperar os teus ativos' }, 502);
   }
 });
 
-// POST /projetos — aluno, mentor ou instituição
-projetoRoutes.post(
-  '/',
-  verifyJwt,
-  checkRole(['aluno', 'mentor', 'instituicao']),
-  zValidator('json', createSchema),
-  async (c) => {
-    const user = c.get('user');
-    const body = c.req.valid('json');
-    try {
-      return c.json(await strapiPost<unknown>('/projetos', { ...body, autorId: user.id, alunoId: user.id }), 201);
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+// DELETE /projetos/:id
+projetoRoutes.delete('/:id', async (c) => {
+  const id = c.req.param('id');
+  const { id: userId } = c.get('user');
+
+  try {
+    const resGet = await strapiGet<any>(`/projetos/${id}`, { populate: 'autor' });
+    const existing = resGet.data[0];
+
+    if (!existing) return c.json({ error: 'Projeto não identificado' }, 404);
+
+    // Invariante: apenas o autor real pode eliminar o ativo
+    if (existing.autor?.userId !== userId) {
+      return c.json({ error: 'Autoridade insuficiente' }, 403);
     }
+
+    await strapiDelete(`/projetos/${id}`);
+    return c.json({ success: true });
+  } catch (err) {
+    return c.json({ error: 'Falha na eliminação do ativo' }, 502);
   }
-);
-
-// PUT /projetos/:id — próprio aluno
-projetoRoutes.put('/:id', verifyJwt, zValidator('json', updateSchema), async (c) => {
-    const projetoId = c.req.param('id');
-    const { id: userId } = c.get('user');
-    const body = c.req.valid('json');
-    // Verifica propriedade
-    try {
-      const proj = await strapiGet<{ data: { alunoId: string; autorId?: string } }>(`/projetos/${projetoId}`);
-      const ownerId = proj.data.autorId ?? proj.data.alunoId;
-      if (ownerId !== userId) {
-        return c.json({ error: 'Forbidden' }, 403);
-      }
-      return c.json(await strapiPut<unknown>(`/projetos/${projetoId}`, body));
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
-    }
-  });
-
-  // DELETE /projetos/:id — aluno (próprio) ou moderador
-  projetoRoutes.delete('/:id', verifyJwt, async (c) => {
-    const projetoId = c.req.param('id');
-    const { id: userId, role } = c.get('user');
-    try {
-      const proj = await strapiGet<{ data: { alunoId: string; autorId?: string } }>(`/projetos/${projetoId ?? ''}`);
-      const ownerId = proj.data.autorId ?? proj.data.alunoId;
-      const ehDono = ownerId === userId;
-      const ehModerador = role === 'moderador' || role === 'super_admin';
-      if (!ehDono && !ehModerador) return c.json({ error: 'Forbidden' }, 403);
-      await strapiDelete(`/projetos/${projetoId ?? ''}`);
-      return c.json({ ok: true });
-    } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
-    }
-  });
+});

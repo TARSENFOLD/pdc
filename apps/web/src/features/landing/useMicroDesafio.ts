@@ -2,17 +2,25 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSocket } from '../../lib/realtime/useSocket';
 import { telemetriaService } from '../../lib/telemetria/telemetria.service';
 import {
-  type Area, type MicroDesafioState, type Veredito,
-  detectarArea, PERGUNTAS, AREA_LABEL,
+  type Area, type MicroDesafioState, type Veredito, type PerguntaData,
+  detectarArea, AREA_LABEL, PERGUNTAS_FALLBACK,
 } from './microDesafioData';
 
 const API_URL: string =
-  (import.meta.env['VITE_API_URL'] as string | undefined) ?? 'http://localhost:3001';
+  (import.meta.env['VITE_API_URL'] as string | undefined) ?? '/api';
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useMicroDesafio() {
   const { on } = useSocket();
+
+  const sessionId = useMemo(() => {
+    const stored = sessionStorage.getItem('pdc_session_id');
+    if (stored) return stored;
+    const id = crypto.randomUUID();
+    sessionStorage.setItem('pdc_session_id', id);
+    return id;
+  }, []);
 
   const [state, setState] = useState<MicroDesafioState>({
     fase: 'intro',
@@ -22,6 +30,8 @@ export function useMicroDesafio() {
     veredito: null,
     pulso: { count: 0 },
   });
+
+  const [perguntas, setPerguntas] = useState<PerguntaData[]>([]);
 
   // ── Socket pulse ──────────────────────────────────────────────────────────
 
@@ -34,7 +44,6 @@ export function useMicroDesafio() {
   // ── Derived ───────────────────────────────────────────────────────────────
 
   const areaDetectada = useMemo(() => detectarArea(state.textoLivre), [state.textoLivre]);
-  const perguntas = PERGUNTAS[areaDetectada];
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -47,23 +56,54 @@ export function useMicroDesafio() {
     setState((s) => ({ ...s, textoLivre: texto }));
   }, []);
 
-  const submeterTexto = useCallback(() => {
-    setState((s) => {
-      const area = detectarArea(s.textoLivre);
-      if (s.textoLivre.length >= 3 && area !== 'GERAL') {
-        void telemetriaService.registarEvento('landing_hero_area_detected', { area }).catch(() => undefined);
-      }
-      return { ...s, fase: 'pergunta' as const };
-    });
-  }, []);
-
-  const gerarVeredito = useCallback(async (respostas: number[], area: Area, textoLivre: string) => {
+  const submeterTexto = useCallback(async () => {
+    const area = detectarArea(state.textoLivre);
     setState((s) => ({ ...s, fase: 'carregando' }));
 
-    const areaPerguntas = PERGUNTAS[area];
+    try {
+      // 1. Report activity to Live Pulse
+      void fetch(`${API_URL}/landing/pulse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, area: area !== 'OUTRA' ? area : undefined }),
+      }).catch(() => undefined);
+
+      // 2. Fetch dynamic questions (with Rate Limit check)
+      const res = await fetch(`${API_URL}/landing/questions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ area, regiao: 'Angola' }), // Defaulting to Angola as starting point
+      });
+
+      if (res.status === 429) {
+        setState((s) => ({ ...s, fase: 'limite' }));
+        return;
+      }
+
+      if (!res.ok) throw new Error('Falha ao obter perguntas');
+
+      const data = await res.json();
+      const dynamicPerguntas = data.perguntas || [];
+
+      setPerguntas(dynamicPerguntas.length > 0 ? dynamicPerguntas : PERGUNTAS_FALLBACK);
+      setState((s) => ({ ...s, fase: 'pergunta' }));
+      
+      if (state.textoLivre.length >= 3 && area !== 'OUTRA') {
+        void telemetriaService.registarEvento('landing_hero_area_detected', { area }).catch(() => undefined);
+      }
+    } catch (err) {
+      console.error('Questions fetch failed:', err);
+      setPerguntas(PERGUNTAS_FALLBACK);
+      setState((s) => ({ ...s, fase: 'pergunta' }));
+    }
+  }, [state.textoLivre, sessionId]);
+
+  const gerarVeredito = useCallback(async (respostas: number[], area: Area, textoLivre: string, perguntasAtuais: PerguntaData[]) => {
+    setState((s) => ({ ...s, fase: 'carregando' }));
+
     const respostasTexto = respostas
       .map((r, i) => {
-        const p = areaPerguntas[i];
+        const p = perguntasAtuais[i];
         const opt = p?.opcoes[r];
         return p && opt ? `${p.texto} → ${opt.texto}` : '';
       })
@@ -71,11 +111,11 @@ export function useMicroDesafio() {
       .join('; ');
 
     const prompt = [
-      'Analisa o perfil vocacional deste estudante angolano.',
+      'Analisa o perfil vocacional deste estudante.',
       `Área de interesse: ${AREA_LABEL[area]}`,
-      `Texto livre: "${textoLivre}"`,
-      `Respostas: ${respostasTexto}`,
-      'Retorna APENAS JSON válido (sem markdown):',
+      `Contexto: "${textoLivre}"`,
+      `Respostas ao desafio: ${respostasTexto}`,
+      'Retorna APENAS JSON válido:',
       '{"area":"string","score":60-99,"arquetipo":"string curto","proximoPasso":"frase curta","simulacoes":["sim1","sim2","sim3"]}',
     ].join('\n');
 
@@ -122,20 +162,17 @@ export function useMicroDesafio() {
 
   const responder = useCallback(
     (opcaoIndex: number) => {
-      setState((s) => {
-        const respostas = [...s.respostas, opcaoIndex];
-        const proxima = s.perguntaActual + 1;
-        const area = detectarArea(s.textoLivre);
+      const respostas = [...state.respostas, opcaoIndex];
+      const proxima = state.perguntaActual + 1;
 
-        if (proxima >= PERGUNTAS[area].length) {
-          void gerarVeredito(respostas, area, s.textoLivre);
-          return { ...s, respostas, perguntaActual: proxima };
-        }
-
-        return { ...s, respostas, perguntaActual: proxima };
-      });
+      if (proxima >= perguntas.length) {
+        void gerarVeredito(respostas, areaDetectada, state.textoLivre, perguntas);
+        setState((s) => ({ ...s, respostas, perguntaActual: proxima }));
+      } else {
+        setState((s) => ({ ...s, respostas, perguntaActual: proxima }));
+      }
     },
-    [gerarVeredito],
+    [state.respostas, state.perguntaActual, state.textoLivre, areaDetectada, perguntas, gerarVeredito],
   );
 
   const reiniciar = useCallback(() => {
@@ -147,6 +184,7 @@ export function useMicroDesafio() {
       veredito: null,
       pulso: s.pulso,
     }));
+    setPerguntas([]);
   }, []);
 
   return { state, areaDetectada, perguntas, comecar, setTextoLivre, submeterTexto, responder, reiniciar };
