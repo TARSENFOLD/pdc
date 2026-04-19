@@ -28,10 +28,10 @@ function LandingDestaquesSkeleton() {
       <div className="h-8 w-64 bg-surface-raised mb-12 rounded-lg" />
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
         <div className="lg:col-span-2 grid gap-6 sm:grid-cols-2">
-          {[1,2,3,4].map(i => <div key={i} className="h-64 bg-surface-raised rounded-2xl" />)}
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-64 bg-surface-raised rounded-2xl" />)}
         </div>
         <div className="space-y-4">
-          {[1,2,3].map(i => <div key={i} className="h-20 bg-surface-raised rounded-xl" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-20 bg-surface-raised rounded-xl" />)}
         </div>
       </div>
     </div>
@@ -108,7 +108,7 @@ export function LandingDestaques() {
                             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
                         ) : (
-                          <div 
+                          <div
                             className="flex h-full w-full items-center justify-center"
                             style={{ background: `linear-gradient(135deg, ${colors.from}, ${colors.to})` }}
                           >
@@ -160,8 +160,8 @@ export function LandingDestaques() {
                 </motion.div>
               ))}
             </div>
-            <Link 
-              to="/explorar?tab=instituicoes" 
+            <Link
+              to="/explorar?tab=instituicoes"
               className="mt-2 text-xs font-bold uppercase tracking-widest text-accent/60 hover:text-accent transition-colors inline-flex items-center gap-1"
             >
               Ver todas <ChevronRight size={12} />

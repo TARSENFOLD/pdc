@@ -1,15 +1,20 @@
 import { z } from 'zod';
 
 export const AreaVocacionalSchema = z.enum([
+  'SAUDE',
   'ENGENHARIA',
   'TECNOLOGIA',
-  'SAUDE',
-  'GESTAO',
-  'ARTES',
-  'CIENCIAS_SOCIAIS',
   'DIREITO',
+  'GESTAO',
   'EDUCACAO',
-  'AGRONOMIA',
+  'ARTES',
+  'CIENCIAS_AGRARIAS',
+  'CIENCIAS_SOCIAIS',
+  'COMUNICACAO',
+  'CIENCIAS_NATURAIS',
+  'ARQUITETURA',
+  'TURISMO_HOTELARIA',
+  'DESPORTO',
   'OUTRA'
 ]);
 

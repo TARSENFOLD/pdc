@@ -76,4 +76,67 @@ Regras:
       return aiService.fallbackOllama(messages, stream);
     }
   },
+
+  async gerarPerguntasDesafio(area: string, regiao: string = 'global'): Promise<any> {
+    const prompt = `Gera 5 perguntas imersivas para um micro-desafio vocacional na área de ${area}.
+Contexto de Mercado: ${regiao}.
+As perguntas devem ser curtas, desafiantes e refletir dilemas reais da profissão.
+Retorna APENAS um JSON no formato:
+{
+  "perguntas": [
+    {
+      "texto": "Frase da pergunta?",
+      "opcoes": [
+        { "emoji": "🚀", "texto": "Opção 1" },
+        { "emoji": "🛠️", "texto": "Opção 2" },
+        { "emoji": "📊", "texto": "Opção 3" },
+        { "emoji": "🧠", "texto": "Opção 4" }
+      ]
+    }
+  ]
+}`;
+
+    const res = await aiService.chat([{ role: 'user', content: prompt }], 'Geração de Desafio Vocacional', false);
+    const data = await res.json() as any;
+    
+    let content = '';
+    if (data.choices) {
+      content = data.choices[0]?.message.content || '{}';
+    } else if (data.message) {
+      content = data.message.content;
+    }
+
+    try {
+      const parsed = JSON.parse(content.replace(/```json|```/g, ''));
+      return parsed.perguntas || [];
+    } catch {
+      return [];
+    }
+  },
+
+  async gerarVereditoPsicometrico(metrics: {
+    phi: number;
+    resilience: number;
+    focus: number;
+    domainId: string;
+  }): Promise<string> {
+    const prompt = `Analisa os seguintes índices psicométricos de um estudante na área de ${metrics.domainId}:
+- Fluidez Cognitiva ($\phi$): ${metrics.phi.toFixed(2)}/10
+- Resiliência ao Erro ($R$): ${metrics.resilience.toFixed(2)}/10
+- Estabilidade de Foco: ${metrics.focus.toFixed(2)}/10
+
+Gera um veredito curto (máx 2 parágrafos) impiedosamente honesto e técnico sobre o potencial deste aluno.
+Usa uma linguagem que misture rigor científico com visão de mercado.
+Retorna APENAS o texto do veredito.`;
+
+    const res = await aiService.chat([{ role: 'user', content: prompt }], 'Análise Psicométrica de Elite', false);
+    const data = await res.json() as any;
+    
+    if (data.choices) {
+      return data.choices[0]?.message.content || '';
+    } else if (data.message) {
+      return data.message.content;
+    }
+    return '';
+  },
 };

@@ -49,8 +49,6 @@ export function BootstrapProvider({ children }: { children: ReactNode }) {
 
 export function useBootstrap(): BootstrapContextValue {
   const ctx = useContext(BootstrapContext);
-  if (!ctx) {
-    throw new Error('useBootstrap deve ser usado dentro de um BootstrapProvider');
-  }
-  return ctx;
+  // Em vez de crashar, devolvemos um estado de "Loading" seguro para evitar erros de renderização
+  return ctx ?? { data: null, isLoading: true, error: null };
 }

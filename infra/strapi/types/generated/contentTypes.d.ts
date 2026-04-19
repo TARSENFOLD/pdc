@@ -1518,6 +1518,7 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
       'api::perfil.perfil'
     > &
       Schema.Attribute.Private;
+    lti_context: Schema.Attribute.JSON;
     modalidadeCusto: Schema.Attribute.String;
     modoAcesso: Schema.Attribute.Enumeration<['individual', 'institucional']> &
       Schema.Attribute.DefaultTo<'individual'>;

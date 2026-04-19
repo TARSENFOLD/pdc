@@ -176,12 +176,12 @@ async function isAlreadyUnlocked(userId: string, slug: string): Promise<boolean>
  */
 async function getPerfilId(userId: string): Promise<number | null> {
   try {
-    const res = await strapiGet<{ data: StrapiPerfilRecord[] }>('/perfis', {
+    const res = await strapiGet<StrapiPerfilRecord>('/perfis', {
       'filters[userId][$eq]': userId,
       'pagination[pageSize]': '1',
       'fields[0]': 'id',
     });
-    return res.data?.[0]?.id ?? null;
+    return res.data[0]?.id ?? null;
   } catch {
     return null;
   }
@@ -193,7 +193,7 @@ async function getPerfilId(userId: string): Promise<number | null> {
  */
 async function unlock(userId: string, rule: ConquistaRule): Promise<void> {
   // 1. Create conquista record (so GET /conquistas/minhas picks it up)
-  const conquistaRes = await strapiPost<{ data: StrapiConquistaRecord }>(
+  const conquistaRes = await strapiPost<StrapiConquistaRecord>(
     '/conquistas',
     {
       userId,
@@ -272,3 +272,7 @@ export async function verificarConquistas(
 
   return unlocked;
 }
+
+export const conquistaEngine = {
+  verificarConquistas,
+};

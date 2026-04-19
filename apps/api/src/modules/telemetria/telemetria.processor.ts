@@ -1,6 +1,13 @@
 import pino from 'pino';
 import { strapiGet, strapiPost, strapiPutRaw } from '../strapi/strapi.client.js';
-import { analyzeFluidity, analyzeResilience, analyzeFocus } from '../analysis/heuristics.engine.js';
+import { heuristicsEngine } from '../analysis/heuristics.engine.js';
+import { 
+  analyzeFluidity, 
+  analyzeResilience, 
+  analyzeFocus, 
+  type BehaviorPattern 
+} from '@pdc/shared';
+import { tinaService } from '../tina/tina.service.js';
 
 const log = pino({ name: 'telemetria-processor' });
 
@@ -21,102 +28,134 @@ export const telemetriaProcessor = {
 
     try {
       // 1. Buscar histórico denso de telemetria
-      const eventsRes = await strapiGet<{ data: TelemetriaRaw[] }>('/telemetrias', {
+      const eventsRes = await strapiGet<TelemetriaRaw>('/telemetrias', {
         'filters[perfil][id][$eq]': perfilId,
-        'filters[targetType][$eq]': 'simulation',
         'sort': 'clientTimestamp:asc',
         'pagination[limit]': '1000',
       });
 
       const events = eventsRes.data;
-      if (events.length < 10) {
+      if (events.length < 5) {
         log.warn({ perfilId }, 'Dados insuficientes para diagnóstico de autoridade');
         return;
       }
 
-      // 2. Cálculo de Fluidez (Phi) - Distribuição Normal de Reação
-      const intervals: number[] = [];
+      // 2. Extração de Métricas de Tempo
+      const times: number[] = [];
+      const timesPosError: number[] = [];
+      let totalInterruptionTime = 0;
+
       for (let i = 1; i < events.length; i++) {
         const current = events[i];
         const previous = events[i - 1];
         
         if (current?.clientTimestamp && previous?.clientTimestamp) {
           const diff = new Date(current.clientTimestamp).getTime() - new Date(previous.clientTimestamp).getTime();
-          // Ignorar ruído: menos de 50ms (mecânico) ou mais de 2 minutos (pausa externa)
+          
+          // Filtrar ruído (50ms a 2min)
           if (diff > 50 && diff < 120000) {
-            intervals.push(diff);
+            times.push(diff);
+            
+            // R: Reação ao erro
+            if (previous.tipo.includes('erro') || previous.tipo.includes('falha')) {
+              timesPosError.push(diff);
+            }
+          }
+
+          // Foco: Detetar interrupções (visibility lost)
+          if (previous.visibilityState !== 'visible') {
+            totalInterruptionTime += diff;
           }
         }
       }
 
-      const mean = intervals.length > 0 ? (intervals.reduce((a, b) => a + b, 0) / intervals.length) : 2000;
-      const variance = intervals.length > 0 ? (intervals.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / intervals.length) : 100;
-      const stdDev = Math.sqrt(variance);
-      const cv = mean > 0 ? (stdDev / mean) : 0; // Coeficiente de Variação (Consistência)
+      // 3. Cálculos Soberanos via Heuristics Engine
+      const meanTime = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 2000;
+      const fluidity = heuristicsEngine.calculateFluidity(times);
+      const resilience = heuristicsEngine.calculateResilience(timesPosError, meanTime);
       
-      const baseline = 2000; // 2s baseline universal
-      // phi = rapidez * consistência
-      const fluidity = Math.min(10, (baseline / Math.max(1, mean)) * (1 - cv) * 10);
+      const lastEvent = events[events.length - 1];
+      const firstEvent = events[0];
+      const totalTime = (lastEvent && firstEvent) 
+        ? new Date(lastEvent.clientTimestamp).getTime() - new Date(firstEvent.clientTimestamp).getTime()
+        : 0;
+      const focus = heuristicsEngine.calculateFocus(totalTime, totalInterruptionTime);
 
-      // 3. Algoritmo de Resiliência (R) - Reação ao Erro
-      let rSum = 0;
-      let rCount = 0;
-      events.forEach((evt, i) => {
-        const next = events[i + 1];
-        if (evt.tipo.includes('erro') && next?.clientTimestamp && evt.clientTimestamp) {
-          const postErrorTime = new Date(next.clientTimestamp).getTime() - new Date(evt.clientTimestamp).getTime();
-          // r = 1 (Calma/Recuperação), r < 1 (Frustração/Chute), r > 1 (Paralisia)
-          const r = postErrorTime / Math.max(1, mean);
-          rSum += r;
-          rCount++;
-        }
-      });
-      
-      const resilienceIndex = rCount > 0 ? (rSum / rCount) : 1.0;
-
-      // 4. Estabilidade de Foco (S) - Permanência vs Distrações
-      const visibleEvents = events.filter(e => e.visibilityState === 'visible').length;
-      const focusStability = (visibleEvents / events.length) * 10;
-
-      // 5. Diagnóstico de Heurísticas
+      // 4. Diagnóstico de Heurísticas (Shared)
       const hFluidity = analyzeFluidity(fluidity / 10);
-      const hResilience = analyzeResilience(resilienceIndex);
-      const hFocus = analyzeFocus(focusStability / 10);
+      const hResilience = analyzeResilience(resilience / 10);
+      const hFocus = analyzeFocus(focus / 10);
 
-      // 6. Persistência de Elite (Upsert)
-      const existing = await strapiGet<{ data: Array<{ id: number }> }>('/behavior-patterns', {
+      // 5. Persistência de Elite (Upsert)
+      const existing = await strapiGet<{ id: number }>('/behavior-patterns', {
         'filters[perfil][id][$eq]': perfilId,
         'filters[domainId][$eq]': domainId,
       });
 
-      const payload = {
+      const behaviorPayload: Partial<BehaviorPattern> = {
         perfil: perfilId,
         domainId,
         cognitiveFluidity: fluidity,
-        resilienceIndex: Math.min(10, resilienceIndex * 5),
-        focusStability,
-        successRate: 0.85, // Placeholder - integrado com tentativas futuramente
-        technicalScore: (fluidity + focusStability) / 2,
+        resilienceIndex: resilience,
+        focusStability: focus,
+        successRate: 0.85, // TODO: Calcular a partir das tentativas reais
+        technicalScore: (fluidity + focus + resilience) / 3,
         tinaSummary: {
           fluidity: hFluidity.insight,
           resilience: hResilience.insight,
           focus: hFocus.insight,
-          verdict: `Perfil vocacional de alta autoridade técnica no domínio ${domainId}.`
+          lastHeuristicUpdate: new Date().toISOString()
         },
         lastUpdatedAt: new Date().toISOString(),
       };
 
       const existingId = existing.data?.[0]?.id;
       if (existingId) {
-        await strapiPutRaw(`/behavior-patterns/${existingId}`, { data: payload });
+        await strapiPutRaw(`/behavior-patterns/${existingId}`, { data: behaviorPayload });
       } else {
-        await strapiPost('/behavior-patterns', payload);
+        await strapiPost('/behavior-patterns', behaviorPayload);
       }
 
-      log.info({ perfilId, fluidity: fluidity.toFixed(2), resilience: resilienceIndex.toFixed(2) }, 'Padrão Behavioral atualizado com sucesso');
+      log.info({ perfilId, fluidity: fluidity.toFixed(2), resilience: resilience.toFixed(2) }, 'Músculo behavioral processado e persistido');
+
+      // 6. Camada de Interpretação Assíncrona (Tina)
+      // No patamar mundial, a IA não bloqueia o pipeline de dados.
+      void this.requestTinaInterpretation(perfilId, domainId, behaviorPayload);
 
     } catch (err) {
       log.error({ err }, 'Falha crítica no processamento de mérito behavioral');
+    }
+  },
+
+  async requestTinaInterpretation(perfilId: string, domainId: string, behavior: any): Promise<void> {
+    try {
+      const dynamicVerdict = await tinaService.gerarVereditoPsicometrico({
+        phi: behavior.cognitiveFluidity,
+        resilience: behavior.resilienceIndex,
+        focus: behavior.focusStability,
+        domainId
+      });
+
+      const existing = await strapiGet<{ id: number; tinaSummary: any }>('/behavior-patterns', {
+        'filters[perfil][id][$eq]': perfilId,
+        'filters[domainId][$eq]': domainId,
+      });
+
+      const existingData = existing.data?.[0];
+      const existingId = existingData?.id;
+      if (existingId) {
+        const updatedSummary = {
+          ...(existingData.tinaSummary || {}),
+          verdict: dynamicVerdict,
+          tinaUpdatedAt: new Date().toISOString()
+        };
+        await strapiPutRaw(`/behavior-patterns/${existingId}`, { 
+          data: { tinaSummary: updatedSummary } 
+        });
+        log.info({ perfilId }, 'Interpretação da Tina injetada na assinatura DNA');
+      }
+    } catch (err) {
+      log.warn({ err }, 'Tina indisponível para interpretação. Mantendo heurísticas puras.');
     }
   }
 };

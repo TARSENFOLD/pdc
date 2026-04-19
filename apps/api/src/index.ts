@@ -27,10 +27,10 @@ import { telemetriaRoutes } from './routes/telemetria.js';
 import { tinaRoutes } from './routes/tina.js';
 import { experienciaRoutes } from './routes/experiencias.js';
 import { programaRoutes } from './routes/programas.js';
-import { propostasRoutes } from './routes/propostas.js';
+import { propostaRoutes } from './routes/propostas.js';
 import { interactionRoutes } from './routes/interactions.js';
 import { estudanteRoutes } from './routes/estudante.js';
-import { ratingsRoutes } from './routes/ratings.js';
+import { ratingRoutes } from './routes/ratings.js';
 import { commentsRoutes } from './routes/comments.js';
 import { moderacaoRoutes } from './routes/moderacao.js';
 import { adminRoutes } from './routes/admin.js';
@@ -49,6 +49,8 @@ import { denunciaRoutes } from './routes/denuncias.js';
 import { featureFlagsRoutes } from './routes/feature-flags.js';
 import { reputationRoutes } from './routes/reputation.js';
 import { bootstrapRoutes } from './routes/bootstrap.js';
+import { landingRoutes } from './routes/landing.js';
+import { healthRoutes } from './routes/health.js';
 
 import { socketService } from './modules/realtime/socket.service.js';
 import { tinaService } from './modules/tina/tina.service.js';
@@ -69,6 +71,8 @@ app.use('/auth/*', security);
 
 // ─── ROTAS ───
 app.route('/bootstrap', bootstrapRoutes);
+app.route('/landing', landingRoutes);
+app.route('/health', healthRoutes);
 app.route('/auth', authRoutes);
 app.route('/ai', aiRoutes);
 app.route('/feed', feedRoutes);
@@ -80,17 +84,18 @@ app.route('/telemetria', telemetriaRoutes);
 app.route('/tina', tinaRoutes);
 app.route('/experiencias', experienciaRoutes);
 app.route('/programas', programaRoutes);
-app.route('/propostas', propostasRoutes);
+app.route('/propostas', propostaRoutes);
 app.route('/interactions', interactionRoutes);
 app.route('/estudante', estudanteRoutes);
-app.route('/ratings', ratingsRoutes);
+app.route('/ratings', ratingRoutes);
 app.route('/comments', commentsRoutes);
 app.route('/moderacao', moderacaoRoutes);
 app.route('/admin', adminRoutes);
 app.route('/comite', comiteRoutes);
 app.route('/vinculos', vinculoRoutes);
 app.route('/mensagens', mensagensRoutes);
-app.route('/reputation', reputationRoutes);
+app.route('/reputacao', reputationRoutes); // Rota Canónica (R2.T6)
+app.route('/reputation', reputationRoutes); // Alias legacy
 app.route('/seo', seoRoutes);
 app.route('/conquistas', conquistaRoutes);
 app.route('/mentorias', mentoriaRoutes);
@@ -110,6 +115,15 @@ const server = serve({
 });
 
 // ─── INICIALIZAÇÕES ───
+import { eventBus } from './modules/events/event-bus.js';
+import { ltiHandler } from './modules/events/lti.handler.js';
+import { conquistasHandler } from './modules/events/conquistas.handler.js';
+import { DomainEventName } from './modules/events/types.js';
+
+// Registo explícito de handlers no Registry (D1)
+eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA, ltiHandler);
+eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA, conquistasHandler);
+
 socketService.init(server as Server);
 tinaService.indexarKnowledge().catch((err: unknown) => { 
   log.error({ err }, 'Falha ao indexar Tina'); 

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { authApi, type LoginResponse } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/http';
@@ -9,26 +9,46 @@ import type { RegistoEstudantePayload, AreaVocacional } from '@pdc/shared';
 import { ArrowLeft } from 'lucide-react';
 
 const AREAS: Array<{ value: AreaVocacional; label: string }> = [
-  { value: 'TECNOLOGIA', label: 'Tecnologia' },
   { value: 'SAUDE', label: 'Saúde' },
-  { value: 'DIREITO', label: 'Direito' },
   { value: 'ENGENHARIA', label: 'Engenharia' },
-  { value: 'ARTES', label: 'Artes' },
-  { value: 'CIENCIAS_SOCIAIS', label: 'Ciências Sociais' },
-  { value: 'EDUCACAO', label: 'Educação' },
-  { value: 'AGRONOMIA', label: 'Agronomia' },
+  { value: 'TECNOLOGIA', label: 'Tecnologia' },
+  { value: 'DIREITO', label: 'Direito' },
   { value: 'GESTAO', label: 'Gestão' },
-  { value: 'OUTRA', label: 'Outro' },
+  { value: 'EDUCACAO', label: 'Educação' },
+  { value: 'ARTES', label: 'Artes' },
+  { value: 'CIENCIAS_AGRARIAS', label: 'Ciências Agrárias' },
+  { value: 'CIENCIAS_SOCIAIS', label: 'Ciências Sociais' },
+  { value: 'COMUNICACAO', label: 'Comunicação' },
+  { value: 'CIENCIAS_NATURAIS', label: 'Ciências Naturais' },
+  { value: 'ARQUITETURA', label: 'Arquitetura' },
+  { value: 'TURISMO_HOTELARIA', label: 'Turismo e Hotelaria' },
+  { value: 'DESPORTO', label: 'Desporto' },
+  { value: 'OUTRA', label: 'Geral' },
 ];
 
 const NIVEIS = ['Secundário', 'Licenciatura', 'Mestrado', 'Doutoramento'] as const;
 
 export function RegistoEstudantePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const suggestedArea = searchParams.get('area')?.toUpperCase() as AreaVocacional | null;
+
   const [form, setForm] = useState<RegistoEstudantePayload>({
-    nome: '', email: '', password: '', areaInteresse: 'TECNOLOGIA', nivelEnsino: '',
+    nome: '',
+    email: '',
+    password: '',
+    areaInteresse: 'OUTRA',
+    nivelEnsino: '',
   });
+
   const [error, setError] = useState('');
+
+  // Sincronizar área sugerida vinda do Micro Desafio
+  useEffect(() => {
+    if (suggestedArea && AREAS.some(a => a.value === suggestedArea)) {
+      setForm(prev => ({ ...prev, areaInteresse: suggestedArea }));
+    }
+  }, [suggestedArea]);
 
   const mutation = useMutation({
     mutationFn: (payload: RegistoEstudantePayload) => authApi.registarEstudante(payload),
@@ -63,9 +83,9 @@ export function RegistoEstudantePage() {
 
   return (
     <AuthSplitLayout role="estudante">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-text-primary">Conta de Estudante</h1>
-        <p className="mt-1 text-sm text-text-secondary">Preenche os dados para começar.</p>
+        <p className="mt-1 text-sm text-text-secondary">Preenche os dados para desbloquear o teu <span className="text-amber font-bold">Perfil Vocacional Completo</span>.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {error ? <div className="rounded-lg border border-error/20 bg-error/10 p-3 text-sm text-error">{error}</div> : null}
@@ -91,13 +111,13 @@ export function RegistoEstudantePage() {
             </select>
           </div>
 
-          <Button type="submit" className="w-full" isLoading={mutation.isPending}>Criar conta</Button>
+          <Button type="submit" className="w-full" isLoading={mutation.isPending}>Registar e Continuar →</Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-text-muted lg:block hidden">
+        <p className="mt-6 text-center text-sm text-text-muted">
           <Link to="/criar-conta" className="inline-flex items-center gap-1 text-amber hover:underline">
             <ArrowLeft size={16} aria-hidden={true} />
-            Voltar
+            Voltar para escolha de perfil
           </Link>
         </p>
       </div>

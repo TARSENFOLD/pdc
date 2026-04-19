@@ -8,19 +8,8 @@ import { CriarCursoPayloadSchema } from '@pdc/shared';
 
 type Vars = { Variables: AuthVariables };
 
-// ── Strapi v5 Types ─────────────────────────────────────────────────────────
-
-interface StrapiSingleResponse<T> {
-  data: T & { id: number; documentId: string };
-  meta: Record<string, unknown>;
-}
-
-interface StrapiListResponse<T> {
-  data: Array<T & { id: number; documentId: string }>;
-  meta: { pagination: { page: number; pageSize: number; pageCount: number; total: number } };
-}
-
 interface Curso {
+  id: string | number;
   titulo: string;
   autorId: string;
   estado: 'draft' | 'review' | 'published' | 'archived';
@@ -55,8 +44,8 @@ cursoRoutes.get('/', zValidator('query', cursoQuerySchema), async (c) => {
   params['filters[estado][$eq]'] = 'published';
 
   try {
-    const data = await strapiGet<StrapiListResponse<Curso>>('/cursos', params);
-    return c.json(data);
+    const res = await strapiGet<Curso>('/cursos', params);
+    return c.json(res);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -69,14 +58,14 @@ cursoRoutes.get('/meus', checkRole(['mentor', 'instituicao', 'super_admin']), as
   const page = c.req.query('page') || '1';
 
   try {
-      const data = await strapiGet<StrapiListResponse<Curso>>('/cursos', {
+      const res = await strapiGet<Curso>('/cursos', {
         'filters[autorId][$eq]': id,
         populate: 'capa',
         'pagination[page]': page,
       });
       return c.json({
-        data: data.data,
-        pagination: data.meta.pagination
+        data: res.data,
+        pagination: res.meta.pagination
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro interno';
@@ -88,11 +77,11 @@ cursoRoutes.get('/meus', checkRole(['mentor', 'instituicao', 'super_admin']), as
 cursoRoutes.get('/me/inscricoes', async (c) => {
   const { id } = c.get('user');
   try {
-    const data = await strapiGet<StrapiListResponse<unknown>>('/inscricoes', {
+    const res = await strapiGet<any>('/inscricoes', {
       'filters[alunoId][$eq]': id,
       populate: 'curso.capa',
     });
-    return c.json(data);
+    return c.json(res);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -103,17 +92,20 @@ cursoRoutes.get('/me/inscricoes', async (c) => {
 cursoRoutes.get('/:id', async (c) => {
   const cursoId = c.req.param('id');
   try {
-    const data = await strapiGet<StrapiSingleResponse<Curso>>(`/cursos/${cursoId}`, {
+    const res = await strapiGet<Curso>(`/cursos/${cursoId}`, {
       populate: 'capa,autor,modulos.itens',
     });
     
+    const data = res.data[0];
+    if (!data) return c.json({ error: 'Curso não encontrado' }, 404);
+
     // Se não for o autor nem moderador/admin, e não estiver publicado, 403
     const user = c.get('user');
-    if (data.data.estado !== 'published' && data.data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
+    if (data.estado !== 'published' && data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
       return c.json({ error: 'Acesso negado' }, 403);
     }
 
-    return c.json(data);
+    return c.json(res);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -126,13 +118,13 @@ cursoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zVali
   const { id: autorId } = c.get('user');
   
   try {
-    const data = await strapiPost<StrapiSingleResponse<Curso>>('/cursos', {
+    const res = await strapiPost<Curso>('/cursos', {
       ...payload,
       autorId,
       estado: 'draft',
       slug: payload.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
     });
-    return c.json(data, 201);
+    return c.json(res, 201);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -147,13 +139,16 @@ cursoRoutes.put('/:id', checkRole(['mentor', 'instituicao', 'super_admin']), zVa
 
   try {
     // Verificar se é o autor
-    const curso = await strapiGet<StrapiSingleResponse<Curso>>(`/cursos/${id}`);
-    if (curso.data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
+    const resGet = await strapiGet<Curso>(`/cursos/${id}`);
+    const curso = resGet.data[0];
+    if (!curso) return c.json({ error: 'Curso não encontrado' }, 404);
+
+    if (curso.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
       return c.json({ error: 'Não tem permissão para editar este curso' }, 403);
     }
 
-    const data = await strapiPut<StrapiSingleResponse<Curso>>(`/cursos/${id}`, payload);
-    return c.json(data);
+    const resPut = await strapiPut<Curso>(`/cursos/${id}`, payload);
+    return c.json(resPut);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -170,9 +165,11 @@ cursoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'moderador'
 
   try {
     // Buscar curso actual
-    const curso = await strapiGet<StrapiSingleResponse<Curso>>(`/cursos/${id}`);
+    const resGet = await strapiGet<Curso>(`/cursos/${id}`);
+    const curso = resGet.data[0];
+    if (!curso) return c.json({ error: 'Curso não encontrado' }, 404);
 
-    const estadoActual = curso.data.estado;
+    const estadoActual = curso.estado;
 
     // Validar transições permitidas
     const transicaoPermitida = (actual: string, novo: string, role: string): boolean => {
@@ -186,7 +183,7 @@ cursoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'moderador'
     };
 
     // Verificar autorização
-    const podeEditar = user.id === curso.data.autorId || ['moderador', 'super_admin'].includes(user.role);
+    const podeEditar = user.id === curso.autorId || ['moderador', 'super_admin'].includes(user.role);
     if (!podeEditar) {
       return c.json({ error: 'Sem permissão para editar este curso' }, 403);
     }
@@ -212,14 +209,14 @@ cursoRoutes.post('/:id/inscricao', checkRole(['aluno']), async (c) => {
   const cursoId = c.req.param('id');
   const { id: alunoId } = c.get('user');
   try {
-    const data = await strapiPost<unknown>('/inscricoes', {
+    const res = await strapiPost<unknown>('/inscricoes', {
       cursoId,
       alunoId,
       dataInscricao: new Date().toISOString(),
       concluido: false,
       progressoPercentagem: 0,
     });
-    return c.json(data, 201);
+    return c.json(res, 201);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);

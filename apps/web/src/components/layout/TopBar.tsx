@@ -3,6 +3,7 @@ import { Search, Bell, Menu, UserCircle, Settings, LogOut, ChevronDown } from 'l
 import { motion } from 'motion/react';
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Avatar } from '../ui/Avatar';
 
 interface TopBarProps {
   onOpenMobileMenu: () => void;
@@ -35,7 +36,7 @@ export function TopBar({ onOpenMobileMenu }: TopBarProps) {
       {/* ── Esquerda: Logo Mobile + Breadcrumbs ── */}
       <div className="flex items-center gap-4">
         <button
-          onClick={onOpenMobileMenu}
+          onClick={() => { onOpenMobileMenu(); }}
           className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-alt text-text-secondary hover:text-text-primary lg:hidden"
         >
           <Menu size={18} />
@@ -80,9 +81,13 @@ export function TopBar({ onOpenMobileMenu }: TopBarProps) {
             onClick={() => { setDropdownOpen(!dropdownOpen); }}
             className="flex items-center gap-2 rounded-full border border-border bg-surface-raised p-1 pr-3 transition-all hover:bg-surface-alt"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber text-xs font-bold text-black uppercase">
-              {user?.nome.charAt(0)}
-            </div>
+            <Avatar 
+              size="sm" 
+              src={user?.avatarUrl || undefined} 
+              alt={user?.nome} 
+              tier={user?.reputacaoTier}
+              className="border-none"
+            />
             <div className="hidden lg:block text-left">
               <p className="max-w-[80px] truncate text-xs font-bold text-text-primary">{user?.nome.split(' ')[0]}</p>
             </div>

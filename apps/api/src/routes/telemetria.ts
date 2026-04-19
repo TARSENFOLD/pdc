@@ -7,7 +7,6 @@ const log = pino({ name: 'telemetria-routes' });
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { redis } from '../lib/redis.js';
 import { strapiPost, strapiGet } from '../modules/strapi/strapi.client.js';
-import { verificarConquistas } from '../modules/conquistas/conquistas.engine.js';
 
 const CONCURRENCY = 5;
 
@@ -18,7 +17,7 @@ async function resolvePerfilId(userId: string): Promise<string | null> {
   if (typeof cached === 'string') return cached === 'null' ? null : cached;
 
   try {
-    const res = await strapiGet<{ data: Array<{ id: number }> }>('/perfis', {
+    const res = await strapiGet<{ id: number }>('/perfis', {
       'filters[userId][$eq]': userId,
       'fields[0]': 'id',
       'pagination[pageSize]': '1',
@@ -61,9 +60,6 @@ async function processEvent(
   });
 
   await redis.set(redisKey, 'true', { ex: 24 * 60 * 60 });
-
-  // Auto-trigger (fire-and-forget)
-  void verificarConquistas(userId, evt.tipo);
 
   return { eventId: evt.eventId, ok: true };
 }
@@ -126,10 +122,7 @@ telemetriaRoutes.get('/summary', async (c) => {
     const perfilId = await resolvePerfilId(targetUserId);
     if (!perfilId) return c.json({ totalEventos: 0, porTipo: {}, ultimoEvento: null });
 
-    const res = await strapiGet<{
-      data: Array<{ tipo: string; clientTimestamp: number | string }>;
-      meta: { pagination: { total: number } };
-    }>('/telemetrias', {
+    const res = await strapiGet<{ tipo: string; clientTimestamp: number | string }>('/telemetrias', {
       'filters[perfil][id][$eq]': perfilId,
       'pagination[pageSize]': '1000',
       'sort': 'createdAt:desc',

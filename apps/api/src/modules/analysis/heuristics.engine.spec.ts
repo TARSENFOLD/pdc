@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeFluidity, analyzeResilience, analyzeFocus } from './heuristics.engine.js';
+import { analyzeFluidity, analyzeResilience, analyzeFocus } from '@pdc/shared';
 
 describe('Heuristics Engine Characterization Tests', () => {
   describe('analyzeFluidity', () => {

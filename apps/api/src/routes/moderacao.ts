@@ -10,21 +10,12 @@ import { strapiGet, strapiPut } from '../modules/strapi/strapi.client.js';
 type Vars = { Variables: AuthVariables };
 
 interface StrapiItem {
-  id: string;
+  id: string | number;
   titulo?: string;
   estado?: string;
   createdAt?: string;
   autor?: { nome?: string };
   autorId?: { nome?: string };
-}
-
-interface StrapiListResponse {
-  data: StrapiItem[];
-  meta?: { pagination?: { total?: number } };
-}
-
-interface StrapiSingleResponse {
-  data: StrapiItem | null;
 }
 
 const RejeitarPayloadSchema = z.object({
@@ -50,21 +41,22 @@ moderacaoRoutes.get('/fila', async (c) => {
 
     const colecionNome = `${tipo}s`;
 
-    const [items, total] = await Promise.all([
-      strapiGet<StrapiListResponse>(`/${colecionNome}`, {
+    // Fix: Generic type represents the item. Client flattens into StrapiListResponse<T>.
+    const [itemsRes, totalRes] = await Promise.all([
+      strapiGet<StrapiItem>(`/${colecionNome}`, {
         'filters[estado][$eq]': 'review',
         'pagination[page]': page,
         'pagination[pageSize]': pageSize,
         'fields': 'id,titulo,estado,createdAt',
         'populate': 'autor,autorId',
       }),
-      strapiGet<StrapiListResponse>(`/${colecionNome}`, {
+      strapiGet<StrapiItem>(`/${colecionNome}`, {
         'filters[estado][$eq]': 'review',
         'pagination[pageSize]': '1',
       }),
     ]);
 
-    const lista = items.data.map((item) => ({
+    const lista = itemsRes.data.map((item) => ({
       id: item.id,
       titulo: item.titulo,
       autorNome: item.autor?.nome || item.autorId?.nome || 'Desconhecido',
@@ -77,8 +69,8 @@ moderacaoRoutes.get('/fila', async (c) => {
       pagination: {
         page: parseInt(page),
         pageSize: parseInt(pageSize),
-        total: total.meta?.pagination?.total ?? 0,
-        pageCount: Math.ceil((total.meta?.pagination?.total ?? 0) / parseInt(pageSize)),
+        total: totalRes.meta.pagination.total,
+        pageCount: totalRes.meta.pagination.pageCount,
       },
     });
   } catch (error) {
@@ -100,8 +92,8 @@ moderacaoRoutes.put('/:tipo/:id/aprovar', async (c) => {
   try {
     const colecionNome = `${tipo}s`;
 
-    const item = await strapiGet<StrapiSingleResponse>(`/${colecionNome}/${id}`);
-    if (!item.data) {
+    const res = await strapiGet<StrapiItem>(`/${colecionNome}/${id}`);
+    if (!res.data[0]) {
       return c.json({ error: 'Item nao encontrado' }, 404);
     }
 
@@ -130,8 +122,8 @@ moderacaoRoutes.put('/:tipo/:id/rejeitar', async (c) => {
     RejeitarPayloadSchema.parse(await c.req.json());
     const colecionNome = `${tipo}s`;
 
-    const item = await strapiGet<StrapiSingleResponse>(`/${colecionNome}/${id}`);
-    if (!item.data) {
+    const res = await strapiGet<StrapiItem>(`/${colecionNome}/${id}`);
+    if (!res.data[0]) {
       return c.json({ error: 'Item nao encontrado' }, 404);
     }
 

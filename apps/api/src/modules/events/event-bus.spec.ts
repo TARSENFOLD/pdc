@@ -1,56 +1,61 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { eventBus } from './event-bus.js';
-import { strapiPost, strapiPut } from '../strapi/strapi.client.js';
+import { DomainEventName } from './types.js';
 
-vi.mock('../strapi/strapi.client.js', () => ({
-  strapiPost: vi.fn(),
-  strapiPut: vi.fn(),
-}));
-
-describe('EventBus com Outbox Pattern', () => {
+describe('EventBus (Registry & EventEmitter)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    eventBus.removeAllListeners();
   });
 
-  it('deve emitir e receber eventos transientes sem outbox', () => {
-    const handler = vi.fn().mockResolvedValue(undefined);
-    eventBus.subscribe('test.transient', handler);
+  it('deve possuir método register() para registry explícito (D1)', () => {
+    expect(typeof eventBus.register).toBe('function');
+  });
 
-    eventBus.publish({
-      id: '123',
-      name: 'test.transient',
-      payload: { value: true },
+  it('deve disparar todos os handlers registados para um evento', async () => {
+    const handler1 = vi.fn().mockResolvedValue(undefined);
+    const handler2 = vi.fn().mockResolvedValue(undefined);
+    const otherHandler = vi.fn().mockResolvedValue(undefined);
+
+    eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA, handler1);
+    eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA, handler2);
+    eventBus.register(DomainEventName.CURSO_CONCLUIDO, otherHandler);
+
+    await eventBus.publish({
+      id: '1',
+      name: DomainEventName.TENTATIVA_CONCLUIDA,
+      payload: {},
       timestamp: new Date().toISOString()
     });
 
-    expect(handler).toHaveBeenCalledTimes(1);
-    expect(strapiPost).not.toHaveBeenCalled();
+    expect(handler1).toHaveBeenCalled();
+    expect(handler2).toHaveBeenCalled();
+    expect(otherHandler).not.toHaveBeenCalled();
   });
 
-  it('deve persistir no outbox antes de emitir e marcar como processado (Happy Path)', async () => {
-    const handler = vi.fn().mockResolvedValue(undefined);
-    eventBus.subscribe('test.critical', handler);
+  it('deve suportar múltiplos handlers resolvendo em paralelo via publish', async () => {
+    let callOrder: string[] = [];
+    const handlerSlow = vi.fn().mockImplementation(async () => {
+      await new Promise(r => setTimeout(r, 50));
+      callOrder.push('slow');
+    });
+    const handlerFast = vi.fn().mockImplementation(async () => {
+      callOrder.push('fast');
+    });
 
-    vi.mocked(strapiPost).mockResolvedValueOnce({ data: { documentId: 'doc-123' } });
+    eventBus.register('test.parallel', handlerSlow);
+    eventBus.register('test.parallel', handlerFast);
 
-    await eventBus.publishWithOutbox('test.critical', { value: 42 });
+    await eventBus.publish({
+      id: '2',
+      name: 'test.parallel',
+      payload: {},
+      timestamp: new Date().toISOString()
+    });
 
-    expect(strapiPost).toHaveBeenCalledTimes(1);
-    expect(handler).toHaveBeenCalledTimes(1);
-    expect(strapiPut).toHaveBeenCalledWith('/domain-events/doc-123', expect.objectContaining({
-      data: expect.objectContaining({ processed: true })
-    }));
-  });
-
-  it('deve lançar erro e abortar se a persistencia no Outbox falhar', async () => {
-    const handler = vi.fn().mockResolvedValue(undefined);
-    eventBus.subscribe('test.fail', handler);
-
-    vi.mocked(strapiPost).mockRejectedValueOnce(new Error('Strapi DB offline'));
-
-    await expect(eventBus.publishWithOutbox('test.fail', {})).rejects.toThrow('Falha na camada Outbox');
-
-    expect(handler).not.toHaveBeenCalled();
-    expect(strapiPut).not.toHaveBeenCalled();
+    expect(callOrder).toContain('slow');
+    expect(callOrder).toContain('fast');
+    expect(handlerSlow).toHaveBeenCalled();
+    expect(handlerFast).toHaveBeenCalled();
   });
 });

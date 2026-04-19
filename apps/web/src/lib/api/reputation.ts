@@ -1,25 +1,25 @@
 import { http } from './http.js';
-
-export interface ReputationBreakdown {
-  score: number;
-  dimensions: {
-    ratingsMedia: number;
-    cursosPublicados: number;
-    simulacoes: number;
-    conquistas: number;
-    tempoPlataforma: number;
-    engagement: number;
-  };
-}
+import type { ReputacaoBreakdown } from '@pdc/shared';
 
 export const reputationApi = {
-  getMe: async (): Promise<ReputationBreakdown> => {
-    return http.get<ReputationBreakdown>('/reputacao/me');
+  /**
+   * Get my own reputation breakdown (Canonical R2.T6)
+   */
+  getMe: async (): Promise<ReputacaoBreakdown> => {
+    return http.get<ReputacaoBreakdown>('/reputacao/me');
   },
+
+  /**
+   * Get public score for any profile (Legacy support)
+   */
   getByPerfilId: async (perfilId: string): Promise<{ score: number }> => {
     return http.get<{ score: number }>(`/reputacao/${perfilId}`);
   },
-  getBreakdown: async (perfilId: string): Promise<ReputationBreakdown> => {
-    return http.get<ReputationBreakdown>(`/reputacao/${perfilId}/breakdown`);
+
+  /**
+   * Get full breakdown for any profile (Admin/Mentor)
+   */
+  getBreakdown: async (perfilId: string): Promise<ReputacaoBreakdown> => {
+    return http.get<ReputacaoBreakdown>(`/reputacao/${perfilId}/breakdown`);
   },
 };

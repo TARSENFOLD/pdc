@@ -4,15 +4,25 @@ import { eventBus } from './event-bus.js';
 
 const log = pino({ name: 'outbox-replay' });
 
+interface UnprocessedEvent {
+  documentId: string;
+  correlationId: string;
+  name: string;
+  payload: unknown;
+  createdAt: string;
+}
+
 export async function replayUnprocessedEvents() {
   log.info('Iniciando script de Replay do Outbox Pattern...');
 
   try {
-    // Busca eventos não processados (que falharam a emissão ou cujo worker morreu)
-    // Usamos paginação pequena para não esgotar memória.
-    const response = await strapiGet('/domain-events?filters[processed][$eq]=false&pagination[limit]=100') as any;
+    // Fix: Generic type represents the item, client wraps in StrapiListResponse<T>
+    const res = await strapiGet<UnprocessedEvent>('/domain-events', {
+      'filters[processed][$eq]': 'false',
+      'pagination[limit]': '100',
+    });
     
-    const events = response.data;
+    const events = res.data;
     if (!events || events.length === 0) {
       log.info('Nenhum evento pendente encontrado no Outbox.');
       return;
@@ -33,11 +43,10 @@ export async function replayUnprocessedEvents() {
         });
 
         // Marca como processado após a emissão
+        // Fix: strapiPut already wraps body in { data: ... }
         await strapiPut(`/domain-events/${evt.documentId}`, {
-          data: {
-            processed: true,
-            processedAt: new Date().toISOString(),
-          }
+          processed: true,
+          processedAt: new Date().toISOString(),
         });
         
         log.info({ eventId: evt.correlationId }, 'Replay com sucesso.');

@@ -52,7 +52,10 @@ export const TelemetriaTipoSchema = z.enum([
   'vinculo.connected', 
   'visibility.lost', 
   'visibility.gained', 
-  'session.started'
+  'session.started',
+  'simulacao.tipo3.iniciada',
+  'simulacao.tipo3.acao',
+  'simulacao.tipo3.concluida'
 ]);
 export type TelemetriaTipo = z.infer<typeof TelemetriaTipoSchema>;
 

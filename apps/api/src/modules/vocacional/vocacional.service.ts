@@ -5,23 +5,15 @@ import type {
   Curso
 } from '@pdc/shared';
 
-interface StrapiItem {
-  id: number | string;
-  attributes: Record<string, unknown>;
-}
-
 export const vocacionalService = {
   calcularPerfil: async (alunoId: string): Promise<PerfilVocacional> => {
     // Busca tentativas concluídas do aluno
-    const response = await strapiGet<{ data: StrapiItem[] }>('/tentativas', {
+    const res = await strapiGet<Tentativa>('/tentativas', {
       'filters[alunoId][$eq]': alunoId,
       'filters[dataFim][$notNull]': 'true',
     });
 
-    const tentativas = response.data.map(item => ({
-      id: String(item.id),
-      ...item.attributes,
-    })) as Tentativa[];
+    const tentativas = res.data;
 
     if (tentativas.length === 0) {
       return {
@@ -67,17 +59,14 @@ export const vocacionalService = {
 
   gerarRecomendacoes: async (perfil: PerfilVocacional) => {
     // Busca cursos para recomendar (lógica simplificada para MVP)
-    const response = await strapiGet<{ data: StrapiItem[] }>('/cursos', {
+    const res = await strapiGet<Curso>('/cursos', {
       'pagination[pageSize]': '3',
     });
 
-    const cursos = response.data.map(item => ({
-      id: String(item.id),
-      ...item.attributes,
-    })) as Curso[];
+    const cursos = res.data;
 
     return cursos.map(curso => ({
-      cursoId: curso.id,
+      cursoId: String(curso.id),
       titulo: curso.titulo,
       matchPercentagem: Math.min(99, Math.round(70 + (perfil.scoreGlobal * 3))),
       motivo: `Com base no seu excelente desempenho em simulações e score global de ${String(perfil.scoreGlobal)}.`,

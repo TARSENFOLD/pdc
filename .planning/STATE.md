@@ -1,68 +1,70 @@
 # PDC v2 — Project State
 
-> Memória persistente do projecto entre sessões. Lê este ficheiro PRIMEIRO antes de qualquer trabalho. Actualiza após cada sessão de trabalho.
+> Memória persistente do projecto entre sessões. Lê este ficheiro PRIMEIRO. Actualiza após cada sessão.
 
-## Project Reference
-
-Ver: `.planning/PROJECT.md` (Restaurado: Abril 2026)
-Fonte de verdade para specs: `epic:63eac955-69ad-45d7-8599-09637d3ce043`
-
-**Core value:** O estudante faz uma escolha de carreira baseada em evidência real — não em suposições.
-
-## Current Status (Auditoria Real - Abril 2026)
+## Current Status
+Estamos na transição entre a **Wave 1 (Estabilização)** e a **Wave 2 (Motor Vocacional)**.
 
 ```
-Fase 0 — Fundação          [~] EM PROGRESSO (Saneamento e Tooling parcial)
-Fase 1 — Auth Segura       [ ] TODO (Resete de Auth e Edge Rascunho)
-Fase 2 — Design System     [ ] TODO (Padrão Tech-Terracota e Registry em falta)
-Fase 3 — API Layer         [ ] TODO (Contratos Quebrados)
-Fase 4 — Core do Produto   [ ] TODO (Simulações Tipo 3 e Event Bus pendentes)
-Fase 5 — LTI 1.3           [ ] TODO (AGS Grade Passback com falhas)
-Fase 6 — Moderação/Admin   [ ] TODO (Audit trail e Sentry ativos)
-Fase 7 — IA e Realtime     [ ] TODO (DeepSeek e Socket.IO soberanos)
+Wave 0 — Fundação          [x] COMPLETA
+Wave 1 — Estabilização     [~] EM PROGRESSO (Fix de redirects e Login pendentes)
+Wave 2 — Motor Vocacional  [~] EM PROGRESSO (Event Bus e Heurísticas)
+Wave 3 — Design System     [ ] NÃO INICIADA (Soul & Elite Design)
+Wave 4 — Dashboards        [ ] NÃO INICIADA (Bento Grids)
+Wave 5 — Gamificação       [ ] NÃO INICIADA
 ```
 
-**Repositório:** `pdc-v2/`
-**Branch activa:** main
-**Último Commit:** Documentation governance reset (W0-T2).
+## O que foi feito (Real)
+- [x] Monorepo npm workspaces e ADRs base.
+- [x] Cliente Strapi v5 com normalização de dados.
+- [x] Simulações Tipo 1 e 2 (Placeholder técnico enriquecido).
+- [x] Dockerfile soberano para o BFF.
+- [~] Saneamento de tipos `any` residuais.
 
-### Lacunas Estruturais Críticas (Honesty Pass W0-T2)
-A auditoria real revelou que a base de código NÃO corresponde à documentação do approach:
-- **Shared/SSOT Ausente:** Faltam ficheiros nucleares em `@pdc/shared`: `bootstrap.ts`, `registry/features.ts`, `telemetry-token.ts`, `heuristics.ts`.
-- **Edge Rascunho:** O workspace `apps/edge` ainda está em "commonjs" (não module), expõe `TELEMETRY_SECRET = "change-me-in-production"` e não tem verificação real JWS (`jws-verify.ts` ausente). `apps/api/src/modules/telemetria/consumer.ts` não existe.
-- **Contratos Quebrados (Reputação):** O frontend chama `/reputacao/me`, mas o backend ainda monta a rota `/reputation` e o código em `reputation.service.ts` continua em inglês.
-- **Fundações em Falta:** `Tipo3Player.tsx`, `i18n/index.ts` e `events/event-bus.ts` não existem. W1-W5 continuam como trabalho pendente.
+## Bloqueios Imediatos
+- [404] Redirecionamentos pós-login em `LoginPage.tsx` e `TwoFactorPage.tsx`.
+- [CORS] Erros de preflight no browser ("estado null") devido a inconsistência de origem.
 
-## O que foi feito recentemente (Wave 0 — Fundação Soberana)
+## Lacunas Estruturais Críticas (Sincronizado)
+A auditoria real confirmou que os seguintes ficheiros nucleares **existem** e estão operacionais (drift documental corrigido):
+- `packages/shared/src/bootstrap.ts`
+- `apps/api/src/modules/events/event-bus.ts`
+- `packages/shared/src/heuristics.ts`
+- `apps/edge/src/middleware/jws-verify.ts`
+- `apps/api/src/modules/telemetria/consumer.ts`
 
-- [x] **Design PWA "Herança Invisível":** Landing v2 (World-class + DNA Africano), Apple PWA Safári compliance e CSS Tema Claro perfeito.
-- [x] **Characterization Tests:** useTelemetry, heuristics.engine, vocacional.service e lti.ags blindados.
-- [x] **Zero Type Errors:** Typecheck 100% verde em todo o monorepo.
-- [x] **Tooling:** Axe-core integrado, Husky pre-commit com testes otimizados (--changed).
-- [x] **Governança:** Roadmap de 5 Waves ratificado e Constituição v2.1 em vigor.
+## Reclassificação de Tickets Parciais (R1-1)
+- **W1-T3 (Bootstrap Layered)**: ✅ COMPLETA (review-only). O `BootstrapProvider` já está implementado e integrado em `main.tsx`.
+- **W4-T1 (Mensagens)**: ⏸ ESTACIONADO. Depende da Wave 3 (Design System).
+- **W4-T2 (Feed)**: ⏸ ESTACIONADO. Depende da Wave 3 (Design System).
 
-## Próximos passos imediatos
+## Wave 2 Progress (Real-time)
+- **R2.T3 (Event Bus)**: ✅ COMPLETO. Refactor soberano concluído. Handlers (LTI + Conquistas) integrados via Registry explícito. Outbox reentrante com aguardo de todos os handlers.
+- **R2.T4 (Score Real)**: ✅ COMPLETO. Derivação determinística no BFF implementada. Remoção do hardcoded 8.5. Tests "Cirurgião vs Hacker Hesitante" verdes.
+- **R2.T5 (Sim Tipo 3)**: ✅ COMPLETO. Shell funcional do `Tipo3Player` implementado com telemetria canónica e suporte a derivação no BFF. Seed extendido com simulações Tipo 3.
+- **R2.T6 (Reputação Canónica)**: ✅ COMPLETO. Endpoint `/reputacao/me` soberano implementado com gate de feature-flag. Alias temporário `/reputation/me` mantido para rollback. `RelatorioVocacional` no frontend totalmente integrado com o breakdown real.
 
-1. **Suite E2E Playwright (T11):** Montar a infraestrutura de testes para validar a Landing e Auth agora cravadas.
-2. **Seed Monumental (W1-T5):** Injeção das 100 personas e 9k eventos para povoar o Oráculo.
-3. **Auth v2 Reset (W1-T2):** Implementação de JWT httpOnly e Role SSOT.
+## Debt Explícito (Registado em R3-1)
+1. **BFF Heuristics Parallelism**: `apps/api/src/modules/analysis/heuristics.engine.ts` paralelo ao `@pdc/shared/heuristics` — consolidar na Wave 3.
+2. **FeedPage Residual Any**: `apps/web/src/features/feed/FeedPage.tsx` contém 4 `any` — limpar em W4-T2.
+3. **Observability Exporter**: Métrica `domain_events_failed_total` implementada em logs; exporter (Prometheus/Sentry) pendente.
 
-## Decisions Log (Consolidado)
+## Próximos Passos (Ordem de Autoridade)
+1. **Wave 3 (Design System)**: Purga de cores hardcoded, Glassmorphism, BentoGrid e endurecimento de acessibilidade.
+2. **R3-1 (Sync Final)**: Sincronização final do plano, debt registry e métricas de setup.
 
-| Data | Decisão | Racional |
-| --- | --- | --- |
-| Abr 2026 | Arquitectura Híbrida | Ingestão no Edge (Cloudflare) + Lógica no Core (Railway). |
-| Abr 2026 | Rejeição de Clerk | Preservar a soberania da Auth v2 e o ecossistema de 6 roles. |
-| Abr 2026 | Tipagem Pragmática | Uso de Record<string, any> em metadados para agilidade de integração. |
-| Abr 2026 | Fail-Safe Flags | Flags ausentes resultam em FALSE por omissão (Segurança). |
+## Architecture Snapshot
+```
+pdc-v2/
+├── .planning/       ← Fonte de Verdade (Manifesto, Req, State)
+├── apps/
+│   ├── web/         ← Frontend (React/Vite/Tailwind v4)
+│   └── api/         ← BFF (Hono/Node 24)
+├── packages/
+│   └── shared/      ← Contrato Soberano (@pdc/shared)
+└── infra/
+    └── strapi/      ← CMS Strapi v5
+```
 
 ---
-
-## Documentação de Referência (Válida)
-
-- [CONSTITUTION.md](.planning/CONSTITUTION.md) — Leis fundamentais.
-- [REQUIREMENTS.md](.planning/REQUIREMENTS.md) — Catálogo de requisitos e honest pass.
-- [roadmap.md](.planning/roadmap.md) — Mapeamento de 5 Waves.
-
----
-*Regra de ouro: Se não está documentado aqui, não aconteceu.*
+**Regra de Ouro:** Se não está documentado aqui, não aconteceu.

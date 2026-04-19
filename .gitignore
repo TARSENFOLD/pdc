@@ -56,3 +56,9 @@ infra/strapi/exports/
 infra/strapi/public/uploads/
 
 *.timestamp-*.mjs
+
+# Nao versionar / Local
+nao_versionar/
+test-results/
+playwright-report/
+coverage/

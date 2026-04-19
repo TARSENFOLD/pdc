@@ -34,7 +34,7 @@
 | REQ-1-002 | JWT em httpOnly cookie | 🔴 | `[ ]` | Implementação parcial; rotação em falta |
 | REQ-1-007 | Rate limiting via Upstash | 🔴 | `[x]` | Middleware integrado |
 | REQ-1-010 | OTP por SMS (Twilio) | 🟡 | `[ ]` | Serviço mockado; integração real pendente |
-| REQ-1-011 | Telemetria Edge (ADR-005) | 🔴 | `[ ]` | Worker rascunho. Falta JWS verify, TelemetryToken, e BFF consumer |
+| REQ-1-011 | Telemetria Edge (ADR-005) | 🔴 | `[x]` | Worker funcional com JWS verify e BFF consumer integrado (W1-T4) |
 
 ## Fase 2 — Design System e Frontend Base
 
@@ -44,20 +44,20 @@
 | REQ-2-002 | Component Registry | 🔴 | `[ ]` | Registry ausente/desalinhado do approach |
 | REQ-2-005 | React Query v5 SSOT | 🔴 | `[x]` | Único estado servidor |
 | REQ-2-010 | Design responsivo | 🟠 | `[x]` | Refatoração PWA / "Herança Invisível" concluída |
-| REQ-2-011 | SSOT/Shared Types | 🔴 | `[ ]` | Faltam `bootstrap.ts`, `heuristics.ts`, `registry/features.ts` |
+| REQ-2-011 | SSOT/Shared Types | 🔴 | `[x]` | `bootstrap.ts`, `heuristics.ts`, `registry/features.ts` integrados |
 
 ## Fase 4 — Core do Produto
 
 | ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
 | --- | --- | --- | --- | --- |
-| REQ-4-002 | Simulação Tipo 2 | 🔴 | `[ ]` | Score hardcoded = 8.5; tracking real pendente |
-| REQ-4-003 | Simulação Tipo 3 | 🔴 | `[ ]` | Ausente (`Tipo3Player.tsx` não existe) |
-| REQ-4-004 | Telemetria Idempotente | 🔴 | `[ ]` | Precision timestamps não normalizados |
-| REQ-4-005 | Perfil Vocacional Auto | 🔴 | `[ ]` | Fórmulas determinísticas em falta no BFF |
-| REQ-4-009 | Programas: gestão | 🟠 | `[~]` | UI de gestão pendente |
-| REQ-4-013 | Conquistas automáticas | 🟠 | `[ ]` | Motor existe mas sem triggers de eventos/event-bus ausente |
-| REQ-4-014 | Feed: ranking soberano | 🟠 | `[~]` | Algoritmo funcional; cache Redis pendente |
-| REQ-4-015 | Reputação Contract | 🔴 | `[ ]` | Frontend e Backend dessincronizados (`/reputacao` vs `/reputation`) |
+| REQ-4-002 | Simulação Tipo 2 | 🔴 | `[x]` | Score real derivado no BFF via Heuristics (R2.T4) |
+| REQ-4-003 | Simulação Tipo 3 | 🔴 | `[x]` | `Tipo3Player.tsx` funcional com telemetria L3 (R2.T5) |
+| REQ-4-004 | Telemetria Idempotente | 🔴 | `[x]` | UUID eventId + outbox pattern (R2.T3b) |
+| REQ-4-005 | Perfil Vocacional Auto | 🔴 | `[x]` | Integrado com motor de heurísticas e Tina (IA) |
+| REQ-4-009 | Programas: gestão | 🟠 | `[~]` | UI de gestão em progresso |
+| REQ-4-013 | Conquistas automáticas | 🟠 | `[x]` | Ativadas via Registry de EventBus (R2.T3b) |
+| REQ-4-014 | Feed: ranking soberano | 🟠 | `[x]` | Algoritmo implementado e cache Redis ativo |
+| REQ-4-015 | Reputação Contract | 🔴 | `[x]` | Rota canónica `/reputacao/me` sincronizada com Shared Schema (R2.T6b) |
 
 ## Fase 7 — IA e Realtime
 
@@ -74,4 +74,4 @@
 | REQ-NF-005 | Acessibilidade Total | 🔴 | `[x]` | PWA + Contraste Tema Claro resolvidos, botões > 44px e iOS autocomplete fix. |
 | REQ-NF-007 | Rule of 300 (linhas) | 🟡 | `[~]` | Shared index ainda excede limite |
 
-*Last updated: Abril 2026 — Governance Reset (W0-T2)*
+*Last updated: Abril 2026 — R0-2 Sync Pass 1*

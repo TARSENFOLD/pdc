@@ -21,20 +21,12 @@ export interface FlagOverride {
   enabled: boolean;
 }
 
-interface StrapiFeatureFlagResponse {
-  data: FeatureFlag[];
-  meta?: unknown;
-}
-
-interface StrapiSingleResponse {
-  data: FeatureFlag;
-}
-
 async function getAllFlags(): Promise<FeatureFlag[]> {
   const cached = await redis.get<FeatureFlag[]>(CACHE_KEY);
   if (cached) return cached;
 
-  const res = await strapiGet<StrapiFeatureFlagResponse>('/feature-flags', {
+  // Fix: Generic type already represents the item.
+  const res = await strapiGet<FeatureFlag>('/feature-flags', {
     'pagination[pageSize]': '100',
   });
 
@@ -92,13 +84,14 @@ export async function upsertDefault(
   if (existing) {
     const body: Record<string, unknown> = { enabled };
     if (description !== undefined) body['description'] = description;
-    const res = await strapiPut<StrapiSingleResponse>(
+    // Fix: StrapiSingleResponse already provides res.data as the T type.
+    const res = await strapiPut<FeatureFlag>(
       `/feature-flags/${existing.documentId ?? String(existing.id)}`,
       body,
     );
     result = res.data;
   } else {
-    const res = await strapiPost<StrapiSingleResponse>('/feature-flags', {
+    const res = await strapiPost<FeatureFlag>('/feature-flags', {
       domain,
       enabled,
       description: description ?? null,
@@ -123,7 +116,7 @@ export async function updateDefaultStrict(
   const existing = all.find((f) => f.domain === domain);
   if (!existing) return null;
 
-  const res = await strapiPut<StrapiSingleResponse>(
+  const res = await strapiPut<FeatureFlag>(
     `/feature-flags/${existing.documentId ?? String(existing.id)}`,
     { enabled },
   );
@@ -148,7 +141,7 @@ export async function setInstitutionOverride(
     : [];
   overrides.push({ instituicaoId, enabled });
 
-  const res = await strapiPut<StrapiSingleResponse>(
+  const res = await strapiPut<FeatureFlag>(
     `/feature-flags/${flag.documentId ?? String(flag.id)}`,
     { overrides },
   );
@@ -173,7 +166,7 @@ export async function removeInstitutionOverride(
     ? flag.overrides.filter((o) => o.instituicaoId !== instituicaoId)
     : [];
 
-  const res = await strapiPut<StrapiSingleResponse>(
+  const res = await strapiPut<FeatureFlag>(
     `/feature-flags/${flag.documentId ?? String(flag.id)}`,
     { overrides },
   );

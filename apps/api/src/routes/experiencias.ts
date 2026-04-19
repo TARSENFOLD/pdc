@@ -1,125 +1,96 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { CriarExperienciaPayloadSchema } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { CriarExperienciaPayloadSchema, type Experiencia } from '@pdc/shared';
 
 type Vars = { Variables: AuthVariables };
 
-const listQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional(),
-  pageSize: z.coerce.number().int().min(1).max(100).optional(),
-  search: z.string().optional(),
-  instituicaoId: z.string().optional(),
-});
-
-const atualizarSchema = CriarExperienciaPayloadSchema.partial();
+interface StrapiExperiencia {
+  id: string | number;
+  titulo: string;
+  instituicaoId: string;
+  estado: string;
+}
 
 export const experienciaRoutes = new Hono<Vars>();
 
-// ─── Rotas Públicas ──────────────────────────────────────────────────────────
-
-// GET /experiencias — catálogo público
-experienciaRoutes.get('/', zValidator('query', listQuerySchema), async (c) => {
-  const q = c.req.valid('query');
-  const params: Record<string, string> = { 
-    populate: 'capa,instituicao,curso',
-    'filters[estado][$eq]': 'published'
-  };
-  
-  if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
-  if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
-  if (q.search !== undefined) params['filters[titulo][$containsi]'] = q.search;
-  if (q.instituicaoId !== undefined) params['filters[instituicaoId][$eq]'] = q.instituicaoId;
-
-  try {
-    const data = await strapiGet<unknown>('/experiencias', params);
-    return c.json(data);
-  } catch (err) {
-    return c.json({ error: 'Erro ao carregar catálogo de experiências' }, 502);
-  }
-});
-
-// GET /experiencias/:id — detalhe imersivo
-experienciaRoutes.get('/:id', async (c) => {
-  const expId = c.req.param('id');
-  try {
-    const data = await strapiGet<unknown>(`/experiencias/${expId}`, {
-      populate: 'capa,instituicao,curso,gradeDestaque',
-    });
-    return c.json(data);
-  } catch (err) {
-    return c.json({ error: 'Experiência não encontrada ou indisponível' }, 404);
-  }
-});
-
-// ─── Rotas Protegidas ─────────────────────────────────────────────────────────
-
 experienciaRoutes.use('*', verifyJwt);
 
-// GET /experiencias/minhas — zona instituição
-experienciaRoutes.get('/minhas', checkRole(['instituicao', 'super_admin']), async (c) => {
-  const { id: autorId } = c.get('user');
+// GET /experiencias
+experienciaRoutes.get('/', async (c) => {
   try {
-    const data = await strapiGet<unknown>('/experiencias', {
-      'filters[instituicaoId][$eq]': autorId,
-      populate: 'capa,instituicao,curso',
-      'sort': 'createdAt:desc',
+    const res = await strapiGet<Experiencia>('/experiencias', {
+      'filters[estado][$eq]': 'published',
+      populate: 'capa,instituicao',
+      sort: 'createdAt:desc'
     });
-    return c.json(data);
+    return c.json(res);
   } catch (err) {
-    return c.json({ error: 'Erro ao carregar as tuas experiências' }, 502);
+    return c.json({ error: 'Falha ao sincronizar o catálogo de experiências' }, 502);
   }
 });
 
-// POST /experiencias — criar nova imersão curricular
-experienciaRoutes.post(
-  '/',
-  checkRole(['instituicao', 'super_admin']),
-  zValidator('json', CriarExperienciaPayloadSchema),
+// GET /experiencias/minhas
+experienciaRoutes.get('/minhas', checkRole(['instituicao', 'super_admin']), async (c) => {
+  const { id } = c.get('user');
+  try {
+    const res = await strapiGet<Experiencia>('/experiencias', {
+      'filters[instituicaoId][$eq]': id,
+      populate: 'capa',
+    });
+    return c.json(res);
+  } catch (err) {
+    return c.json({ error: 'Erro ao recuperar as tuas experiências' }, 502);
+  }
+});
+
+// POST /experiencias
+experienciaRoutes.post('/', 
+  checkRole(['instituicao', 'super_admin']), 
+  zValidator('json', CriarExperienciaPayloadSchema), 
   async (c) => {
-    const { id: instituicaoId } = c.get('user');
     const body = c.req.valid('json');
-    
+    const { id } = c.get('user');
+
     try {
-      const data = await strapiPost<unknown>('/experiencias', {
+      const res = await strapiPost<Experiencia>('/experiencias', {
         ...body,
-        instituicaoId,
-        autorId: instituicaoId,
+        instituicaoId: id,
         estado: 'draft',
-        validadoAcademicamente: false
+        slug: body.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
       });
-      return c.json(data, 201);
+      return c.json(res.data, 201);
     } catch (err) {
-      return c.json({ error: 'Erro ao criar experiência' }, 502);
+      return c.json({ error: 'Falha na persistência da experiência' }, 502);
     }
   }
 );
 
-// PUT /experiencias/:id — editar imersão
-experienciaRoutes.put(
-  '/:id',
-  checkRole(['instituicao', 'super_admin']),
-  zValidator('json', atualizarSchema),
+// PUT /experiencias/:id
+experienciaRoutes.put('/:id', 
+  checkRole(['instituicao', 'super_admin']), 
+  zValidator('json', CriarExperienciaPayloadSchema.partial()), 
   async (c) => {
-    const expId = c.req.param('id');
-    const { id: userId, role } = c.get('user');
+    const id = c.req.param('id');
     const body = c.req.valid('json');
-    
+    const { id: userId, role } = c.get('user');
+
     try {
-      if (role !== 'super_admin') {
-        const existing = await strapiGet<{ data?: { attributes?: { instituicaoId?: string } }; instituicaoId?: string }>(`/experiencias/${expId}`);
-        const ownerId = existing.data?.attributes?.instituicaoId ?? existing.instituicaoId;
-        if (ownerId !== userId) {
-          return c.json({ error: 'Sem permissão para editar esta experiência' }, 403);
-        }
+      const resGet = await strapiGet<StrapiExperiencia>(`/experiencias/${id}`);
+      const existing = resGet.data[0];
+
+      if (!existing) return c.json({ error: 'Experiência não identificada' }, 404);
+
+      if (existing.instituicaoId !== userId && role !== 'super_admin') {
+        return c.json({ error: 'Autoridade insuficiente' }, 403);
       }
-      const data = await strapiPut<unknown>(`/experiencias/${expId}`, body);
-      return c.json(data);
+
+      const resPut = await strapiPut<Experiencia>(`/experiencias/${id}`, body);
+      return c.json(resPut.data);
     } catch (err) {
-      return c.json({ error: 'Erro ao atualizar experiência' }, 502);
+      return c.json({ error: 'Falha na atualização da experiência' }, 502);
     }
   }
 );

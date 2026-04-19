@@ -54,7 +54,7 @@ export const Tipo2Player = ({ simulacao }: Props) => {
       
       await simulacoesApi.concluirTentativa({
         tentativaId,
-        score: 8.5, // Cálculo simulado - o motor L2 processará o real
+        // Score agora é calculado pelo BFF a partir do metadata (R2.T4)
         metadata: { 
           duracaoSegundos: duracao, 
           focusStability: focusLost,

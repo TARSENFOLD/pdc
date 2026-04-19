@@ -9,7 +9,7 @@ A tipagem estrita é inegociável. O uso de `any` em novos códigos é proibido 
 Todos os contratos, schemas Zod e interfaces de domínio devem nascer e ser exportados pelo pacote `@pdc/shared`. Aplicações (`web`, `api`, `edge`) não definem formas de dados privadas que cruzam fronteiras de rede.
 
 ## 3. UI Registry & Bootstrap-driven
-O sistema de UI é centralizado. O `UI Registry` (em `apps/web/src/components/ui/`) expõe apenas o que existe e está validado. A UI deve ser construída via composição de primitivos, evitando estilos ad-hoc em páginas.
+O sistema de UI é centralizado. O `UI Registry` (em `apps/web/src/components/ui/`) expõe apenas o que existe e está validado. A UI deve ser construída via composição de primitivos, evitando estilos ad-hoc em páginas em mobile-first em conformidade como padroes exigista peala Apple para pulbicar o aplicativo nas suaas lojas (PWA).
 
 ## 4. Telemetria Resiliente (Edge-First)
 A telemetria é o coração do Oráculo. Todos os eventos críticos devem passar pelo pipeline de Edge Dual-Write (Vercel Edge -> Upstash Queue -> BFF). A perda de dados comportamentais é inaceitável.

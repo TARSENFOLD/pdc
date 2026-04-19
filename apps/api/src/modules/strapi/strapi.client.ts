@@ -1,5 +1,6 @@
 import pino from 'pino';
 import { env } from '../../lib/env.js';
+import { type StrapiListResponse, type StrapiSingleResponse } from './strapi.types.js';
 
 const log = pino({ name: 'strapi-client' });
 
@@ -89,7 +90,7 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, timeout = 
 export async function strapiGet<T>(
   path: string,
   params?: Record<string, string>
-): Promise<T> {
+): Promise<StrapiListResponse<T>> {
   const url = new URL(`${STRAPI_URL}/api${path}`);
   if (params) {
     for (const [k, v] of Object.entries(params)) {
@@ -100,11 +101,11 @@ export async function strapiGet<T>(
   if (!res.ok) {
     throw new Error(`Strapi GET ${path} falhou: ${res.status.toString()}`);
   }
-  const json = (await res.json()) as T;
+  const json = (await res.json()) as StrapiListResponse<T>;
   return normalize(json);
 }
 
-export async function strapiPost<T>(path: string, body: unknown): Promise<T> {
+export async function strapiPost<T>(path: string, body: unknown): Promise<StrapiSingleResponse<T>> {
   const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
     method: 'POST',
     headers: buildHeaders(),
@@ -113,11 +114,11 @@ export async function strapiPost<T>(path: string, body: unknown): Promise<T> {
   if (!res.ok) {
     throw new Error(`Strapi POST ${path} falhou: ${res.status.toString()}`);
   }
-  const json = (await res.json()) as T;
+  const json = (await res.json()) as StrapiSingleResponse<T>;
   return normalize(json);
 }
 
-export async function strapiPut<T>(path: string, body: unknown): Promise<T> {
+export async function strapiPut<T>(path: string, body: unknown): Promise<StrapiSingleResponse<T>> {
   const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
     method: 'PUT',
     headers: buildHeaders(),
@@ -126,7 +127,7 @@ export async function strapiPut<T>(path: string, body: unknown): Promise<T> {
   if (!res.ok) {
     throw new Error(`Strapi PUT ${path} falhou: ${res.status.toString()}`);
   }
-  const json = (await res.json()) as T;
+  const json = (await res.json()) as StrapiSingleResponse<T>;
   return normalize(json);
 }
 
@@ -151,6 +152,32 @@ export async function strapiPutRaw<T>(path: string, body: unknown): Promise<T> {
   }, WRITE_TIMEOUT);
   if (!res.ok) {
     throw new Error(`Strapi PUT ${path} falhou: ${res.status.toString()}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export async function strapiPostRaw<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify(body),
+  }, WRITE_TIMEOUT);
+  if (!res.ok) {
+    throw new Error(`Strapi POST ${path} falhou: ${res.status.toString()}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export async function strapiGetRaw<T>(path: string, params?: Record<string, string>): Promise<T> {
+  const url = new URL(`${STRAPI_URL}/api${path}`);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      url.searchParams.set(k, v);
+    }
+  }
+  const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() }, TIMEOUT);
+  if (!res.ok) {
+    throw new Error(`Strapi GET ${path} falhou: ${res.status.toString()}`);
   }
   return res.json() as Promise<T>;
 }

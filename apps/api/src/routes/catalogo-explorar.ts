@@ -9,18 +9,6 @@ export const catalogoExplorarRoutes = new Hono();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface StrapiPagination {
-  page: number;
-  pageSize: number;
-  pageCount: number;
-  total: number;
-}
-
-interface StrapiList<T> {
-  data: T[];
-  meta: { pagination: StrapiPagination };
-}
-
 interface StrapiGenericItem {
   id: string | number;
   slug?: string;
@@ -98,7 +86,8 @@ catalogoExplorarRoutes.get('/', zValidator('query', explorarQuery), async (c) =>
     params['pagination[pageSize]'] = perType.toString();
 
     try {
-      const res = await strapiGet<StrapiList<StrapiGenericItem>>(cfg.endpoint, params);
+      // Fix: Use direct item type. Client flattens into StrapiListResponse<T>.
+      const res = await strapiGet<StrapiGenericItem>(cfg.endpoint, params);
       return res.data.map((d): ExplorarResultado => ({
         tipo: t,
         id: sid(d.id),

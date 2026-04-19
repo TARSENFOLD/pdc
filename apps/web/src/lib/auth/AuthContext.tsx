@@ -21,8 +21,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const { data: user = null, isLoading, isFetched } = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => authApi.me().catch(() => null),
-    retry: false,
+    queryFn: () => authApi.me().catch((err) => {
+      console.warn('[AUTH] Falha ao recuperar sessão:', err);
+      return null;
+    }),
+    retry: (failureCount, error: any) => {
+      // Não repetir se for 401 ou 403 (Sessão inválida/expirada)
+      if (error?.status === 401 || error?.status === 403) return false;
+      return failureCount < 1;
+    },
     staleTime: 5 * 60 * 1000,
   });
 
@@ -45,6 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: ({ otp, canal }: { otp: string; canal: 'email' | 'sms' }) =>
       authApi.verifyOtp(otp, canal),
     onSuccess: (verifiedUser) => {
+      // Invalida e força refetch para garantir integridade total
+      void queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       queryClient.setQueryData(['auth', 'me'], verifiedUser);
     },
   });

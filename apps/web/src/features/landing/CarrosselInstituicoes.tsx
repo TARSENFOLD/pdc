@@ -1,84 +1,79 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { motion, useReducedMotion } from 'motion/react';
-import { http } from '@/lib/api/http';
-import type { InstituicaoPublica, CatalogoResponse } from '@pdc/shared';
+import { Link } from 'react-router-dom';
+import { catalogoApi } from '@/lib/api/catalogo';
+import { Spinner } from '@/components/ui';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function CarrosselInstituicoes() {
-  const [active, setActive] = useState(0);
-  const paused = useRef(false);
-  const reduced = useReducedMotion();
-
-  const { data: instituicoes, isError } = useQuery({
+  const { data: res, isLoading, isError } = useQuery({
     queryKey: ['landing-carrossel-instituicoes'],
-    queryFn: () => http.get<CatalogoResponse<InstituicaoPublica>>('/catalogo/instituicoes?limit=8'),
-    retry: false,
+    queryFn: () => catalogoApi.getInstituicoes({ pageSize: 15 }),
+    staleTime: 1000 * 60 * 30, // 30 min cache
   });
 
-  const items = instituicoes?.data ?? [];
+  const items = res?.data ?? [];
 
-  useEffect(() => {
-    if (items.length === 0) return;
-    const id = setInterval(() => {
-      if (!paused.current) setActive((i) => (i + 1) % items.length);
-    }, 4000);
-    return () => { clearInterval(id); };
-  }, [items.length]);
-
-  // Regra zero mocks: sem dados reais, não renderiza
-  if (isError || items.length === 0) return null;
+  // Regra zero mocks: sem dados reais, mostramos skeleton ou nada.
+  if (isError || (items.length === 0 && !isLoading)) return null;
 
   return (
-    <section className="px-4 py-16 sm:px-6">
-      <div className="mx-auto max-w-5xl text-center">
-        <p className="mb-8 text-xs font-semibold uppercase tracking-widest text-text-muted">
-          Instituições parceiras
-        </p>
-        <div
-          className="flex justify-center gap-4 overflow-x-auto pb-2"
-          onMouseEnter={() => { paused.current = true; }}
-          onMouseLeave={() => { paused.current = false; }}
-        >
-          {items.map((inst, i) => {
-            const card = (
-              <motion.div
-                key={inst.id}
-                initial={false}
-                animate={{
-                  opacity: i === active ? 1 : 0.4,
-                  scale: reduced ? 1 : i === active ? 1.05 : 0.95,
-                }}
-                transition={{ duration: 0.3 }}
-                className="flex min-w-[150px] flex-col items-center gap-2 rounded-2xl border border-border bg-surface-raised px-5 py-4"
-              >
-                {inst.logoUrl ? (
-                  <img src={inst.logoUrl} alt={inst.nome} className="h-10 w-10 rounded-lg object-contain" />
-                ) : (
-                  <img src="/images/placeholder/logo-default.svg" alt="" className="h-10 w-10 rounded-lg" />
-                )}
-                <span className="text-center text-xs text-text-secondary line-clamp-2">{inst.nome}</span>
-                {inst.tipo && (
-                  <span className="rounded-full bg-amber/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber">
-                    {inst.tipo}
-                  </span>
-                )}
-                {inst.regiao && (
-                  <span className="text-[10px] text-text-muted">{inst.regiao}</span>
-                )}
-              </motion.div>
-            );
-
-            return inst.slug ? (
-              <Link key={inst.id} to={`/instituicoes/${inst.slug}`} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber rounded-2xl">
-                {card}
-              </Link>
-            ) : card;
-          })}
+    <section className="bg-surface-alt/30 border-y border-border/50 py-12 overflow-hidden">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="text-center mb-8">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">
+            Instituições de Prestígio em Angola
+          </h2>
         </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-4 opacity-20">
+            <Spinner size="sm" />
+          </div>
+        ) : (
+          <div className="relative group">
+            {/* Gradientes de Máscara para suavizar as bordas do carrossel */}
+            <div className="absolute left-0 top-0 bottom-0 z-10 w-24 bg-gradient-to-r from-background to-transparent pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 z-10 w-24 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+
+            {/* Marquee de Logos */}
+            <div className="flex animate-marquee whitespace-nowrap gap-12 py-4">
+              {[...items, ...items].map((inst, i) => (
+                <Link
+                  key={`${inst.id}-${i}`}
+                  to={`/instituicoes/${inst.slug || inst.id}`}
+                  className="flex flex-none items-center gap-4 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-500"
+                >
+                  <div className="h-12 w-12 rounded-xl bg-surface-raised border border-border p-2 flex items-center justify-center shadow-sm">
+                    {inst.logoUrl ? (
+                      <img src={inst.logoUrl} alt={inst.nome} className="max-h-full max-w-full object-contain" />
+                    ) : (
+                      <span className="text-[10px] font-bold text-amber">{inst.nome.substring(0, 2)}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-text-primary tracking-tight">{inst.nome}</span>
+                    <span className="text-[9px] uppercase font-bold text-amber/60">{inst.regiao}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          animation: marquee 40s linear infinite;
+        }
+        .animate-marquee:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
     </section>
   );
 }

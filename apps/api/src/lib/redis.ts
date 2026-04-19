@@ -13,12 +13,12 @@ export const redis = hasRedis
       url: env.UPSTASH_REDIS_REST_URL || '',
       token: env.UPSTASH_REDIS_REST_TOKEN || '',
     })
-  : {
-      get: async <T = any>(_key: string): Promise<T | null> => null,
-      set: async (_key: string, _value: any, _opts?: any): Promise<'OK'> => 'OK',
+  : ({
+      get: async <T>(_key: string): Promise<T | null> => null,
+      set: async (_key: string, _value: unknown, _opts?: { ex?: number }): Promise<'OK'> => 'OK',
       del: async (_key: string): Promise<number> => 1,
-      sadd: async (_key: string, _member: any): Promise<number> => 1,
-      sismember: async (_key: string, _member: any): Promise<number> => 0,
+      sadd: async (_key: string, ..._members: unknown[]): Promise<number> => 1,
+      sismember: async (_key: string, _member: unknown): Promise<0 | 1> => 0,
       incr: async (_key: string): Promise<number> => 1,
-      expire: async (_key: string, _seconds: number): Promise<boolean> => true,
-    } as unknown as Redis; 
+      expire: async (_key: string, _seconds: number): Promise<0 | 1> => 1,
+    } as unknown as Redis); 

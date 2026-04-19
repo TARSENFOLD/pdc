@@ -10,6 +10,10 @@ vi.mock('../strapi/strapi.client.js', () => ({
 
 const strapiGetMock = vi.mocked(strapiGet);
 
+const mockMeta = {
+  pagination: { page: 1, pageSize: 10, pageCount: 1, total: 1 }
+};
+
 describe('vocacionalService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -23,7 +27,10 @@ describe('vocacionalService', () => {
 
   describe('Básicos', () => {
     it('deve retornar perfil zerado quando não há tentativas', async () => {
-      strapiGetMock.mockResolvedValue({ data: [] });
+      strapiGetMock.mockResolvedValue({ 
+        data: [], 
+        meta: { pagination: { page: 1, pageSize: 10, pageCount: 0, total: 0 } } 
+      });
 
       const perfil = await vocacionalService.calcularPerfil('aluno-1');
 
@@ -37,14 +44,13 @@ describe('vocacionalService', () => {
         data: [
           {
             id: 1,
-            attributes: {
-              alunoId: 'aluno-1',
-              simulacaoId: 'sim-1',
-              score: 8,
-              dataFim: '2026-04-15T12:00:00Z'
-            }
+            alunoId: 'aluno-1',
+            simulacaoId: 'sim-1',
+            score: 8,
+            dataFim: '2026-04-15T12:00:00Z'
           }
-        ]
+        ],
+        meta: mockMeta
       });
 
       const perfil = await vocacionalService.calcularPerfil('aluno-1');
@@ -63,13 +69,19 @@ describe('vocacionalService', () => {
         strapiGetMock.mockResolvedValue({
           data: persona.tentativas.map((t, idx) => ({
             id: idx + 1,
-            attributes: {
-              alunoId: persona.alunoId,
-              simulacaoId: t.simulacaoId,
-              score: t.score,
-              dataFim: t.dataFim || new Date().toISOString()
+            alunoId: persona.alunoId,
+            simulacaoId: t.simulacaoId,
+            score: t.score,
+            dataFim: t.dataFim || new Date().toISOString()
+          })),
+          meta: {
+            pagination: { 
+              page: 1, 
+              pageSize: 100, 
+              pageCount: 1, 
+              total: persona.tentativas.length 
             }
-          }))
+          }
         });
 
         const perfil = await vocacionalService.calcularPerfil(persona.alunoId);
@@ -88,11 +100,14 @@ describe('vocacionalService', () => {
   describe('Recomendações', () => {
     it('deve gerar recomendações baseadas no perfil', async () => {
       const mockCursos = [
-        { id: '1', attributes: { titulo: 'Engenharia de Software' } },
-        { id: '2', attributes: { titulo: 'Medicina' } },
-        { id: '3', attributes: { titulo: 'Gestão de Empresas' } },
+        { id: '1', titulo: 'Engenharia de Software' },
+        { id: '2', titulo: 'Medicina' },
+        { id: '3', titulo: 'Gestão de Empresas' },
       ];
-      strapiGetMock.mockResolvedValue({ data: mockCursos });
+      strapiGetMock.mockResolvedValue({ 
+        data: mockCursos, 
+        meta: { pagination: { page: 1, pageSize: 3, pageCount: 1, total: 3 } } 
+      });
 
       const perfil = {
         alunoId: 'aluno-1',

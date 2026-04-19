@@ -57,7 +57,7 @@ export function MicroDesafioVeredito({ veredito, onReiniciar, reduced }: {
 
       <div className="mt-4 flex flex-col items-center gap-4 w-full">
         <Link
-          to="/criar-conta"
+          to={`/register?area=${veredito.area.toUpperCase()}`}
           className="w-full rounded-xl bg-accent px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.03] hover:bg-accent-hover active:scale-[0.98]"
         >
           Resgatar Perfil Completo
@@ -71,7 +71,7 @@ export function MicroDesafioVeredito({ veredito, onReiniciar, reduced }: {
       </div>
 
       <Link
-        to="/explorar"
+        to={`/explorar?area=${veredito.area.toUpperCase()}`}
         className="mt-2 text-xs font-medium text-accent/60 hover:text-accent transition-colors underline underline-offset-4 decoration-accent/20"
       >
         Explorar catálogos públicos como convidado

@@ -1,5 +1,4 @@
 import { createStrapi } from '@strapi/strapi';
-import { randomUUID } from 'crypto';
 // @ts-ignore: O script de Seed cruza workspaces e o tsx consegue interpretá-lo mas o tsc queixa-se de rootDir
 import { personas } from '../../../apps/api/src/modules/vocacional/__fixtures__/personas.js';
 
@@ -15,15 +14,31 @@ async function main() {
   console.log('🌱 Iniciando PDC Seed Narrativo (W1-T5) ...');
   const app = await createStrapi({ appDir: process.cwd() + '/dist' }).load();
 
-  const findOrCreate = async (uid: any, filters: any, data: any) => {
-    const existing = await app.documents(uid).findFirst({ filters });
+  const findOrCreate = async (uid: string, filters: any, data: any) => {
+    const existing = await app.documents(uid as any).findFirst({ filters });
     if (existing) return existing;
-    return await app.documents(uid).create({ data, status: 'published' });
+    return await app.documents(uid as any).create({ data, status: 'published' });
   };
 
   try {
     // ─── 3. ÁREAS VOCACIONAIS E INSTITUIÇÕES ────────────────────────
     const areas = ['Engenharia', 'Saúde', 'Gestão', 'Artes', 'Tecnologia', 'Ciências Sociais'];
+    
+    // ─── 3.1 SIMULAÇÕES (R2.T5) ──────────────────────────────────────
+    console.log('🧪 Criando Simulações (Diversidade de Tipos)...');
+    for (let i = 0; i < areas.length; i++) {
+      const area = areas[i];
+      const tipo = (i % 3) + 1; // Alternar entre Tipo 1, 2 e 3
+      await findOrCreate('api::simulacao.simulacao', { slug: `sim-${area.toLowerCase().replace(' ', '-')}` }, {
+        titulo: `Simulação Profissional: ${area}`,
+        slug: `sim-${area.toLowerCase().replace(' ', '-')}`,
+        descricao: `Teste as tuas habilidades práticas no domínio de ${area}. Fidelity Level ${tipo}.`,
+        area: area.toUpperCase(),
+        tipo,
+        estado: 'published',
+      });
+    }
+
     const instNomes = [
       'Universidade Agostinho Neto (UAN)', 'ISPTEC', 'Universidade Católica de Angola (UCAN)',
       'Universidade Metodista de Angola', 'Instituto Superior Politécnico Tundavala',

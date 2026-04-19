@@ -31,14 +31,14 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
   const perfilId = '123';
 
   beforeEach(() => {
-    vi.resetAllMocks(); // Comentário 1: Reset total para evitar fugas de implementação
+    vi.resetAllMocks();
     vi.mocked(featureFlagService.getEffectiveFlags).mockResolvedValue({ 
       'REPUTATION_VISIBLE': true 
     });
   });
 
   /**
-   * Helper para criar respostas do Strapi validadas
+   * Helper para criar respostas do Strapi validadas (Flat v5 conforme strapi.client.ts)
    */
   function mockStrapiResponse(data: any, meta: any = {}) {
     return {
@@ -52,13 +52,12 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
     it('deve calcular correctamente a dimensão ratingsMedia (peso 25)', async () => {
       fetchMock.mockImplementation(async (url: string) => {
         const u = new URL(url);
-        // Validação de Query (Comentário 2)
         if (u.pathname.endsWith('/ratings') && u.searchParams.get('filters[perfilAlvo][$eq]') === perfilId) {
           const ratings: any[] = [{ nota: 5 }, { nota: 5 }];
           return mockStrapiResponse(ratings);
         }
         if (u.pathname.endsWith(`/perfis/${perfilId}`)) {
-          return mockStrapiResponse({ createdAt: new Date().toISOString() });
+          return mockStrapiResponse([{ createdAt: new Date().toISOString() }]);
         }
         return mockStrapiResponse([], { pagination: { total: 0 } });
       });
@@ -74,7 +73,7 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
           return mockStrapiResponse([], { pagination: { total: 5 } }); // 5/10 -> 0.5 * 20 = 10
         }
         if (u.pathname.endsWith(`/perfis/${perfilId}`)) {
-          return mockStrapiResponse({ createdAt: new Date().toISOString() });
+          return mockStrapiResponse([{ createdAt: new Date().toISOString() }]);
         }
         return mockStrapiResponse([], { pagination: { total: 0 } });
       });
@@ -90,7 +89,7 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
           return mockStrapiResponse([], { pagination: { total: 20 } }); // 20/20 -> 1.0 * 15 = 15
         }
         if (u.pathname.endsWith(`/perfis/${perfilId}`)) {
-          return mockStrapiResponse({ createdAt: new Date().toISOString() });
+          return mockStrapiResponse([{ createdAt: new Date().toISOString() }]);
         }
         return mockStrapiResponse([], { pagination: { total: 0 } });
       });
@@ -106,7 +105,7 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
           return mockStrapiResponse([], { pagination: { total: 15 } }); // 15/15 -> 1.0 * 20 = 20
         }
         if (u.pathname.endsWith(`/perfis/${perfilId}`)) {
-          return mockStrapiResponse({ createdAt: new Date().toISOString() });
+          return mockStrapiResponse([{ createdAt: new Date().toISOString() }]);
         }
         return mockStrapiResponse([], { pagination: { total: 0 } });
       });
@@ -120,7 +119,7 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
         if (url.includes(`/perfis/${perfilId}`)) {
           const twoYearsAgo = new Date();
           twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-          return mockStrapiResponse({ createdAt: twoYearsAgo.toISOString() }); // 24 meses -> 1.0 * 10 = 10
+          return mockStrapiResponse([{ createdAt: twoYearsAgo.toISOString() }]); // 24 meses -> 1.0 * 10 = 10
         }
         return mockStrapiResponse([], { pagination: { total: 0 } });
       });
@@ -136,7 +135,7 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
         if (u.pathname.endsWith('/ratings') && u.searchParams.get('filters[autor][$eq]') === perfilId) {
           return mockStrapiResponse([], { pagination: { total: 25 } });
         }
-        if (u.pathname.endsWith(`/perfis/${perfilId}`)) return mockStrapiResponse({ createdAt: new Date().toISOString() });
+        if (u.pathname.endsWith(`/perfis/${perfilId}`)) return mockStrapiResponse([{ createdAt: new Date().toISOString() }]);
         return mockStrapiResponse([], { pagination: { total: 0 } });
       });
 
@@ -148,7 +147,7 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
   describe('Feature Flag: REPUTATION_VISIBLE', () => {
     it('deve retornar score real quando a flag está activa', async () => {
       vi.mocked(redis.get).mockResolvedValue(null);
-      fetchMock.mockResolvedValue(mockStrapiResponse({ reputacao: 88 }));
+      fetchMock.mockResolvedValue(mockStrapiResponse([{ reputacao: 88 }]));
 
       const score = await getReputacao(perfilId);
       expect(score).toBe(88);
@@ -177,7 +176,7 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
 
     it('deve popular o cache (MISS) com TTL de 5 min (300s)', async () => {
       vi.mocked(redis.get).mockResolvedValue(null);
-      fetchMock.mockResolvedValue(mockStrapiResponse({ reputacao: 42 }));
+      fetchMock.mockResolvedValue(mockStrapiResponse([{ reputacao: 42 }]));
 
       const score = await getReputacao(perfilId);
       
@@ -192,7 +191,7 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
         const u = new URL(url);
         // Primeiro busca perfil
         if (u.pathname.endsWith(`/perfis/${perfilId}`)) {
-          return mockStrapiResponse({ id: 123, documentId: 'doc_xyz', createdAt: new Date().toISOString() });
+          return mockStrapiResponse([{ id: 123, documentId: 'doc_xyz', createdAt: new Date().toISOString() }]);
         }
         // Depois faz o PUT (Comentário 2: Validação de Payload)
         if (options?.method === 'PUT' && u.pathname.endsWith('/perfis/doc_xyz')) {
@@ -213,7 +212,6 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
     });
 
     it('recalcularGlobal: deve ser totalmente auto-contido e processar perfis', async () => {
-      // Comentário 1: Mock completo para evitar leakage
       fetchMock.mockImplementation(async (url: string, options: any) => {
         const u = new URL(url);
         
@@ -227,20 +225,27 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
 
         // Chamadas internas do persistirReputacao (recalculo)
         if (options?.method === 'PUT') return mockStrapiResponse({ id: 1 });
-        if (u.pathname.includes('/perfis/')) return mockStrapiResponse({ id: 1, documentId: 'd1', createdAt: new Date().toISOString() });
+        if (u.pathname.includes('/perfis/')) return mockStrapiResponse([{ id: 1, documentId: 'd1', createdAt: new Date().toISOString() }]);
         
         return mockStrapiResponse([], { pagination: { total: 0 } });
       });
 
       const result = await recalcularGlobal();
       expect(result.updated).toBe(2);
-      // Verifica se houve 2 tentativas de escrita
       const puts = fetchMock.mock.calls.filter(c => c[1]?.method === 'PUT');
       expect(puts.length).toBe(2);
     });
   });
 
   describe('Breakdown Detalhado', () => {
+    it('deve lançar erro se flag REPUTATION_VISIBLE estiver off (Gate R2.T6)', async () => {
+      vi.mocked(featureFlagService.getEffectiveFlags).mockResolvedValue({ 
+        'REPUTATION_VISIBLE': false 
+      });
+
+      await expect(getReputacaoBreakdown(perfilId)).rejects.toThrow();
+    });
+
     it('getReputacaoBreakdown: deve retornar todas as dimensões validadas', async () => {
       fetchMock.mockImplementation(async (url: string) => {
         const u = new URL(url);
@@ -252,7 +257,7 @@ describe('reputation.service Characterization Tests (W0-T6)', () => {
         if (u.pathname.endsWith('/ratings') && u.searchParams.get('filters[autor][$eq]') === perfilId) return mockStrapiResponse([], { pagination: { total: 5 } });
         if (u.pathname.endsWith(`/perfis/${perfilId}`)) {
           const yearAgo = new Date(Date.now() - 1000 * 60 * 60 * 24 * 30 * 12);
-          return mockStrapiResponse({ createdAt: yearAgo.toISOString() });
+          return mockStrapiResponse([{ createdAt: yearAgo.toISOString() }]);
         }
         return mockStrapiResponse([], { pagination: { total: 0 } });
       });

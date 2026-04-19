@@ -16,15 +16,6 @@ interface StrapiItem {
   autorId?: { id?: string; nome?: string };
 }
 
-interface StrapiListResponse {
-  data: StrapiItem[];
-  meta?: { pagination?: { total?: number } };
-}
-
-interface StrapiSingleResponse {
-  data: StrapiItem | null;
-}
-
 const ValidarPayloadSchema = z.object({
   acao: z.enum(['aprovar', 'rejeitar']),
   parecer: z.string().min(20).max(1000),
@@ -49,21 +40,15 @@ comiteRoutes.get(
     const colecionNome = `${tipo}s`;
 
     try {
-      const [items, total] = await Promise.all([
-        strapiGet<StrapiListResponse>(`/${colecionNome}`, {
-          'filters[estado][$eq]': 'review',
-          'pagination[page]': page.toString(),
-          'pagination[pageSize]': pageSize.toString(),
-          'fields': 'id,titulo,estado,createdAt',
-          'populate': 'autor,autorId',
-        }),
-        strapiGet<StrapiListResponse>(`/${colecionNome}`, {
-          'filters[estado][$eq]': 'review',
-          'pagination[pageSize]': '1',
-        }),
-      ]);
+      const resItems = await strapiGet<StrapiItem>(`/${colecionNome}`, {
+        'filters[estado][$eq]': 'review',
+        'pagination[page]': page.toString(),
+        'pagination[pageSize]': pageSize.toString(),
+        'fields': 'id,titulo,estado,createdAt',
+        'populate': 'autor,autorId',
+      });
 
-      const lista = items.data.map((item) => ({
+      const lista = resItems.data.map((item) => ({
         id: item.id,
         titulo: item.titulo,
         autorNome: item.autor?.nome ?? item.autorId?.nome ?? 'Desconhecido',
@@ -76,8 +61,8 @@ comiteRoutes.get(
         pagination: {
           page,
           pageSize,
-          total: total.meta?.pagination?.total ?? 0,
-          pageCount: Math.ceil((total.meta?.pagination?.total ?? 0) / pageSize),
+          total: resItems.meta.pagination.total,
+          pageCount: resItems.meta.pagination.pageCount,
         },
       });
     } catch (err) {
@@ -103,20 +88,22 @@ comiteRoutes.put(
     const colecionNome = `${tipo}s`;
 
     try {
-      const item = await strapiGet<StrapiSingleResponse>(`/${colecionNome}/${id}`);
-      if (!item.data) return c.json({ error: 'Item não encontrado' }, 404);
-      if (item.data.estado !== 'review') return c.json({ error: "Conteúdo não está em revisão. Só é possível validar itens com estado 'review'." }, 409);
+      const res = await strapiGet<StrapiItem>(`/${colecionNome}/${id}`);
+      const item = res.data[0];
+      
+      if (!item) return c.json({ error: 'Item não encontrado' }, 404);
+      if (item.estado !== 'review') return c.json({ error: "Conteúdo não está em revisão. Só é possível validar itens com estado 'review'." }, 409);
 
       const novoEstado = acao === 'aprovar' ? 'approved' : 'draft';
       await strapiPut(`/${colecionNome}/${id}`, { estado: novoEstado });
 
       // Notificação ao autor
-      const autorId = item.data.autor?.id ?? item.data.autorId?.id;
+      const autorId = item.autor?.id ?? item.autorId?.id;
       if (autorId) {
         await strapiPost('/notificacoes', {
           destinatarioId: autorId,
           tipo: acao === 'aprovar' ? 'conteudo_aprovado' : 'conteudo_rejeitado',
-          mensagem: `O seu ${tipo} "${item.data.titulo ?? ''}" foi ${acao === 'aprovar' ? 'aprovado' : 'rejeitado'} pelo Comité Científico. Parecer: ${parecer}`,
+          mensagem: `O seu ${tipo} "${item.titulo ?? ''}" foi ${acao === 'aprovar' ? 'aprovado' : 'rejeitado'} pelo Comité Científico. Parecer: ${parecer}`,
           lida: false,
         }).catch(() => {});
       }

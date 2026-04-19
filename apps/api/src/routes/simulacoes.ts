@@ -6,6 +6,10 @@ import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.j
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { CriarSimulacaoPayloadSchema } from '@pdc/shared';
+import { eventBus } from '../modules/events/event-bus.js';
+import { DomainEventName } from '../modules/events/types.js';
+import { type Tentativa, analyzeFluidity, analyzeFocus } from '@pdc/shared';
+import { telemetriaProcessor } from '../modules/telemetria/telemetria.processor.js';
 
 const log = pino({ name: 'routes:simulacoes' });
 type Vars = { Variables: AuthVariables };
@@ -26,6 +30,15 @@ const concluirSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 
+interface StrapiSimulacao {
+  id: string | number;
+  titulo: string;
+  autorId: string;
+  estado: string;
+  tipo: number;
+  area: string;
+}
+
 export const simulacaoRoutes = new Hono<Vars>();
 
 simulacaoRoutes.use('*', verifyJwt);
@@ -43,8 +56,8 @@ simulacaoRoutes.get('/', zValidator('query', simQuerySchema), async (c) => {
   params['filters[estado][$eq]'] = 'published';
 
   try {
-    const data = await strapiGet<unknown>('/simulacoes', params);
-    return c.json(data);
+    const res = await strapiGet<StrapiSimulacao>('/simulacoes', params);
+    return c.json(res);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -55,11 +68,11 @@ simulacaoRoutes.get('/', zValidator('query', simQuerySchema), async (c) => {
 simulacaoRoutes.get('/minhas', checkRole(['mentor', 'super_admin']), async (c) => {
   const { id } = c.get('user');
   try {
-    const data = await strapiGet<unknown>('/simulacoes', {
+    const res = await strapiGet<StrapiSimulacao>('/simulacoes', {
       'filters[autorId][$eq]': id,
       populate: 'capa',
     });
-    return c.json(data);
+    return c.json(res);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -70,12 +83,12 @@ simulacaoRoutes.get('/minhas', checkRole(['mentor', 'super_admin']), async (c) =
 simulacaoRoutes.get('/me/tentativas', async (c) => {
   const { id } = c.get('user');
   try {
-    const data = await strapiGet<unknown>('/tentativas', {
-      'filters[alunoId][$eq]': id,
+    const res = await strapiGet<any>('/tentativas', {
+      'filters[perfil][userId][$eq]': id,
       populate: 'simulacao',
       'sort': 'createdAt:desc',
     });
-    return c.json(data);
+    return c.json(res);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -86,15 +99,17 @@ simulacaoRoutes.get('/me/tentativas', async (c) => {
 simulacaoRoutes.get('/:id', async (c) => {
   const simId = c.req.param('id');
   try {
-    const data = await strapiGet<any>(`/simulacoes/${simId}`, { populate: 'capa,iframeUrl' });
+    const res = await strapiGet<StrapiSimulacao>(`/simulacoes/${simId}`, { populate: 'capa,iframeUrl' });
+    const data = res.data[0];
+    if (!data) return c.json({ error: 'Simulação não encontrada' }, 404);
     
     // Verificação de acesso
     const user = c.get('user');
-    if (data.data.estado !== 'published' && data.data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
+    if (data.estado !== 'published' && data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
       return c.json({ error: 'Acesso negado' }, 403);
     }
 
-    return c.json(data);
+    return c.json(res);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -107,13 +122,13 @@ simulacaoRoutes.post('/', checkRole(['mentor', 'super_admin']), zValidator('json
   const { id: autorId } = c.get('user');
   
   try {
-    const data = await strapiPost<unknown>('/simulacoes', {
+    const res = await strapiPost<StrapiSimulacao>('/simulacoes', {
       ...payload,
       autorId,
       estado: 'draft',
       slug: payload.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
     });
-    return c.json(data, 201);
+    return c.json(res, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -128,13 +143,16 @@ simulacaoRoutes.put('/:id', checkRole(['mentor', 'super_admin']), zValidator('js
 
   try {
     // Verificar se é o autor
-    const sim = await strapiGet<any>(`/simulacoes/${id}`);
-    if (sim.data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
+    const resGet = await strapiGet<StrapiSimulacao>(`/simulacoes/${id}`);
+    const sim = resGet.data[0];
+    if (!sim) return c.json({ error: 'Simulação não encontrada' }, 404);
+
+    if (sim.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
       return c.json({ error: 'Não tem permissão para editar esta simulação' }, 403);
     }
 
-    const data = await strapiPut<unknown>(`/simulacoes/${id}`, payload);
-    return c.json(data);
+    const resPut = await strapiPut<StrapiSimulacao>(`/simulacoes/${id}`, payload);
+    return c.json(resPut);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -151,12 +169,13 @@ simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'moderador', 'super_ad
 
   try {
     // Buscar simulação actual
-    const sim = await strapiGet<any>(`/simulacoes/${id}`);
-    if (!sim.data) {
+    const resGet = await strapiGet<StrapiSimulacao>(`/simulacoes/${id}`);
+    const sim = resGet.data[0];
+    if (!sim) {
       return c.json({ error: 'Simulação não encontrada' }, 404);
     }
 
-    const estadoActual = sim.data.estado;
+    const estadoActual = sim.estado;
 
     // Validar transições permitidas (similar a cursos)
     const transicaoPermitida = (actual: string, novo: string, role: string): boolean => {
@@ -170,7 +189,7 @@ simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'moderador', 'super_ad
     };
 
     // Verificar autorização
-    const podeEditar = user.id === sim.data.autorId || ['moderador', 'super_admin'].includes(user.role);
+    const podeEditar = user.id === sim.autorId || ['moderador', 'super_admin'].includes(user.role);
     if (!podeEditar) {
       return c.json({ error: 'Sem permissão para editar esta simulação' }, 403);
     }
@@ -193,29 +212,40 @@ simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'moderador', 'super_ad
 
 // POST /simulacoes/tentativas — iniciar tentativa (aluno apenas)
 simulacaoRoutes.post('/tentativas', checkRole(['aluno']), zValidator('json', iniciarSchema), async (c) => {
-  const { id: alunoId } = c.get('user');
+  const { id: userId } = c.get('user');
   const { simulacaoId } = c.req.valid('json');
   try {
+    // Buscar perfilId real do usuário
+    const resPerfil = await strapiGet<{ id: string }>('/perfis', {
+      'filters[userId][$eq]': userId,
+      'fields[0]': 'id',
+    });
+    const perfilId = resPerfil.data[0]?.id;
+    if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
+
     // Buscar simulação para obter tipo
-    const sim = await strapiGet<{ data: { tipo: number } }>(`/simulacoes/${simulacaoId}`);
-    const tipo = sim.data.tipo;
+    const resSim = await strapiGet<StrapiSimulacao>(`/simulacoes/${simulacaoId}`);
+    const sim = resSim.data[0];
+    if (!sim) return c.json({ error: 'Simulação não encontrada' }, 404);
+
+    const tipo = sim.tipo;
     
     // Contar tentativas anteriores
-    const prevTentativas = await strapiGet<{ meta: { pagination: { total: number } } }>('/tentativas', {
-      'filters[alunoId][$eq]': alunoId,
-      'filters[simulacaoId][$eq]': simulacaoId,
+    const prevTentativas = await strapiGet<any>('/tentativas', {
+      'filters[perfil][id][$eq]': perfilId,
+      'filters[simulacao][id][$eq]': simulacaoId,
     });
-    const tentativaNum = prevTentativas.meta.pagination.total + 1;
+    const tentativaNum = (prevTentativas.meta?.pagination?.total ?? 0) + 1;
 
-    const data = await strapiPost<unknown>('/tentativas', {
-      simulacaoId,
-      alunoId,
+    const resPost = await strapiPost<any>('/tentativas', {
+      simulacao: simulacaoId,
+      perfil: perfilId,
       dataInicio: new Date().toISOString(),
       tentativaNum,
       executorTipo: `tipo${tipo}`,
       status: 'em_progresso',
     });
-    return c.json(data, 201);
+    return c.json(resPost, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -226,30 +256,51 @@ simulacaoRoutes.post('/tentativas', checkRole(['aluno']), zValidator('json', ini
 simulacaoRoutes.put('/tentativas/:id', checkRole(['aluno']), zValidator('json', concluirSchema), async (c) => {
   const tentativaId = c.req.param('id');
   const { score, metadata } = c.req.valid('json');
+  const user = c.get('user');
+  
+  // R2.T4: Derivação de score no BFF
+  let finalScore = score;
+  if (metadata?.tipo === 2) {
+    const phi = (Number(metadata.focusStability) || 100) / 100;
+    const resFluidity = analyzeFluidity(phi);
+    const resFocus = analyzeFocus(phi);
+    // Média simples entre Fluidity (Phi) e Focus (Stability)
+    finalScore = (resFluidity.score + resFocus.score) / 2;
+    log.info({ tentativaId, finalScore, phi }, 'Score Tipo 2 derivado no BFF');
+  }
+
   try {
-    const data = await strapiPut<any>(`/tentativas/${tentativaId}`, {
-      score,
+    const resPut = await strapiPut<Tentativa>(`/tentativas/${tentativaId}`, {
+      score: finalScore,
       metadata,
       status: 'concluida',
       dataFim: new Date().toISOString(),
-      duracaoSegundos: metadata?.duracaoSegundos ?? 0,
+      duracaoSegundos: Number(metadata?.duracaoSegundos) || 0,
     });
 
-    // Grade Passback LTI (Ticket T1 Fix)
-    if (metadata?.ltiContext) {
-      try {
-        const { ltiAgsService } = await import('../modules/lti/lti.ags.service.js');
-        void ltiAgsService.sendScore(data.data.alunoId, {
-          scoreGiven: score || 0,
-          scoreMaximum: 10,
-          activityProgress: 'Completed',
-          gradingProgress: 'FullyGraded',
-          timestamp: new Date().toISOString(),
-        });
-      } catch (err) {
-        log.error({ err }, 'Falha no Grade Passback LTI');
-      }
+    const data = resPut.data;
+
+    // R2.T5: Disparar processamento automático de mérito (Músculo)
+    // Buscamos o perfilId real através do userId para o processador
+    const resPerfilLookup = await strapiGet<{ id: string }>('/perfis', {
+      'filters[userId][$eq]': user.id,
+      'fields[0]': 'id',
+    });
+    const perfilIdReal = resPerfilLookup.data[0]?.id;
+
+    if (perfilIdReal) {
+      // Executa de forma assíncrona para não atrasar a resposta da UI
+      // O domainId é extraído do metadata ou 'geral'
+      const domainId = (metadata?.domainId as string) || 'geral';
+      void telemetriaProcessor.processUserDomain(String(perfilIdReal), domainId);
     }
+
+    // Disparar evento de conclusão com payload tipado
+    eventBus.publishWithOutbox(DomainEventName.TENTATIVA_CONCLUIDA, {
+      tentativaId,
+      score: finalScore || 0,
+      perfilId: String(perfilIdReal),
+    }).catch(err => log.error({ err }, 'Falha ao publicar evento tentativa.concluida'));
 
     return c.json(data);
   } catch (err) {
@@ -257,4 +308,3 @@ simulacaoRoutes.put('/tentativas/:id', checkRole(['aluno']), zValidator('json', 
     return c.json({ error: message }, 502);
   }
 });
-

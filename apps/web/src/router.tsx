@@ -119,9 +119,20 @@ const ROLE_DASHBOARD: Record<Role, string> = {
 };
 
 function DashboardRedirect() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
   if (!user) return <Navigate to="/login" replace />;
-  return <Navigate to={ROLE_DASHBOARD[user.role]} replace />;
+  
+  const target = ROLE_DASHBOARD[user.role] ?? '/app/dashboard/aluno';
+  return <Navigate to={target} replace />;
 }
 
 function RoleGuard({ allowed, children }: { allowed: Role[]; children: React.ReactNode }) {

@@ -46,6 +46,7 @@ export function MicroDesafio() {
         />
       )}
       {state.fase === 'carregando' && <Carregando f={f} />}
+      {state.fase === 'limite' && <Limite onReiniciar={reiniciar} f={f} />}
       {state.fase === 'erro' && (
         <motion.div {...f} className="flex flex-col items-center gap-4 py-8 text-center">
           <p className="text-sm font-medium text-error">Não foi possível gerar o teu veredito.</p>
@@ -161,6 +162,36 @@ function Carregando({ f }: { f: F }) {
         <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-accent" />
       </div>
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent animate-pulse">A processar evidências…</p>
+    </motion.div>
+  );
+}
+
+function Limite({ onReiniciar, f }: { onReiniciar: () => void; f: F }) {
+  return (
+    <motion.div {...f} className="flex flex-col items-center gap-6 text-center py-6">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 border border-warning/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-warning">
+        🔒 Limite Atingido
+      </span>
+      <h3 className="text-xl font-bold tracking-tight text-text-primary">
+        Esgotaste as tuas 3 simulações gratuitas
+      </h3>
+      <p className="text-sm leading-relaxed text-text-secondary">
+        Regista-te agora para desbloquear o teu <span className="text-accent font-bold">Perfil Vocacional Completo</span>, aceder a mentorias e explorar o catálogo sem limites.
+      </p>
+      <div className="flex flex-col w-full gap-3">
+        <a
+          href="/register"
+          className="rounded-xl bg-accent px-8 py-3 text-sm font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.03] hover:bg-accent-hover"
+        >
+          Criar conta gratuita
+        </a>
+        <button
+          onClick={onReiniciar}
+          className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+        >
+          Voltar ao início
+        </button>
+      </div>
     </motion.div>
   );
 }

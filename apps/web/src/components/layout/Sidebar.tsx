@@ -1,7 +1,8 @@
 import { useState, type ComponentType } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { Avatar } from '../ui/Avatar';
 import type { Role } from '@/config/roles';
 import {
   LayoutDashboard, Rss, BookOpen, FlaskConical, Trophy,
@@ -227,7 +228,27 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         </ul>
       </nav>
 
-      <div className="p-6 border-t border-white/5 bg-white/[0.01]">
+      <div className="p-6 border-t border-white/5 bg-white/[0.01] space-y-4">
+        {/* User Quick Profile (R2.T6 Integrity) */}
+        <Link 
+          to="/app/perfil"
+          onClick={onNavigate}
+          className="flex items-center gap-3 p-3 rounded-2xl bg-surface-alt border border-white/5 hover:bg-surface-raised transition-all group"
+        >
+          <Avatar 
+            size="sm" 
+            src={user?.avatarUrl || undefined} 
+            alt={user?.nome} 
+            tier={user?.reputacaoTier}
+            className="border-none"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-black text-text-primary truncate">{user?.nome}</p>
+            <p className="text-[9px] font-bold text-accent uppercase tracking-widest">{user?.reputacaoTier || 'Bronze'}</p>
+          </div>
+          <ChevronRight size={14} className="text-text-muted group-hover:text-accent transition-colors" />
+        </Link>
+
         <div className="rounded-[24px] bg-surface-raised p-5 border border-accent/10 relative overflow-hidden group">
           <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
              <Brain size={80} />

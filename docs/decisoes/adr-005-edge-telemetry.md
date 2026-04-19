@@ -1,41 +1,39 @@
-# ADR 005: Arquitetura Híbrida de Telemetria no Edge
+# ADR-005 — Edge Telemetry via Cloudflare Workers
 
-## Status
-Aceite (Abril 2026)
+**Estado:** Aceite  
+**Data:** 2026-04-19  
+**Contexto:** Wave 1 / Wave 2 — Pipeline de Ingestão de Dados
+
+---
 
 ## Contexto
-A telemetria comportamento no PDC v2 gera um volume de requisições massivo (estimado em 100k+ eventos por dia). Processar todos esses eventos diretamente no BFF principal no Railway é ineficiente em termos de custo (CPU/RAM do Node.js) e performance (latência para usuários em Angola).
+O PDC gera um volume massivo de eventos de telemetria (cliques, dwellTime, hesitação, foco). Processar cada clique no BFF principal (Railway/Node.js) consome recursos de CPU/RAM desnecessários e aumenta a latência para utilizadores em Angola (servidores US-East).
 
-## Decisão
-Implementar uma infraestrutura híbrida de telemetria utilizando Cloudflare Workers para ingestão no Edge e o BFF no Railway para processamento e persistência.
+---
 
-### 1. Fronteiras de Responsabilidade
-- **Cloudflare Workers (Edge):**
-    - Endpoints de ingestão: `POST /telemetria/batch` (autenticado) e `POST /landing/pulse` (público).
-    - Endpoints de catálogos públicos (cache no edge): `GET /explorar`, `/cursos`, `/simulacoes` (apenas metadados públicos).
-- **Railway (BFF Principal):**
-    - Autenticação (JWT httpOnly), Autorização (RBAC), Lógica de Negócio (Matrículas, Simulações complexas, Mensagens).
-    - Processamento assíncrono da telemetria e escrita no Strapi.
+## Decis\C3\A3o
+Adoptar **Cloudflare Workers** como o Ingestor de Telemetria de Fronteira (Edge Ingestor).
 
-### 2. Validação e Segurança
-- O Worker no Edge valida o utilizador através de um **Telemetry Token** curto, enviado no header `X-Telemetry-Token`.
-- Este token é emitido pelo BFF principal no login ou no endpoint de `/bootstrap`.
-- Os cookies `access_token` e `refresh_token` permanecem `SameSite=Strict` e vinculados ao domínio da API principal (`api.usepdc.com`), protegendo a auth principal contra vazamentos no Edge.
+1.  **Fronteira:** Apenas o endpoint `POST /telemetry/batch` migra para o Worker.
+2.  **Identidade:** O Worker valida o utilizador via JWT no cookie `access_token` (lido através do domínio compartilhado `.usepdc.com` ou via header).
+3.  **Persistência:** O Worker faz PUSH imediato para o **Upstash Redis** (Queue). Um processo consumidor no Railway lê do Redis e persiste no Strapi/Postgres de forma assíncrona.
 
-### 3. Pipeline de Escrita (Resiliência)
-- O Worker não escreve diretamente no PostgreSQL/Strapi.
-- Os eventos são enviados para uma fila (Queue) no **Upstash Redis**.
-- Um worker secundário no Railway consome essa fila de forma assíncrona, garantindo que picos de tráfego na telemetria não sobrecarreguem o banco de dados principal.
+---
 
-## Consequências
-- **Positivas:**
-    - Custo operacional de ingestão próximo de zero (plano gratuito/base da Cloudflare).
-    - Redução drástica na latência para usuários em Angola (PoPs locais).
-    - BFF principal livre de overhead de telemetria.
-- **Negativas:**
-    - Complexidade adicional na gestão de tokens (Telemetry Token).
-    - Necessidade de gerenciar segredos (Upstash API Key) em dois ambientes (Railway e Cloudflare).
+## Justifica\C3\A7\C3\A3o
+- **Economia:** 100k requests/dia gratuitos no Cloudflare (e $5/mês para 10M) é ordens de grandeza mais barato que escalar instâncias de Railway para volume de telemetria.
+- **Latência:** Cloudflare tem PoPs em África (Lagos, Joanesburgo), garantindo que a telemetria é capturada com < 100ms de latência.
+- **Resiliência:** O BFF principal não é sobrecarregado por picos de tráfego de telemetria ("pá de areia").
 
-## Referências
-- Spec 1a81656f — Modelo de Telemetria e Perfil Vocacional.
-- CONSTITUTION.md — Princípio II (Stateless Security & Persistence).
+---
+
+## Consequ\C3\AAncias
+- **Positivo:** Custo de infraestrutura reduzido drasticamente.
+- **Positivo:** Melhora a precisão dos cálculos de $\phi$ (Fluidez) ao reduzir o jitter de rede.
+- **Negativo:** Introduz um novo serviço no deploy (Wrangler).
+- **Negativo:** Exige cuidado com a partilha de cookies (SameSite=Lax obrigatório para cross-subdomain).
+
+---
+
+## Reavalia\C3\A7\C3\A3o
+Se o volume de telemetria saturar o limite do plano gratuito do Upstash ou se a latência entre Cloudflare e Redis for impeditiva.

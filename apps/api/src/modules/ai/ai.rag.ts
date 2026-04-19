@@ -20,20 +20,22 @@ export const aiRag = {
   async indexarConteudo(): Promise<void> {
     if (!redis) return;
 
-    const cursosRes = await strapiGet<{ data: Array<{ id: number; attributes: { titulo: string; descricao: string } }> }>('/cursos');
-    const experienciasRes = await strapiGet<{ data: Array<{ id: number; attributes: { titulo: string; descricao: string } }> }>('/experiencias');
+    // Fix: Strapi client already flattens and wraps in data array.
+    // Removed nested { data: ... } and attributes access.
+    const cursosRes = await strapiGet<{ id: number; titulo: string; descricao: string }>('/cursos');
+    const experienciasRes = await strapiGet<{ id: number; titulo: string; descricao: string }>('/experiencias');
 
     const items: ContentItem[] = [
       ...cursosRes.data.map(c => ({
         id: c.id.toString(),
-        titulo: c.attributes.titulo,
-        descricao: c.attributes.descricao,
+        titulo: c.titulo,
+        descricao: c.descricao,
         tipo: 'curso' as const,
       })),
       ...experienciasRes.data.map(e => ({
         id: e.id.toString(),
-        titulo: e.attributes.titulo,
-        descricao: e.attributes.descricao,
+        titulo: e.titulo,
+        descricao: e.descricao,
         tipo: 'experiencia' as const,
       })),
     ];

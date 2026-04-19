@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ReputacaoTierSchema } from './reputation.js';
 
 export const RoleSchema = z.enum([
   'aluno',
@@ -17,6 +18,7 @@ export const UserSchema = z.object({
   nome: z.string(),
   role: RoleSchema,
   avatarUrl: z.string().url().optional().nullable(),
+  reputacaoTier: ReputacaoTierSchema.optional().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   bio: z.string().optional().nullable(),
@@ -29,6 +31,7 @@ export const PerfilPublicoSchema = z.object({
   nome: z.string(),
   role: RoleSchema,
   avatarUrl: z.string().url().optional().nullable(),
+  reputacaoTier: ReputacaoTierSchema.optional().nullable(),
   bio: z.string().optional().nullable(),
 });
 
@@ -71,6 +74,7 @@ export const PerfilCompletoSchema = UserSchema.extend({
   areasInteresse: z.array(z.string()).optional().default([]),
   xp: z.number().int().default(0),
   reputacao: z.number().int().default(0),
+  reputacaoTier: ReputacaoTierSchema.optional().nullable(),
   socialLinks: z.array(z.object({
     platform: z.string(),
     url: z.string().url()

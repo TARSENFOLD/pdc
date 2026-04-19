@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ltiAgs } from './lti.ags.js';
+import { ltiAgsService } from './lti.ags.js';
 import type { LtiScore } from '@pdc/shared';
 
 describe('ltiAgs Characterization Tests (W0-T8)', () => {
@@ -25,7 +25,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
       json: async () => ({ status: 'success' }),
     } as Response);
 
-    const result = await ltiAgs.sendScore(lineitemUrl, mockScore, accessToken);
+    const result = await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
 
     expect(result).toEqual({ status: 'success' });
     expect(fetchSpy).toHaveBeenCalledWith(
@@ -46,7 +46,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
       json: async () => ({}),
     } as Response);
 
-    await ltiAgs.sendScore(lineitemUrl, mockScore, accessToken);
+    await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
 
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringMatching(/^https:\/\/lms\.com\/api\/lineitem\/123\/scores$/),
@@ -60,7 +60,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
       json: async () => ({}),
     } as Response);
 
-    await ltiAgs.sendScore(lineitemUrl, mockScore, accessToken);
+    await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
 
     const callArgs = fetchSpy.mock.calls[0];
     const body = JSON.parse(callArgs?.[1]?.body as string);
@@ -83,7 +83,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
       text: async () => 'Invalid payload format',
     } as Response);
 
-    await expect(ltiAgs.sendScore(lineitemUrl, mockScore, accessToken))
+    await expect(ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken))
       .rejects.toThrow('Falha ao enviar score LTI AGS: 400 - Invalid payload format');
   });
 
@@ -94,14 +94,14 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
       text: async () => 'Service Unavailable',
     } as Response);
 
-    await expect(ltiAgs.sendScore(lineitemUrl, mockScore, accessToken))
+    await expect(ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken))
       .rejects.toThrow('Falha ao enviar score LTI AGS: 503 - Service Unavailable');
   });
 
   it('deve lidar com falha de rede (Fetch Rejection)', async () => {
     vi.spyOn(global, 'fetch').mockRejectedValue(new Error('Network failure'));
 
-    await expect(ltiAgs.sendScore(lineitemUrl, mockScore, accessToken))
+    await expect(ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken))
       .rejects.toThrow('Network failure');
   });
 });

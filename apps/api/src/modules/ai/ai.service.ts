@@ -16,23 +16,24 @@ export const aiService = {
   async buildContexto(alunoId: string): Promise<string> {
     const perfil = await vocacionalService.calcularPerfil(alunoId);
     
-    const tentativasRes = await strapiGet<{ data: Array<{ id: number; simulacao?: { data?: { titulo: string } } }> }>('/tentativas', {
+    // Fix: Strapi client already flattens. Removed nested { data: ... }
+    const tentativasRes = await strapiGet<{ id: number; simulacao?: { titulo: string } }>('/tentativas', {
       'filters[alunoId][$eq]': alunoId,
       'filters[dataFim][$notNull]': 'true',
       'populate': 'simulacao',
     });
     
-    const inscricoesRes = await strapiGet<{ data: Array<{ id: number; curso?: { data?: { titulo: string } } }> }>('/inscricoes', {
+    const inscricoesRes = await strapiGet<{ id: number; curso?: { titulo: string } }>('/inscricoes', {
       'filters[alunoId][$eq]': alunoId,
       'populate': 'curso',
     });
 
     const sims = tentativasRes.data.map(t => {
-      return t.simulacao?.data?.titulo;
+      return t.simulacao?.titulo;
     }).filter(Boolean).join(', ');
 
     const cursos = inscricoesRes.data.map(i => {
-      return i.curso?.data?.titulo;
+      return i.curso?.titulo;
     }).filter(Boolean).join(', ');
 
     return `Perfil Vocacional: Score Global ${perfil.scoreGlobal.toString()}, Aptidão ${perfil.aptidao.toString()}, Dedicação ${perfil.dedicacao.toString()}. Simulações concluídas: ${sims || 'Nenhuma'}. Cursos inscritos: ${cursos || 'Nenhum'}.`;

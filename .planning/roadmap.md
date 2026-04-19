@@ -33,7 +33,7 @@ O projeto migrou do modelo M*/Onda* para W*-T*. Identificadores antigos são pre
 | ID | Task | Status | Epic Link |
 |----|------|--------|-----------|
 | W0-T1 | Pre-flight runtime bugs (Mensagens router + Sidebar icons + log import) | ✅ | T1 |
-| W0-T2 | Documentation governance reset (recreate ghosts + sync + archive + audit Auth Fix) | 🔄 | T2 |
+| W0-T2 | Documentation governance reset (recreate ghosts + sync + archive + audit Auth Fix) | ✅ | T2 |
 | W0-T3 | Characterization tests — useTelemetry hook | ✅ | T3 |
 | W0-T4 | Characterization tests — heuristics.engine.ts | ✅ | T4 |
 | W0-T5 | Characterization tests — vocacional.service.ts (expand) | ✅ | T5 |
@@ -45,23 +45,24 @@ O projeto migrou do modelo M*/Onda* para W*-T*. Identificadores antigos são pre
 ## Wave 1: Autenticação & Pipeline Soberano
 | ID | Task | Status | Context |
 |----|------|--------|---------|
-| W1-T1 | apps/edge worker hardening (wrangler config + nodejs compat + secrets + scoped package) | ⏳ | Hardening |
-| W1-T2 | TelemetryToken JWS RS256 — signer no BFF + verify middleware no edge + payload schema | ⏳ | Security |
-| W1-T3 | GET /bootstrap layered + FeatureRegistry híbrido + frontend bootstrap.ts | ⏳ | DX |
-| W1-T4 | Edge dual-write + Upstash queue + BFF consumer (full ingestion pipeline) | ⏳ | Telemetry |
-| W1-T5 | Seed narrativo (4 áreas vocacionais + 10 instituições + 30 mentores + 100 alunos) | ⏳ | Data |
+| W1-T1 | apps/edge worker hardening (wrangler config + nodejs compat + secrets + scoped package) | ✅ | Hardening |
+| W1-T2 | TelemetryToken JWS RS256 — signer no BFF + verify middleware no edge + payload schema | ✅ | Security |
+| W1-T3 | GET /bootstrap layered + FeatureRegistry híbrido + frontend bootstrap.ts | ✅ | review-only |
+| W1-T4 | Edge dual-write + Upstash queue + BFF consumer (full ingestion pipeline) | ✅ | Telemetry |
+| W1-T5 | Seed narrativo (4 áreas vocacionais + 10 instituições + 30 mentores + 100 alunos) | ✅ | Data |
 
 ## Wave 2: Motor Vocacional & LTI
 | ID | Task | Status | Context |
 |----|------|--------|---------|
-| W2-T1 | Heuristics shared + Sanity validator dupla (edge + BFF) | ⏳ | Core |
-| W2-T2 | Event bus interno + Outbox pattern (Strapi domain events) | ⏳ | Feature |
-| W2-T3 | LTI Grade Passback + Conquistas como event subscribers | ⏳ | LTI |
-| W2-T4 | Sim Tipo 2 score real (substituir hardcoded 8.5 + telemetry-driven) | ⏳ | Reputation |
-| W2-T5 | Sim Tipo 3 player (criar Tipo3Player.tsx + telemetria nativa + scoring) | ⏳ | Simulation |
-| W2-T6 | GET /reputacao/me endpoint separado + ReputacaoBreakdown schema + Relatório Vocacional Premium MVP | ⏳ | Dashboard |
+| W2-T1 | Heuristics shared + Sanity validator dupla (edge + BFF) | ✅ | Core |
+| W2-T2 | Event bus interno + Outbox pattern (Strapi domain events) | ✅ | Feature |
+| W2-EXT | Constelação Neural — Hero Landing Page Adaptive | ✅ | Design |
+| W2-T3 | LTI Grade Passback + Conquistas como event subscribers | ✅ | LTI |
+| W2-T4 | Sim Tipo 2 score real (substituir hardcoded 8.5 + telemetry-driven) | ✅ | Reputation |
+| W2-T5 | Sim Tipo 3 player (criar Tipo3Player.tsx + telemetria nativa + scoring) | ✅ | Simulation |
+| W2-T6 | GET /reputacao/me endpoint separado + ReputacaoBreakdown schema + Relatório Vocacional Premium MVP | ✅ | Dashboard |
 
-## Wave 3: Design System de Autoridade
+## Wave 3: Design System de Autoridade (PRÓXIMO BLOCO)
 | ID | Task | Status | Context |
 |----|------|--------|---------|
 | W3-T1 | Token audit + purga hardcoded colors (27 ui components + outros) | ⏳ | Design |
@@ -73,8 +74,8 @@ O projeto migrou do modelo M*/Onda* para W*-T*. Identificadores antigos são pre
 ## Wave 4: Dashboards & Hubs
 | ID | Task | Status | Context |
 |----|------|--------|---------|
-| W4-T1 | MensagensPage build-from-scratch (inbox + busca + filtros role + realtime) | ⏳ | Social |
-| W4-T2 | Feed completo 4 fontes (Geral Vocacional Institucional Trending) + Comments com moderação | ⏳ | Analytics |
+| W4-T1 | MensagensPage build-from-scratch (inbox + busca + filtros role + realtime) | ⏸ | depende de W3 |
+| W4-T2 | Feed completo 4 fontes (Geral Vocacional Institucional Trending) + Comments com moderação | ⏸ | depende de W3 |
 | W4-T3 | Dashboard Bento Grid + Top Bar Glass Header (Command+K) + Sidebar slim audit | ⏳ | B2B |
 | W4-T4 | Reputação Bento role-aware + Hub de Oportunidades 'Match Terminal' | ⏳ | Marketplace |
 | W4-T5 | Empty States aspiracionais + Threaded Insights (anotações Tina laterais no Relatório) | ⏳ | Polish |

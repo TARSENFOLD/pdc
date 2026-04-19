@@ -1,9 +1,9 @@
 import { useParams, Link } from 'react-router-dom';
-import { Wrench } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import { Tipo1Player } from './Tipo1Player';
 import { Tipo2Player } from './Tipo2Player';
+import { Tipo3Player } from './Tipo3Player';
 import { Spinner, Button } from '../../components/ui';
 
 export const SimulacaoPlayerPage = () => {
@@ -42,11 +42,11 @@ export const SimulacaoPlayerPage = () => {
       <div className="relative">
         {simulacao.tipo === 1 && <Tipo1Player simulacao={simulacao} />}
         {simulacao.tipo === 2 && <Tipo2Player simulacao={simulacao} />}
-        {(simulacao.tipo !== 1 && simulacao.tipo !== 2) && (
+        {simulacao.tipo === 3 && <Tipo3Player simulacao={simulacao} />}
+        {(simulacao.tipo < 1 || simulacao.tipo > 3) && (
           <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-            <Wrench size={40} aria-hidden={true} className="mb-4 text-slate-400 mx-auto block" />
-            <h3 className="text-lg font-bold text-slate-700">Simulador Tipo {String(simulacao.tipo)} em desenvolvimento</h3>
-            <p className="text-slate-500">Estamos a preparar esta experiência para ti.</p>
+            <h3 className="text-lg font-bold text-slate-700">Simulador Tipo {String(simulacao.tipo)} não suportado</h3>
+            <p className="text-slate-500">Aguardando implementação de novos modelos experimentais.</p>
             <Link to="/app/simulacoes" className="mt-6 block">
               <Button variant="secondary">Escolher outra simulação</Button>
             </Link>

@@ -1,6 +1,6 @@
 import { jwtVerify, createRemoteJWKSet } from 'jose';
 import { Redis } from '@upstash/redis';
-import { strapiPost, strapiGet } from '../strapi/strapi.client.js';
+import { strapiPostRaw, strapiGet } from '../strapi/strapi.client.js';
 import type { LtiLaunchClaims, LtiPlataforma, User } from '@pdc/shared';
 import { env } from '../../lib/env.js';
 
@@ -60,7 +60,7 @@ export const ltiService = {
     try {
       // Tentar criar utilizador LTI
       // O endpoint /users do Strapi não usa o wrapper { data: ... }
-      const res = await strapiPost<User>('/users', {
+      return await strapiPostRaw<User>('/users', {
         email,
         username,
         ltiSub: claims.sub,
@@ -68,16 +68,13 @@ export const ltiService = {
         role: 'aluno',
         confirmed: true,
       });
-      return res;
     } catch (err) {
       // Se falhar por email duplicado, buscar o existente
-      const users = await strapiGet<User[]>('/users', {
+      const res = await strapiGet<User>('/users', {
         'filters[email][$eq]': email,
       });
-      if (users.length > 0) {
-        const firstUser = users[0];
-        if (firstUser) return firstUser;
-      }
+      const firstUser = res.data[0];
+      if (firstUser) return firstUser;
       throw err;
     }
   },

@@ -49,7 +49,8 @@ export const socketService = {
       socket.on('mensagem:enviar', async (payload: { destinatarioId: string; conteudo: string }) => {
         if (!userId) return;
         try {
-          const res = await strapiPost<{ data: { id: number } }>('/mensagens', {
+          // Fix: Generic type already represents the item.
+          const res = await strapiPost<{ id: number }>('/mensagens', {
             remetenteId: userId,
             destinatarioId: payload.destinatarioId,
             conteudo: payload.conteudo,
@@ -83,5 +84,10 @@ export const socketService = {
   emitirMensagem(userId: string, mensagem: unknown): void {
     if (!io) return;
     io.to(`user:${userId}`).emit('nova_mensagem', mensagem);
+  },
+
+  emitirConquista(userId: string, conquista: { slug: string; titulo: string; descricao: string }): void {
+    if (!io) return;
+    io.to(`user:${userId}`).emit('conquista_desbloqueada', conquista);
   },
 };

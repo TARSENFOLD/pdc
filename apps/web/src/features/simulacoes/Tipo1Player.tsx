@@ -53,8 +53,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
     try {
       await simulacoesApi.concluirTentativa({
         tentativaId,
-        score,
-        metadata: { checklist, tipo: 1 }
+        metadata: { checklist, tipo: 1, scoreSelf: score }
       });
       void telemetriaService.registarEvento('simulacao.concluida', { 
         tentativaId, 

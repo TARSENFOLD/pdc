@@ -39,14 +39,9 @@ interface StrapiConversa {
   participant2Id: string;
   participant1?: StrapiParticipante;
   participant2?: StrapiParticipante;
-  ultimaMensagem?: { conteudo: string };
+  ultimaMensagem?: { id: string; conteudo: string };
   mensagens?: StrapiMensagem[];
   updatedAt: string;
-}
-
-interface StrapiListResponse<T> {
-  data: T[];
-  meta: { pagination: { total: number; pageCount: number } };
 }
 
 export const mensagensRoutes = new Hono<Vars>();
@@ -59,16 +54,17 @@ mensagensRoutes.get('/conversas', zValidator('query', mensagensQuerySchema), asy
   const { page, pageSize } = c.req.valid('query');
 
   try {
-    const data = await strapiGet<StrapiListResponse<StrapiConversa>>('/conversas', {
+    // Fix: StrapiListResponse is already applied by the client.
+    const res = await strapiGet<StrapiConversa>('/conversas', {
       'filters[$or][0][participant1Id][$eq]': userId,
       'filters[$or][1][participant2Id][$eq]': userId,
       'pagination[page]': page.toString(),
       'pagination[pageSize]': pageSize.toString(),
-      populate: 'ultimaMensagem,participant1,participant2',
+      populate: 'ultimaMensagem,participant1,participant2,mensagens',
       sort: 'updatedAt:desc',
     });
 
-    const conversas = data.data.map((conv: StrapiConversa) => {
+    const conversas = res.data.map((conv) => {
       const outroParticipante =
         conv.participant1Id === userId ? conv.participant2 : conv.participant1;
       return {
@@ -85,7 +81,7 @@ mensagensRoutes.get('/conversas', zValidator('query', mensagensQuerySchema), asy
 
     return c.json({
       data: conversas,
-      meta: data.meta,
+      meta: res.meta,
     });
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
@@ -105,7 +101,7 @@ mensagensRoutes.post(
         return c.json({ error: 'Não podes criar conversa contigo próprio' }, 400);
       }
 
-      const vinculoData = await strapiGet<{ data: Array<{ id: string }> }>('/vinculos', {
+      const vinculoData = await strapiGet<{ id: string }>('/vinculos', {
         'filters[$or][0][senderId][$eq]': userId,
         'filters[$or][0][receiverId][$eq]': destinatarioId,
         'filters[$or][0][estado][$eq]': 'connected',
@@ -119,7 +115,7 @@ mensagensRoutes.post(
         return c.json({ error: 'Só podes enviar mensagens a vínculos confirmados' }, 403);
       }
 
-      const conversaExistente = await strapiGet<StrapiListResponse<StrapiConversa>>('/conversas', {
+      const conversaExistente = await strapiGet<StrapiConversa>('/conversas', {
         'filters[$or][0][participant1Id][$eq]': userId,
         'filters[$or][0][participant2Id][$eq]': destinatarioId,
         'filters[$or][1][participant1Id][$eq]': destinatarioId,
@@ -131,13 +127,13 @@ mensagensRoutes.post(
         return c.json(conversaExistente.data[0], 200);
       }
 
-      const novaConversa = await strapiPost<StrapiConversa>('/conversas', {
+      const resNova = await strapiPost<StrapiConversa>('/conversas', {
         participant1Id: userId,
         participant2Id: destinatarioId,
         ultimaMensagem: null,
       });
 
-      return c.json(novaConversa, 201);
+      return c.json(resNova.data, 201);
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
@@ -151,19 +147,20 @@ mensagensRoutes.get('/conversas/:conversaId', zValidator('query', mensagensQuery
   const { page, pageSize } = c.req.valid('query');
 
   try {
-    const conversa = await strapiGet<{ data: StrapiConversa | null }>(`/conversas/${conversaId}`, {
+    const resConversa = await strapiGet<StrapiConversa>(`/conversas/${conversaId}`, {
       populate: 'participant1,participant2,mensagens',
     });
 
-    if (!conversa.data) {
+    const conversa = resConversa.data[0];
+    if (!conversa) {
       return c.json({ error: 'Conversa não encontrada' }, 404);
     }
 
-    if (conversa.data.participant1Id !== userId && conversa.data.participant2Id !== userId) {
+    if (conversa.participant1Id !== userId && conversa.participant2Id !== userId) {
       return c.json({ error: 'Acesso negado' }, 403);
     }
 
-    const mensagens = await strapiGet<StrapiListResponse<StrapiMensagem>>('/mensagens', {
+    const mensagens = await strapiGet<StrapiMensagem>('/mensagens', {
       'filters[conversaId][$eq]': conversaId,
       'pagination[page]': page.toString(),
       'pagination[pageSize]': pageSize.toString(),
@@ -196,21 +193,22 @@ mensagensRoutes.post(
     const { conteudo } = c.req.valid('json');
 
     try {
-      const conversa = await strapiGet<{ data: StrapiConversa | null }>(`/conversas/${conversaId}`, {
+      const resConversa = await strapiGet<StrapiConversa>(`/conversas/${conversaId}`, {
         populate: 'participant1,participant2',
       });
 
-      if (!conversa.data) {
+      const conversa = resConversa.data[0];
+      if (!conversa) {
         return c.json({ error: 'Conversa não encontrada' }, 404);
       }
 
-      if (conversa.data.participant1Id !== userId && conversa.data.participant2Id !== userId) {
+      if (conversa.participant1Id !== userId && conversa.participant2Id !== userId) {
         return c.json({ error: 'Acesso negado' }, 403);
       }
 
-      const destinatarioId = conversa.data.participant1Id === userId ? conversa.data.participant2Id : conversa.data.participant1Id;
+      const destinatarioId = conversa.participant1Id === userId ? conversa.participant2Id : conversa.participant1Id;
 
-      const vinculoCheck = await strapiGet<{ data: { id: number }[] }>('/vinculos', {
+      const vinculoCheck = await strapiGet<{ id: number }>('/vinculos', {
         'filters[$or][0][senderId][$eq]': userId,
         'filters[$or][0][receiverId][$eq]': destinatarioId,
         'filters[$or][0][estado][$eq]': 'connected',
@@ -224,7 +222,7 @@ mensagensRoutes.post(
         return c.json({ error: 'O vínculo foi removido. Não é possível enviar novas mensagens.' }, 403);
       }
 
-      const mensagem = await strapiPost<{ data: StrapiMensagem }>('/mensagens', {
+      const resMsg = await strapiPost<StrapiMensagem>('/mensagens', {
         conversaId,
         remetenteId: userId,
         conteudo,
@@ -232,13 +230,13 @@ mensagensRoutes.post(
       });
 
       await strapiPut<unknown>(`/conversas/${conversaId}`, {
-        ultimaMensagem: mensagem.data.id,
+        ultimaMensagem: resMsg.data.id,
         updatedAt: new Date().toISOString(),
       });
 
       try {
         socketService.emitirMensagem(destinatarioId, {
-          id: mensagem.data.id,
+          id: resMsg.data.id,
           conversaId,
           remetenteId: userId,
           conteudo,
@@ -246,7 +244,7 @@ mensagensRoutes.post(
         });
       } catch { /* ignore socket fail */ }
 
-      return c.json(mensagem, 201);
+      return c.json(resMsg.data, 201);
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }

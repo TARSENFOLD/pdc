@@ -42,19 +42,6 @@ export const SimulacaoMinhaSchema = z.object({
 
 export type SimulacaoMinha = z.infer<typeof SimulacaoMinhaSchema>;
 
-export const TentativaSchema = z.object({
-  id: z.string(),
-  simulacaoId: z.string(),
-  alunoId: z.string(),
-  eventId: z.string(),
-  dataInicio: z.string().datetime(),
-  dataFim: z.string().datetime().optional(),
-  score: z.number().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
-
-export type Tentativa = z.infer<typeof TentativaSchema>;
-
 export const IniciarTentativaPayloadSchema = z.object({
   simulacaoId: z.string(),
 });
@@ -71,7 +58,6 @@ export interface SimulacaoFilters {
 
 export const ConcluirTentativaPayloadSchema = z.object({
   tentativaId: z.string(),
-  score: z.number().optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 

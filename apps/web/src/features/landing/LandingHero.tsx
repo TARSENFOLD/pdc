@@ -25,16 +25,23 @@ export function LandingHero() {
       className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 pt-24 pb-16 text-center sm:px-6"
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
-      {/* Hero background image */}
+      {/* Imagem Hero nítida (camada mais profunda) */}
+      <div className="pointer-events-none absolute inset-0 z-0">
+        <img
+          src="/images/hero/hero-students.jpg"
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover"
+        />
+        {/* Sobreposição do tema para legibilidade */}
+        <div className="absolute inset-0 bg-background/60 dark:bg-background/70" />
+      </div>
+
+      {/* Neural Constellation (sobre a imagem) */}
       <NeuralConstellation choreography={choreography} />
       {/* Heritage Fractal Base Pattern Overlay (Adinkra inspired geometry) */}
       <div className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06] mix-blend-multiply dark:mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20Z' fill='%23C1440E'/%3E%3Cpath d='M0 0h10v10H0zM30 30h10v10H30z' fill='%23C1440E'/%3E%3C/svg%3E")`, backgroundSize: '40px 40px' }} />
 
-      {/* Glow cinemático isolado "Imagem Desfocada" no núcleo para leitura espetacular do texto, sem macular os limites do ecrã! */}
-      <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[60%] w-[80vw] h-[600px] bg-[radial-gradient(circle_at_center,rgba(240,239,231,1)_0%,transparent_60%)] dark:bg-[radial-gradient(circle_at_center,rgba(13,13,13,1)_0%,transparent_60%)] blur-3xl opacity-80" />
-      
-      {/* Suavização geral ultra-fina só para consolidar ruído fractal */}
-      <div className="pointer-events-none absolute inset-0 bg-background/5 backdrop-blur-[1px]" />
 
       <motion.div {...stagger(0)} className="relative z-10 mb-8">
         <div className="inline-flex items-center gap-3 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 py-1.5 px-4 text-xs font-semibold tracking-wide text-text-secondary dark:text-white/80 backdrop-blur-lg shadow-md dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.6)]">

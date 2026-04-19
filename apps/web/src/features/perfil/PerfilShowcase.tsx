@@ -30,9 +30,19 @@ export function PerfilShowcase() {
             animate={{ scale: 1, opacity: 1 }}
             className="relative"
           >
-            <div className="h-32 w-32 md:h-40 md:w-40 rounded-full border-4 border-accent/20 p-1 shadow-2xl shadow-accent/10">
-              <Avatar src={perfil.avatarUrl || undefined} fallback={initials} className="h-full w-full rounded-full object-cover text-4xl" />
+            <div className="h-32 w-32 md:h-40 md:w-40 rounded-full p-1 shadow-2xl shadow-accent/10">
+              <Avatar 
+                src={perfil.avatarUrl || undefined} 
+                fallback={initials} 
+                tier={perfil.reputacaoTier}
+                className="h-full w-full rounded-full object-cover text-4xl border-4" 
+              />
             </div>
+            {perfil.reputacaoTier && (
+              <div className="absolute -bottom-2 -left-2 bg-accent text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-xl uppercase tracking-[0.2em] border-4 border-surface-alt animate-in zoom-in duration-700">
+                {perfil.reputacaoTier}
+              </div>
+            )}
             <div className="absolute -bottom-2 -right-2 h-10 w-10 rounded-2xl bg-success border-4 border-surface-alt flex items-center justify-center text-white shadow-lg">
               <ShieldCheck size={20} />
             </div>

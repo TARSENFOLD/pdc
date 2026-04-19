@@ -187,7 +187,8 @@ export default function LoginPage() {
       ease: "power4.in",
       delay: 0.5,
       onComplete: () => {
-        navigate(from, { replace: true });
+        // Redirecionamento Unificado para o Orquestrador /app
+        navigate('/app', { replace: true });
       }
     });
   });

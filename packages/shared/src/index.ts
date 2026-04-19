@@ -1,5 +1,7 @@
 export * from './user.js';
 export * from './telemetry-token.js';
+export * from './tentativa.js';
+export * from './feed.js';
 export * from './registry/features.js';
 export * from './bootstrap.js';
 export * from './cursos.js';
@@ -9,6 +11,7 @@ export * from './telemetry.js';
 export * from './behavior-patterns.js';
 export * from './core.js';
 export * from './heuristics.js';
+export * from './reputation.js';
 export * from './sanity/index.js';
 
 // Schemas Modulares

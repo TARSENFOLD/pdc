@@ -89,20 +89,6 @@ export interface ExplorarResultado extends Record<string, any> {
 
 // ─── Feed ────────────────────────────────────────────────────────────────────
 
-export const FeedItemTipoSchema = z.enum([
-  'conquista',
-  'curso_concluido',
-  'simulacao_concluida',
-  'projeto_publicado',
-  'vínculo_novo',
-  'artigo_novo',
-  'curso',
-  'simulacao',
-  'experiencia',
-  'projeto',
-]);
-export type FeedItemTipo = z.infer<typeof FeedItemTipoSchema>;
-
 export const FeedWeightsSchema = z.object({
   engagement: z.number(),
   completion: z.number(),
@@ -116,14 +102,6 @@ export type FeedWeights = z.infer<typeof FeedWeightsSchema>;
 
 export const UpdateFeedWeightsPayloadSchema = FeedWeightsSchema;
 export type UpdateFeedWeightsPayload = z.infer<typeof UpdateFeedWeightsPayloadSchema>;
-
-export interface FeedResponse {
-  data: FeedItem[];
-  meta: {
-    total: number;
-    hasMore: boolean;
-  };
-}
 
 // ─── Registo Payloads ──────────────────────────────────────────────────────────
 
@@ -212,17 +190,3 @@ export interface Comment extends Record<string, any> {
   createdAt: string;
 }
 
-export interface FeedItem extends Record<string, any> {
-  id: string;
-  tipo: FeedItemTipo;
-  userId: string;
-  timestamp: string;
-  payload: Record<string, any>;
-  titulo?: string | undefined;
-  corpo?: string | undefined;
-  descricao?: string | undefined;
-  area?: string | undefined;
-  autorNome?: string | undefined;
-  slug?: string | undefined;
-  stats?: Record<string, any> | undefined;
-}

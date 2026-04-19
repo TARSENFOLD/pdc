@@ -29,6 +29,7 @@ export type InstituicaoStats = z.infer<typeof InstituicaoStatsSchema>;
 
 export const ConquistaSchema = z.object({
   id: z.string(),
+  slug: z.string(),
   titulo: z.string(),
   descricao: z.string(),
   icone: z.string().optional(),
