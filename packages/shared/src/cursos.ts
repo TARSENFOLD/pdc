@@ -30,8 +30,14 @@ export const CursoSchema = z.object({
   descricao: z.string(),
   capaUrl: z.string().url().optional(),
   autorId: z.string(),
-  modulos: z.array(ModuloSchema).optional(),
   totalHoras: z.number(),
+  // Regras de Match Soberano
+  regrasAcesso: z.object({
+    minFluidez: z.number().min(0).max(10).optional(),
+    minResiliencia: z.number().min(0).max(10).optional(),
+    minFoco: z.number().min(0).max(10).optional(),
+    areasCompativeis: z.array(AreaVocacionalSchema).optional(),
+  }).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -42,10 +48,25 @@ export const CriarCursoPayloadSchema = z.object({
   titulo: z.string().min(3).max(120),
   descricao: z.string().min(10).max(2000),
   area: AreaVocacionalSchema,
-  nivel: z.string().min(2).max(100),
-  capaUrl: z.string().url().optional(),
+  nivel: z.enum(['basico', 'medio', 'avancado']),
+  thumbnailUrl: z.string().url().optional(),
   preco: z.number().min(0).optional(),
-  visibilidade: z.enum(['publico', 'privado']).optional(),
+  visibilidade: z.enum(['publico', 'privado', 'institucional']).optional(),
+  regrasAcesso: z.object({
+    minFluidez: z.number().min(0).max(10).optional(),
+    minResiliencia: z.number().min(0).max(10).optional(),
+  }).optional(),
+  // Estrutura Recursiva para Camada 3
+  modulos: z.array(z.object({
+    titulo: z.string(),
+    ordem: z.number(),
+    itens: z.array(z.object({
+      titulo: z.string(),
+      tipo: z.enum(['video', 'pdf', 'texto', 'quiz', 'tarefa', 'iframe']),
+      conteudo: z.string().optional(),
+      ordem: z.number(),
+    }))
+  })).optional(),
 });
 
 export type CriarCursoPayload = z.infer<typeof CriarCursoPayloadSchema>;

@@ -6,15 +6,16 @@ import { useGSAP } from '@gsap/react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { authApi } from '@/lib/api/auth';
 import { useTelemetry } from '@/hooks/useTelemetry';
+import { AsymmetricButton } from '@/components/ui';
 
 gsap.registerPlugin(useGSAP);
 
-// Configuração dos Blocos (Formas e Cores Low-Poly)
+// Configuração dos Blocos (Formas e Cores Low-Poly) - Epic 05
 const blockTypes = [
-  { shape: 'cube', color: 'var(--color-accent)' }, // Laranja ou Azul consoante o tema
-  { shape: 'pyramid', color: 'var(--color-accent-trust)' }, // Azul Claro
-  { shape: 'sphere', color: '#a855f7' }, // Purple
-  { shape: 'torus', color: '#10b981' }  // Green
+  { shape: 'cube', color: 'var(--accent-terracotta)' },
+  { shape: 'pyramid', color: 'var(--institutional-cobalt)' },
+  { shape: 'sphere', color: '#a855f7' }, // Purple elite
+  { shape: 'torus', color: 'var(--accent-success)' }
 ];
 
 export default function LoginPage() {
@@ -23,10 +24,9 @@ export default function LoginPage() {
   const formRef = useRef<HTMLFormElement>(null);
   const blocksRefs = useRef<HTMLDivElement[]>([]);
   
-  const blockCount = 15; // Número de blocos a coreografar
+  const blockCount = 15;
   const [loginStatus, setLoginStatus] = useState<'idle' | 'typing' | 'success' | 'failure'>('idle');
 
-  // Real Auth State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -41,9 +41,7 @@ export default function LoginPage() {
 
   const { contextSafe } = useGSAP({ scope: leftPaneRef });
 
-  // 1. Estado: Idle/Entrada (Caos de Potencial)
   useGSAP(() => {
-    // Animação de Entrada
     gsap.fromTo(blocksRefs.current, 
       { 
         x: "-=300", 
@@ -65,7 +63,6 @@ export default function LoginPage() {
       }
     );
 
-    // Animação de flutuação magnética
     function startIdleAnimation() {
       if (loginStatus !== 'idle') return;
       blocksRefs.current.forEach(block => {
@@ -82,17 +79,14 @@ export default function LoginPage() {
     }
   });
 
-  // 2. Estado: Digitar (Empilhamento e Ginga Instável)
   const handleTypingFocus = contextSafe(() => {
     setLoginStatus('typing');
     gsap.killTweensOf(blocksRefs.current);
 
-    // Coreografia de Empilhamento
     blocksRefs.current.forEach((block, i) => {
-      const yPos = 120 - (i * 18); // Empilha no centro vertical (25%)
+      const yPos = 120 - (i * 18);
       const rotation = i % 2 === 0 ? 5 : -5;
 
-      // Move para a pilha central
       gsap.to(block, {
         x: 0,
         y: yPos,
@@ -104,13 +98,12 @@ export default function LoginPage() {
         onComplete: startJiggle
       });
 
-      // Começa a ginga de instabilidade
       function startJiggle() {
         if (loginStatus !== 'typing') return;
         gsap.to(block, {
           rotate: i % 2 === 0 ? -10 : 10,
           y: "+=3",
-          duration: 0.1 + (i * 0.01), // Frequência varia para parecer caótico
+          duration: 0.1 + (i * 0.01),
           repeat: -1,
           yoyo: true,
           ease: "power1.inOut"
@@ -119,12 +112,10 @@ export default function LoginPage() {
     });
   });
 
-  // Resetar ao sair dos campos
   const handleInputBlur = contextSafe(() => {
     if (loginStatus === 'success' || loginStatus === 'failure') return;
     setLoginStatus('idle');
     gsap.killTweensOf(blocksRefs.current);
-    // Volta a flutuar aleatoriamente
     gsap.to(blocksRefs.current, {
       x: () => gsap.utils.random(-50, 50),
       y: () => gsap.utils.random(-150, 150),
@@ -139,21 +130,17 @@ export default function LoginPage() {
 
   const simulateFailure = contextSafe(() => {
     setLoginStatus('failure');
-    // Desmoronamento Violento
     gsap.to(blocksRefs.current, {
       y: "+=300",
       x: () => gsap.utils.random(-200, 200),
       rotate: () => gsap.utils.random(-180, 180),
       scale: 0.6,
-      backgroundColor: "#404040", // Cor de metal/chumbo (desativado)
+      backgroundColor: "#404040",
       duration: 0.8,
       stagger: 0.02,
       ease: "power4.in",
       onComplete: () => {
-        // Feedback visual de erro
         gsap.fromTo(leftPaneRef.current, { x: -5 }, { x: 5, duration: 0.05, repeat: 10, yoyo: true });
-        
-        // Retoma o estado se o erro persistir apos a animacao
         setTimeout(() => {
             if (document.activeElement?.tagName === 'INPUT') {
                 handleTypingFocus();
@@ -169,9 +156,8 @@ export default function LoginPage() {
     setLoginStatus('success');
     gsap.to(formRef.current, { opacity: 0, x: 20, duration: 0.5 });
     
-    // Solidificação e Metamorfose
     gsap.to(blocksRefs.current, {
-      backgroundColor: "var(--color-accent, #FF5C00)", // Cor da marca
+      backgroundColor: "var(--accent-terracotta)",
       rotate: 0,
       scale: 1.5,
       opacity: 1,
@@ -179,15 +165,13 @@ export default function LoginPage() {
       ease: "back.out(3)"
     });
 
-    // Ocultar e expandir para Dashboard
     gsap.to(blocksRefs.current, {
-      y: -500, // Dispara para cima
+      y: -500,
       scale: 0.5,
       duration: 0.8,
       ease: "power4.in",
       delay: 0.5,
       onComplete: () => {
-        // Redirecionamento Unificado para o Orquestrador /app
         navigate('/app', { replace: true });
       }
     });
@@ -216,14 +200,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-background overflow-hidden font-sans">
+    <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-canvas overflow-hidden font-sans">
       
-      {/* LADO ESQUERDO: A Animação (50%) */}
+      {/* LADO ESQUERDO: A Animação */}
       <div 
         ref={leftPaneRef}
-        className="relative flex items-center justify-center bg-surface-alt border-r border-border [perspective:1000px] hidden lg:flex"
+        className="relative flex items-center justify-center bg-recessed border-r border-ink-tertiary/10 [perspective:1000px] hidden lg:flex"
       >
-        {/* Renderização dos Blocos Geométricos Low-Poly */}
         {Array.from({ length: blockCount }).map((_, i) => {
           const config = blockTypes[i % blockTypes.length]!;
           return (
@@ -240,19 +223,18 @@ export default function LoginPage() {
           );
         })}
         
-        {/* Detalhes Estéticos */}
-        <div className="absolute bottom-10 left-10 text-text-muted text-xs font-mono tracking-tighter dark:mix-blend-screen">
+        <div className="absolute bottom-10 left-10 text-ink-tertiary text-xs font-mono tracking-tighter">
           SYSTEM: ACTIVE <br />
           MORPHOLOGY: MULTI-BODY_STANCE
         </div>
       </div>
 
-      {/* LADO DIREITO: O Login (50%) */}
+      {/* LADO DIREITO: O Login */}
       <div className="flex items-center justify-center p-8 lg:p-12">
         <div className="w-full max-w-sm">
           <header className="mb-12">
-            <h1 className="text-4xl font-black text-text-primary tracking-tight mb-2">Login.</h1>
-            <p className="text-text-secondary font-medium">Bem-vindo de volta ao teu futuro.</p>
+            <h1 className="text-5xl font-black text-ink-primary tracking-tight mb-2 font-display">Login.</h1>
+            <p className="text-ink-secondary font-medium">Bem-vindo de volta ao teu futuro.</p>
           </header>
 
           {error && (
@@ -263,7 +245,7 @@ export default function LoginPage() {
 
           <form ref={formRef} onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
             <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Identificação Académica</label>
+              <label className="block text-xs font-bold text-ink-tertiary uppercase tracking-widest mb-2">Identificação Académica</label>
               <input 
                 type="email" 
                 required
@@ -272,16 +254,12 @@ export default function LoginPage() {
                 onFocus={handleTypingFocus}
                 onBlur={handleInputBlur}
                 placeholder="nome@exemplo.com"
-                autoComplete="email"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                className="w-full p-4 bg-surface-raised border border-border rounded-xl text-base text-text-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all placeholder:text-text-muted"
+                className="w-full p-4 bg-recessed border border-ink-tertiary/10 rounded-xl text-base text-ink-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all placeholder:text-ink-tertiary touch-target"
               />
             </div>
             
             <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-widest mb-2">Chave de Acesso</label>
+              <label className="block text-xs font-bold text-ink-tertiary uppercase tracking-widest mb-2">Chave de Acesso</label>
               <input 
                 type="password" 
                 required
@@ -290,42 +268,41 @@ export default function LoginPage() {
                 onFocus={handleTypingFocus}
                 onBlur={handleInputBlur}
                 placeholder="••••••••"
-                autoComplete="current-password"
-                className="w-full p-4 bg-surface-raised border border-border rounded-xl text-base text-text-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all placeholder:text-text-muted"
+                className="w-full p-4 bg-recessed border border-ink-tertiary/10 rounded-xl text-base text-ink-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all placeholder:text-ink-tertiary touch-target"
               />
             </div>
 
-            <button 
+            <AsymmetricButton 
               type="submit"
               disabled={isLoading}
-              className="w-full p-4 bg-text-primary text-background font-black uppercase tracking-widest rounded-xl hover:bg-accent hover:text-white transition-colors duration-300 transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-14 bg-ink-primary text-canvas font-black uppercase tracking-widest text-[11px] hover:bg-accent hover:text-ink-on-accent transition-all shadow-xl"
             >
               {isLoading ? 'A Processar...' : 'Aceder Plataforma'}
-            </button>
+            </AsymmetricButton>
 
             <div className="mt-8">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border"></div>
+                  <div className="w-full border-t border-ink-tertiary/10"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="bg-background px-4 text-text-muted font-mono tracking-widest text-xs uppercase">ou</span>
+                  <span className="bg-canvas px-4 text-ink-tertiary font-mono tracking-widest text-xs uppercase">ou</span>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => { authApi.loginWithGoogle(); }}
-                className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface-raised p-4 font-bold text-text-primary transition-colors hover:bg-border active:scale-[0.98]"
+                className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-ink-tertiary/10 bg-recessed p-4 font-bold text-ink-primary transition-colors hover:bg-ink-tertiary/10 active:scale-[0.98] touch-target"
               >
                 Continuar com Google
               </button>
             </div>
           </form>
 
-          <footer className="mt-12 pt-8 border-t border-border flex flex-col gap-4 sm:flex-row sm:justify-between text-sm text-text-muted font-medium">
-            <Link to="/forgot-password" replace className="hover:text-text-primary transition-colors">Esqueci-me da chave</Link>
-            <Link to="/criar-conta" replace className="hover:text-text-primary transition-colors">Criar conta académica</Link>
+          <footer className="mt-12 pt-8 border-t border-ink-tertiary/10 flex flex-col gap-4 sm:flex-row sm:justify-between text-sm text-ink-tertiary font-medium">
+            <Link to="/forgot-password" replace className="hover:text-ink-primary transition-colors">Esqueci-me da chave</Link>
+            <Link to="/criar-conta" replace className="hover:text-ink-primary transition-colors">Criar conta académica</Link>
           </footer>
         </div>
       </div>

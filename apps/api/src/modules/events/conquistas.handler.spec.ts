@@ -57,6 +57,8 @@ describe('Conquistas Handler', () => {
       meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } }
     } as StrapiListResponse<unknown>);
 
+    vi.mocked(conquistaEngine.verificarConquistas).mockResolvedValueOnce([]);
+
     await conquistasHandler(cursoEvent);
 
     expect(conquistaEngine.verificarConquistas).toHaveBeenCalledWith(

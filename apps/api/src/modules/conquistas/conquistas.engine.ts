@@ -1,6 +1,7 @@
 import pino from 'pino';
 import { strapiGet, strapiPost } from '../strapi/strapi.client.js';
 import { featureFlagService } from '../feature-flags/feature-flags.service.js';
+import { DomainEventName } from '../events/types.js';
 
 const log = pino({ name: 'conquistas-engine' });
 
@@ -31,7 +32,7 @@ async function countTelemetria(userId: string, tipo: string): Promise<number> {
       'filters[user][$eq]': userId,
       'filters[tipo][$eq]': tipo,
     });
-    return res.meta?.pagination?.total ?? 0;
+    return res.meta.pagination.total;
   } catch {
     return 0;
   }
@@ -56,6 +57,24 @@ function thresholdCondition(
     return count >= threshold;
   };
 }
+
+// ── Strategy A: DomainEventName → trigger string mapping (ADR-008.bis) ─────
+// TENTATIVA_CONCLUIDA is the only enum value that diverges from its trigger.
+// All other enum values already match the telemetry trigger strings 1:1.
+export const EVENT_TO_TRIGGER_MAP: Readonly<Record<string, string>> = {
+  [DomainEventName.TENTATIVA_CONCLUIDA]: 'simulacao.concluida',
+  [DomainEventName.CURSO_CONCLUIDO]:     DomainEventName.CURSO_CONCLUIDO,
+  [DomainEventName.VINCULO_CONNECTED]:   DomainEventName.VINCULO_CONNECTED,
+  [DomainEventName.LOGIN]:               DomainEventName.LOGIN,
+  [DomainEventName.MENTORIA_ACEITE]:     DomainEventName.MENTORIA_ACEITE,
+  [DomainEventName.EXPERIENCIA_PUBLICADA]: DomainEventName.EXPERIENCIA_PUBLICADA,
+  [DomainEventName.RATING_CRIADO]:       DomainEventName.RATING_CRIADO,
+  [DomainEventName.PERFIL_ATUALIZADO]:   DomainEventName.PERFIL_ATUALIZADO,
+  [DomainEventName.SIMULACAO_CRIADA]:    DomainEventName.SIMULACAO_CRIADA,
+  [DomainEventName.CURSO_PUBLICADO]:     DomainEventName.CURSO_PUBLICADO,
+  [DomainEventName.CURSO_INSCRICAO]:     DomainEventName.CURSO_INSCRICAO,
+  [DomainEventName.COMENTARIO_CRIADO]:   DomainEventName.COMENTARIO_CRIADO,
+} as const;
 
 // ── Declarative rules (10+) ─────────────────────────────────────────────────
 
@@ -165,7 +184,7 @@ async function isAlreadyUnlocked(userId: string, slug: string): Promise<boolean>
       'filters[userId][$eq]': userId,
       'filters[slug][$eq]': slug,
     });
-    return (res.meta?.pagination?.total ?? 0) > 0;
+    return res.meta.pagination.total > 0;
   } catch {
     return false;
   }
@@ -208,7 +227,7 @@ async function unlock(userId: string, rule: ConquistaRule): Promise<void> {
   );
 
   // 2. Also create conquista-utilizador record (content-type existente)
-  const conquistaId = conquistaRes.data?.id;
+  const conquistaId = conquistaRes.data.id;
   const perfilId = await getPerfilId(userId);
 
   if (conquistaId && perfilId) {
@@ -242,7 +261,10 @@ export async function verificarConquistas(
     return [];
   }
 
-  const matchingRules = REGRAS.filter((r) => r.trigger === evento);
+  // Strategy A: resolve the canonical trigger string from the incoming event name.
+  // This fixes the TENTATIVA_CONCLUIDA → 'simulacao.concluida' mismatch (T-FIX-3).
+  const trigger = EVENT_TO_TRIGGER_MAP[evento] ?? evento;
+  const matchingRules = REGRAS.filter((r) => r.trigger === trigger);
   if (matchingRules.length === 0) return [];
 
   const unlocked: UnlockedConquista[] = [];

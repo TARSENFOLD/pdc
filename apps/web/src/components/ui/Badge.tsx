@@ -23,19 +23,19 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
   ({ className, variant = 'default', ...props }, ref) => {
     const variants: Record<BadgeVariant, string> = {
-      default: 'bg-surface-raised text-text-primary border-border',
-      outline: 'bg-transparent text-text-secondary border-border',
-      success: 'bg-success/10 text-success border-success/20',
-      error: 'bg-error/10 text-error border-error/20',
-      warning: 'bg-amber/10 text-amber border-amber/20',
-      info: 'bg-info/10 text-info border-info/20',
-      admin: 'bg-role-admin/10 text-role-admin border-role-admin/20',
-      mentor: 'bg-role-mentor/10 text-role-mentor border-role-mentor/20',
-      aluno: 'bg-role-aluno/10 text-role-aluno border-role-aluno/20',
-      instituicao: 'bg-role-instituicao/10 text-role-instituicao border-role-instituicao/20',
-      moderador: 'bg-role-moderador/10 text-role-moderador border-role-moderador/20',
-      comite_cientifico: 'bg-info/10 text-info border-info/20',
-      super_admin: 'bg-error/10 text-error border-error/20',
+      default: 'bg-recessed text-ink-primary border-ink-tertiary/20',
+      outline: 'bg-transparent text-ink-secondary border-ink-tertiary/20',
+      success: 'bg-green-500/10 text-green-600 border-green-500/20',
+      error: 'bg-red-500/10 text-red-600 border-red-500/20',
+      warning: 'bg-accent/10 text-accent border-accent/20',
+      info: 'bg-cobalt/10 text-cobalt border-cobalt/20',
+      admin: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+      mentor: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
+      aluno: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+      instituicao: 'bg-pink-500/10 text-pink-600 border-pink-500/20',
+      moderador: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
+      comite_cientifico: 'bg-cobalt/10 text-cobalt border-cobalt/20',
+      super_admin: 'bg-red-500/10 text-red-600 border-red-500/20',
     };
 
     return (

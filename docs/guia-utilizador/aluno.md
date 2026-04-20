@@ -1,155 +1,45 @@
-# Guia do Aluno
+# Guia do Estudante (PDC v2)
 
-Bem-vindo ao PDC v2. Este guia explica como tirar partido de todas as funcionalidades disponíveis para alunos.
+Bem-vindo ao PDC v2 — a tua infraestrutura de decisão educacional. Este guia ajuda-te a navegar na plataforma para transformares a incerteza vocacional em escolhas de carreira precisas.
 
-## Primeiros Passos
+## 1. O que é o PDC?
+O PDC não é um site de cursos. É um **GPS de performance**. Através de simulações reais, o sistema mede o teu comportamento (não as tuas opiniões) para te dizer onde tens mais aptidão e fluidez.
 
-### 1. Criar conta
+## 2. Primeiros Passos
 
-1. Acede a `usepdc.com/criar-conta`
-2. Escolhe o tipo de conta: **Estudante**, Mentor ou Instituição
-3. Para estudante: preenche nome, email, senha, área de interesse e nível de ensino
-4. Após confirmação, és redirecionado para o teu dashboard
+### O Micro-Desafio Vocacional
+Na página inicial, podes começar com o **Micro-Desafio**. São perguntas rápidas que iniciam o mapeamento da tua área de interesse.
+- **Dica:** Sê honesto. O sistema deteta padrões de hesitação e fluidez para começar a desenhar o teu perfil.
 
-### 2. Explorar a Plataforma
+### Criar Conta
+1. Regista-te como **Estudante**.
+2. O teu email e telefone serão verificados via OTP (Segurança 2FA).
+3. Após o login, serás levado para o teu **Dashboard Bento**.
 
-Antes de criar conta, podes explorar a oferta pública:
+## 3. O Coração: Simulações (O Fazer)
+As simulações medem a tua **Fluidez Cognitiva ($\phi$)** e **Resiliência ao Erro ($R$)**.
+- **Tipo 1:** Vídeo guiado + Checklist.
+- **Tipo 2:** Laboratório prático com tomada de decisão.
+- **Tipo 3:** Desafio técnico interativo com HUD em tempo real.
 
-- **Explorar** (`/explorar`) — pesquisa global com filtros por tipo e área
-- **Cursos** (`/cursos`) — catálogo de cursos com filtros por área, nível e gratuidade
-- **Simulações** (`/simulacoes`) — lista de simulações por área, tipo e nível
-- **Mentores** (`/mentores`) — lista de mentores disponíveis, filtrável por área
-- **Instituições** (`/instituicoes`) — instituições registadas, filtrável por tipo e região
-- **Perfis** (`/perfil/:id`) — perfil público de qualquer utilizador
+**Anti-Fraude:** Não adianta tentar "adivinhar" a resposta certa. O sistema avalia o *como* decides, não apenas o *quê*.
 
-### 3. Descoberta Social
+## 4. Perfil Vocacional e Tina
+No teu dashboard, a **Tina (nossa IA)** apresentará "Threaded Insights" — notas laterais que interpretam os teus dados comportamentais.
+- O teu Perfil Vocacional é **privado**. Apenas tu e os mentores com quem te vinculares podem ver os detalhes técnicos.
 
-Na página **Explorar**, encontras uma secção "Pessoas que podes seguir" com sugestões de mentores e colegas. Podes:
+## 5. Experiências (O Sentir)
+As **Experiências** são publicadas por instituições e são **sempre gratuitas**. Servem para veres "por dentro" como é o campus, quem são os professores e qual a realidade do mercado para esse curso.
 
-- Navegar perfis públicos de mentores e ver a sua especialidade
-- Ver projectos públicos — alguns marcados como **Aberto para colaboração**
-- Usar os CTAs nos cards (Conectar, Ver curso, Experimentar) para navegar directamente
+## 6. Projetos (O Teu Ativo)
+Cria **Projetos** para mostrares o teu talento.
+- **Camada Pública (Abstract):** Todos vêm o teu "Pitch".
+- **Camada Privada (Core):** Só quem tu autorizares (mentores ou parceiros) vê o teu código ou metodologia secreta.
 
-### 4. Completar o perfil
-
-Antes de usares as funcionalidades principais, completa o teu perfil:
-
-- **Foto de perfil** — ajuda mentores e instituições a identificar-te
-- **Bio** — resume os teus interesses e objetivos
-- **Área de interesse** — usada para recomendar cursos e experiências relevantes
-
-Acede em: **Dashboard → Perfil → Editar**
-
----
-
-## Simulações
-
-As simulações são o coração do PDC. Permitem-te experimentar profissões e avaliar a tua aptidão antes de te comprometeres com uma matrícula.
-
-### Tipos de Simulação
-
-| Tipo | Descrição |
-|------|-----------|
-| Tipo 1 | Questionário de triagem vocacional (15–20 min) |
-| Tipo 2 | Cenário prático com tomada de decisão (30–45 min) |
-| Tipo 3 | Desafio técnico com avaliação de competências (45–90 min) |
-
-### Como fazer uma simulação
-
-1. Vai a **Simulações** na barra lateral
-2. Escolhe uma simulação pela área temática ou nível
-3. Lê as instruções com atenção — o tempo é cronometrado
-4. Responde a todas as questões sem interrupção
-5. No final, o teu **Score** é calculado automaticamente
-
-> **Nota:** Cada submissão é registada com um `eventId` único. Se perderes a ligação durante uma simulação, podes retomar sem perder progresso.
-
-### Ver o teu Score
-
-Após cada simulação completa, tens acesso imediato ao teu resultado. Os scores contribuem para o teu **Perfil Vocacional**.
+## 7. Vínculos e Mentoria
+- **Vínculo:** Estabelece uma ligação formal com um Mentor ou Instituição.
+- **Shadow a Pro:** Um programa especial onde podes acompanhar um profissional por um dia.
+- **EduVisita:** Agenda visitas guiadas aos teus campus de eleição.
 
 ---
-
-## Perfil Vocacional
-
-O Perfil Vocacional é gerado automaticamente com base nas tuas simulações completadas. Combina os teus scores em diferentes áreas para recomendar cursos e carreiras alinhadas com as tuas aptidões.
-
-### Como interpretar o relatório
-
-- **Pontos fortes:** Áreas com score ≥ 70% — considera investir aqui
-- **A desenvolver:** Áreas entre 40–69% — melhoráveis com prática dirigida
-- **Explorar:** Áreas abaixo de 40% — podem indicar incompatibilidade ou falta de exposição
-
-Acede em: **Dashboard → Perfil Vocacional**
-
----
-
-## Cursos
-
-Os cursos são estruturados em módulos e itens. Podes inscrever-te gratuitamente.
-
-### Inscrição
-
-1. Vai a **Cursos** e usa a barra de pesquisa para encontrar o que procuras
-2. Abre o curso e clica em **Inscrever-se**
-3. O progresso é guardado automaticamente ao concluir cada item
-
-### Acompanhar progresso
-
-No detalhe de cada curso, o separador **Progresso** mostra:
-- Itens concluídos (marcados a verde)
-- Percentagem global de conclusão
-- Items pendentes
-
----
-
-## Projetos
-
-Os alunos podem publicar projetos desenvolvidos durante os cursos ou de forma independente.
-
-### Criar um projeto
-
-1. Vai a **Projetos → Novo Projeto**
-2. Preenche título, descrição e tags relevantes
-3. Adiciona opcionalmente: URL do repositório, link de demo, imagem de capa
-4. Clica em **Criar Projeto** — o projeto fica imediatamente público
-
-### Editar ou eliminar
-
-- A edição está disponível no detalhe do projeto (botão **Editar**)
-- A eliminação requer confirmação e é irreversível
-
----
-
-## Mentorias
-
-As mentorias permitem-te receber orientação personalizada de mentores experientes.
-
-### Solicitar uma mentoria
-
-1. Vai a **Mentorias → Solicitar Mentoria**
-2. Seleciona um mentor da lista
-3. Escreve uma mensagem explicando o que procuras (10–500 caracteres)
-4. Envia o pedido — o mentor recebe uma notificação
-
-### Estados do pedido
-
-| Estado | Significado |
-|--------|-------------|
-| Pendente | Aguarda resposta do mentor |
-| Aceite | Mentor aceitou — podes iniciar a comunicação |
-| Recusada | Mentor não está disponível — podes tentar outro |
-| Concluída | Sessão terminada com sucesso |
-
----
-
-## Ecossistema Vivo (Narrativa)
-
-O PDC não é apenas uma plataforma estática; é um **ecossistema vivo** habitado por milhares de estudantes, centenas de mentores e dezenas de instituições angolanas de renome.
-
-Ao navegares pelo **Feed**, verás a atividade real destas personas — novas conquistas, projetos publicados e discussões vibrantes. Este ambiente reflete o mercado de trabalho real, onde a reputação e o networking são tão importantes quanto o conhecimento técnico.
-
-Podes interagir com este ecossistema:
-- **Seguindo** colegas e mentores com interesses similares.
-- **Participando** em fóruns de discussão.
-- **Partilhando** a tua evolução para ganhar visibilidade perante as instituições.
+*O PDC é o teu GPS para o topo da montanha que escolheres.*

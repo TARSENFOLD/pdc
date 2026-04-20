@@ -45,5 +45,32 @@ export const heuristicsEngine = {
     const stability = (totalTimeMs - interruptionTimeMs) / totalTimeMs;
     const analysis = analyzeFocus(stability);
     return analysis.score;
+  },
+
+  /**
+   * Calcula a Hesitação Mecânica (Entropia)
+   * Baseado na trajetória do rato vs deslocamento directo.
+   */
+  calculateHesitation(events: any[]): number {
+    const bioEvents = events.filter(e => e.tipo === 'simulacao.biomechanics');
+    if (bioEvents.length < 2) return 0;
+
+    let erraticMovements = 0;
+    for (let i = 1; i < bioEvents.length; i++) {
+      const prev = bioEvents[i - 1].payload;
+      const curr = bioEvents[i].payload;
+      const dt = new Date(bioEvents[i].timestamp).getTime() - new Date(bioEvents[i - 1].timestamp).getTime();
+      const dx = curr.x - prev.x;
+      const dy = curr.y - prev.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Entropia: movimento pequeno em tempo longo (hesitação mecânica/vibrante)
+      if (dist < 5 && dt > 500) {
+        erraticMovements++;
+      }
+    }
+
+    // Normaliza: 5 movimentos erráticos = score 10 de hesitação
+    return Math.min(10, erraticMovements * 2);
   }
 };

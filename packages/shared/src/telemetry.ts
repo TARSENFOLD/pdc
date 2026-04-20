@@ -55,7 +55,11 @@ export const TelemetriaTipoSchema = z.enum([
   'session.started',
   'simulacao.tipo3.iniciada',
   'simulacao.tipo3.acao',
-  'simulacao.tipo3.concluida'
+  'simulacao.tipo3.concluida',
+  // Novas Tipagens Mandatárias (Biomecânica e Foco)
+  'simulacao.biomechanics',
+  'focus_lost',
+  'focus_gained'
 ]);
 export type TelemetriaTipo = z.infer<typeof TelemetriaTipoSchema>;
 
@@ -64,7 +68,7 @@ export const TelemetriaEventoSchema = z.object({
   tipo: TelemetriaTipoSchema,
   payload: z.record(z.unknown()).optional().default({}),
   timestamp: z.string(),
-  clientTimestamp: z.number().optional(), // Precisão para algoritmo Phi
+  clientTimestamp: z.number().optional(), 
   sessionId: z.string().optional(),
   correlationId: z.string().optional(),
   url: z.string().optional(),

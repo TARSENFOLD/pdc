@@ -20,6 +20,7 @@
     "clientTimestamp": { "type": "biginteger" },
     "url": { "type": "string" },
     "userAgent": { "type": "string" },
+    "visibilityState": { "type": "string" },
     "perfil": {
       "type": "relation",
       "relation": "manyToOne",

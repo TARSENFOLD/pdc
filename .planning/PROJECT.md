@@ -1,40 +1,45 @@
-# Por Dentro do Curso (PDC v2) — Project Manifesto
+# PDC v2 — Visão do Produto (Canónica)
 
-## What This Is
-O PDC é uma infraestrutura de decisão educacional angolana que transforma a incerteza vocacional em escolhas de carreira precisas. Permite que estudantes experimentem profissões e cursos através de simulações práticas, experiências imersivas e orientação por mentores — antes de se comprometerem com a matrícula. Serve estudantes (base, secundário e superior), mentores, instituições, patrocinadores e moderadores (Não é dependente de IA, se a IA falhar ele continua).
+> **Frase de autoridade:** O PDC não é uma plataforma de ensino. É uma infraestrutura de decisão educacional — transforma a incerteza vocacional em escolhas de carreira precisas, antes que as decisões erradas custem dinheiro.
 
-## Core Value
-**O estudante faz uma escolha de carreira baseada em evidência real do seu próprio comportamento — não em suposições.**
-O sistema utiliza o motor de heurísticas para calcular a **Fluidez Cognitiva ($\phi$)** e a **Resiliência ao Erro ($R$)**, transformando telemetria bruta em autoridade de decisão.
+**Status:** Canónico · **Substitui:** versões dispersas em `docs/projeto/SISTEMA_MESTRE_FINAL.md`, `.planning/PROJECT.md` e a spec original perdida.
 
-## Tech Stack (Canónica)
+## 1. O Problema que o PDC Resolve
+Em Angola e em mercados emergentes, a escolha de curso universitário é uma **aposta**, não uma decisão informada. O PDC resolve isto dando ao estudante a experiência real do curso antes de se comprometer com a matrícula.
 
-| Camada | Tecnologia | Papel |
-| --- | --- | --- |
-| Frontend | React 18, Vite 5, TailwindCSS v4, Motion | UI Imersiva (PWA-First) |
-| BFF | Hono v4, Node.js 24 LTS, Jose v5 | Orquestração de Negócio e Segurança |
-| CMS | Strapi v5, PostgreSQL 16 | Gestão de Conteúdo e Persistência |
-| Cache/Rate-limit | Upstash Redis | Performance e Resiliência |
-| Storage | Cloudflare R2 | Ativos e Projetos |
-| IA | DeepSeek + RAG (LangChain.js) | Oráculo Tina (Interpretação de Dados) |
+## 2. O que o PDC É (e o que NÃO é)
+| O PDC É | O PDC NÃO é |
+| --- | --- |
+| Uma infraestrutura de decisão vocacional | Um repositório passivo de conteúdo |
+| Um sistema que mede **comportamento real** | Um teste de personalidade genérico |
+| Uma plataforma de marketing institucional | Uma cópia do Canvas/Moodle |
+| **Independente de IA** | Dependente de qualquer LLM |
 
-## Context & Constraints
-- **Mercado:** Angola (conectividade variável, mobile-first).
-- **Problema:** Altos níveis de evasão no 1º ano universitário por má escolha vocacional.
-- **Segurança:** JWT em httpOnly cookies (ADR-003). Nunca localStorage.
-- **Integridade:** Zero `any`. Tipagem estrita nasce no `@pdc/shared`.
-- **Limites:** Ficheiros até 300 linhas (ADR-005 emenda).
+## 3. Core Value (Promessa Mensurável)
+O estudante toma uma decisão de carreira baseada em evidência real do seu próprio comportamento. O sistema usa o **Motor de Heurísticas** (`packages/shared/src/heuristics.ts`) para calcular:
+- **Fluidez Cognitiva ($\phi$):** Constância e ritmo de decisão.
+- **Resiliência ao Erro ($R$):** Recuperação após falha.
+- **Estabilidade de Foco:** Micro-interrupções de atenção.
+- **Hesitação:** Tempo + entropia de movimento antes de uma decisão.
 
-## Out of Scope (MVP)
-- Gateway de pagamento em produção (fase comercial posterior).
-- Turborepo/Nx (over-engineering para o estágio atual).
-- Upload de vídeos > 50MB (usar embed YouTube/Vimeo).
-- Antifraude avançado (biometria, etc.).
+## 4. Stack Canónica (Soberana)
+- **Frontend:** React 18 · Vite 5 · TailwindCSS v4 · Motion (UI Imersiva PWA-First).
+- **BFF:** Hono v4 · Node.js 24 LTS · Jose v5 (RPC type-safe).
+- **Edge:** Cloudflare Workers (`apps/edge`) · Telemetria L1.
+- **CMS:** Strapi v5 · PostgreSQL 16.
+- **Cache/Rate-limit:** Upstash Redis.
+- **IA (opcional):** DeepSeek + RAG (Tina — Oráculo Interpretativo).
 
-## Fonte de Verdade Documental
-1. **ADRs:** `docs/decisoes/` — Decisões arquiteturais ratificadas.
-2. **Specs:** `.planning/` — 13 especificações detalhadas (UUIDs).
-3. **Estado:** `.planning/STATE.md` — A verdade nua sobre o progresso real.
+## 5. Arquitetura em 4 Camadas (L1–L4)
+1. **L1 — Factos (Edge):** Telemetria, catálogos públicos.
+2. **L2 — Cérebro Matemático (BFF/Shared):** Cálculo determinístico de $\phi$ e $R$.
+3. **L3 — Verniz Inteligente (BFF):** Tina (IA).
+4. **L4 — Core de Negócio (BFF/Strapi):** Auth soberano, RBAC, Realtime.
+
+## 6. Identidade Visual — "Soul & Elite"
+- **Princípio:** Herança Invisível (ADR-006).
+- **Cores:** Claro `#F8F9FA` base; Terracota `#D2691E` (≤ 5%).
+- **Tipografia:** Inter (UI), Instrument Serif (Autoridade), JetBrains Mono (Dados).
 
 ---
-*Regra de Ouro: O código é o músculo, a documentação é a alma. Se não está documentado, não existe.*
+*Última validação: 20 de Abril de 2026 · Fonte de verdade: Epic 01.*

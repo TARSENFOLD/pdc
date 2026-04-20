@@ -16,3 +16,9 @@ export * from './ConectarButton';
 export * from './Skeleton';
 export * from './EmptyState';
 export * from './AppErrorBoundary';
+
+/* Soul & Elite Primitives */
+export * from './BentoGrid';
+export * from './GlassCard';
+export * from './AsymmetricButton';
+export * from './AspirationalEmpty';

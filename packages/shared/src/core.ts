@@ -45,7 +45,7 @@ export const LtiScoreSchema = z.object({
 });
 export type LtiScore = z.infer<typeof LtiScoreSchema>;
 
-export interface LtiLaunchClaims extends Record<string, any> {}
+export interface LtiLaunchClaims extends Record<string, unknown> {}
 
 export const LtiPlataformaSchema = z.object({
   id: z.string(),
@@ -79,7 +79,7 @@ export interface CatalogoResponse<T> {
   pagination: CatalogoMeta;
 }
 
-export interface ExplorarResultado extends Record<string, any> {
+export interface ExplorarResultado extends Record<string, unknown> {
   id: string;
   tipo: 'curso' | 'simulacao' | 'experiencia' | 'mentor' | 'instituicao';
   titulo: string;
@@ -142,12 +142,53 @@ export type RegistoInstituicaoPayload = z.infer<typeof RegistoInstituicaoPayload
 
 // ─── Outros ──────────────────────────────────────────────────────────────────
 
-export interface PerfilVocacional extends Record<string, any> {
+export interface PerfilVocacional extends Record<string, unknown> {
   alunoId: string;
   scoreGlobal: number;
+  areaMatch: string;
+  certeza: number; // 0-1 (autoridade)
+  dimensoes: {
+    fluidez: number;
+    resiliencia: number;
+    foco: number;
+    hesitacao: number;
+  };
 }
 
-export interface MentorPublico extends Record<string, any> {
+export interface DashboardEstudante {
+  stats: {
+    xp: number;
+    reputacao: number;
+    conquistasCount: number;
+    vinkulosCount: number;
+    pulseVariacao: number; // ex: +12
+  };
+  match: {
+    area: string;
+    score: number; // ex: 87
+    insight: string;
+    directive: string;
+  };
+  behavior: {
+    domainId: string;
+    fluidez: number;
+    resiliencia: number;
+    foco: number;
+  } | null;
+  progressoCursos: Array<{
+    id: string;
+    titulo: string;
+    progresso: number;
+  }>;
+  proximaAcao: {
+    tipo: string;
+    label: string;
+    to: string;
+  };
+  insightsTina: string[];
+}
+
+export interface MentorPublico extends Record<string, unknown> {
   id: string;
   nome: string;
   especialidade: string;
@@ -156,7 +197,7 @@ export interface MentorPublico extends Record<string, any> {
   disponivel?: boolean | undefined;
 }
 
-export interface InstituicaoPublica extends Record<string, any> {
+export interface InstituicaoPublica extends Record<string, unknown> {
   id: string;
   nome: string;
   logoUrl?: string | undefined;
@@ -164,16 +205,16 @@ export interface InstituicaoPublica extends Record<string, any> {
   regiao?: string | undefined;
 }
 
-export interface PerfilPublicoBasico extends Record<string, any> {
+export interface PerfilPublicoBasico extends Record<string, unknown> {
   id: string;
   nome: string;
   role: Role;
   avatarUrl?: string | undefined;
 }
 
-export interface CursoPublico extends Record<string, any> { id: string; titulo: string; }
-export interface SimulacaoPublica extends Record<string, any> { id: string; titulo: string; }
-export interface ExperienciaPublica extends Record<string, any> { id: string; titulo: string; }
+export interface CursoPublico extends Record<string, unknown> { id: string; titulo: string; }
+export interface SimulacaoPublica extends Record<string, unknown> { id: string; titulo: string; }
+export interface ExperienciaPublica extends Record<string, unknown> { id: string; titulo: string; }
 
 export const CreateCommentPayloadSchema = z.object({
   targetId: z.string(),
@@ -183,7 +224,7 @@ export const CreateCommentPayloadSchema = z.object({
 });
 export type CreateCommentPayload = z.infer<typeof CreateCommentPayloadSchema>;
 
-export interface Comment extends Record<string, any> {
+export interface Comment extends Record<string, unknown> {
   id: string;
   userId: string;
   conteudo: string;

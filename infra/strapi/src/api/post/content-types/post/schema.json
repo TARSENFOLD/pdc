@@ -16,7 +16,7 @@
     "conteudo": { "type": "richtext" },
     "tipo": {
       "type": "enumeration",
-      "enum": ["post", "aviso", "noticia", "conquista_partilhada"]
+      "enum": ["post", "aviso", "noticia", "conquista_partilhada", "vocacional", "institucional"]
     },
     "autor": {
       "type": "relation",

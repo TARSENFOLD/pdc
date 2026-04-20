@@ -24,7 +24,7 @@ const Avatar = forwardRef<ElementRef<typeof AvatarPrimitive.Root>, AvatarProps>(
     };
 
     const tierStyles: Record<string, string> = {
-      BRONZE: 'border-amber-700/50',
+      BRONZE: 'border-orange-700/50',
       PRATA: 'border-slate-400/50',
       OURO: 'border-accent shadow-[0_0_10px_rgba(210,105,30,0.2)]',
       DIAMANTE: 'border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.3)] animate-pulse-slow',
@@ -34,7 +34,7 @@ const Avatar = forwardRef<ElementRef<typeof AvatarPrimitive.Root>, AvatarProps>(
       <AvatarPrimitive.Root
         ref={ref}
         className={cn(
-          'relative flex shrink-0 overflow-hidden rounded-full border border-border bg-surface-raised transition-all duration-500',
+          'relative flex shrink-0 overflow-hidden rounded-full border border-ink-tertiary/10 bg-recessed transition-all duration-500',
           sizes[size],
           tier && tierStyles[tier],
           className
@@ -47,7 +47,7 @@ const Avatar = forwardRef<ElementRef<typeof AvatarPrimitive.Root>, AvatarProps>(
           className="aspect-square h-full w-full object-cover"
         />
         <AvatarPrimitive.Fallback
-          className="flex h-full w-full items-center justify-center rounded-full bg-surface-raised font-semibold text-text-secondary"
+          className="flex h-full w-full items-center justify-center rounded-full bg-recessed font-semibold text-ink-secondary"
         >
           {fallback || alt?.substring(0, 2).toUpperCase() || '?'}
         </AvatarPrimitive.Fallback>

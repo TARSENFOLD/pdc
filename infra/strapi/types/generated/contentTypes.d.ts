@@ -538,6 +538,14 @@ export interface ApiBehaviorPatternBehaviorPattern
         },
         number
       >;
+    hesitationIndex: Schema.Attribute.Decimal &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 10;
+          min: 0;
+        },
+        number
+      >;
     lastUpdatedAt: Schema.Attribute.DateTime;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
@@ -833,6 +841,7 @@ export interface ApiCursoCurso extends Struct.CollectionTypeSchema {
     objetivos: Schema.Attribute.Text;
     preco: Schema.Attribute.Decimal;
     publishedAt: Schema.Attribute.DateTime;
+    regrasAcesso: Schema.Attribute.JSON;
     requisitos: Schema.Attribute.Text;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     syllabus: Schema.Attribute.Text;
@@ -910,6 +919,7 @@ export interface ApiDomainEventDomainEvent extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    attempts: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     correlationId: Schema.Attribute.UID & Schema.Attribute.Required;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -971,6 +981,7 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.DefaultTo<'draft'>;
     gradeDestaque: Schema.Attribute.JSON;
+    guiaInstitucional: Schema.Attribute.JSON;
     instituicao: Schema.Attribute.Relation<
       'manyToOne',
       'api::instituicao.instituicao'
@@ -985,7 +996,9 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
     modalidade: Schema.Attribute.Enumeration<
       ['presencial', 'online', 'hibrido']
     >;
+    muralVozes: Schema.Attribute.JSON;
     nivel: Schema.Attribute.Enumeration<['basico', 'medio', 'avancado']>;
+    painelRealidade: Schema.Attribute.JSON;
     publishedAt: Schema.Attribute.DateTime;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
@@ -1591,7 +1604,14 @@ export interface ApiPostPost extends Struct.CollectionTypeSchema {
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
     tipo: Schema.Attribute.Enumeration<
-      ['post', 'aviso', 'noticia', 'conquista_partilhada']
+      [
+        'post',
+        'aviso',
+        'noticia',
+        'conquista_partilhada',
+        'vocacional',
+        'institucional',
+      ]
     >;
     tipoAutor: Schema.Attribute.Enumeration<
       ['mentor', 'instituicao', 'plataforma', 'aluno']
@@ -1911,6 +1931,7 @@ export interface ApiSubscricaoSubscricao extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    features: Schema.Attribute.JSON;
     fimEm: Schema.Attribute.DateTime;
     inicioEm: Schema.Attribute.DateTime;
     instituicao: Schema.Attribute.Relation<
@@ -1930,6 +1951,7 @@ export interface ApiSubscricaoSubscricao extends Struct.CollectionTypeSchema {
       ['gratuito', 'premium', 'institucional_basico', 'institucional_premium']
     >;
     publishedAt: Schema.Attribute.DateTime;
+    quotas: Schema.Attribute.JSON;
     tipo: Schema.Attribute.Enumeration<['individual', 'institucional']>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -1975,6 +1997,7 @@ export interface ApiTelemetriaTelemetria extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     url: Schema.Attribute.String;
     userAgent: Schema.Attribute.String;
+    visibilityState: Schema.Attribute.String;
   };
 }
 
@@ -1993,6 +2016,8 @@ export interface ApiTentativaTentativa extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    dataFim: Schema.Attribute.DateTime;
+    dataInicio: Schema.Attribute.DateTime;
     duracaoSegundos: Schema.Attribute.Integer;
     executorTipo: Schema.Attribute.Enumeration<['tipo1', 'tipo2', 'tipo3']>;
     feedback: Schema.Attribute.Text;
@@ -2004,6 +2029,7 @@ export interface ApiTentativaTentativa extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.Private;
     logsExecucao: Schema.Attribute.JSON;
+    metadata: Schema.Attribute.JSON;
     outputExecucao: Schema.Attribute.JSON;
     perfil: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'> &
       Schema.Attribute.Required;

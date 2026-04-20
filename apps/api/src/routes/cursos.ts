@@ -5,6 +5,11 @@ import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.j
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { CriarCursoPayloadSchema } from '@pdc/shared';
+import { eventBus } from '../modules/events/event-bus.js';
+import { DomainEventName } from '../modules/events/types.js';
+import pino from 'pino';
+
+const log = pino({ name: 'cursos-routes' });
 
 type Vars = { Variables: AuthVariables };
 
@@ -33,18 +38,51 @@ cursoRoutes.use('*', verifyJwt);
 // GET /cursos
 cursoRoutes.get('/', zValidator('query', cursoQuerySchema), async (c) => {
   const q = c.req.valid('query');
-  const params: Record<string, string> = { populate: 'capa,autor' };
+  const user = c.get('user');
+  
+  const params: Record<string, string | string[]> = { populate: 'capa,autor' };
   if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
   if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
   if (q.search !== undefined) params['filters[titulo][$containsi]'] = q.search;
-  if (q.categoria !== undefined) params['filters[categoria][$eq]'] = q.categoria;
-  if (q.autorId !== undefined) params['filters[autorId][$eq]'] = q.autorId;
   
   // Apenas cursos publicados no catálogo público
   params['filters[estado][$eq]'] = 'published';
 
   try {
-    const res = await strapiGet<Curso>('/cursos', params);
+    // 1. Buscar cursos publicados
+    const res = await strapiGet<Curso>('/cursos', params as any);
+    
+    // 2. Lógica Soberana de Match (End-to-End)
+    // Se for aluno, filtramos por mérito behaviorista
+    if (user.role === 'aluno') {
+      const patternsRes = await strapiGet<any>('/behavior-patterns', {
+        'filters[perfil][userId][$eq]': user.id,
+      });
+      const pattern = patternsRes.data[0];
+
+      // Enriquecer os cursos com metadados de bloqueio
+      const enrichedData = res.data.map((curso: any) => {
+        const regras = curso.regrasAcesso;
+        let bloqueado = false;
+        let motivo = '';
+
+        if (regras && pattern) {
+          if (regras.minFluidez && pattern.cognitiveFluidity < regras.minFluidez) {
+            bloqueado = true;
+            motivo = 'Fluidez insuficiente';
+          }
+          if (regras.minResiliencia && pattern.resilienceIndex < regras.minResiliencia) {
+            bloqueado = true;
+            motivo = 'Resiliência insuficiente';
+          }
+        }
+
+        return { ...curso, bloqueado, motivoBloqueio: motivo };
+      });
+
+      return c.json({ ...res, data: enrichedData });
+    }
+
     return c.json(res);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
@@ -112,21 +150,59 @@ cursoRoutes.get('/:id', async (c) => {
   }
 });
 
-// POST /cursos — criar curso
+// POST /cursos — criar curso completo (E2E Soberano)
 cursoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zValidator('json', CriarCursoPayloadSchema), async (c) => {
   const payload = c.req.valid('json');
   const { id: autorId } = c.get('user');
+  const { modulos, ...cursoData } = payload;
   
   try {
+    // 1. Criar o Curso Base no Strapi
     const res = await strapiPost<Curso>('/cursos', {
-      ...payload,
+      ...cursoData,
       autorId,
-      estado: 'draft',
+      estado: 'published', // No patamar mundial, materialização é imediata se vindo do builder
       slug: payload.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
     });
+    
+    const cursoId = res.data.id;
+
+    // 2. Criar Módulos e Itens em Cascata (Sovereign Cascading)
+    if (modulos && modulos.length > 0) {
+      for (const mod of modulos) {
+        const modRes = await strapiPost<any>('/modulos', {
+          titulo: mod.titulo,
+          ordem: mod.ordem,
+          curso: cursoId
+        });
+        
+        const moduloId = modRes.data.id;
+        
+        for (const item of mod.itens) {
+          await strapiPost('/modulo-items', {
+            ...item,
+            modulo: moduloId
+          });
+        }
+      }
+    }
+
+    // 3. CAMADA 5: IMPACTO NO ECOSSISTEMA
+    // Disparar evento para o Event Bus. O impacto (Feed, Match, Conquista) é autônomo.
+    await eventBus.publishWithOutbox(DomainEventName.CURSO_PUBLICADO, {
+      cursoId,
+      autorId,
+      titulo: cursoData.titulo,
+      area: cursoData.area,
+      regrasAcesso: cursoData.regrasAcesso
+    });
+
+    log.info({ cursoId, autorId }, 'Curso materializado com sucesso e impacto disparado.');
+    
     return c.json(res, 201);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
+    const message = err instanceof Error ? err.message : 'Erro interno na materialização';
+    log.error({ err, autorId }, 'Falha crítica na Camada 3/5 de Cursos');
     return c.json({ error: message }, 502);
   }
 });

@@ -1,77 +1,57 @@
-# PDC v2 — Requirements
+# PDC v2 — Mapa de Funcionalidades e Requisitos
 
-> Fonte de verdade para requisitos com rastreabilidade por fase. Cada requisito tem ID único, fase, prioridade e critério de verificação. Actualizar após cada fase concluída.
+Este ficheiro é a fonte de verdade para o estado de cada funcionalidade, sincronizado com a **Epic Canónica 02**.
 
-## Como usar este ficheiro
+## 1. Núcleo de Decisão Vocacional
+| ID | Funcionalidade | Estado | Notas |
+| --- | --- | --- | --- |
+| N1 | Motor de Heurísticas $\phi$ e $R$ | ✅ | `@pdc/shared/heuristics.ts` |
+| N2 | Telemetria Edge-First (L1) | ✅ | Cloudflare Workers + Upstash |
+| N3 | Idempotência (UUID + outbox) | ✅ | Resiliência de eventos |
+| N4 | Sanity Validator dual-layer | ✅ | Anti-cheat |
+| N5 | Score derivado no BFF | ✅ | Substitui hardcode legacy |
+| N6 | Perfil Vocacional automático | ✅ | 6 dimensões + 4 tiers |
+| N7 | Reputação canónica | ✅ | Cache Redis |
+| N8 | Conquistas via Event Bus | ✅ | 12 regras |
+| N9 | Relatório Premium | 🟡 | Threaded insights pendentes |
 
-- **ID:** `REQ-[FASE]-[NNN]` — ex: `REQ-0-001`
-- **Prioridade:** 🔴 Crítico | 🟠 Alto | 🟡 Médio | 🟢 Baixo
-- **Estado:** `[ ]` Todo | `[x]` Done | `[~]` In Progress | `[-]` Descartado
+## 2. Conteúdo e Domínios
+| ID | Funcionalidade | Estado | Notas |
+| --- | --- | --- | --- |
+| C1 | Cursos (Hierarquia completa) | ✅ | Curso -> Módulo -> Item |
+| C2 | Simulações Tipo 1 (Vídeo) | ✅ | Player funcional |
+| C3 | Simulações Tipo 2 (Lab) | ✅ | Score real derivado |
+| C4 | Simulações Tipo 3 (Interativo) | ✅ | `Tipo3Player.tsx` |
+| C5 | Experiências (Marketing) | ✅ | Sempre gratuitas |
+| C6 | Programas (Contentores) | 🟡 | UI de gestão parcial |
+| C7 | Projetos (UGC) | ✅ | Camadas de privacidade |
+| C8 | Posts e Conquistas | ✅ | Feed social |
+| C9 | Quizzes e Tarefas | ✅ | Notas automáticas |
+| C10| Certificados | ✅ | `/estudante/certificados` |
 
-## Fase 0 — Fundação
+## 3. Transversais (Target Polimórfico)
+| ID | Funcionalidade | Estado | Notas |
+| --- | --- | --- | --- |
+| T1 | Like / Curtir | ✅ | Evento `interaction.like` |
+| T2 | Bookmark / Guardar | ✅ | Página `/guardados` |
+| T3 | Comentar | ✅ | Rate limit 10/min |
+| T4 | Avaliar (Rating) | 🟡 | Persistência PostgreSQL |
+| T5 | Partilhar | ⏳ | Por integrar |
+| T6 | Denunciar (Report) | ✅ | Fila para moderador |
+| T7 | Telemetria Global | ✅ | Coração do Oráculo |
+| T8 | Vínculos Bilaterais | 🟡 | Schema base ✅ |
+| T9 | Notificações Realtime | ✅ | Socket.IO |
 
-**Objetivo:** Repositório limpo, tooling configurado, CI/CD básico, ambiente de desenvolvimento funcional.
+## 4. Plataforma
+| ID | Funcionalidade | Estado | Notas |
+| --- | --- | --- | --- |
+| P1 | Auth JWT httpOnly + RBAC | 🟡 | Rotação de tokens pendente |
+| P2 | OAuth + OTP (Twilio) | 🟡 | Twilio mockado |
+| P3 | 2FA Obrigatório | ✅ | Hardening completo |
+| P4 | FeatureRegistry SSOT | ✅ | 7 features + 6 HUBs |
+| P5 | Bootstrap 4 camadas | ✅ | Session/Caps/Security/UX |
+| P6 | Rate limiting | ✅ | Upstash |
+| P9 | Tina (Assistente IA) | 🟡 | Streaming instável |
 
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-0-001 | Estrutura de monorepo npm workspaces | 🔴 | `[x]` | `npm install` instala tudo |
-| REQ-0-002 | Workspace `apps/web` React 18 | 🔴 | `[x]` | Build limpo |
-| REQ-0-003 | Workspace `apps/api` Hono | 🔴 | `[x]` | Build limpo |
-| REQ-0-004 | Workspace `infra/strapi` Strapi v5 | 🔴 | `[~]` | Saneamento de tipos em progresso |
-| REQ-0-005 | ESLint + Prettier global | 🟠 | `[x]` | Lint passa na raiz |
-| REQ-0-006 | Husky pre-commit | 🟠 | `[x]` | Hook reactivado (W0-T9) |
-| REQ-0-007 | GitHub Actions CI | 🟠 | `[x]` | Build + Lint + A11y (warning) |
-| REQ-0-008 | Docker Compose (PG + Redis) | 🟠 | `[x]` | Infra sobe localmente |
-| REQ-0-012 | Dockerfile BFF multi-stage | 🔴 | `[x]` | Container funcional |
-
-## Fase 1 — Autenticação Segura e Edge
-
-**Objetivo:** Auth robusto com JWT httpOnly, 2FA e pipeline de Telemetria Edge.
-
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-1-001 | Endpoint `POST /auth/register` | 🔴 | `[~]` | Refactor para Role SSOT pendente |
-| REQ-1-002 | JWT em httpOnly cookie | 🔴 | `[ ]` | Implementação parcial; rotação em falta |
-| REQ-1-007 | Rate limiting via Upstash | 🔴 | `[x]` | Middleware integrado |
-| REQ-1-010 | OTP por SMS (Twilio) | 🟡 | `[ ]` | Serviço mockado; integração real pendente |
-| REQ-1-011 | Telemetria Edge (ADR-005) | 🔴 | `[x]` | Worker funcional com JWS verify e BFF consumer integrado (W1-T4) |
-
-## Fase 2 — Design System e Frontend Base
-
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-2-001 | TailwindCSS v4 soberano | 🔴 | `[~]` | Purga de cores hardcoded em progresso |
-| REQ-2-002 | Component Registry | 🔴 | `[ ]` | Registry ausente/desalinhado do approach |
-| REQ-2-005 | React Query v5 SSOT | 🔴 | `[x]` | Único estado servidor |
-| REQ-2-010 | Design responsivo | 🟠 | `[x]` | Refatoração PWA / "Herança Invisível" concluída |
-| REQ-2-011 | SSOT/Shared Types | 🔴 | `[x]` | `bootstrap.ts`, `heuristics.ts`, `registry/features.ts` integrados |
-
-## Fase 4 — Core do Produto
-
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-4-002 | Simulação Tipo 2 | 🔴 | `[x]` | Score real derivado no BFF via Heuristics (R2.T4) |
-| REQ-4-003 | Simulação Tipo 3 | 🔴 | `[x]` | `Tipo3Player.tsx` funcional com telemetria L3 (R2.T5) |
-| REQ-4-004 | Telemetria Idempotente | 🔴 | `[x]` | UUID eventId + outbox pattern (R2.T3b) |
-| REQ-4-005 | Perfil Vocacional Auto | 🔴 | `[x]` | Integrado com motor de heurísticas e Tina (IA) |
-| REQ-4-009 | Programas: gestão | 🟠 | `[~]` | UI de gestão em progresso |
-| REQ-4-013 | Conquistas automáticas | 🟠 | `[x]` | Ativadas via Registry de EventBus (R2.T3b) |
-| REQ-4-014 | Feed: ranking soberano | 🟠 | `[x]` | Algoritmo implementado e cache Redis ativo |
-| REQ-4-015 | Reputação Contract | 🔴 | `[x]` | Rota canónica `/reputacao/me` sincronizada com Shared Schema (R2.T6b) |
-
-## Fase 7 — IA e Realtime
-
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-7-001 | AI tutor streaming | 🔴 | `[~]` | Modo streaming instável |
-| REQ-7-005 | Mensagens Realtime | 🟠 | `[ ]` | Rota inbox/lista comentada; UI ausente |
-
-## Requisitos Não Funcionais
-
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-NF-003 | Zero `any` em TS | 🔴 | `[~]` | Lint reports indicam ~23 ocorrências residuais (honest pass) |
-| REQ-NF-005 | Acessibilidade Total | 🔴 | `[x]` | PWA + Contraste Tema Claro resolvidos, botões > 44px e iOS autocomplete fix. |
-| REQ-NF-007 | Rule of 300 (linhas) | 🟡 | `[~]` | Shared index ainda excede limite |
-
-*Last updated: Abril 2026 — R0-2 Sync Pass 1*
+---
+*Legenda: ✅ Implementado | 🟡 Parcial | ⏳ Por implementar | ⏸ Estacionado.*

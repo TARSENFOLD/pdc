@@ -4,108 +4,119 @@ import { strapiPost } from '../strapi/strapi.client.js';
 import { telemetriaProcessor } from './telemetria.processor.js';
 import type { TelemetriaEvento } from '@pdc/shared';
 import { applySanityRules, BFF_SANITY_RULES } from '@pdc/shared';
+import { uploadToR2 } from '../media/r2.service.js';
 
 const log = pino({ name: 'telemetry-consumer' });
 
 const QUEUE_KEY = 'telemetry_queue';
 const IDEMPOTENCY_PREFIX = 'seen_event_ids:';
-const TTL_7_DAYS = 7 * 24 * 60 * 60; // segundos
+const LOCK_PREFIX = 'lock:telemetry:';
+const DLQ_KEY = 'telemetry_dlq';
+const TTL_7_DAYS = 7 * 24 * 60 * 60;
 
+// Identificador único para este worker para gerir in-flight queues
+const WORKER_ID = crypto.randomUUID();
+const PROCESSING_QUEUE = `telemetry_queue:processing:${WORKER_ID}`;
+
+async function acquireLock(eventId: string): Promise<boolean> {
+  const lockKey = `${LOCK_PREFIX}${eventId}`;
+  const acquired = await redis.set(lockKey, '1', { nx: true, px: 10000 }); // 10s lock
+  return acquired === 'OK';
+}
+
+async function releaseLock(eventId: string) {
+  await redis.del(`${LOCK_PREFIX}${eventId}`);
+}
+
+async function moveToColdStorage(event: TelemetriaEvento, reason: string) {
+  const key = `cold-storage/telemetry/${new Date().toISOString().split('T')[0]}/${event.eventId}.json`;
+  const payload = JSON.stringify({ ...event, invalidReason: reason });
+  await uploadToR2(key, Buffer.from(payload), 'application/json').catch(err => {
+    log.error({ err, eventId: event.eventId }, 'Falha ao mover para Cold Storage');
+  });
+}
 export async function processEvent(eventRaw: string) {
+  const event = JSON.parse(eventRaw) as TelemetriaEvento & { perfilId?: string; metadata?: any };
+
+  if (!event.eventId) return;
+
+  // 1. RedLock: Garantir exclusividade absoluta
+  const hasLock = await acquireLock(event.eventId);
+  if (!hasLock) return;
+
   try {
-    const event: TelemetriaEvento & { perfilId?: string } = JSON.parse(eventRaw);
-
-    if (!event.eventId) {
-      log.warn('Evento rejeitado: eventId ausente');
-      return;
-    }
-
-    // 1. Idempotência Matemática
+    // 2. Idempotência Matemática (SET NX EX)
+    // Previne o Bug do Midnight Rollover e garante limpeza automática em 7 dias
     const idempKey = `${IDEMPOTENCY_PREFIX}${event.eventId}`;
-    const isNew = await redis.sadd(idempKey, '1');
-    if (isNew === 0) {
-      // Evento já existe (retry de cliente), descartar de forma segura
+    const isNew = await redis.set(idempKey, '1', { nx: true, ex: TTL_7_DAYS });
+    if (isNew !== 'OK') return;
+
+    // 3. Auditoria Forense (Camada 1 - Edge & Camada 2 - BFF)
+    const edgeInvalid = event.metadata?.edgeInvalidated;
+    const bffSanity = applySanityRules(event, BFF_SANITY_RULES);
+
+    if (edgeInvalid || !bffSanity.valid) {
+      const reason = edgeInvalid ? `Edge: ${event.metadata?.edgeReason}` : bffSanity.reason;
+      log.warn({ eventId: event.eventId, reason }, 'Mover para Cold Storage (Compliance Audit)');
+      await moveToColdStorage(event, reason || 'Invalid behavior detected');
+
+      // Sucesso Forense: Remover da In-Flight Queue sem poluir o Postgres
+      await redis.lrem(PROCESSING_QUEUE, 1, eventRaw);
       return;
     }
-    await redis.expire(idempKey, TTL_7_DAYS);
 
-    // 1.5 Sanity full audit pre-persist (BFF layer)
-    const sanity = applySanityRules(event, BFF_SANITY_RULES);
-    let invalidated = false;
-    if (!sanity.valid) {
-      log.warn({ eventId: event.eventId, reason: sanity.reason, rule: sanity.ruleName }, 'Evento invalidado pelo Sanity BFF (Anti-cheat)');
-      invalidated = true;
-    }
-
-    const securePayload = { 
-      ...(event.payload || {}), 
-      ...(invalidated ? { invalidated: true, sanityReason: sanity.reason } : {}) 
-    };
-
-    // 2. Persistência no Strapi
+    // 4. Persistência Strapi (Apenas dados limpos de mérito)
     await strapiPost('/telemetrias', {
-      data: {
-        eventId: event.eventId,
-        tipo: event.tipo,
-        payload: securePayload,
-        clientTimestamp: event.timestamp,
-        sessionId: (event as any).sessionId,
-        url: (event as any).url,
-        visibilityState: (event as any).visibilityState,
-        perfil: event.perfilId,
-      },
+...
+
+      eventId: event.eventId,
+      tipo: event.tipo,
+      dados: event.payload,
+      clientTimestamp: event.timestamp,
+      perfil: event.perfilId,
     });
 
-    // 3. Heurísticas Eventuais
-    // Ignorar eventos inválidos para o cálculo das heurísticas (anti-cheat blindado)
-    if (!invalidated && event.perfilId && event.tipo.startsWith('simulacao.')) {
-      // Background worker não bloqueia a ingestão do próximo
-      telemetriaProcessor.processUserDomain(event.perfilId, 'simulacao').catch(err => {
-        log.error({ err, perfilId: event.perfilId }, 'Falha na avaliação de Heurísticas Eventuais');
+    // 5. Heurísticas
+    if (event.perfilId && event.tipo.startsWith('simulacao.')) {
+      await telemetriaProcessor.processUserDomain(event.perfilId, 'simulacao').catch(err => {
+        log.error({ err }, 'Heuristics Error');
       });
     }
+
+    // Sucesso: Remover da In-Flight Queue
+    await redis.lrem(PROCESSING_QUEUE, 1, eventRaw);
   } catch (err: unknown) {
-    log.error({ err }, 'Erro ao processar item da queue');
-    // Num sistema maduro re-enfileirava numa Dead Letter Queue (DLQ)
+    log.error({ err, eventId: event.eventId }, 'Erro no processamento. Mover para DLQ.');
+    await redis.lpush(DLQ_KEY, eventRaw);
+    await redis.lrem(PROCESSING_QUEUE, 1, eventRaw);
+  } finally {
+    await releaseLock(event.eventId);
   }
 }
 
 export async function startConsumer() {
-  log.info('Iniciando Consumer de Telemetria Edge (Long-Running Worker)');
+  log.info({ workerId: WORKER_ID }, 'Iniciando Reliable Consumer (Sovereign Ingestion)');
 
-  let isShuttingDown = false;
-  const handleShutdown = () => {
-    isShuttingDown = true;
-    log.info('Desligando Consumer de Telemetria graciosamente...');
-    process.exit(0);
-  };
-
-  process.on('SIGINT', handleShutdown);
-  process.on('SIGTERM', handleShutdown);
-
-  while (!isShuttingDown) {
+  while (true) {
     try {
-      // Upstash REST não suporta BRPOP. Fazemos RPOP com delay manual em caso de miss.
-      const result = await redis.rpop<string>(QUEUE_KEY);
+      // RPOPLPUSH: Move atomicamente da fila principal para a fila de processamento deste worker
+      const result = await redis.rpoplpush<string>(QUEUE_KEY, PROCESSING_QUEUE);
       
       if (result) {
         await processEvent(result);
       } else {
-        // Polling delay de 5s para não derreter o rate limit
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
-    } catch (err: unknown) {
-      log.error({ err }, 'Erro na ligação à Upstash Queue');
-      // Backoff para não asfixiar a rede
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+    } catch (err) {
+      log.error({ err }, 'Erro na Upstash Queue');
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
   }
 }
 
-// Se foi invocado diretamente pela CLI
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === `file://${process.argv[1] ?? ''}`) {
   startConsumer().catch(err => {
-    log.fatal({ err }, 'Falha fatal no Worker');
+    log.fatal({ err }, 'Falha Fatal no Worker');
     process.exit(1);
   });
 }

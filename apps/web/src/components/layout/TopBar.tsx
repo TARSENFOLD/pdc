@@ -44,7 +44,7 @@ export function TopBar({ onOpenMobileMenu }: TopBarProps) {
         
         <div className="hidden lg:block">
           <p className="text-xs font-medium text-text-muted uppercase tracking-widest">
-            {user?.role === 'aluno' ? 'Painel do Estudante' : 'Plataforma de Decisão'}
+            {user?.role === 'aluno' ? 'Painel do Estudante' : 'Painel de Decisão'}
           </p>
         </div>
       </div>

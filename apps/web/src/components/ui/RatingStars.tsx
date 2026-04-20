@@ -40,7 +40,7 @@ export function RatingStars({ targetType, targetId, readOnly = false, stats }: R
             disabled={readOnly}
             onClick={() => { handleClick(star); }}
             onMouseEnter={() => { if (!readOnly) setHoverValue(star); }}
-            className={`p-0.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-110 transition-transform'}`}
+            className={`p-0.5 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1 ${readOnly ? 'cursor-default' : 'cursor-pointer hover:scale-110 transition-transform'}`}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -50,7 +50,7 @@ export function RatingStars({ targetType, targetId, readOnly = false, stats }: R
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className={`w-5 h-5 ${star <= displayRating ? 'text-yellow-400' : 'text-surface-border'}`}
+              className={`w-5 h-5 ${star <= displayRating ? 'text-accent' : 'text-ink-tertiary/20'}`}
             >
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
@@ -59,7 +59,7 @@ export function RatingStars({ targetType, targetId, readOnly = false, stats }: R
       </div>
       
       {stats && (
-        <span className="text-sm text-text-muted font-medium">
+        <span className="text-sm text-ink-tertiary font-medium">
           {stats.media > 0 ? stats.media.toFixed(1) : 'Sem avaliações'} 
           {stats.total > 0 && <span className="ml-1 opacity-70">({stats.total})</span>}
         </span>

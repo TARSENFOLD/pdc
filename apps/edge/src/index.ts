@@ -27,39 +27,37 @@ app.use('/telemetria/batch/*', jwsVerifyMiddleware);
  * Ingestor de alta performance no Edge.
  */
 app.post('/telemetria/batch', async (c) => {
-  // Casting para unknown para garantir segurança total nas boundaries de I/O
-  const parsed = (await c.req.json()) as unknown;
-  
-  const events: unknown[] = (
-    typeof parsed === 'object' && 
-    parsed !== null && 
-    'events' in parsed && 
-    Array.isArray((parsed as { events: unknown }).events)
-  ) ? (parsed as { events: unknown[] }).events : [];
+  const parsed = (await c.req.json()) as any;
+  const events = Array.isArray(parsed?.events) ? parsed.events : [];
 
   if (events.length === 0) return c.json({ success: true });
 
-  const validEvents: unknown[] = [];
-  for (const rawEvent of events) {
-    if (typeof rawEvent === 'object' && rawEvent !== null && 'eventId' in rawEvent && 'timestamp' in rawEvent) {
-      const sanity = applySanityRules(rawEvent as any, EDGE_SANITY_RULES);
-      if (sanity.valid) {
-        validEvents.push(rawEvent);
-      } else {
-        console.warn(`Evento rejeitado no Edge (Sanity ${sanity.ruleName}):`, sanity.reason);
-      }
+  const processedEvents = events.map((rawEvent: any) => {
+    // Aplicar sanidade no Edge (Camada 1)
+    const sanity = applySanityRules(rawEvent, EDGE_SANITY_RULES);
+
+    if (!sanity.valid) {
+      // REGRA SOBERANA: Não descartar. Etiquetar para auditoria forense no BFF/S3.
+      return {
+        ...rawEvent,
+        metadata: {
+          ...rawEvent.metadata,
+          edgeInvalidated: true,
+          edgeReason: sanity.reason
+        }
+      };
     }
-  }
+    return rawEvent;
+  });
 
-  if (validEvents.length === 0) return c.json({ success: true, count: 0 }, 202);
-
-  // Push para Upstash Redis (Queue)
+  // Push para Upstash Redis (Queue) - Todos os eventos, inclusive os etiquetados
   try {
     const response = await fetch(`${c.env.UPSTASH_REDIS_REST_URL}/lpush/telemetry_queue`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${c.env.UPSTASH_REDIS_REST_TOKEN}` },
-      body: JSON.stringify(validEvents.map((e: unknown) => JSON.stringify(e))),
+      body: JSON.stringify(processedEvents.map((e: any) => JSON.stringify(e))),
     });
+...
 
     if (!response.ok) throw new Error('Falha no buffer Redis');
 

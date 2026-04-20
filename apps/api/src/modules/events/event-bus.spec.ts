@@ -34,7 +34,7 @@ describe('EventBus (Registry & EventEmitter)', () => {
   });
 
   it('deve suportar múltiplos handlers resolvendo em paralelo via publish', async () => {
-    let callOrder: string[] = [];
+    const callOrder: string[] = [];
     const handlerSlow = vi.fn().mockImplementation(async () => {
       await new Promise(r => setTimeout(r, 50));
       callOrder.push('slow');

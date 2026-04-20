@@ -237,6 +237,8 @@ simulacaoRoutes.post('/tentativas', checkRole(['aluno']), zValidator('json', ini
     });
     const tentativaNum = (prevTentativas.meta?.pagination?.total ?? 0) + 1;
 
+    // D22: Usamos dataInicio (PT) para alinhar com o domínio canónico (ADR-012).
+    // Strapi tem aliases startedAt/finishedAt, mas BFF prefere PT.
     const resPost = await strapiPost<any>('/tentativas', {
       simulacao: simulacaoId,
       perfil: perfilId,
@@ -270,6 +272,7 @@ simulacaoRoutes.put('/tentativas/:id', checkRole(['aluno']), zValidator('json', 
   }
 
   try {
+    // D21/D22: Persistimos metadata da simulação e data de fim em PT.
     const resPut = await strapiPut<Tentativa>(`/tentativas/${tentativaId}`, {
       score: finalScore,
       metadata,
@@ -300,7 +303,7 @@ simulacaoRoutes.put('/tentativas/:id', checkRole(['aluno']), zValidator('json', 
       tentativaId,
       score: finalScore || 0,
       perfilId: String(perfilIdReal),
-    }).catch(err => log.error({ err }, 'Falha ao publicar evento tentativa.concluida'));
+    }).catch(err => { log.error({ err }, 'Falha ao publicar evento tentativa.concluida'); });
 
     return c.json(data);
   } catch (err) {

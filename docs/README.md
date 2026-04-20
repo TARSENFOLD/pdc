@@ -1,38 +1,33 @@
 # Documentação do Projeto de Decisão Educacional v2 (PDC v2)
 
-Este repositório contém a documentação técnica e de utilizador para o Projeto de Decisão Educacional v2.
+Este repositório contém a documentação técnica e de utilizador para o PDC v2.
 
-## Guias de Utilizador
+## 🏛️ Hierarquia de Autoridade (Governação)
 
-A secção de Guias de Utilizador destina-se a todos os tipos de utilizadores da plataforma PDC v2, detalhando como utilizar as funcionalidades de acordo com o seu papel.
+Se encontrar informações contraditórias, a ordem de precedência é:
+1. **Epics Canónicas (01-05)** — A Constituição Soberana (em memória do sistema).
+2. **Diretoria `.planning/`** — Estado real, requisitos e roadmap atualizado.
+3. **Diretoria `docs/decisoes/`** — Registos de Arquitetura (ADRs).
+4. **Diretoria `docs/`** — Guias e manuais (esta diretoria).
 
-- [Aluno](guia-utilizador/aluno.md)
-- [Mentor](guia-utilizador/mentor.md)
-- [Instituição](guia-utilizador/instituicao.md)
-- [Moderador](guia-utilizador/moderador.md)
+---
 
-## Guias Técnicos
+## 📖 Guias Rápidos
 
-A secção de Guias Técnicos abrange a arquitetura do projeto, instruções de configuração e desenvolvimento, e diretrizes de deployment.
+### Para Utilizadores
+- [🎓 Guia do Estudante](guia-utilizador/aluno.md)
+- [👨‍🏫 Guia do Mentor](guia-utilizador/mentor.md)
+- [🏛️ Guia da Instituição](guia-utilizador/instituicao.md)
 
-- [Arquitetura do Monorepo](guia-tecnico/arquitectura.md)
-- [Configuração Local](guia-tecnico/setup-local.md)
-- [Deployment](guia-tecnico/deploy.md)
-- [Como Contribuir](guia-tecnico/contribuir.md)
+### Para Desenvolvedores
+- [🏗️ Arquitetura](guia-tecnico/arquitectura.md)
+- [💻 Configuração Local](guia-tecnico/setup-local.md)
+- [🚀 Guia de Contribuição](guia-tecnico/contribuir.md)
 
-## Documentação da API
+## 📡 Core Técnico
+- [⌬ Motor de Heurísticas](vocacional/modelo.md)
+- [📊 Telemetria e Pipeline](telemetria/pipeline.md)
+- [🔐 Segurança e Auth](api/auth.md)
 
-Detalhes sobre os endpoints da API e do BFF.
-
-- [API de Autenticação](api/auth.md)
-- [API de Simulações](api/simulacoes.md)
-- [API de Catálogo Público](api/catalogo.md)
-
-## Decisões de Arquitetura (ADRs)
-
-Registos que documentam decisões de arquitetura significativas.
-
-- [ADR-001: Monorepo com npm workspaces](decisoes/adr-001-monorepo.md)
-- [ADR-002: Hono em vez de Express](decisoes/adr-002-hono.md)
-- [ADR-003: JWT em httpOnly Cookies](decisoes/adr-003-jwt-cookies.md)
-- [ADR-004: Strapi como CMS](decisoes/adr-004-strapi-cms.md)
+---
+*Última auditoria de governação: 20 de Abril de 2026.*

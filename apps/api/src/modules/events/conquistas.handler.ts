@@ -8,22 +8,23 @@ import { socketService } from '../realtime/socket.service.js';
 const log = pino({ name: 'conquistas-handler' });
 
 /**
- * Handler de Conquistas (Refactored R2.T3b)
+ * Handler de Conquistas (T-FIX-3: suporta 12 eventos canónicos)
  * Dispara a verificação de conquistas automáticas após eventos de domínio.
+ * Compatível com todos os eventos em DomainEventName via EVENT_TO_TRIGGER_MAP.
  */
-export async function conquistasHandler(event: DomainEvent<{ tentativaId: string; perfilId: string }>) {
+export async function conquistasHandler(event: DomainEvent<{ tentativaId?: string; perfilId?: string }>) {
   const { perfilId, tentativaId } = event.payload;
 
   try {
     // 1. Resolve userId do perfilId (Engine exige userId Clerk/Strapi)
     const resPerfil = await strapiGet<StrapiPerfil>('/perfis', {
-      'filters[id][$eq]': perfilId,
+      'filters[id][$eq]': perfilId ?? '',
       'fields[0]': 'userId'
     });
     
     const perfil = resPerfil.data[0];
     const userId = perfil?.userId;
-    if (!userId) throw new Error(`UserId não encontrado para perfilId ${perfilId}`);
+    if (!userId) throw new Error(`UserId não encontrado para perfilId ${perfilId ?? 'desconhecido'}`);
 
     // 2. Chama a engine de conquistas (Sovereign & Idempotente)
     // Usa o nome do evento original para decidir quais regras aplicar

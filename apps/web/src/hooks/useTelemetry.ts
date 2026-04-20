@@ -5,11 +5,16 @@ import { useBootstrap } from '../lib/bootstrap/BootstrapContext.js';
 
 const BUFFER_LIMIT = 10;
 const FLUSH_INTERVAL = 30000;
+const BIOMECHANICS_INTERVAL = 250; // ms
 const EDGE_URL = (import.meta.env.VITE_EDGE_URL as string | undefined) ?? 'http://localhost:8787';
 
 export function useTelemetry() {
   const buffer = useRef<TelemetriaEvento[]>([]);
   const timer = useRef<NodeJS.Timeout | null>(null);
+  const lastMousePos = useRef({ x: 0, y: 0 });
+  const lastScrollPos = useRef(0);
+  const biomechanicsTimer = useRef<NodeJS.Timeout | null>(null);
+  const focusStartTime = useRef<number>(Date.now());
   
   // W1-T3/W1-T4: O Token é assinado e trazido de forma segura durante a carga da aplicação
   const { data } = useBootstrap();
@@ -23,6 +28,7 @@ export function useTelemetry() {
 
     try {
       // Passamos o token para utilizar o Edge de preferência, ou o Fallback do BFF
+      // O Circuit Breaker está implementado dentro do telemetriaService.registarBatch
       await telemetriaService.registarBatch(eventsToFlush, token);
     } catch (error) {
       console.error('Falha ao enviar telemetria:', error);
@@ -35,7 +41,10 @@ export function useTelemetry() {
     const event: TelemetriaEvento = {
       eventId: crypto.randomUUID(),
       tipo,
-      payload,
+      payload: {
+        ...payload,
+        visibilityState: document.visibilityState,
+      },
       timestamp: new Date().toISOString(),
     };
 
@@ -47,14 +56,55 @@ export function useTelemetry() {
   }, [flush]);
 
   useEffect(() => {
+    // 1. Timer de Flush Regular
     timer.current = setInterval(() => { void flush(); }, FLUSH_INTERVAL);
+
+    // 2. Rastreio Biomecânico (Passivo)
+    const handleMouseMove = (e: MouseEvent) => {
+      lastMousePos.current = { x: e.clientX, y: e.clientY };
+    };
+    const handleScroll = () => {
+      lastScrollPos.current = window.scrollY;
+    };
+
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    biomechanicsTimer.current = setInterval(() => {
+      // Só enviamos biomecânica se estivermos numa simulação ou se houver movimento
+      const isSimulation = window.location.pathname.includes('/simulacoes/');
+      if (isSimulation) {
+        track('simulacao.biomechanics' as TelemetriaTipo, {
+          x: lastMousePos.current.x,
+          y: lastMousePos.current.y,
+          scroll: lastScrollPos.current,
+        });
+      }
+    }, BIOMECHANICS_INTERVAL);
+
+    // 3. Estabilidade de Foco (Micro-interrupções)
+    const handleVisibility = () => {
+      const now = Date.now();
+      if (document.visibilityState === 'hidden') {
+        track('focus_lost' as TelemetriaTipo, { 
+          duration_since_focus: now - focusStartTime.current 
+        });
+        void flush();
+      } else {
+        focusStartTime.current = now;
+        track('focus_gained' as TelemetriaTipo, {});
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibility);
 
     const handleBeforeUnload = () => {
       if (buffer.current.length > 0) {
         const payload = JSON.stringify({ events: buffer.current });
         
+        // No beforeunload, usamos o telemetriaService para respeitar o circuit breaker se possível
+        // ou fazemos um fetch directo resiliente
         if (token) {
-          // sendBeacon() não aceita custom headers. Usamos a fetch API com keepalive.
           fetch(`${EDGE_URL}/telemetria/batch`, {
             method: 'POST',
             body: payload,
@@ -64,7 +114,6 @@ export function useTelemetry() {
             },
             keepalive: true,
           }).catch(() => {
-            // Em caso de falha imediata, enviar para BFF
             fetch(`${import.meta.env.VITE_API_URL || '/api'}/telemetria/batch`, {
               method: 'POST',
               body: payload,
@@ -72,14 +121,6 @@ export function useTelemetry() {
               keepalive: true,
             }).catch(() => {});
           });
-        } else {
-          // Visitantes Anónimos: Fallback apenas via BFF sem Token (a rota permite injecção relaxada)
-          fetch(`${import.meta.env.VITE_API_URL || '/api'}/telemetria/batch`, {
-            method: 'POST',
-            body: payload,
-            headers: { 'Content-Type': 'application/json' },
-            keepalive: true,
-          }).catch(() => {});
         }
       }
     };
@@ -88,10 +129,14 @@ export function useTelemetry() {
 
     return () => {
       if (timer.current) clearInterval(timer.current);
+      if (biomechanicsTimer.current) clearInterval(biomechanicsTimer.current);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       void flush();
     };
-  }, [flush, token]);
+  }, [flush, token, track]);
 
   return { track, flush };
 }

@@ -142,3 +142,29 @@ telemetriaRoutes.get('/summary', async (c) => {
     return c.json({ error: 'Erro summary' }, 500);
   }
 });
+
+// GET /patterns — Histórico de Músculo Cognitivo
+telemetriaRoutes.get('/patterns', async (c) => {
+  const user = c.get('user');
+  const { perfilId } = c.req.query();
+
+  // Segurança Soberana: Mentor pode ver perfis, Aluno vê apenas o seu
+  if (perfilId && user.role !== 'mentor' && user.role !== 'super_admin') {
+    return c.json({ error: 'Acesso negado ao Oráculo' }, 403);
+  }
+
+  try {
+    const resolvedPerfilId = perfilId || await resolvePerfilId(user.id);
+    if (!resolvedPerfilId) return c.json([]);
+
+    const res = await strapiGet<any>('/behavior-patterns', {
+      'filters[perfil][id][$eq]': resolvedPerfilId,
+      'sort': 'lastUpdatedAt:desc',
+    });
+
+    return c.json(res.data);
+  } catch (err) {
+    log.error({ err }, 'Erro ao buscar padrões behaviorais');
+    return c.json({ error: 'Erro interno' }, 500);
+  }
+});

@@ -54,6 +54,7 @@ import { healthRoutes } from './routes/health.js';
 
 import { socketService } from './modules/realtime/socket.service.js';
 import { tinaService } from './modules/tina/tina.service.js';
+import { replayUnprocessedEvents } from './modules/events/outbox-replay.js';
 
 const app = new Hono();
 
@@ -117,16 +118,60 @@ const server = serve({
 // ─── INICIALIZAÇÕES ───
 import { eventBus } from './modules/events/event-bus.js';
 import { ltiHandler } from './modules/events/lti.handler.js';
-import { conquistasHandler } from './modules/events/conquistas.handler.js';
+import { conquistasHandler } from './modules/events/conquistas.handler.ts';
+import { feedHandler } from './modules/events/feed.handler.js';
 import { DomainEventName } from './modules/events/types.js';
 
 // Registo explícito de handlers no Registry (D1)
 eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA, ltiHandler);
-eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA, conquistasHandler);
+eventBus.register(DomainEventName.CURSO_PUBLICADO, feedHandler);
+eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA,    conquistasHandler);
+eventBus.register(DomainEventName.CURSO_CONCLUIDO,        conquistasHandler);
+eventBus.register(DomainEventName.VINCULO_CONNECTED,      conquistasHandler);
+eventBus.register(DomainEventName.LOGIN,                  conquistasHandler);
+eventBus.register(DomainEventName.MENTORIA_ACEITE,        conquistasHandler);
+eventBus.register(DomainEventName.EXPERIENCIA_PUBLICADA,  conquistasHandler);
+eventBus.register(DomainEventName.RATING_CRIADO,          conquistasHandler);
+eventBus.register(DomainEventName.PERFIL_ATUALIZADO,      conquistasHandler);
+eventBus.register(DomainEventName.SIMULACAO_CRIADA,       conquistasHandler);
+eventBus.register(DomainEventName.CURSO_PUBLICADO,        conquistasHandler);
+eventBus.register(DomainEventName.CURSO_INSCRICAO,        conquistasHandler);
+eventBus.register(DomainEventName.COMENTARIO_CRIADO,      conquistasHandler);
 
 socketService.init(server as Server);
 tinaService.indexarKnowledge().catch((err: unknown) => { 
   log.error({ err }, 'Falha ao indexar Tina'); 
 });
+
+// ─── OUTBOX REPLAY SCHEDULER (ADR-007) ───
+let outboxReplayTimer: ReturnType<typeof setInterval> | null = null;
+
+if (process.env.NODE_ENV !== 'test') {
+  const OUTBOX_REPLAY_INTERVAL_MS = parseInt(
+    process.env.OUTBOX_REPLAY_INTERVAL_MS ?? '60000',
+    10,
+  );
+
+  log.info({ intervalMs: OUTBOX_REPLAY_INTERVAL_MS }, 'Outbox Replay scheduler iniciado');
+
+  outboxReplayTimer = setInterval(() => {
+    replayUnprocessedEvents().catch((err: unknown) => {
+      log.error({ err }, 'Erro inesperado no Outbox Replay scheduler');
+    });
+  }, OUTBOX_REPLAY_INTERVAL_MS);
+}
+
+// ─── GRACEFUL SHUTDOWN ───
+const shutdown = (signal: string) => {
+  log.info({ signal }, 'Sinal recebido — a encerrar servidor BFF');
+  if (outboxReplayTimer !== null) {
+    clearInterval(outboxReplayTimer);
+    log.info('Outbox Replay scheduler parado');
+  }
+  process.exit(0);
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 export type AppType = typeof app;

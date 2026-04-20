@@ -23,7 +23,7 @@ const Modal = ({ children, open, ...props }: ModalProps) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-canvas/80 backdrop-blur-sm"
               />
             </DialogPrimitive.Overlay>
             <DialogPrimitive.Content asChild>
@@ -31,11 +31,11 @@ const Modal = ({ children, open, ...props }: ModalProps) => {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ type: 'spring', duration: 0.3 }}
-                className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-surface p-6 shadow-lg rounded-xl"
+                transition={{ type: 'spring', stiffness: 220, damping: 28 }}
+                className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-ink-tertiary/10 bg-elevated p-6 shadow-lg rounded-xl"
               >
                 {children}
-                <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-amber focus:ring-offset-2 disabled:pointer-events-none">
+                <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-canvas transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:pointer-events-none touch-target">
                   <span className="sr-only">Fechar</span>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -72,7 +72,7 @@ const ModalTitle = forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn('text-lg font-semibold leading-none tracking-tight text-text-primary', className)}
+    className={cn('text-lg font-semibold leading-none tracking-tight text-ink-primary', className)}
     {...props}
   />
 ));
@@ -83,7 +83,7 @@ const ModalDescription = forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn('text-sm text-text-secondary', className)}
+    className={cn('text-sm text-ink-secondary', className)}
     {...props}
   />
 ));

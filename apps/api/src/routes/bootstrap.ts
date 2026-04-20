@@ -6,7 +6,7 @@ import { authService } from '../modules/auth/auth.service.js';
 import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 import { signTelemetryToken } from '../modules/auth/telemetry-token.js';
 import { Features, type BootstrapResponse } from '@pdc/shared';
-import type { Role } from '@pdc/shared';
+// Role import removed as it is unused
 
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 
@@ -28,7 +28,7 @@ bootstrapRoutes.get('/', async (c) => {
       userPayload = {
         id: dbUser.id,
         email: dbUser.email,
-        role: dbUser.role as Role,
+        role: dbUser.role,
         perfilId: (dbUser as any).perfilId || undefined,
       };
       

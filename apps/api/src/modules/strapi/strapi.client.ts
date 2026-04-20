@@ -89,12 +89,18 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, timeout = 
 
 export async function strapiGet<T>(
   path: string,
-  params?: Record<string, string>
+  params?: Record<string, string | string[]>
 ): Promise<StrapiListResponse<T>> {
   const url = new URL(`${STRAPI_URL}/api${path}`);
   if (params) {
     for (const [k, v] of Object.entries(params)) {
-      url.searchParams.set(k, v);
+      if (Array.isArray(v)) {
+        v.forEach((val, i) => {
+          url.searchParams.append(`${k}[${i}]`, val);
+        });
+      } else {
+        url.searchParams.set(k, v);
+      }
     }
   }
   const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() }, TIMEOUT);

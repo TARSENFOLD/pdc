@@ -22,11 +22,28 @@ export const CriarExperienciaPayloadSchema = z.object({
   titulo: z.string().min(3).max(200),
   descricao: z.string().min(10),
   area: AreaVocacionalSchema,
+  nivel: z.enum(['basico', 'medio', 'avancado']),
   vagas: z.number().int().min(1).optional(),
   dataInicio: z.string().datetime().optional(),
   dataFim: z.string().datetime().optional(),
   localizacao: z.string().max(200).optional(),
   modalidade: ModalidadeSchema,
+  // 3 Painéis Obrigatórios (Spec 04)
+  painelRealidade: z.object({
+    salarioMedio: z.string().optional(),
+    taxaEmpregabilidade: z.string().optional(),
+    principaisEmpregadores: z.array(z.string()).optional(),
+  }).optional(),
+  muralVozes: z.array(z.object({
+    autor: z.string(),
+    cargo: z.string(),
+    depoimento: z.string(),
+    videoUrl: z.string().url().optional(),
+  })).optional(),
+  guiaInstitucional: z.object({
+    fotosCampus: z.array(z.string().url()).optional(),
+    timelineCurricular: z.array(z.object({ ano: z.string(), foco: z.string() })).optional(),
+  }).optional(),
 });
 
 export type CriarExperienciaPayload = z.infer<typeof CriarExperienciaPayloadSchema>;

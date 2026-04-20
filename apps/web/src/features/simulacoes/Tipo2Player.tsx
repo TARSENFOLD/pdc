@@ -54,7 +54,6 @@ export const Tipo2Player = ({ simulacao }: Props) => {
       
       await simulacoesApi.concluirTentativa({
         tentativaId,
-        // Score agora é calculado pelo BFF a partir do metadata (R2.T4)
         metadata: { 
           duracaoSegundos: duracao, 
           focusStability: focusLost,
@@ -69,7 +68,8 @@ export const Tipo2Player = ({ simulacao }: Props) => {
         focusStability: focusLost
       });
 
-      navigate('/app/reputacao');
+      // Redireciona para o Relatório Vocacional para ver o veredito processado
+      navigate('/app/reputacao'); 
     } catch (err) {
       console.error('Erro ao concluir missão:', err);
     }

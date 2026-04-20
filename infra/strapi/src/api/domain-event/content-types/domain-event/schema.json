@@ -31,6 +31,10 @@
     },
     "processedAt": {
       "type": "datetime"
+    },
+    "attempts": {
+      "type": "integer",
+      "default": 0
     }
   }
 }
