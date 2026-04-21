@@ -132,8 +132,8 @@ import { behaviorHook } from './modules/hooks/behavior.hook.js';
 // Registo de G15 Hooks (Músculo do Oráculo)
 eventBus.registerHook(rankingHook);
 eventBus.registerHook(feedHook);
-eventBus.registerHook(matchHook as any);
-eventBus.registerHook(behaviorHook as any);
+eventBus.registerHook(matchHook);
+eventBus.registerHook(behaviorHook);
 eventBus.registerHook(achievementHook);
 eventBus.registerHook(notifyHook);
 

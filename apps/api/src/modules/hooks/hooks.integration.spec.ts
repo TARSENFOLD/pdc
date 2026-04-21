@@ -37,12 +37,13 @@ describe('G15: EcosystemHooks Integration', () => {
         reputacao: 100, 
         areaInteresse: 'Tecnologia',
         userId: 'user-123' 
-      }] 
+      }],
+      meta: { pagination: { page: 1, pageSize: 10, total: 1, pageCount: 1 } }
     } as any);
 
     // Mock padrão de POST
-    vi.mocked(strapiPost).mockResolvedValue({ data: { id: 100 } } as any);
-    vi.mocked(strapiPut).mockResolvedValue({ data: { id: 100 } } as any);
+    vi.mocked(strapiPost).mockResolvedValue({ data: { id: 100 }, meta: {} } as any);
+    vi.mocked(strapiPut).mockResolvedValue({ data: { id: 100 }, meta: {} } as any);
   });
 
   it('deve executar o fluxo completo de 5 hooks ao publicar um curso', async () => {

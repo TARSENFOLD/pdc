@@ -15,13 +15,16 @@ import {
 const log = pino({ name: 'event-bus' });
 
 class EventBus {
-  private hooks: EcosystemHook<unknown>[] = [];
+  // Mantemos o armazenamento interno flexível para suportar múltiplos payloads
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private hooks: EcosystemHook<any>[] = [];
 
   /**
    * Registar um Hook G15 no ecossistema
    */
-  registerHook(hook: EcosystemHook<unknown>) {
-    this.hooks.push(hook);
+  registerHook<T>(hook: EcosystemHook<T>) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.hooks.push(hook as EcosystemHook<any>);
     log.info({ hook: hook.name }, 'G15 Hook Registado');
   }
 
