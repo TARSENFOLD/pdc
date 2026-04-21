@@ -47,7 +47,6 @@ import { notificacaoRoutes } from './routes/notificacoes.js';
 import { perfilRoutes } from './routes/perfis.js';
 import { denunciaRoutes } from './routes/denuncias.js';
 import { featureFlagsRoutes } from './routes/feature-flags.js';
-import { reputationRoutes } from './routes/reputation.js';
 import { matchRoutes } from './routes/match.js';
 import { bootstrapRoutes } from './routes/bootstrap.js';
 import { landingRoutes } from './routes/landing.js';
@@ -96,8 +95,6 @@ app.route('/admin', adminRoutes);
 app.route('/comite', comiteRoutes);
 app.route('/vinculos', vinculoRoutes);
 app.route('/mensagens', mensagensRoutes);
-app.route('/reputacao', reputationRoutes); // Rota Canónica (R2.T6)
-app.route('/reputation', reputationRoutes); // Alias legacy
 app.route('/seo', seoRoutes);
 app.route('/conquistas', conquistaRoutes);
 app.route('/mentorias', mentoriaRoutes);

@@ -154,14 +154,15 @@ cursoRoutes.get('/:id', async (c) => {
 cursoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zValidator('json', CriarCursoPayloadSchema), async (c) => {
   const payload = c.req.valid('json');
   const { id: autorId } = c.get('user');
-  const { modulos, ...cursoData } = payload;
+  const { modulos, regrasAcesso, ...cursoData } = payload;
   
   try {
     // 1. Criar o Curso Base no Strapi
     const res = await strapiPost<Curso>('/cursos', {
       ...cursoData,
+      regrasAcesso,
       autorId,
-      estado: 'published', // No patamar mundial, materialização é imediata se vindo do builder
+      estado: 'published', 
       slug: payload.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
     });
     
@@ -180,7 +181,10 @@ cursoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zVali
         
         for (const item of mod.itens) {
           await strapiPost<unknown>('/modulo-items', {
-            ...item,
+            titulo: item.titulo,
+            tipo: item.tipo,
+            conteudo: item.conteudo,
+            ordem: item.ordem,
             modulo: moduloId
           });
         }
@@ -188,18 +192,18 @@ cursoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zVali
     }
 
     // 3. CAMADA 5: IMPACTO NO ECOSSISTEMA
-    // Disparar evento para o Event Bus. O impacto (Feed, Match, Conquista) é autônomo.
+    // O barramento G15 agora recebe o payload completo para Match Terminal
     await eventBus.publishWithOutbox(DomainEventName.CURSO_PUBLICADO, {
       cursoId: String(cursoId),
       autorId,
       titulo: cursoData.titulo,
       area: String(cursoData.area),
-      regrasAcesso: cursoData.regrasAcesso
+      regrasAcesso
     });
 
-    log.info({ cursoId: String(cursoId), autorId }, 'Curso materializado com sucesso e impacto disparado.');
+    log.info({ cursoId: String(cursoId), autorId }, 'Curso materializado com sucesso e impacto E2E disparado.');
     
-    return c.json(res, 201);
+    return c.json(res.data, 201);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno na materialização';
     log.error({ err, autorId }, 'Falha crítica na Camada 3/5 de Cursos');

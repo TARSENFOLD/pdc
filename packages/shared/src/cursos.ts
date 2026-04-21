@@ -65,22 +65,26 @@ export const CriarCursoPayloadSchema = z.object({
   thumbnailUrl: z.string().url().optional(),
   capaUrl: z.string().url().optional(),
   preco: z.number().min(0).optional(),
-  visibilidade: z.enum(['publico', 'privado', 'institucional']).optional(),
+  visibilidade: z.enum(['publico', 'privado', 'institucional']).optional().default('publico'),
+  
+  // Regras de Match Soberano (Mandatário para E2E)
   regrasAcesso: z.object({
-    minFluidez: z.number().min(0).max(10).optional(),
-    minResiliencia: z.number().min(0).max(10).optional(),
-  }).optional(),
-  // Estrutura Recursiva para Camada 3
+    minFluidez: z.number().min(0).max(10).optional().default(0),
+    minResiliencia: z.number().min(0).max(10).optional().default(0),
+    minFoco: z.number().min(0).max(10).optional().default(0),
+  }),
+
+  // Estrutura em Cascata (Mandatário para E2E)
   modulos: z.array(z.object({
-    titulo: z.string(),
+    titulo: z.string().min(3),
     ordem: z.number(),
     itens: z.array(z.object({
-      titulo: z.string(),
+      titulo: z.string().min(3),
       tipo: z.enum(['video', 'pdf', 'texto', 'quiz', 'tarefa', 'iframe']),
       conteudo: z.string().optional(),
       ordem: z.number(),
-    }))
-  })).optional(),
+    })).min(1),
+  })).min(1),
 });
 
 export type CriarCursoPayload = z.infer<typeof CriarCursoPayloadSchema>;
