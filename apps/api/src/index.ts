@@ -126,10 +126,14 @@ import { rankingHook } from './modules/hooks/ranking.hook.js';
 import { feedHook } from './modules/hooks/feed.hook.js';
 import { achievementHook } from './modules/hooks/achievement.hook.js';
 import { notifyHook } from './modules/hooks/notify.hook.js';
+import { matchHook } from './modules/hooks/match.hook.js';
+import { behaviorHook } from './modules/hooks/behavior.hook.js';
 
 // Registo de G15 Hooks (Músculo do Oráculo)
 eventBus.registerHook(rankingHook);
 eventBus.registerHook(feedHook);
+eventBus.registerHook(matchHook as any);
+eventBus.registerHook(behaviorHook as any);
 eventBus.registerHook(achievementHook);
 eventBus.registerHook(notifyHook);
 

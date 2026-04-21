@@ -138,21 +138,112 @@ export type DomainEvent<TPayload = unknown> = z.infer<typeof DomainEventSchema> 
   payload: TPayload;
 };
 
+const BaseInteractionSchema = z.object({
+  autorId: z.string(),
+  targetId: z.string(),
+});
+
+const ContentPublishSchema = z.object({
+  autorId: z.string(),
+  titulo: z.string(),
+  area: z.string().optional(),
+});
+
 /**
  * Map de Schemas por Evento para Validação E2E
+ * Cobre exaustivamente os 49 eventos do ecossistema G15.
  */
 export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
-  [DomainEventName.CURSO_PUBLICADO]: z.object({
-    cursoId: z.string(),
-    autorId: z.string(),
-    titulo: z.string(),
-    area: z.string(),
-  }),
-  [DomainEventName.TENTATIVA_CONCLUIDA]: z.object({
-    tentativaId: z.string(),
-    perfilId: z.string(),
-    area: z.string(),
-    score: z.number(),
-  }),
-  // ... adicionar conforme necessário para cada feature E2E
+  // --- Simulação ---
+  [DomainEventName.TENTATIVA_INICIADA]: z.object({ tentativaId: z.string(), perfilId: z.string() }),
+  [DomainEventName.TENTATIVA_CONCLUIDA]: z.object({ tentativaId: z.string(), perfilId: z.string(), area: z.string(), score: z.number() }),
+  [DomainEventName.TENTATIVA_FALHADA]: z.object({ tentativaId: z.string(), perfilId: z.string(), reason: z.string().optional() }),
+  [DomainEventName.SIMULACAO_CRIADA]: ContentPublishSchema.extend({ simulacaoId: z.string() }),
+  [DomainEventName.SIMULACAO_PUBLICADA]: ContentPublishSchema.extend({ simulacaoId: z.string() }),
+  [DomainEventName.SIMULACAO_APROVADA]: z.object({ simulacaoId: z.string(), aprovadorId: z.string() }),
+  [DomainEventName.SIMULACAO_REJEITADA]: z.object({ simulacaoId: z.string(), rejeitadorId: z.string(), motivo: z.string().optional() }),
+
+  // --- Curso ---
+  [DomainEventName.CURSO_PUBLICADO]: ContentPublishSchema.extend({ cursoId: z.string(), regrasAcesso: z.record(z.unknown()).optional() }),
+  [DomainEventName.CURSO_ATUALIZADO]: z.object({ cursoId: z.string(), autorId: z.string() }),
+  [DomainEventName.CURSO_ARQUIVADO]: z.object({ cursoId: z.string(), autorId: z.string() }),
+  [DomainEventName.CURSO_INSCRICAO]: z.object({ cursoId: z.string(), estudanteId: z.string() }),
+  [DomainEventName.CURSO_MODULO_CONCLUIDO]: z.object({ cursoId: z.string(), moduloId: z.string(), estudanteId: z.string() }),
+  [DomainEventName.CURSO_CONCLUIDO]: z.object({ cursoId: z.string(), estudanteId: z.string() }),
+
+  // --- Experiência ---
+  [DomainEventName.EXPERIENCIA_PUBLICADA]: ContentPublishSchema.extend({ experienciaId: z.string() }),
+  [DomainEventName.EXPERIENCIA_VISUALIZADA]: BaseInteractionSchema.extend({ experienciaId: z.string() }),
+  [DomainEventName.EXPERIENCIA_QA_RESPONDIDA]: z.object({ experienciaId: z.string(), perguntaId: z.string(), autorId: z.string() }),
+
+  // --- Programa ---
+  [DomainEventName.PROGRAMA_PUBLICADO]: ContentPublishSchema.extend({ programaId: z.string(), instituicaoId: z.string() }),
+  [DomainEventName.PROGRAMA_APROVADO]: z.object({ programaId: z.string(), aprovadorId: z.string() }),
+  [DomainEventName.PROGRAMA_INSCRICAO]: z.object({ programaId: z.string(), estudanteId: z.string() }),
+  [DomainEventName.PROGRAMA_CONVITE_ENVIADO]: z.object({ programaId: z.string(), estudanteId: z.string(), instituicaoId: z.string() }),
+  [DomainEventName.PROGRAMA_CONVITE_ACEITE]: z.object({ programaId: z.string(), estudanteId: z.string() }),
+  [DomainEventName.SHADOWAPRO_VINCULO_CRIADO]: z.object({ programaId: z.string(), estudanteId: z.string(), mentorId: z.string() }),
+  [DomainEventName.EDUVISITA_AGENDADA]: z.object({ programaId: z.string(), instituicaoId: z.string(), data: z.string() }),
+
+  // --- Projeto ---
+  [DomainEventName.PROJETO_PUBLICADO]: ContentPublishSchema.extend({ projetoId: z.string() }),
+  [DomainEventName.PROJETO_ACESSO_SOLICITADO]: BaseInteractionSchema.extend({ projetoId: z.string() }),
+  [DomainEventName.PROJETO_ACESSO_CONCEDIDO]: BaseInteractionSchema.extend({ projetoId: z.string() }),
+  [DomainEventName.PROJETO_ACESSO_RECUSADO]: BaseInteractionSchema.extend({ projetoId: z.string() }),
+  [DomainEventName.PROJETO_COLABORADOR_ACEITE]: z.object({ projetoId: z.string(), autorId: z.string(), colaboradorId: z.string() }),
+  [DomainEventName.PROJETO_ENDORSEMENT_RECEBIDO]: BaseInteractionSchema.extend({ projetoId: z.string() }),
+  [DomainEventName.PROJETO_SELO_ATRIBUIDO]: z.object({ projetoId: z.string(), seloId: z.string(), avaliadorId: z.string() }),
+
+  // --- Post/Conquista ---
+  [DomainEventName.POST_PUBLICADO]: ContentPublishSchema.extend({ postId: z.string() }),
+  [DomainEventName.CONQUISTA_DESBLOQUEADA]: z.object({ perfilId: z.string(), conquistaSlug: z.string() }),
+  [DomainEventName.COMENTARIO_CRIADO]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string() }),
+  [DomainEventName.LIKE_ADICIONADO]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string() }),
+  [DomainEventName.BOOKMARK_ADICIONADO]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string() }),
+
+  // --- Identidade ---
+  [DomainEventName.PERFIL_CRIADO]: z.object({ perfilId: z.string(), role: z.string() }),
+  [DomainEventName.PERFIL_ATUALIZADO]: z.object({ perfilId: z.string() }).passthrough(),
+  [DomainEventName.PERFIL_ROLE_ALTERADO]: z.object({ perfilId: z.string(), oldRole: z.string(), newRole: z.string() }),
+  [DomainEventName.PERFIL_SUSPENSO]: z.object({ perfilId: z.string(), reason: z.string().optional() }),
+  [DomainEventName.LOGIN]: z.object({ userId: z.string(), ip: z.string().optional() }),
+  [DomainEventName.LOGOUT]: z.object({ userId: z.string() }),
+  [DomainEventName.MFA_ATIVADO]: z.object({ userId: z.string() }),
+  [DomainEventName.OAUTH_VINCULADO]: z.object({ userId: z.string(), provider: z.string() }),
+
+  // --- Vínculo ---
+  [DomainEventName.VINCULO_SOLICITADO]: z.object({ solicitanteId: z.string(), destinatarioId: z.string() }),
+  [DomainEventName.VINCULO_APROVADO]: z.object({ vinculoId: z.string(), solicitanteId: z.string(), destinatarioId: z.string() }),
+  [DomainEventName.VINCULO_REJEITADO]: z.object({ vinculoId: z.string(), solicitanteId: z.string(), destinatarioId: z.string() }),
+  [DomainEventName.VINCULO_TERMINADO]: z.object({ vinculoId: z.string(), atorId: z.string() }),
+  [DomainEventName.VINCULO_CONNECTED]: z.object({ vinculoId: z.string(), solicitanteId: z.string(), destinatarioId: z.string() }),
+
+  // --- Mentoria ---
+  [DomainEventName.MENTORIA_SOLICITADA]: BaseInteractionSchema.extend({ mentoriaId: z.string() }),
+  [DomainEventName.MENTORIA_ACEITE]: BaseInteractionSchema.extend({ mentoriaId: z.string() }),
+  [DomainEventName.MENTORIA_REJEITADA]: BaseInteractionSchema.extend({ mentoriaId: z.string() }),
+
+  // --- Ratings/Feed ---
+  [DomainEventName.RATING_CRIADO]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string(), score: z.number() }),
+  [DomainEventName.PROPOSTA_CRIADA]: z.object({ propostaId: z.string(), estudanteId: z.string(), instituicaoId: z.string() }),
+  [DomainEventName.PROGRAMA_CONCLUIDO]: z.object({ programaId: z.string(), estudanteId: z.string() }),
+
+  // --- Mensagens ---
+  [DomainEventName.MENSAGEM_ENVIADA]: z.object({ mensagemId: z.string(), conversaId: z.string(), remetenteId: z.string(), destinatarioId: z.string(), conteudo: z.string(), createdAt: z.string() }),
+  [DomainEventName.MENSAGEM_LIDA]: z.object({ mensagemId: z.string(), leitorId: z.string(), conversaId: z.string() }),
+  [DomainEventName.CONVERSA_INICIADA]: z.object({ conversaId: z.string(), participant1Id: z.string(), participant2Id: z.string() }),
+
+  // --- Moderação ---
+  [DomainEventName.DENUNCIA_CRIADA]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string() }),
+  [DomainEventName.DENUNCIA_RESOLVIDA]: z.object({ denunciaId: z.string(), resolutorId: z.string(), acao: z.string() }),
+  [DomainEventName.CONTEUDO_REMOVIDO]: z.object({ targetType: z.string(), targetId: z.string(), remocaoId: z.string() }),
+  [DomainEventName.COMITE_APROVOU]: z.object({ targetType: z.string(), targetId: z.string(), membroId: z.string() }),
+  [DomainEventName.COMITE_REJEITOU]: z.object({ targetType: z.string(), targetId: z.string(), membroId: z.string() }),
+  [DomainEventName.MODERADOR_APROVOU]: z.object({ targetType: z.string(), targetId: z.string(), moderadorId: z.string() }),
+  [DomainEventName.MODERADOR_REJEITOU]: z.object({ targetType: z.string(), targetId: z.string(), moderadorId: z.string() }),
+
+  // --- Mídia ---
+  [DomainEventName.MEDIA_UPLOADED]: z.object({ mediaId: z.string(), uploaderId: z.string(), url: z.string() }),
+  [DomainEventName.MEDIA_PROCESSED]: z.object({ mediaId: z.string(), url: z.string() }),
+  [DomainEventName.MEDIA_FAILED]: z.object({ mediaId: z.string(), reason: z.string() }),
 };
