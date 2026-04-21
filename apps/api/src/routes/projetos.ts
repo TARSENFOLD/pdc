@@ -78,13 +78,18 @@ projetoRoutes.post('/', async (c) => {
   }
 });
 
+interface StrapiProjetoWithAutor {
+  id: string | number;
+  autor?: { userId: string };
+}
+
 // DELETE /projetos/:id
 projetoRoutes.delete('/:id', async (c) => {
   const id = c.req.param('id');
   const { id: userId } = c.get('user');
 
   try {
-    const resGet = await strapiGet<unknown>(`/projetos/${id}`, { populate: 'autor' });
+    const resGet = await strapiGet<StrapiProjetoWithAutor>(`/projetos/${id}`, { populate: 'autor' });
     const existing = resGet.data[0];
 
     if (!existing) return c.json({ error: 'Projeto não identificado' }, 404);

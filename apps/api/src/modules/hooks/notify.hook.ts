@@ -25,13 +25,12 @@ export const notifyHook: EcosystemHook = {
 
   execute: async (event: DomainEvent<BaseDomainEventPayload>, context: EcosystemHookContext): Promise<EcosystemHookResult> => {
     const payload = event.payload;
-    const { results } = context;
+    const results = context.results;
 
     // 1. Processar Conquistas (Hook 4)
-    const achievementResult = results[EcosystemHookName.ACHIEVEMENT] as EcosystemHookResult | undefined;
+    const achievementResult = results[EcosystemHookName.ACHIEVEMENT];
     if (achievementResult?.status === 'sent' && achievementResult.data) {
-      const data = achievementResult.data as { userId: string; desbloqueadas: unknown[] };
-      const { userId, desbloqueadas } = data;
+      const { userId, desbloqueadas } = achievementResult.data as { userId: string; desbloqueadas: { slug: string; titulo: string; descricao: string }[] };
       desbloqueadas.forEach((conquista) => {
         socketService.emitirConquista(userId, conquista);
       });
@@ -49,7 +48,7 @@ export const notifyHook: EcosystemHook = {
           eventId: event.id,
           lida: false
         });
-      } catch (err) {
+      } catch (err: unknown) {
         log.error({ err }, 'Falha ao persistir log de notificação');
       }
     }

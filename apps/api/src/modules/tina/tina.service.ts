@@ -15,6 +15,11 @@ const redis = env.UPSTASH_REDIS_REST_URL
 
 const AI_PROVIDER = env.AI_PROVIDER;
 
+interface AiChatResponse {
+  choices?: { message: { content: string } }[];
+  message?: { content: string };
+}
+
 export const tinaService = {
   buildSystemPrompt(userContext: string, chunks: string): string {
     return `És a Tina, a assistente virtual inteligente do PDC (Por Dentro do Curso).
@@ -97,7 +102,7 @@ Retorna APENAS um JSON no formato:
 }`;
 
     const res = await aiService.chat([{ role: 'user', content: prompt }], 'Geração de Desafio Vocacional', false);
-    const data = await res.json();
+    const data = await res.json() as AiChatResponse;
     
     let content = '';
     if (data.choices) {
@@ -130,7 +135,7 @@ Usa uma linguagem que misture rigor científico com visão de mercado.
 Retorna APENAS o texto do veredito.`;
 
     const res = await aiService.chat([{ role: 'user', content: prompt }], 'Análise Psicométrica de Elite', false);
-    const data = await res.json();
+    const data = await res.json() as AiChatResponse;
     
     if (data.choices) {
       return data.choices[0]?.message.content || '';

@@ -9,11 +9,11 @@ const log = pino({ name: 'mobile-push-service' });
 export const mobilePushService = {
   enviarAPNs(perfilId: string, _payload: Record<string, unknown>): Promise<boolean> {
     log.info({ perfilId, platform: 'ios' }, 'APNs Push enviado (Simulado - Certificados APNs necessários)');
-    return true;
+    return Promise.resolve(true);
   },
 
   enviarFCM(perfilId: string, _payload: Record<string, unknown>): Promise<boolean> {
     log.info({ perfilId, platform: 'android' }, 'FCM Push enviado (Simulado - firebase-admin necessário)');
-    return true;
+    return Promise.resolve(true);
   }
 };

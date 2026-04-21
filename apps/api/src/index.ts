@@ -126,7 +126,7 @@ const server = serve({
 import './modules/outbox/outbox-worker.js';
 import { eventBus } from './modules/events/event-bus.js';
 import { rankingHook } from './modules/hooks/ranking.hook.js';
-import { feedHook } from './modules/hooks/feed.hook.ts';
+import { feedHook } from './modules/hooks/feed.hook.js';
 import { achievementHook } from './modules/hooks/achievement.hook.js';
 import { notifyHook } from './modules/hooks/notify.hook.js';
 

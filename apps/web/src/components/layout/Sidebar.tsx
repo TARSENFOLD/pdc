@@ -210,7 +210,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
   return (
     <div className="flex h-full flex-col bg-surface border-r border-white/5">
-      <div className="flex items-center gap-4 px-8 py-10 border-b border-white/5 bg-white/[0.01]">
+      <div className="flex items-center gap-4 px-8 py-10 border-b border-white/5 bg-white/1">
         <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-accent shadow-xl shadow-accent/20">
           <span className="font-display font-black text-white text-xl">P</span>
         </div>
@@ -228,7 +228,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         </ul>
       </nav>
 
-      <div className="p-6 border-t border-white/5 bg-white/[0.01] space-y-4">
+      <div className="p-6 border-t border-white/5 bg-white/1 space-y-4">
         {/* User Quick Profile (R2.T6 Integrity) */}
         <Link 
           to="/app/perfil"
@@ -249,7 +249,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
           <ChevronRight size={14} className="text-text-muted group-hover:text-accent transition-colors" />
         </Link>
 
-        <div className="rounded-[24px] bg-surface-raised p-5 border border-accent/10 relative overflow-hidden group">
+        <div className="rounded-3xl bg-surface-raised p-5 border border-accent/10 relative overflow-hidden group">
           <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
              <Brain size={80} />
           </div>

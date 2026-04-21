@@ -5,7 +5,8 @@ export enum EcosystemHookName {
   FEED = 'feed',
   MATCH = 'match',
   ACHIEVEMENT = 'achievement',
-  NOTIFY = 'notify'
+  NOTIFY = 'notify',
+  BEHAVIOR = 'behavior'
 }
 
 export interface EcosystemHookContext {

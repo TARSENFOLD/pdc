@@ -38,11 +38,11 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
   it('deve derivar score alto para persona "Cirurgião" (focusStability=95)', async () => {
     vi.mocked(strapiPut).mockResolvedValueOnce({
       data: { id: 'tent-1', score: 9.75, status: 'concluida', perfil: 'perf-1' }
-    } as unknown);
+    } as any);
 
     vi.mocked(strapiGet).mockResolvedValueOnce({
       data: [{ id: 'perf-1' }]
-    } as unknown);
+    } as any);
 
     const res = await app.request('/simulacoes/tentativas/tent-1', {
       method: 'PUT',
@@ -64,11 +64,11 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
   it('deve derivar score baixo para persona "Hacker Hesitante" (focusStability=40)', async () => {
     vi.mocked(strapiPut).mockResolvedValueOnce({
       data: { id: 'tent-2', score: 4.75, status: 'concluida', perfil: 'perf-2' }
-    } as unknown);
+    } as any);
 
     vi.mocked(strapiGet).mockResolvedValueOnce({
       data: [{ id: 'perf-2' }]
-    } as unknown);
+    } as any);
 
     const res = await app.request('/simulacoes/tentativas/tent-2', {
       method: 'PUT',

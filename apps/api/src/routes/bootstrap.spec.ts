@@ -34,7 +34,7 @@ describe('GET /bootstrap', () => {
     const res = await bootstrapRoutes.request(req);
     
     expect(res.status).toBe(200);
-    const json: unknown = await res.json();
+    const json: any = await res.json();
     
     expect(json.session.isAuthenticated).toBe(false);
     expect(json.session.user).toBeNull();
@@ -54,7 +54,7 @@ describe('GET /bootstrap', () => {
     const res = await bootstrapRoutes.request(req);
     
     expect(res.status).toBe(200);
-    const json: unknown = await res.json();
+    const json: any = await res.json();
     
     expect(json.capabilities.features['REPUTATION_VISIBLE']).toBe(true); // Strapi ganha
     expect(json.capabilities.features['MENSAGENS_INBOX']).toBeUndefined(); // Registry barra HIDDEN

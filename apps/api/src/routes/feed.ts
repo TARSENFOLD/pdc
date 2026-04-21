@@ -22,7 +22,7 @@ feedRoutes.get('/', verifyJwt, async (c) => {
 
   try {
     // 1. Buscar perfil do usuário para boost de afinidade
-    const resPerfil = await strapiGet<unknown>('/perfis', {
+    const resPerfil = await strapiGet<{ id: string | number; areasInteresse?: string[] }>('/perfis', {
       'filters[userId][$eq]': user.id,
       'fields': 'areasInteresse',
     });

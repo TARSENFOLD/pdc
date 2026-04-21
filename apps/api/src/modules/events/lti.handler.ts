@@ -49,7 +49,8 @@ export async function ltiHandler(event: DomainEvent): Promise<LtiScoreResult | v
     return { success: true };
 
   } catch (err: unknown) {
-    log.error({ err: err.message, eventId: event.id }, 'Erro no LTI Sync');
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    log.error({ err: msg, eventId: event.id }, 'Erro no LTI Sync');
     await redis.del(lockKey);
     throw err;
   }

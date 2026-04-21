@@ -21,10 +21,10 @@ describe('EventBus Integration', () => {
   });
 
   it('deve marcar evento como processado após execução', async () => {
-    vi.mocked(strapiPost).mockResolvedValueOnce({ data: { id: 100 } } as unknown);
-    vi.mocked(strapiPut).mockResolvedValueOnce({ data: { id: 100, processed: true } } as unknown);
+    vi.mocked(strapiPost).mockResolvedValueOnce({ data: { id: 100 } } as any);
+    vi.mocked(strapiPut).mockResolvedValueOnce({ data: { id: 100, processed: true } } as any);
 
-    await eventBus.publishWithOutbox('test.event', { foo: 'bar' });
+    await eventBus.publishWithOutbox('test.event' as any, { foo: 'bar' });
 
     expect(strapiPut).toHaveBeenCalledWith(expect.stringContaining('/100'), expect.objectContaining({
       processed: true

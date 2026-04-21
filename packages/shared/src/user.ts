@@ -21,6 +21,7 @@ export const UserSchema = z.object({
   email: z.string().email(),
   nome: z.string(),
   role: RoleSchema,
+  perfilId: z.string().optional().nullable(),
   avatarUrl: z.string().url().optional().nullable(),
   reputacaoTier: ReputacaoTierSchema.optional().nullable(),
   createdAt: z.string().datetime(),
@@ -53,6 +54,7 @@ export type MentorPublico = z.infer<typeof MentorPublicoSchema>;
 
 export const InstituicaoPublicaSchema = z.object({
   id: z.string(),
+  slug: z.string().optional(),
   nome: z.string(),
   logoUrl: z.string().url().optional().nullable(),
   tipo: z.string().optional().nullable(),

@@ -52,15 +52,15 @@ export const matchHook: EcosystemHook<MatchPayload> = {
     ];
 
     if (!matchableEvents.includes(event.name)) {
-      return { hook: this.name, status: 'skipped', reason: 'not-a-matchable-event' };
+      return { status: 'skipped', reason: 'not-a-matchable-event' };
     }
 
     const { area, autorId } = event.payload;
     const rawEntityId = event.payload.cursoId || event.payload.simulacaoId || event.payload.experienciaId || event.payload.projetoId || event.payload.postId || event.payload.programaId || event.payload.id;
     const entityType = event.name.split('.')[0];
 
-    if (!area) return { hook: this.name, status: 'skipped', reason: 'missing-area-for-match' };
-    if (!rawEntityId) return { hook: this.name, status: 'failed', reason: 'entityId-missing' };
+    if (!area) return { status: 'skipped', reason: 'missing-area-for-match' };
+    if (!rawEntityId) return { status: 'fatal_error', reason: 'entityId-missing' };
     
     const entityId = String(rawEntityId);
 
@@ -113,14 +113,13 @@ export const matchHook: EcosystemHook<MatchPayload> = {
       await Promise.all(promises);
 
       return { 
-        hook: this.name, 
-        status: 'success', 
+        status: 'sent', 
         data: { matchesCreated, candidatesEvaluated: candidatos.length, minScore } 
       };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       log.error({ err, event: event.name, entityId }, 'Falha no hook de match');
-      return { hook: this.name, status: 'retryable_error', reason: message };
+      return { status: 'retryable_error', reason: message };
     }
   }
 };

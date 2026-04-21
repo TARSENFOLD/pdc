@@ -57,11 +57,15 @@ export const heuristicsEngine = {
 
     let erraticMovements = 0;
     for (let i = 1; i < bioEvents.length; i++) {
-      const prev = bioEvents[i - 1].payload as { x: number; y: number };
-      const curr = bioEvents[i].payload as { x: number; y: number };
+      const pEvt = bioEvents[i - 1];
+      const cEvt = bioEvents[i];
+      if (!pEvt || !cEvt) continue;
+
+      const prev = pEvt.payload as { x: number; y: number };
+      const curr = cEvt.payload as { x: number; y: number };
       
-      const prevTime = new Date(bioEvents[i - 1].timestamp).getTime();
-      const currTime = new Date(bioEvents[i].timestamp).getTime();
+      const prevTime = new Date(pEvt.timestamp).getTime();
+      const currTime = new Date(cEvt.timestamp).getTime();
       const dt = currTime - prevTime;
       
       const dx = (curr.x || 0) - (prev.x || 0);

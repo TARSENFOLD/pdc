@@ -42,13 +42,19 @@ mentoriaRoutes.get('/alunado', async (c) => {
   }
 });
 
+interface StrapiProjeto {
+  id: string | number;
+  titulo: string;
+  estudanteId: string;
+}
+
 // GET /mentorias/validar-projeto/:projetoId
 mentoriaRoutes.get('/validar-projeto/:projetoId', async (c) => {
   const projetoId = c.req.param('projetoId');
   const { id: mentorId } = c.get('user');
 
   try {
-    const res = await strapiGet<unknown>(`/projetos/${projetoId}`);
+    const res = await strapiGet<StrapiProjeto>(`/projetos/${projetoId}`);
     const proj = res.data[0];
     
     if (!proj) return c.json({ error: 'Projeto não encontrado' }, 404);

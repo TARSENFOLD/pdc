@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { UpdatePerfilPayloadSchema } from '@pdc/shared';
+import { UpdatePerfilPayloadSchema, DomainEventName } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPut, strapiPutRaw } from '../modules/strapi/strapi.client.js';
@@ -64,7 +64,7 @@ perfilRoutes.get('/me', async (c) => {
     });
     return c.json(data.data[0]);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
+    const message = (err as Error).message || 'Erro interno';
     return c.json({ error: message }, 502);
   }
 });
@@ -88,7 +88,7 @@ perfilRoutes.put('/me', zValidator('json', UpdatePerfilPayloadSchema), async (c)
       const resPut = await strapiPut<StrapiPerfilRaw>(`/perfis/${docId}`, body);
       
       // G15: Impacto no Ecossistema
-      void eventBus.publishWithOutbox('perfil.atualizado', {
+      void eventBus.publishWithOutbox(DomainEventName.PERFIL_ATUALIZADO, {
         perfilId: String(perfil?.id),
         ...body
       });
@@ -100,7 +100,7 @@ perfilRoutes.put('/me', zValidator('json', UpdatePerfilPayloadSchema), async (c)
     const data = await strapiPutRaw<unknown>(`/users/${id}`, body);
     return c.json(data);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
+    const message = (err as Error).message || 'Erro interno';
     return c.json({ error: message }, 502);
   }
 });
@@ -133,7 +133,7 @@ perfilRoutes.get('/me/stats', checkRole(['estudante']), async (c) => {
       conquistasTotal: conquistas.meta.pagination.total,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
+    const message = (err as Error).message || 'Erro interno';
     return c.json({ error: message }, 502);
   }
 });
@@ -160,7 +160,7 @@ perfilRoutes.get('/estudantes-vinculados', checkRole(['instituicao', 'super_admi
     );
     return c.json({ data: students.map(s => s.data[0]) });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
+    const message = (err as Error).message || 'Erro interno';
     return c.json({ error: message }, 502);
   }
 });
@@ -209,7 +209,7 @@ perfilRoutes.get('/:id', async (c) => {
     });
     return c.json(resUser.data[0]);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
+    const message = (err as Error).message || 'Erro interno';
     return c.json({ error: message }, 502);
   }
 });

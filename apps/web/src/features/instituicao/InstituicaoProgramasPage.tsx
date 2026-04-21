@@ -32,7 +32,7 @@ export function InstituicaoProgramasPage() {
       </header>
 
       {programas.length === 0 ? (
-        <Card className="p-20 text-center border-dashed border-white/10 bg-white/[0.01]">
+        <Card className="p-20 text-center border-dashed border-white/10 bg-white/1">
           <Building2 size={48} className="mx-auto text-text-muted mb-4 opacity-20" />
           <p className="text-sm text-text-muted uppercase font-black tracking-widest">Nenhum programa activo no momento</p>
         </Card>
@@ -47,7 +47,7 @@ export function InstituicaoProgramasPage() {
             >
               <Link to={`/app/programas/${prog.id}`}>
                 <Card className="group h-full relative overflow-hidden bg-surface-alt border-white/5 hover:border-accent/30 transition-all p-0 shadow-2xl">
-                   <div className="aspect-video bg-gradient-to-br from-accent/10 to-transparent relative overflow-hidden">
+                   <div className="aspect-video bg-linear-to-br from-accent/10 to-transparent relative overflow-hidden">
                      {prog.capa?.url ? (
                        <img src={prog.capa.url} alt="" className="h-full w-full object-cover grayscale mix-blend-luminosity opacity-40 group-hover:scale-110 transition-transform duration-700" />
                      ) : (

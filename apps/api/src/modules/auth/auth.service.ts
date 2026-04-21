@@ -175,6 +175,7 @@ export const authService = {
       email: u.email,
       nome: perfil?.nome ?? u.nome ?? u.username,
       role: resolveRole(u.role?.name, perfil?.tipo),
+      perfilId: perfil?.id ? String(perfil.id) : undefined,
       avatarUrl: perfil?.foto?.url ?? u.avatar?.url,
       reputacaoTier: getTier(reputationScore),
       createdAt: u.createdAt ?? new Date().toISOString(),

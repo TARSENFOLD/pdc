@@ -31,7 +31,7 @@ describe('Telemetry Consumer', () => {
 
   it.skip('deve processar um evento da fila e persistir no Strapi', async () => {
     vi.mocked(redis.rpoplpush).mockResolvedValueOnce(JSON.stringify(mockEvent)).mockResolvedValueOnce(null);
-    vi.mocked(strapiPost).mockResolvedValue({ data: { id: 1 } } as unknown);
+    vi.mocked(strapiPost).mockResolvedValue({ data: { id: 1 } } as any);
 
     // Chamar em um contexto que não executa o while(true) para sempre
     await processTelemetryQueue();

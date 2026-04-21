@@ -38,7 +38,7 @@ export const achievementHook: EcosystemHook = {
       const desbloqueadas = await conquistaEngine.verificarConquistas(
         userId,
         event.name,
-        payload.tentativaId
+        payload.tentativaId ? String(payload.tentativaId) : undefined
       );
 
       if (desbloqueadas.length === 0) {

@@ -16,8 +16,9 @@ export interface WebPushSubscription {
  */
 export const webPushService = {
   enviarNotificacao(perfilId: string, payload: unknown): Promise<boolean> {
-    log.info({ perfilId, titulo: payload.titulo }, 'Web Push enviado (Simulado - Web-Push NPM necessário para produção)');
+    const data = payload as { titulo: string };
+    log.info({ perfilId, titulo: data.titulo }, 'Web Push enviado (Simulado - Web-Push NPM necessário para produção)');
     // TODO: Implementar com 'web-push' NPM package e VAPID keys
-    return true;
+    return Promise.resolve(true);
   }
 };

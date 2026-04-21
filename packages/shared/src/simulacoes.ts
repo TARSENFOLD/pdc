@@ -18,10 +18,12 @@ export type Simulacao = z.infer<typeof SimulacaoSchema>;
 
 export const SimulacaoPublicaSchema = z.object({
   id: z.string(),
+  slug: z.string().optional(),
   titulo: z.string(),
   descricao: z.string(),
   area: AreaVocacionalSchema,
   tipo: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  nivel: z.string().optional().nullable(),
   capaUrl: z.string().url().optional().nullable(),
 });
 export type SimulacaoPublica = z.infer<typeof SimulacaoPublicaSchema>;

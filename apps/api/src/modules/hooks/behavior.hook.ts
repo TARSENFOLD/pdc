@@ -35,13 +35,13 @@ export const behaviorHook: EcosystemHook<BehaviorEventPayload> = {
     ];
 
     if (!triggerEvents.includes(event.name)) {
-      return { hook: EcosystemHookName.BEHAVIOR, status: 'skipped', reason: 'not-a-behavior-trigger-event' };
+      return { status: 'skipped', reason: 'not-a-behavior-trigger-event' };
     }
 
     const payload = event.payload;
     const { perfilId, area } = payload;
     if (!perfilId || !area) {
-      return { hook: EcosystemHookName.BEHAVIOR, status: 'failed', reason: 'perfilId-or-area-missing' };
+      return { status: 'fatal_error', reason: 'perfilId-or-area-missing' };
     }
 
     try {
@@ -49,11 +49,11 @@ export const behaviorHook: EcosystemHook<BehaviorEventPayload> = {
       // Transforma dados brutos em assinatura comportamental DNA
       await telemetriaProcessor.processUserDomain(perfilId, area);
 
-      return { hook: EcosystemHookName.BEHAVIOR, status: 'success' };
+      return { status: 'sent' };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
       log.error({ err, event: event.name, perfilId }, 'Falha no hook de comportamento');
-      return { hook: EcosystemHookName.BEHAVIOR, status: 'retryable_error', reason: message };
+      return { status: 'retryable_error', reason: message };
     }
   }
 };

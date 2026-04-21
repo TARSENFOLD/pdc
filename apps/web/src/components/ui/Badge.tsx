@@ -15,7 +15,6 @@ export type BadgeVariant =
   | 'moderador'
   | 'comite_cientifico'
   | 'super_admin'
-  | 'estudante'
   | 'patrocinador'
   | 'secondary';
 
@@ -39,7 +38,6 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       moderador: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
       comite_cientifico: 'bg-cobalt/10 text-cobalt border-cobalt/20',
       super_admin: 'bg-red-500/10 text-red-600 border-red-500/20',
-      estudante: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
       patrocinador: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
       secondary: 'bg-recessed text-ink-secondary border-ink-tertiary/10',
     };

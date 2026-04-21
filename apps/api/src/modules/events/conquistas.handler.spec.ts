@@ -22,7 +22,7 @@ describe('ConquistasHandler', () => {
   it('deve processar evento e chamar engine', async () => {
     vi.mocked(strapiGet).mockResolvedValue({ 
       data: [{ id: 'perf-789' }] 
-    } as unknown);
+    } as any);
 
     const event: DomainEvent = {
       id: 'evt-1',

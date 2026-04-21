@@ -23,7 +23,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: () => ({ status: 'success' }),
-    } as Response);
+    } as unknown as Response);
 
     const result = await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
 
@@ -44,7 +44,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: () => ({}),
-    } as Response);
+    } as unknown as Response);
 
     await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
 
@@ -58,7 +58,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
       json: () => ({}),
-    } as Response);
+    } as unknown as Response);
 
     await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
 
@@ -81,7 +81,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
       ok: false,
       status: 400,
       text: () => 'Invalid payload format',
-    } as Response);
+    } as unknown as Response);
 
     await expect(ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken))
       .rejects.toThrow('Falha ao enviar score LTI AGS: 400 - Invalid payload format');
@@ -92,7 +92,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
       ok: false,
       status: 503,
       text: () => 'Service Unavailable',
-    } as Response);
+    } as unknown as Response);
 
     await expect(ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken))
       .rejects.toThrow('Falha ao enviar score LTI AGS: 503 - Service Unavailable');

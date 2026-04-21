@@ -68,7 +68,7 @@ export function MentorDashboard() {
 
       {/* Grid de Talentos (Bento Style) */}
       <div className="grid grid-cols-1 gap-6">
-        <h2 className="text-xl font-black text-text-primary tracking-tight flex items-center gap-2 uppercase text-[12px] tracking-[0.2em]">
+        <h2 className="font-black text-text-primary flex items-center gap-2 uppercase text-[12px] tracking-[0.2em]">
           <Activity size={16} className="text-accent" /> Auditoria de Músculo Cognitivo
         </h2>
         
@@ -85,7 +85,7 @@ export function MentorDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
             >
-              <Card className="p-6 bg-surface hover:bg-surface-raised transition-all border-border shadow-xl hover:shadow-2xl rounded-[32px] group overflow-hidden relative">
+              <Card className="p-6 bg-surface hover:bg-surface-raised transition-all border-border shadow-xl hover:shadow-2xl rounded-4xl group overflow-hidden relative">
                 {/* Background Decor */}
                 <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 blur-2xl rounded-full -translate-y-1/2 translate-x-1/2" />
                 

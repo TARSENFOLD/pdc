@@ -14,9 +14,9 @@ describe('VocacionalService', () => {
   it('deve gerar recomendações baseadas no padrão', async () => {
     vi.mocked(strapiGet).mockResolvedValueOnce({
       data: [{ id: 'curso-1', titulo: 'Curso de Teste' }]
-    } as unknown);
+    } as any);
 
-    const res = await vocacionalService.gerarRecomendacoes({ id: 'pat-1' } as unknown);
+    const res = await vocacionalService.gerarRecomendacoes({ id: 'pat-1' } as any);
     expect(res).toHaveLength(1);
     expect(res[0]?.titulo).toBe('Curso de Teste');
   });

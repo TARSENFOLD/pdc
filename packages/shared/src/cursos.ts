@@ -36,6 +36,8 @@ export const CursoSchema = z.object({
   capaUrl: z.string().url().optional(),
   autorId: z.string(),
   totalHoras: z.number(),
+  estado: EstadoEditorialSchema.optional().default('draft'),
+  rating: z.number().min(0).max(5).optional().default(0),
   // Regras de Match Soberano
   regrasAcesso: z.object({
     minFluidez: z.number().min(0).max(10).optional(),
@@ -128,6 +130,7 @@ export const CursoPublicoSchema = z.object({
   capaUrl: z.string().url().optional().nullable(),
   area: AreaVocacionalSchema.optional().nullable(),
   nivel: z.string().optional().nullable(),
+  idioma: z.string().optional(),
   gratuito: z.boolean().optional(),
   totalHoras: z.number().optional(),
   autorNome: z.string().optional(),

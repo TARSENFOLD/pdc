@@ -29,7 +29,7 @@ bootstrapRoutes.get('/', async (c) => {
         id: dbUser.id,
         email: dbUser.email,
         role: dbUser.role,
-        perfilId: (dbUser as unknown).perfilId || undefined,
+        perfilId: dbUser.perfilId || undefined,
       };
       
       // Instituição ID para extração de Flags override se existir no token

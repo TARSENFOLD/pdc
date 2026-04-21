@@ -34,7 +34,8 @@ export const ExperienciaPublicaSchema = z.object({
   titulo: z.string(),
   descricao: z.string(),
   capaUrl: z.string().url().optional().nullable(),
-  instituicaoId: z.string(),
+  instituicaoId: z.string().optional(),
+  instituicaoNome: z.string().optional(),
   instituicao: z.object({
     id: z.string(),
     nome: z.string(),
@@ -45,9 +46,10 @@ export const ExperienciaPublicaSchema = z.object({
     descricao: z.string(),
     relevanciaMercado: z.string(),
   })).optional(),
-  dataInicio: z.string().datetime(),
-  dataFim: z.string().datetime().optional().nullable(),
+  dataInicio: z.string().optional(),
+  dataFim: z.string().optional().nullable(),
   area: AreaVocacionalSchema.optional().nullable(),
+  nivel: z.string().optional().nullable(),
   vagas: z.number().int().optional().nullable(),
   modalidade: ModalidadeSchema.optional().nullable(),
 });

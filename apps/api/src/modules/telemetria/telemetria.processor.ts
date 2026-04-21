@@ -5,7 +5,8 @@ import {
   analyzeFluidity, 
   analyzeResilience, 
   analyzeFocus, 
-  type BehaviorPattern 
+  type BehaviorPattern,
+  type TelemetriaEvento
 } from '@pdc/shared';
 import { tinaService } from '../tina/tina.service.js';
 
@@ -14,6 +15,8 @@ const log = pino({ name: 'telemetria-processor' });
 interface TelemetriaRaw {
   id: number;
   tipo: string;
+  payload: Record<string, unknown>;
+  timestamp: string;
   clientTimestamp: string;
   visibilityState: string;
 }
@@ -87,7 +90,7 @@ export const telemetriaProcessor = {
       const meanTime = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 2000;
       const fluidity = heuristicsEngine.calculateFluidity(times);
       const resilience = heuristicsEngine.calculateResilience(timesPosError, meanTime);
-      const hesitation = heuristicsEngine.calculateHesitation(events);
+      const hesitation = heuristicsEngine.calculateHesitation(events as unknown as TelemetriaEvento[]);
       
       const lastEvent = events[events.length - 1];
       const firstEvent = events[0];

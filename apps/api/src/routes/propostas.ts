@@ -26,9 +26,9 @@ propostaRoutes.post('/', zValidator('json', CriarPropostaPayloadSchema), async (
     });
 
     // G15: Impacto no Ecossistema
-    await eventBus.publishWithOutbox(DomainEventName.PROPOSTA_CRIADA, {
+    await eventBus.publishWithOutbox(DomainEventName.PROPOSTA_CRIADA as any, {
       propostaId: res.data.id,
-      estudanteId: payload.estudanteId,
+      estudanteId: payload.targetId,
       instituicaoId
     });
 

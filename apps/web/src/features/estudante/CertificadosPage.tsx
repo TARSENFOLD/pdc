@@ -43,7 +43,7 @@ export function CertificadosPage() {
            {/* Skeletons of Future Achievements (Aspirational) */}
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-30 grayscale filter blur-[1px] pointer-events-none select-none">
               {[1, 2, 3].map(i => (
-                <Card key={i} className="p-8 border-dashed border-white/10 bg-white/[0.01] relative flex flex-col items-center text-center">
+                <Card key={i} className="p-8 border-dashed border-white/10 bg-white/1 relative flex flex-col items-center text-center">
                   <div className="absolute top-4 right-4 text-accent/40"><Lock size={14} /></div>
                   <div className="h-16 w-16 rounded-2xl bg-white/5 flex items-center justify-center mb-6">
                      <Award size={32} className="text-text-muted" />
@@ -65,7 +65,7 @@ export function CertificadosPage() {
             >
               <Card className="group relative overflow-hidden bg-surface-alt border-white/5 hover:border-accent/30 transition-all shadow-2xl p-0">
                  {/* Certificate Aesthetic Header */}
-                 <div className="h-2 w-full bg-gradient-to-r from-accent/20 via-accent to-accent/20" />
+                 <div className="h-2 w-full bg-linear-to-r from-accent/20 via-accent to-accent/20" />
                  
                  <div className="p-8 space-y-6">
                     <div className="flex justify-between items-start">

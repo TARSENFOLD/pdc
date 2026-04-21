@@ -1,4 +1,5 @@
 import pino from 'pino';
+import { z } from 'zod';
 import { redis } from '../../lib/redis.js';
 import { strapiPost, strapiPut } from '../strapi/strapi.client.js';
 import { 
@@ -25,6 +26,25 @@ class EventBus {
   }
 
   /**
+   * Métodos de Compatibilidade para Testes Legados
+   */
+  register(name: DomainEventName, handler: (event: DomainEvent<any>) => Promise<void>) {
+    this.registerHook({
+      name: `legacy-handler:${name}` as any,
+      dependencies: [],
+      idempotencyKey: (e) => `legacy:${e.id}`,
+      execute: async (e) => {
+        await handler(e);
+        return { status: 'sent' };
+      }
+    });
+  }
+
+  removeAllListeners() {
+    this.hooks = [];
+  }
+
+  /**
    * Publicar evento com persistência Outbox e execução de Hooks G15
    */
   async publishWithOutbox<TName extends DomainEventName>(
@@ -34,7 +54,7 @@ class EventBus {
     const event: DomainEvent<unknown> = {
       id: crypto.randomUUID(),
       name,
-      payload,
+      payload: payload as Record<string, unknown>,
       timestamp: new Date().toISOString(),
     };
 
@@ -76,7 +96,23 @@ class EventBus {
     }
   }
 
-  private async dispatchHooks(event: DomainEvent): Promise<void> {
+  /**
+   * Despachar ganchos para um evento já persistido (Replay)
+   */
+  async publish(event: DomainEvent<unknown>): Promise<void> {
+    const schema = (EventPayloadSchemas as Record<string, z.ZodTypeAny>)[event.name];
+    if (schema) {
+      const result = schema.safeParse(event.payload);
+      if (!result.success) {
+        log.error({ name: event.name, errors: result.error.format() }, 'Payload G15 Inválido no Replay');
+        throw new Error(`Falha de contrato E2E no evento: ${event.name}`);
+      }
+      event.payload = result.data;
+    }
+    await this.dispatchHooks(event);
+  }
+
+  private async dispatchHooks(event: DomainEvent<unknown>): Promise<void> {
     const context: EcosystemHookContext = {
       results: {} as Record<EcosystemHookName, EcosystemHookResult>
     };

@@ -83,11 +83,11 @@ export interface ExplorarResultado {
   id: string;
   tipo: 'curso' | 'simulacao' | 'experiencia' | 'mentor' | 'instituicao';
   titulo: string;
-  slug?: string;
-  descricao?: string;
-  area?: string;
-  capaUrl?: string | null;
-  imagemUrl?: string; // Mantido para retrocompatibilidade
+  slug?: string | undefined;
+  descricao?: string | undefined;
+  area?: string | undefined;
+  capaUrl?: string | null | undefined;
+  imagemUrl?: string | undefined; // Mantido para retrocompatibilidade
 }
 
 // ─── Feed ────────────────────────────────────────────────────────────────────

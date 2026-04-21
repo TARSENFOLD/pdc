@@ -43,10 +43,11 @@ export async function replayUnprocessedEvents() {
       try {
         // AWAIT IMPORTANTE: Aguarda a conclusão dos handlers (RedLock, external calls, etc)
         await eventBus.publish({
-          id: evt.correlationId,
-          name: evt.name as unknown,
-          payload: evt.payload,
+          id: crypto.randomUUID(), // Gerar ID de execução única para o replay
+          name: evt.name as any,
+          payload: evt.payload as any,
           timestamp: evt.createdAt,
+          correlationId: evt.correlationId
         });
 
         // Sucesso Total
@@ -58,7 +59,8 @@ export async function replayUnprocessedEvents() {
         
         log.info({ eventId: evt.correlationId }, 'Replay com sucesso.');
       } catch (err: unknown) {
-        log.error({ err: err.message, eventId: evt.correlationId }, 'Falha no replay. Incrementando tentativas.');
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        log.error({ err: msg, eventId: evt.correlationId }, 'Falha no replay. Incrementando tentativas.');
         await strapiPut(`/domain-events/${evt.documentId}`, {
           attempts: attempts + 1,
         });

@@ -67,6 +67,17 @@ export enum DomainEventName {
   VINCULO_APROVADO = 'vinculo.aprovado',
   VINCULO_REJEITADO = 'vinculo.rejeitado',
   VINCULO_TERMINADO = 'vinculo.terminado',
+  VINCULO_CONNECTED = 'vinculo.connected',
+
+  // --- Mentoria ---
+  MENTORIA_SOLICITADA = 'mentoria.solicitada',
+  MENTORIA_ACEITE = 'mentoria.aceite',
+  MENTORIA_REJEITADA = 'mentoria.rejeitada',
+
+  // --- Ratings/Feed ---
+  RATING_CRIADO = 'rating.criado',
+  PROPOSTA_CRIADA = 'proposta.criada',
+  PROGRAMA_CONCLUIDO = 'programa.concluido',
 
   // --- Mensagens ---
   MENSAGEM_ENVIADA = 'mensagem.enviada',
