@@ -1059,6 +1059,48 @@ export interface ApiFeatureFlagFeatureFlag extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiFeedEntryFeedEntry extends Struct.CollectionTypeSchema {
+  collectionName: 'feed_entries';
+  info: {
+    description: 'Entradas agregadas para o feed multi-source';
+    displayName: 'Feed Entry';
+    pluralName: 'feed-entries';
+    singularName: 'feed-entry';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    area: Schema.Attribute.String;
+    autorId: Schema.Attribute.String;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    entityId: Schema.Attribute.String & Schema.Attribute.Required;
+    entityType: Schema.Attribute.Enumeration<
+      ['curso', 'simulacao', 'experiencia', 'programa', 'projeto', 'post']
+    >;
+    eventId: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::feed-entry.feed-entry'
+    > &
+      Schema.Attribute.Private;
+    publicadoEm: Schema.Attribute.DateTime;
+    publishedAt: Schema.Attribute.DateTime;
+    score: Schema.Attribute.Float & Schema.Attribute.DefaultTo<0>;
+    source: Schema.Attribute.Enumeration<
+      ['geral', 'vocacional', 'institucional', 'trending']
+    >;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiInscricaoInscricao extends Struct.CollectionTypeSchema {
   collectionName: 'inscricoes';
   info: {
@@ -1179,6 +1221,48 @@ export interface ApiLikeLike extends Struct.CollectionTypeSchema {
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+  };
+}
+
+export interface ApiMatchSuggestionMatchSuggestion
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'match_suggestions';
+  info: {
+    description: 'Sugest\u00F5es do Match Terminal baseadas em afinidade';
+    displayName: 'Match Suggestion';
+    pluralName: 'match-suggestions';
+    singularName: 'match-suggestion';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    aceitada: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    entityId: Schema.Attribute.String & Schema.Attribute.Required;
+    entityType: Schema.Attribute.Enumeration<
+      ['curso', 'simulacao', 'experiencia', 'programa', 'projeto']
+    >;
+    estudante: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
+    eventId: Schema.Attribute.String & Schema.Attribute.Required;
+    expiraEm: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::match-suggestion.match-suggestion'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    score: Schema.Attribute.Float;
+    tierMinimo: Schema.Attribute.Enumeration<
+      ['Bronze', 'Prata', 'Ouro', 'Diamante']
+    >;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    vista: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
   };
 }
 
@@ -1363,12 +1447,16 @@ export interface ApiNotificacaoNotificacao extends Struct.CollectionTypeSchema {
     actorId: Schema.Attribute.String;
     agrupada: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     contagemAgrupada: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<1>;
+    corpo: Schema.Attribute.Text;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     data: Schema.Attribute.DateTime;
+    entreguePor: Schema.Attribute.JSON;
+    eventId: Schema.Attribute.String;
     lida: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     lidaEm: Schema.Attribute.DateTime;
+    link: Schema.Attribute.String;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -2669,9 +2757,11 @@ declare module '@strapi/strapi' {
       'api::domain-event.domain-event': ApiDomainEventDomainEvent;
       'api::experiencia.experiencia': ApiExperienciaExperiencia;
       'api::feature-flag.feature-flag': ApiFeatureFlagFeatureFlag;
+      'api::feed-entry.feed-entry': ApiFeedEntryFeedEntry;
       'api::inscricao.inscricao': ApiInscricaoInscricao;
       'api::instituicao.instituicao': ApiInstituicaoInstituicao;
       'api::like.like': ApiLikeLike;
+      'api::match-suggestion.match-suggestion': ApiMatchSuggestionMatchSuggestion;
       'api::mensagem.mensagem': ApiMensagemMensagem;
       'api::mentoria.mentoria': ApiMentoriaMentoria;
       'api::modulo-item.modulo-item': ApiModuloItemModuloItem;

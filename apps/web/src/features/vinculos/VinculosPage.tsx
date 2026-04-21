@@ -8,15 +8,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { http } from '@/lib/api/http';
 import { Users, UserPlus, ShieldCheck, ArrowUpRight, Filter, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import type { VinculoTipo, PerfilPublico } from '@pdc/shared';
-
-interface VinculoComPerfil {
-  id: string;
-  status: string;
-  tipo: VinculoTipo;
-  solicitante: PerfilPublico;
-  destinatario: PerfilPublico;
-}
+import type { VinculoTipo, PerfilPublico, VinculoComPerfil } from '@pdc/shared';
 
 export function VinculosPage() {
   const { user } = useAuth();
@@ -25,7 +17,7 @@ export function VinculosPage() {
   const { toast } = useToast();
   const { track } = useTelemetry();
 
-  useSocket((notif: any) => {
+  useSocket<{ tipo: string; mensagem: string }>((notif) => {
     if (notif.tipo === 'vinculo_pedido') {
       void queryClient.invalidateQueries({ queryKey: ['vinculos', 'pendentes'] });
       toast({ title: 'Novo Pedido de Vínculo', description: notif.mensagem });
@@ -112,13 +104,13 @@ export function VinculosPage() {
                       </div>
                       <div className="flex gap-2">
                         <Button 
-                          onClick={() => resolverMutation.mutate({ id: v.id, status: 'aprovado' })}
+                          onClick={() => { resolverMutation.mutate({ id: v.id, status: 'aprovado' }); }}
                           disabled={resolverMutation.isPending}
                           className="flex-1 bg-accent text-white font-bold rounded-xl h-11"
                         >Aceitar</Button>
                         <Button 
                           variant="ghost"
-                          onClick={() => resolverMutation.mutate({ id: v.id, status: 'rejeitado' })}
+                          onClick={() => { resolverMutation.mutate({ id: v.id, status: 'rejeitado' }); }}
                           className="flex-1 border border-white/5 rounded-xl h-11"
                         >Recusar</Button>
                       </div>

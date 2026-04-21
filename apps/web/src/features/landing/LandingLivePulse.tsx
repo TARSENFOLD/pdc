@@ -18,7 +18,7 @@ export function LandingLivePulse(): React.JSX.Element {
   const reduced = useReducedMotion();
   const { on } = useSocket();
   const [entries, setEntries] = useState<PulseEntry[]>(buildInitialEntries);
-  const [globalCount, setGlobalCount] = useState<number>(0);
+  const [globalCount, setGlobalCount] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const push = useCallback((text: string): void => {

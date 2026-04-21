@@ -1,4 +1,4 @@
-import { analyzeResilience, analyzeFocus } from '@pdc/shared';
+import { analyzeResilience, analyzeFocus, type TelemetriaEvento } from '@pdc/shared';
 
 /**
  * Heuristics Engine — PDC v2
@@ -51,17 +51,21 @@ export const heuristicsEngine = {
    * Calcula a Hesitação Mecânica (Entropia)
    * Baseado na trajetória do rato vs deslocamento directo.
    */
-  calculateHesitation(events: any[]): number {
+  calculateHesitation(events: TelemetriaEvento[]): number {
     const bioEvents = events.filter(e => e.tipo === 'simulacao.biomechanics');
     if (bioEvents.length < 2) return 0;
 
     let erraticMovements = 0;
     for (let i = 1; i < bioEvents.length; i++) {
-      const prev = bioEvents[i - 1].payload;
-      const curr = bioEvents[i].payload;
-      const dt = new Date(bioEvents[i].timestamp).getTime() - new Date(bioEvents[i - 1].timestamp).getTime();
-      const dx = curr.x - prev.x;
-      const dy = curr.y - prev.y;
+      const prev = bioEvents[i - 1].payload as { x: number; y: number };
+      const curr = bioEvents[i].payload as { x: number; y: number };
+      
+      const prevTime = new Date(bioEvents[i - 1].timestamp).getTime();
+      const currTime = new Date(bioEvents[i].timestamp).getTime();
+      const dt = currTime - prevTime;
+      
+      const dx = (curr.x || 0) - (prev.x || 0);
+      const dy = (curr.y || 0) - (prev.y || 0);
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       // Entropia: movimento pequeno em tempo longo (hesitação mecânica/vibrante)

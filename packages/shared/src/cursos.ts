@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import { EstadoEditorialSchema } from './user.js';
-import { AreaVocacionalSchema } from './schemas/enums.js';
+import { AreaVocacionalSchema, EstadoEditorialSchema } from './schemas/enums.js';
 
 export const ItemModuloSchema = z.object({
   id: z.string(),
@@ -28,6 +27,12 @@ export const CursoSchema = z.object({
   slug: z.string(),
   titulo: z.string(),
   descricao: z.string(),
+  area: AreaVocacionalSchema.optional(),
+  nivel: z.string().optional(),
+  idioma: z.string().optional(),
+  gratuito: z.boolean().optional(),
+  preco: z.number().optional(),
+  moeda: z.string().optional(),
   capaUrl: z.string().url().optional(),
   autorId: z.string(),
   totalHoras: z.number(),
@@ -38,6 +43,12 @@ export const CursoSchema = z.object({
     minFoco: z.number().min(0).max(10).optional(),
     areasCompativeis: z.array(AreaVocacionalSchema).optional(),
   }).optional(),
+  modulos: z.array(ModuloSchema).optional(),
+  
+  // Detalhes de Mérito (Diferencial PDC)
+  bloqueado: z.boolean().optional(),
+  motivoBloqueio: z.string().optional(),
+  
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -50,6 +61,7 @@ export const CriarCursoPayloadSchema = z.object({
   area: AreaVocacionalSchema,
   nivel: z.enum(['basico', 'medio', 'avancado']),
   thumbnailUrl: z.string().url().optional(),
+  capaUrl: z.string().url().optional(),
   preco: z.number().min(0).optional(),
   visibilidade: z.enum(['publico', 'privado', 'institucional']).optional(),
   regrasAcesso: z.object({
@@ -93,7 +105,7 @@ export type CursoMeu = z.infer<typeof CursoMeuSchema>;
 export const InscricaoSchema = z.object({
   id: z.string(),
   cursoId: z.string(),
-  alunoId: z.string(),
+  estudanteId: z.string(),
   dataInscricao: z.string().datetime(),
   concluido: z.boolean(),
   dataConclusao: z.string().datetime().optional(),
@@ -107,6 +119,20 @@ export const InscricaoComCursoSchema = InscricaoSchema.extend({
 });
 
 export type InscricaoComCurso = z.infer<typeof InscricaoComCursoSchema>;
+
+export const CursoPublicoSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  titulo: z.string(),
+  descricao: z.string(),
+  capaUrl: z.string().url().optional().nullable(),
+  area: AreaVocacionalSchema.optional().nullable(),
+  nivel: z.string().optional().nullable(),
+  gratuito: z.boolean().optional(),
+  totalHoras: z.number().optional(),
+  autorNome: z.string().optional(),
+});
+export type CursoPublico = z.infer<typeof CursoPublicoSchema>;
 
 export interface CursoFilters {
   search?: string;

@@ -5,8 +5,16 @@ import { Spinner, Badge, Card, EmptyState, Button } from '@/components/ui';
 import { Bookmark as BookmarkIcon, FlaskConical, BookOpen, Building2, Rocket, ArrowRight, Zap, Search } from 'lucide-react';
 import type { Bookmark } from '@pdc/shared';
 import { motion } from 'motion/react';
+import type { LucideIcon } from 'lucide-react';
 
-const TIPO_CONFIG: Record<string, { label: string; icon: any; color: string; href: string }> = {
+interface TipoConfig {
+  label: string;
+  icon: LucideIcon;
+  color: string;
+  href: string;
+}
+
+const TIPO_CONFIG: Record<string, TipoConfig> = {
   curso: { label: 'Curso', icon: BookOpen, color: 'text-blue-400', href: '/app/cursos' },
   simulacao: { label: 'Simulação', icon: FlaskConical, color: 'text-accent', href: '/app/simulacoes' },
   experiencia: { label: 'Experiência', icon: Building2, color: 'text-success', href: '/experiencias' },
@@ -54,17 +62,17 @@ export function GuardadosPage() {
         </section>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {bookmarks.map((b, idx) => {
-            const config = (TIPO_CONFIG[b.targetType] || TIPO_CONFIG.curso) as NonNullable<typeof TIPO_CONFIG[string]>;
+          {bookmarks.map((bookmark, idx) => {
+            const config = TIPO_CONFIG[bookmark.targetType] ?? TIPO_CONFIG.curso;
             const Icon = config.icon;
             return (
               <motion.div
-                key={b.id}
+                key={bookmark.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: idx * 0.05 }}
               >
-                <Link to={`${config.href}/${b.targetId}`}>
+                <Link to={`${config.href}/${bookmark.targetId}`}>
                   <Card className="group relative p-6 h-full bg-surface-alt border-white/5 hover:border-accent/30 transition-all shadow-xl flex flex-col justify-between overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                        <Icon size={80} />
@@ -77,7 +85,7 @@ export function GuardadosPage() {
                           <Badge className="bg-white/5 text-text-muted border-white/5 text-[8px] font-black uppercase tracking-widest">{config.label}</Badge>
                        </div>
                        <h3 className="text-lg font-bold text-text-primary tracking-tight group-hover:text-accent transition-colors">
-                         {b.targetId}
+                         {bookmark.targetId}
                        </h3>
                     </div>
                     <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-between">

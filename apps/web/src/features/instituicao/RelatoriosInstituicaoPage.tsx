@@ -75,7 +75,7 @@ export function RelatoriosInstituicaoPage() {
           <div className="relative z-10">
              <span className="text-7xl font-black font-mono tracking-tighter text-text-primary">-22<span className="text-4xl text-accent">%</span></span>
              <p className="text-xs text-text-secondary mt-2 leading-relaxed">
-               Alunos que vivem experiências PDC têm <span className="text-success font-bold">80% mais chance</span> de concluir o percurso académico.
+               Estudantes que vivem experiências PDC têm <span className="text-success font-bold">80% mais chance</span> de concluir o percurso académico.
              </p>
           </div>
         </Card>

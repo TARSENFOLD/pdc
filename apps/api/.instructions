@@ -1,0 +1,22 @@
+# CodeRabbit Instructions — Backend (apps/api)
+
+Foco em Segurança, Resiliência e Ecossistema (G15).
+
+## 🛡️ Segurança e RBAC
+- **Sovereign Auth**: Sessões via `httpOnly` cookies com HS256.
+- **RBAC**: Toda rota protegida deve usar `verifyJwt` seguida de `checkRole(['estudante', ...])`.
+- **Validation**: Todo input deve ser validado via `zValidator` com schemas de `@pdc/shared`.
+
+## 🔄 G15 — Ecosystem & Events
+- **Contract**: Disparar obrigatoriamente `eventBus.publishWithOutbox(eventName, payload)`.
+- **Outbox**: Toda escrita no Strapi que gera impacto global deve passar pelo outbox.
+- **Hooks**: Nenhuma funcionalidade E2E está completa sem os 5 hooks (Ranking, Feed, Match, Achievement, Notify).
+
+## 🗄️ Persistência e Arquitetura
+- **4 Camadas**: Respeitar estritamente a autoridade L4 (BFF -> Strapi -> Postgres).
+- **Idempotência**: Implementar checks de idempotência baseados em `eventId` para evitar duplicação em retries do outbox.
+- **Rule of 300**: Evite ficheiros de route gigantes; modularize em sub-routers.
+
+## 📝 Logging e Observabilidade
+- **Sentry**: Capturar erros significativos que podem afectar o E2E.
+- **Pino**: Logs estruturados.

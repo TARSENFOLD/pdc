@@ -22,7 +22,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
   it('deve enviar o score com sucesso (Happy Path 200 OK)', async () => {
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      json: async () => ({ status: 'success' }),
+      json: () => ({ status: 'success' }),
     } as Response);
 
     const result = await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
@@ -43,7 +43,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
   it('deve formatar a URL corretamente como ${lineitemUrl}/scores', async () => {
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      json: async () => ({}),
+      json: () => ({}),
     } as Response);
 
     await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
@@ -57,7 +57,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
   it('deve validar o envelope JSON enviado no corpo da requisição', async () => {
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
-      json: async () => ({}),
+      json: () => ({}),
     } as Response);
 
     await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
@@ -80,7 +80,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,
       status: 400,
-      text: async () => 'Invalid payload format',
+      text: () => 'Invalid payload format',
     } as Response);
 
     await expect(ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken))
@@ -91,7 +91,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
     vi.spyOn(global, 'fetch').mockResolvedValue({
       ok: false,
       status: 503,
-      text: async () => 'Service Unavailable',
+      text: () => 'Service Unavailable',
     } as Response);
 
     await expect(ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken))

@@ -29,7 +29,7 @@ bootstrapRoutes.get('/', async (c) => {
         id: dbUser.id,
         email: dbUser.email,
         role: dbUser.role,
-        perfilId: (dbUser as any).perfilId || undefined,
+        perfilId: (dbUser as unknown).perfilId || undefined,
       };
       
       // Instituição ID para extração de Flags override se existir no token
@@ -70,7 +70,7 @@ bootstrapRoutes.get('/', async (c) => {
     },
     capabilities: {
       features: cleanFeatures,
-      roles: ['aluno', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin'],
+      roles: ['estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin', 'patrocinador'],
     },
     security: {
       telemetryToken,

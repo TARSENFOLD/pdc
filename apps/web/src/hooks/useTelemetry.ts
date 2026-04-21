@@ -14,7 +14,7 @@ export function useTelemetry() {
   const lastMousePos = useRef({ x: 0, y: 0 });
   const lastScrollPos = useRef(0);
   const biomechanicsTimer = useRef<NodeJS.Timeout | null>(null);
-  const focusStartTime = useRef<number>(Date.now());
+  const focusStartTime = useRef(Date.now());
   
   // W1-T3/W1-T4: O Token é assinado e trazido de forma segura durante a carga da aplicação
   const { data } = useBootstrap();

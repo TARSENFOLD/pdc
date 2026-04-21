@@ -26,8 +26,8 @@ export function MentorAnalyticsPage() {
       bg: 'bg-amber/10',
     },
     {
-      label: 'Alunos Orientados',
-      value: data?.alunosOrientados || 0,
+      label: 'Estudantes Orientados',
+      value: data?.estudantesOrientados || 0,
       icon: Users,
       color: 'text-info',
       bg: 'bg-info/10',

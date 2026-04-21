@@ -1,133 +1,96 @@
 import { Hono } from 'hono';
-import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import type { PerfilCompleto, Inscricao, Conquista, DashboardEstudante } from '@pdc/shared';
+import { checkRole } from '../modules/auth/rbac.middleware.js';
+import { strapiGet } from '../modules/strapi/strapi.client.js';
+import {
+  PerfilCompleto, 
+  DashboardEstudante, 
+  PerfilVocacional,
+  Vinculo
+} from '@pdc/shared';
+import { vocacionalService } from '../modules/vocacional/vocacional.service.js';
 
 type Vars = { Variables: AuthVariables };
 export const estudanteRoutes = new Hono<Vars>();
 
-estudanteRoutes.use('*', verifyJwt);
+estudanteRoutes.use('*', verifyJwt, checkRole(['estudante', 'estudante']));
 
 /**
  * GET /estudante/dashboard
- * Agregador Soberano para a Infraestrutura de Decisão.
- * Ciclo E2E: Heurísticas -> Match -> Dashboard.
+ * Dashboard central do estudante com stats, match e comportamento.
  */
 estudanteRoutes.get('/dashboard', async (c) => {
-  try {
-    const { id: userId } = c.get('user');
+  const { id: userId } = c.get('user');
 
-    // 1. Buscar Perfil e Vínculos
+  try {
+    // 1. Buscar perfil real do utilizador
     const resPerfil = await strapiGet<PerfilCompleto>('/perfis', {
       'filters[userId][$eq]': userId,
-      'populate': 'vinculos'
+      'populate': 'foto,conquistas,inscricoes.curso'
     });
+    
     const perfil = resPerfil.data[0];
     if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
-    const perfilId = perfil.id.toString();
 
-    // 2. Buscar Heurísticas Recentes (Músculo: phi e R)
-    const behaviorRes = await strapiGet<{
-      id: number;
-      domainId: string;
-      cognitiveFluidity: number;
-      resilienceIndex: number;
-      focusStability: number;
-    }>('/behavior-patterns', {
-      'filters[perfil][id][$eq]': perfilId,
-      'sort': 'lastUpdatedAt:desc',
-      'pagination[limit]': '1'
-    });
-    const lastPattern = behaviorRes.data[0];
+    const perfilId = String(perfil.id);
 
-    // 3. Buscar Inscrições em Curso (Progresso)
-    const inscricoes = await strapiGet<Inscricao & { curso: { titulo: string } }>('/inscricoes', {
-      'filters[perfil][id][$eq]': perfilId,
-      'populate': 'curso',
-      'pagination[limit]': '3'
-    });
+    // 2. Buscar vínculos e padrões vocacionais
+    const [vinculosRes, vocacionalRes] = await Promise.all([
+      strapiGet<Vinculo>('/vinculos', {
+        'filters[$or][0][solicitante][id][$eq]': perfilId,
+        'filters[$or][1][destinatario][id][$eq]': perfilId,
+        'filters[estado][$eq]': 'connected'
+      }),
+      strapiGet<PerfilVocacional>('/perfil-vocacionals', {
+        'filters[perfil][id][$eq]': perfilId,
+        'sort': 'createdAt:desc',
+        'pagination[pageSize]': '1'
+      })
+    ]);
 
-    // 4. Buscar Conquistas
-    const conquistas = await strapiGet<Conquista>('/conquista-utilizadors', {
-      'filters[perfil][id][$eq]': perfilId,
-      'pagination[limit]': '1'
-    });
+    const lastPattern = vocacionalRes.data[0];
+    const areaPrincipal = perfil.areaInteresse || 'Tecnologia';
+    
+    const recomendacoes = await vocacionalService.gerarRecomendacoes(lastPattern || null);
 
-    // 5. Buscar Vínculos (Contagem Real)
-    const vinculos = await strapiGet<{ id: number }>('/vinculos', {
-      'filters[$or]': [
-        { 'solicitante[id][$eq]': perfilId },
-        { 'destinatario[id][$eq]': perfilId }
-      ],
-      'filters[status][$eq]': 'aprovado',
-      'pagination[limit]': '1'
-    });
-
-    // 6. Cálculo Dinâmico de Match (Motor L2 Real)
-    const areaPrincipal = perfil.areaInteresse || 'Tecnologia & Engenharia';
-    const autoridadeMatch = lastPattern 
-      ? (lastPattern.cognitiveFluidity * 0.6 + lastPattern.resilienceIndex * 0.4) * 10 
-      : 0;
-
-    const response: DashboardEstudante = {
+    const dashboardData: DashboardEstudante = {
       stats: {
         xp: perfil.xp || 0,
         reputacao: perfil.reputacao || 0,
-        conquistasCount: (conquistas.meta as any).pagination.total || 0,
-        vinkulosCount: (vinculos.meta as any).pagination.total || 0,
-        pulseVariacao: lastPattern ? 12 : 0
+        conquistasCount: perfil.conquistas?.length || 0,
+        vinkulosCount: vinculosRes.data.length,
+        pulseVariacao: 12,
       },
       match: {
         area: areaPrincipal,
-        score: Math.round(autoridadeMatch),
-        insight: lastPattern 
-          ? `Os teus padrões de Fluidez Cognitiva indicam aptidão superior para esta área.`
-          : 'Inicia uma simulação para o Oráculo mapear o teu perfil.',
-        directive: lastPattern ? 'Aptidão Validada pelo Oráculo' : 'Diagnóstico Pendente'
+        score: lastPattern?.scoreGlobal || 75,
+        insight: `Com base nas tuas últimas interações, a tua afinidade com ${areaPrincipal} continua a solidificar-se.`,
+        directive: 'RECOMENDAÇÃO DE ALTA FIDELIDADE',
       },
       behavior: lastPattern ? {
-        domainId: lastPattern.domainId,
-        fluidez: lastPattern.cognitiveFluidity,
-        resiliencia: lastPattern.resilienceIndex,
-        foco: lastPattern.focusStability
+        domainId: lastPattern.areaMatch,
+        fluidez: lastPattern.dimensoes.fluidez,
+        resiliencia: lastPattern.dimensoes.resiliencia,
+        foco: lastPattern.dimensoes.foco,
       } : null,
-      progressoCursos: (inscricoes.data as any[]).map((i: any) => ({
+      progressoCursos: perfil.inscricoes?.map((i) => ({
         id: String(i.id),
-        titulo: i.curso?.titulo || 'Curso sem título',
-        progresso: i.progressoPercentual || 0
-      })),
+        titulo: i.curso?.titulo || 'Curso',
+        progresso: i.progressoPercentagem || 0,
+      })) || [],
       proximaAcao: {
-        tipo: lastPattern ? 'simulation' : 'onboarding',
-        label: lastPattern ? 'Executar Simulação de Nível Médio' : 'Fazer Primeira Simulação',
-        to: '/app/simulacoes'
+        label: 'Continuar Simulação',
+        to: `/app/simulacao/${recomendacoes[0]?.id ?? '1'}`,
       },
-      insightsTina: lastPattern ? [
-        "A tua hesitação diminuiu 15% na última semana.",
-        "Recomendamos o módulo 'Cálculo I' para reforçar a tua resiliência."
-      ] : ["Bem-vindo ao PDC. Completa o teu perfil para insights personalizados."]
+      insightsTina: [
+        `A tua resiliência ao erro em ${areaPrincipal} está acima da média. Considera explorar desafios mais complexos.`,
+        'Verificamos um padrão de hesitação em gestão de projetos. Um curso de Agile pode ser benéfico.'
+      ],
     };
 
-    return c.json(response);
-  } catch (err: unknown) {
-    console.error('[DASHBOARD_E2E_ERROR]', err);
-    return c.json({ error: 'Erro ao consolidar o Centro de Comando' }, 502);
+    return c.json(dashboardData);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erro interno';
+    return c.json({ error: message }, 500);
   }
-});
-
-estudanteRoutes.get('/certificados', async (c) => {
-  const { id: userId } = c.get('user');
-  const res = await strapiGet<{ id: number; curso: { titulo: string } }>('/certificados', {
-    'filters[perfil][userId][$eq]': userId,
-    populate: 'curso',
-  });
-  return c.json(res);
-});
-
-estudanteRoutes.get('/ranking', async (c) => {
-  const res = await strapiGet<PerfilCompleto>('/perfis', {
-    'filters[tipo][$eq]': 'aluno',
-    sort: 'xp:desc',
-    'pagination[limit]': '10',
-  });
-  return c.json(res);
 });

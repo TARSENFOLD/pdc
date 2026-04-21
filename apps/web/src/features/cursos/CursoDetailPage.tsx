@@ -2,33 +2,24 @@ import { useEffect, useState } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { Button, Spinner, Badge, LikeButton, BookmarkButton, RatingStars, EmptyState, Card } from '@/components/ui';
+import { Button, Spinner, Badge, EmptyState, Card } from '@/components/ui';
 import { BookOpen, Lock, ShieldCheck, Zap, MessageSquare } from 'lucide-react';
 import { cursosApi } from '@/lib/api/cursos';
-import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
-import { useFeatureFlags } from '@/hooks/useFeatureFlags';
-import { DiscussionsPanel } from '@/features/discussions/DiscussionsPanel';
-import { useAuth } from '@/lib/auth/AuthContext';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { motion, AnimatePresence } from 'motion/react';
-import type { ProgressoItem } from '@pdc/shared';
+import type { ProgressoItem, Curso, Modulo, ItemModulo } from '@pdc/shared';
 
 export function CursoDetailPage() {
   const { id } = useParams<{ id: string }>();
   const qc = useQueryClient();
-  const { isEnabled } = useFeatureFlags();
-  const { user } = useAuth();
   const { track } = useTelemetry();
   const [showPayInfo, setShowPayInfo] = useState(false);
-  
-  const discussionsEnabled = isEnabled('DISCUSSIONS_ENABLED');
-  const isMentorOrAdmin = user?.role === 'super_admin' || user?.role === 'mentor';
 
   useEffect(() => {
     if (id) track('curso.detail_viewed', { cursoId: id });
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { data: curso, isLoading, isError } = useQuery({
+  const { data: curso, isLoading, isError } = useQuery<Curso>({
     queryKey: ['cursos', id ?? ''],
     queryFn: () => cursosApi.getById(id ?? ''),
     enabled: !!id,
@@ -57,8 +48,8 @@ export function CursoDetailPage() {
   }
 
   const isEnrolled = progresso.length > 0;
-  const isBlockedByMerit = (curso as any).bloqueado;
-  const motivoBloqueio = (curso as any).motivoBloqueio;
+  const isBlockedByMerit = curso.bloqueado;
+  const motivoBloqueio = curso.motivoBloqueio;
   const isPaid = !curso.gratuito;
 
   const handleEnrollClick = () => {
@@ -112,14 +103,14 @@ export function CursoDetailPage() {
 
               <TabsContent value="visao" className="mt-8">
                 <div className="space-y-6">
-                   {curso.modulos?.map((mod: any, idx: number) => (
+                   {curso.modulos?.map((mod: Modulo, idx: number) => (
                      <Card key={mod.id} className="p-6 bg-surface border-border hover:border-accent/20 transition-all rounded-3xl">
                         <div className="flex items-center gap-4 mb-4">
                            <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent font-black text-xs">{idx + 1}</div>
                            <h3 className="text-lg font-black text-text-primary tracking-tight">{mod.titulo}</h3>
                         </div>
                         <ul className="space-y-2 pl-12">
-                           {mod.itens?.map((item: any) => (
+                           {mod.itens?.map((item: ItemModulo) => (
                              <li key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-surface-raised/30 border border-border/50 text-sm">
                                 <div className="flex items-center gap-3">
                                    <Zap size={14} className="text-accent" />
@@ -150,7 +141,7 @@ export function CursoDetailPage() {
                  <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-2">Investimento</p>
                     <p className="text-4xl font-black text-text-primary font-mono tracking-tighter">
-                       {isPaid ? `${curso.preco} ${curso.moeda || 'USD'}` : 'GRATUITO'}
+                       {isPaid ? `${String(curso.preco)} ${curso.moeda || 'USD'}` : 'GRATUITO'}
                     </p>
                  </div>
 
@@ -186,7 +177,7 @@ export function CursoDetailPage() {
                              <a href="mailto:finance@usepdc.com" className="block text-xs font-bold text-accent underline">finance@usepdc.com</a>
                              <p className="text-[10px] text-text-muted">Indica o ID do Curso: {id}</p>
                           </div>
-                          <Button variant="ghost" onClick={() => setShowPayInfo(false)} className="w-full text-text-muted text-[9px] font-black uppercase">Voltar</Button>
+                          <Button variant="ghost" onClick={() => { setShowPayInfo(false); }} className="w-full text-text-muted text-[9px] font-black uppercase">Voltar</Button>
                        </motion.div>
                      ) : (
                        <Button 

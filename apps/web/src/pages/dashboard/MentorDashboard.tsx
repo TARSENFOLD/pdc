@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
-interface AlunoPattern {
+interface EstudantePattern {
   perfil: { id: string; nome: string; avatarUrl?: string };
   cognitiveFluidity: number;
   resilienceIndex: number;
@@ -26,10 +26,10 @@ interface AlunoPattern {
 export function MentorDashboard() {
   const { user } = useAuth();
 
-  // Buscar todos os padrões behaviorais para os alunos sob orientação
-  const { data: patterns, isLoading } = useQuery<AlunoPattern[]>({
+  // Buscar todos os padrões behaviorais para os estudantes sob orientação
+  const { data: patterns, isLoading } = useQuery<EstudantePattern[]>({
     queryKey: ['mentor', 'patterns'],
-    queryFn: () => http.get<AlunoPattern[]>('/telemetria/patterns'),
+    queryFn: () => http.get<EstudantePattern[]>('/telemetria/patterns'),
   });
 
   if (isLoading) {
@@ -76,7 +76,7 @@ export function MentorDashboard() {
           {patterns?.length === 0 ? (
             <Card className="col-span-full p-12 flex flex-col items-center justify-center text-center bg-surface-raised/50 border-dashed border-2 border-border">
               <Users size={48} className="text-text-muted opacity-20 mb-4" />
-              <p className="text-text-secondary font-medium">Aguardando as primeiras simulações dos teus alunos para gerar dados de mérito.</p>
+              <p className="text-text-secondary font-medium">Aguardando as primeiras simulações dos teus estudantes para gerar dados de mérito.</p>
             </Card>
           ) : patterns?.map((p, i) => (
             <motion.div

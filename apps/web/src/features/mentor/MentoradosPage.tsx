@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { mentoriasApi, type AlunoMentorado } from '@/lib/api/mentorias';
+import { mentoriasApi, type EstudanteMentorado } from '@/lib/api/mentorias';
 import { Table, ListRowSkeleton, Badge, Button, Avatar, type Column } from '@/components/ui';
 import { Link } from 'react-router-dom';
 import { User, MessageSquare } from 'lucide-react';
@@ -25,15 +25,15 @@ export function MentoradosPage() {
 
   const mentorados = data ?? [];
 
-  const columns: Column<AlunoMentorado>[] = [
+  const columns: Column<EstudanteMentorado>[] = [
     {
-      header: 'Aluno',
+      header: 'Estudante',
       accessor: (row) => (
         <div className="flex items-center gap-3">
-          <Avatar fallback={row.alunoNome[0] || '?'} size="sm" />
+          <Avatar fallback={row.estudanteNome[0] || '?'} size="sm" />
           <div className="flex flex-col">
-            <span className="font-medium text-text-primary">{row.alunoNome}</span>
-            <span className="text-xs text-text-muted">{row.alunoEmail}</span>
+            <span className="font-medium text-text-primary">{row.estudanteNome}</span>
+            <span className="text-xs text-text-muted">{row.estudanteEmail}</span>
           </div>
         </div>
       ),
@@ -62,7 +62,7 @@ export function MentoradosPage() {
       accessor: (row) => (
         <div className="flex gap-2">
           <Button asChild variant="secondary" size="sm">
-            <Link to={`/perfil/${row.alunoId}`}>
+            <Link to={`/perfil/${row.estudanteId}`}>
               <User className="h-4 w-4 mr-2" />
               Perfil
             </Link>

@@ -107,7 +107,7 @@ export function CursoListPage() {
               type="text"
               placeholder="Pesquisar formação..."
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              onChange={(e) => { setInputValue(e.target.value); }}
               className="w-full pl-12 pr-4 py-4 bg-surface-raised/40 backdrop-blur-md border border-white/5 rounded-2xl text-text-primary outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/50 transition-all font-medium"
             />
           </form>

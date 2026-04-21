@@ -48,13 +48,14 @@ import { perfilRoutes } from './routes/perfis.js';
 import { denunciaRoutes } from './routes/denuncias.js';
 import { featureFlagsRoutes } from './routes/feature-flags.js';
 import { reputationRoutes } from './routes/reputation.js';
+import { matchRoutes } from './routes/match.js';
 import { bootstrapRoutes } from './routes/bootstrap.js';
 import { landingRoutes } from './routes/landing.js';
 import { healthRoutes } from './routes/health.js';
 
 import { socketService } from './modules/realtime/socket.service.js';
 import { tinaService } from './modules/tina/tina.service.js';
-import { replayUnprocessedEvents } from './modules/events/outbox-replay.js';
+import { getPublicJwks } from './modules/lti/lti.jwks.js';
 
 const app = new Hono();
 
@@ -107,6 +108,12 @@ app.route('/notificacoes', notificacaoRoutes);
 app.route('/perfis', perfilRoutes);
 app.route('/denuncias', denunciaRoutes);
 app.route('/feature-flags', featureFlagsRoutes);
+app.route('/match', matchRoutes);
+
+// ─── WELL-KNOWN ───
+app.get('/.well-known/jwks.json', async (c) => {
+  return c.json(await getPublicJwks());
+});
 
 const server = serve({
   fetch: app.fetch,
@@ -115,59 +122,28 @@ const server = serve({
   log.info({ port: info.port }, 'BFF Soberano Online');
 });
 
-// ─── INICIALIZAÇÕES ───
+// ─── ECOSSISTEMA G15 ───
+import './modules/outbox/outbox-worker.js';
 import { eventBus } from './modules/events/event-bus.js';
-import { ltiHandler } from './modules/events/lti.handler.js';
-import { conquistasHandler } from './modules/events/conquistas.handler.ts';
-import { feedHandler } from './modules/events/feed.handler.js';
-import { DomainEventName } from './modules/events/types.js';
+import { rankingHook } from './modules/hooks/ranking.hook.js';
+import { feedHook } from './modules/hooks/feed.hook.ts';
+import { achievementHook } from './modules/hooks/achievement.hook.js';
+import { notifyHook } from './modules/hooks/notify.hook.js';
 
-// Registo explícito de handlers no Registry (D1)
-eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA, ltiHandler);
-eventBus.register(DomainEventName.CURSO_PUBLICADO, feedHandler);
-eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA,    conquistasHandler);
-eventBus.register(DomainEventName.CURSO_CONCLUIDO,        conquistasHandler);
-eventBus.register(DomainEventName.VINCULO_CONNECTED,      conquistasHandler);
-eventBus.register(DomainEventName.LOGIN,                  conquistasHandler);
-eventBus.register(DomainEventName.MENTORIA_ACEITE,        conquistasHandler);
-eventBus.register(DomainEventName.EXPERIENCIA_PUBLICADA,  conquistasHandler);
-eventBus.register(DomainEventName.RATING_CRIADO,          conquistasHandler);
-eventBus.register(DomainEventName.PERFIL_ATUALIZADO,      conquistasHandler);
-eventBus.register(DomainEventName.SIMULACAO_CRIADA,       conquistasHandler);
-eventBus.register(DomainEventName.CURSO_PUBLICADO,        conquistasHandler);
-eventBus.register(DomainEventName.CURSO_INSCRICAO,        conquistasHandler);
-eventBus.register(DomainEventName.COMENTARIO_CRIADO,      conquistasHandler);
+// Registo de G15 Hooks (Músculo do Oráculo)
+eventBus.registerHook(rankingHook);
+eventBus.registerHook(feedHook);
+eventBus.registerHook(achievementHook);
+eventBus.registerHook(notifyHook);
 
 socketService.init(server as Server);
 tinaService.indexarKnowledge().catch((err: unknown) => { 
   log.error({ err }, 'Falha ao indexar Tina'); 
 });
 
-// ─── OUTBOX REPLAY SCHEDULER (ADR-007) ───
-let outboxReplayTimer: ReturnType<typeof setInterval> | null = null;
-
-if (process.env.NODE_ENV !== 'test') {
-  const OUTBOX_REPLAY_INTERVAL_MS = parseInt(
-    process.env.OUTBOX_REPLAY_INTERVAL_MS ?? '60000',
-    10,
-  );
-
-  log.info({ intervalMs: OUTBOX_REPLAY_INTERVAL_MS }, 'Outbox Replay scheduler iniciado');
-
-  outboxReplayTimer = setInterval(() => {
-    replayUnprocessedEvents().catch((err: unknown) => {
-      log.error({ err }, 'Erro inesperado no Outbox Replay scheduler');
-    });
-  }, OUTBOX_REPLAY_INTERVAL_MS);
-}
-
 // ─── GRACEFUL SHUTDOWN ───
 const shutdown = (signal: string) => {
   log.info({ signal }, 'Sinal recebido — a encerrar servidor BFF');
-  if (outboxReplayTimer !== null) {
-    clearInterval(outboxReplayTimer);
-    log.info('Outbox Replay scheduler parado');
-  }
   process.exit(0);
 };
 

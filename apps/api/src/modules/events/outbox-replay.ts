@@ -44,7 +44,7 @@ export async function replayUnprocessedEvents() {
         // AWAIT IMPORTANTE: Aguarda a conclusão dos handlers (RedLock, external calls, etc)
         await eventBus.publish({
           id: evt.correlationId,
-          name: evt.name as any,
+          name: evt.name as unknown,
           payload: evt.payload,
           timestamp: evt.createdAt,
         });
@@ -57,7 +57,7 @@ export async function replayUnprocessedEvents() {
         });
         
         log.info({ eventId: evt.correlationId }, 'Replay com sucesso.');
-      } catch (err: any) {
+      } catch (err: unknown) {
         log.error({ err: err.message, eventId: evt.correlationId }, 'Falha no replay. Incrementando tentativas.');
         await strapiPut(`/domain-events/${evt.documentId}`, {
           attempts: attempts + 1,

@@ -22,7 +22,7 @@ feedRoutes.get('/', verifyJwt, async (c) => {
 
   try {
     // 1. Buscar perfil do usuário para boost de afinidade
-    const resPerfil = await strapiGet<any>('/perfis', {
+    const resPerfil = await strapiGet<unknown>('/perfis', {
       'filters[userId][$eq]': user.id,
       'fields': 'areasInteresse',
     });
@@ -51,7 +51,7 @@ feedRoutes.get('/', verifyJwt, async (c) => {
       data: sorted.slice(0, 50),
       meta: { total: sorted.length }
     });
-  } catch (err) {
+  } catch (_err) {
     return c.json({ error: 'Erro ao processar feed' }, 502);
   }
 });

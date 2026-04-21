@@ -3,12 +3,40 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
-import { socketService } from '../modules/realtime/socket.service.js';
+import { eventBus } from '../modules/events/event-bus.js';
+import { DomainEventName } from '../modules/events/types.js';
+import { CriarPropostaPayloadSchema } from '@pdc/shared';
 
 type Vars = { Variables: AuthVariables };
 export const propostaRoutes = new Hono<Vars>();
 
 propostaRoutes.use('*', verifyJwt);
+
+// POST /propostas (Criar nova proposta)
+propostaRoutes.post('/', zValidator('json', CriarPropostaPayloadSchema), async (c) => {
+  const payload = c.req.valid('json');
+  const { id: instituicaoId } = c.get('user');
+
+  try {
+    const res = await strapiPost<StrapiProposta>('/propostas', {
+      ...payload,
+      instituicaoId,
+      estado: 'pendente',
+      criadoEm: new Date().toISOString()
+    });
+
+    // G15: Impacto no Ecossistema
+    await eventBus.publishWithOutbox(DomainEventName.PROPOSTA_CRIADA, {
+      propostaId: res.data.id,
+      estudanteId: payload.estudanteId,
+      instituicaoId
+    });
+
+    return c.json(res.data, 201);
+  } catch (_err) {
+    return c.json({ error: 'Erro ao criar proposta' }, 502);
+  }
+});
 
 interface StrapiProposta {
   id: string;
@@ -26,7 +54,7 @@ propostaRoutes.get('/recebidas', async (c) => {
       populate: 'instituicao',
     });
     return c.json(res);
-  } catch (err) {
+  } catch (_err) {
     return c.json({ error: 'Erro ao carregar propostas' }, 502);
   }
 });
@@ -52,24 +80,24 @@ propostaRoutes.post('/:id/responder', zValidator('json', z.object({ acao: z.enum
     if (acao === 'aceitar') {
       const instId = proposta.instituicaoId;
       // Criar vínculo automático
-      await strapiPost('/vinculos', {
-        senderId: userId,
-        receiverId: instId,
+      const vinculoRes = await strapiPost('/vinculos', {
+        solicitante: userId,
+        destinatario: instId,
         connectionType: 'student-institution',
-        estado: 'connected',
+        status: 'aprovado',
+        criadoEm: new Date().toISOString()
       });
 
-      socketService.emitirNotificacao(instId, {
-        id: crypto.randomUUID(),
-        tipo: 'sucesso',
-        titulo: 'Proposta Aceite',
-        corpo: `Um estudante aceitou a tua proposta de vínculo.`,
-        timestamp: new Date().toISOString(),
+      // G15: Impacto no Ecossistema
+      await eventBus.publishWithOutbox(DomainEventName.VINCULO_APROVADO, {
+        vinculoId: vinculoRes.data.id,
+        solicitanteId: userId,
+        destinatarioId: String(instId)
       });
     }
 
     return c.json({ success: true, estado: novoEstado });
-  } catch (err) {
+  } catch (_err) {
     return c.json({ error: 'Erro ao responder proposta' }, 502);
   }
 });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EstadoEditorialSchema } from './user.js';
+import { EstadoEditorialSchema } from './schemas/enums.js';
 import { AreaVocacionalSchema, ModalidadeSchema, type Modalidade } from './schemas/enums.js';
 
 export { ModalidadeSchema, type Modalidade };
@@ -10,13 +10,48 @@ export const ExperienciaSchema = z.object({
   titulo: z.string(),
   descricao: z.string(),
   capaUrl: z.string().url().optional(),
-  instituicaoId: z.string(),
+  instituicaoId: z.string().optional(),
+  instituicao: z.object({
+    id: z.string(),
+    nome: z.string(),
+    logoUrl: z.string().url().optional(),
+  }).optional(),
+  gradeDestaque: z.array(z.object({
+    disciplina: z.string(),
+    descricao: z.string(),
+    relevanciaMercado: z.string(),
+  })).optional(),
   dataInicio: z.string().datetime(),
   dataFim: z.string().datetime().optional(),
   createdAt: z.string().datetime(),
 });
 
 export type Experiencia = z.infer<typeof ExperienciaSchema>;
+
+export const ExperienciaPublicaSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  titulo: z.string(),
+  descricao: z.string(),
+  capaUrl: z.string().url().optional().nullable(),
+  instituicaoId: z.string(),
+  instituicao: z.object({
+    id: z.string(),
+    nome: z.string(),
+    logoUrl: z.string().url().optional(),
+  }).optional(),
+  gradeDestaque: z.array(z.object({
+    disciplina: z.string(),
+    descricao: z.string(),
+    relevanciaMercado: z.string(),
+  })).optional(),
+  dataInicio: z.string().datetime(),
+  dataFim: z.string().datetime().optional().nullable(),
+  area: AreaVocacionalSchema.optional().nullable(),
+  vagas: z.number().int().optional().nullable(),
+  modalidade: ModalidadeSchema.optional().nullable(),
+});
+export type ExperienciaPublica = z.infer<typeof ExperienciaPublicaSchema>;
 
 export const CriarExperienciaPayloadSchema = z.object({
   titulo: z.string().min(3).max(200),

@@ -23,16 +23,16 @@ const redisInstance = hasRedis
  * No patamar mundial, se o Redis ausente, usamos um mock rigoroso.
  */
 export const redis = (redisInstance || {
-  get: async <T>(_key: string): Promise<T | null> => null,
-  set: async (_key: string, _value: unknown, _opts?: { ex?: number; nx?: boolean; px?: number }): Promise<'OK' | null> => 'OK',
-  del: async (_key: string): Promise<number> => 1,
-  sadd: async (_key: string, ..._members: unknown[]): Promise<number> => 1,
-  sismember: async (_key: string, _member: unknown): Promise<0 | 1> => 0,
-  incr: async (_key: string): Promise<number> => 1,
-  expire: async (_key: string, _seconds: number): Promise<0 | 1> => 1,
-  rpop: async <T>(_key: string): Promise<T | null> => null,
-  lpush: async (_key: string, ..._elements: unknown[]): Promise<number> => 1,
-  lrem: async (_key: string, _count: number, _element: unknown): Promise<number> => 1,
-  rpoplpush: async <T>(_source: string, _destination: string): Promise<T | null> => null,
-  eval: async <T>(_script: string, _keys: string[], _args: unknown[]): Promise<T> => null as unknown as T,
+  get: <T>(_key: string): Promise<T | null> => null,
+  set: (_key: string, _value: unknown, _opts?: { ex?: number; nx?: boolean; px?: number }): Promise<'OK' | null> => 'OK',
+  del: (_key: string): Promise<number> => 1,
+  sadd: (_key: string, ..._members: unknown[]): Promise<number> => 1,
+  sismember: (_key: string, _member: unknown): Promise<0 | 1> => 0,
+  incr: (_key: string): Promise<number> => 1,
+  expire: (_key: string, _seconds: number): Promise<0 | 1> => 1,
+  rpop: <T>(_key: string): Promise<T | null> => null,
+  lpush: (_key: string, ..._elements: unknown[]): Promise<number> => 1,
+  lrem: (_key: string, _count: number, _element: unknown): Promise<number> => 1,
+  rpoplpush: <T>(_source: string, _destination: string): Promise<T | null> => null,
+  eval: <T>(_script: string, _keys: string[], _args: unknown[]): Promise<T> => null as unknown as T,
 }) as PdcRedis;

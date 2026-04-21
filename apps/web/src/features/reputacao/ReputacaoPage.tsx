@@ -31,7 +31,7 @@ export function ReputacaoPage() {
     <div className="mx-auto max-w-6xl space-y-8 pb-20 animate-in fade-in duration-1000">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 mb-3 px-3 py-1">Wave 1 — Gênese</Badge>
+          <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 mb-3 px-3 py-1">Wave 1 - Gênese</Badge>
           <h1 className="text-4xl font-black text-text-primary tracking-tighter font-display">
             A Minha <span className="text-accent">Reputação</span>
           </h1>
@@ -41,7 +41,7 @@ export function ReputacaoPage() {
         </div>
         <div className="flex items-center gap-2 text-xs font-mono text-text-muted">
           <Zap size={14} className="text-accent" />
-          CALCULADO NA EDGE — LUANDA PoP
+          CALCULADO NA EDGE - LUANDA PoP
         </div>
       </header>
 
@@ -96,19 +96,19 @@ export function ReputacaoPage() {
               <div>
                  <p className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em]">Impacto Real</p>
                  <h3 className="text-2xl font-bold mt-1 tracking-tight">
-                    {user?.role === 'mentor' ? 'Rating de Mentoria' : user?.role === 'aluno' ? 'Conquistas' : 'Catálogo'}
+                    {user?.role === 'mentor' ? 'Rating de Mentoria' : user?.role === 'estudante' ? 'Conquistas' : 'Catálogo'}
                  </h3>
               </div>
               <div className="p-3 bg-accent/5 rounded-2xl text-accent group-hover:scale-110 transition-transform">
-                 {user?.role === 'mentor' ? <Star size={24} /> : user?.role === 'aluno' ? <Award size={24} /> : <BookOpen size={24} />}
+                 {user?.role === 'mentor' ? <Star size={24} /> : user?.role === 'estudante' ? <Award size={24} /> : <BookOpen size={24} />}
               </div>
            </div>
            <div className="flex items-baseline gap-3">
               <span className="text-6xl font-black font-mono tracking-tighter">
-                 {user?.role === 'mentor' ? dimensions.ratingsMedia : user?.role === 'aluno' ? dimensions.conquistas : dimensions.cursosPublicados}
+                 {user?.role === 'mentor' ? dimensions.ratingsMedia : user?.role === 'estudante' ? dimensions.conquistas : dimensions.cursosPublicados}
               </span>
               <span className="text-xs font-bold text-text-muted uppercase tracking-widest">
-                 {user?.role === 'mentor' ? '/ 5.0' : user?.role === 'aluno' ? 'badges' : 'items'}
+                 {user?.role === 'mentor' ? '/ 5.0' : user?.role === 'estudante' ? 'badges' : 'items'}
               </span>
            </div>
         </Card>
@@ -185,7 +185,7 @@ export function ReputacaoPage() {
 
       <footer className="pt-10 border-t border-white/5 flex items-center justify-between">
         <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
-          Algoritmo v2.2 — Actualizado a cada 5 minutos através de processamento em background.
+          Algoritmo v2.2 - Actualizado a cada 5 minutos através de processamento em background.
         </p>
         <button className="text-[10px] font-black text-accent uppercase tracking-widest hover:underline transition-all">
           Descarregar Certificado de Autoridade PDF →

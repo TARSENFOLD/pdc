@@ -13,7 +13,7 @@ export const TINA_KNOWLEDGE: TinaKnowledgeItem[] = [
   {
     categoria: 'páginas',
     titulo: 'Simulações',
-    conteudo: 'URL: /app/simulacoes. Acesso: Alunos. Descrição: Lista de simulações práticas de profissões.',
+    conteudo: 'URL: /app/simulacoes. Acesso: Estudantes. Descrição: Lista de simulações práticas de profissões.',
   },
   {
     categoria: 'features',
@@ -22,13 +22,13 @@ export const TINA_KNOWLEDGE: TinaKnowledgeItem[] = [
   },
   {
     categoria: 'roles',
-    titulo: 'Aluno',
+    titulo: 'Estudante',
     conteudo: 'O que pode fazer: Realizar simulações, inscrever-se em cursos, ver relatórios vocacionais e solicitar mentorias.',
   },
   {
     categoria: 'roles',
     titulo: 'Mentor',
-    conteudo: 'O que pode fazer: Aceitar pedidos de mentoria, orientar alunos e partilhar experiências profissionais.',
+    conteudo: 'O que pode fazer: Aceitar pedidos de mentoria, orientar estudantes e partilhar experiências profissionais.',
   },
   {
     categoria: 'FAQ',

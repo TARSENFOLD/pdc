@@ -7,7 +7,7 @@ export function LandingFooter() {
         <div className="flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-center">
           <div>
             <span className="text-lg font-bold text-amber">PDC</span>
-            <p className="mt-1 text-xs text-text-muted">Por Dentro do Curso — Angola</p>
+            <p className="mt-1 text-xs text-text-muted">Por Dentro do Curso - Angola</p>
           </div>
           <div className="flex flex-wrap gap-6 text-sm text-text-secondary">
             <Link to="/login" className="transition-colors hover:text-text-primary">Entrar</Link>

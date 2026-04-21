@@ -51,7 +51,7 @@ export function CriarCursoPage() {
 
   const mutation = useMutation({
     mutationFn: (data: CriarCursoPayload) => 
-      isEditing ? cursosApi.update(id as string, data) : cursosApi.create(data),
+      isEditing ? cursosApi.update(id, data) : cursosApi.create(data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
       toast({ title: isEditing ? 'Curso atualizado!' : 'Curso criado com sucesso!' });

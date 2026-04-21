@@ -2,45 +2,50 @@ import pino from 'pino';
 import { conquistaEngine } from '../conquistas/conquistas.engine.js';
 import type { DomainEvent } from './types.js';
 import { strapiGet } from '../strapi/strapi.client.js';
-import type { StrapiPerfil } from '../strapi/strapi.types.js';
 import { socketService } from '../realtime/socket.service.js';
 
 const log = pino({ name: 'conquistas-handler' });
 
 /**
- * Handler de Conquistas (T-FIX-3: suporta 12 eventos canónicos)
- * Dispara a verificação de conquistas automáticas após eventos de domínio.
- * Compatível com todos os eventos em DomainEventName via EVENT_TO_TRIGGER_MAP.
+ * Event-driven Achievements Handler
+ * Reage a Domain Events e avalia se o utilizador desbloqueou medalhas.
  */
-export async function conquistasHandler(event: DomainEvent<{ tentativaId?: string; perfilId?: string }>) {
-  const { perfilId, tentativaId } = event.payload;
+export async function conquistasHandler(event: DomainEvent): Promise<void> {
+  const payload = event.payload as { perfilId?: string; autorId?: string; tentativaId?: string };
+  const perfilId = payload.perfilId || payload.autorId;
+
+  if (!perfilId) return;
 
   try {
-    // 1. Resolve userId do perfilId (Engine exige userId Clerk/Strapi)
-    const resPerfil = await strapiGet<StrapiPerfil>('/perfis', {
-      'filters[id][$eq]': perfilId ?? '',
-      'fields[0]': 'userId'
+    // 1. Procurar o userId vinculado ao perfil (Engine usa userId do Clerk/Strapi-Auth)
+    const resPerfil = await strapiGet<{ userId: string }>('/perfis', {
+      'filters[id][$eq]': perfilId,
+      'fields[0]': 'userId',
     });
-    
-    const perfil = resPerfil.data[0];
-    const userId = perfil?.userId;
-    if (!userId) throw new Error(`UserId não encontrado para perfilId ${perfilId ?? 'desconhecido'}`);
 
-    // 2. Chama a engine de conquistas (Sovereign & Idempotente)
-    // Usa o nome do evento original para decidir quais regras aplicar
-    const novasConquistas = await conquistaEngine.verificarConquistas(userId, event.name, tentativaId);
-    
-    // 3. Emite evento de tempo real para celebração imediata (The Nervous System)
-    if (novasConquistas.length > 0) {
-      for (const conquista of novasConquistas) {
-        socketService.emitirConquista(userId, conquista);
-      }
+    const userRecord = resPerfil.data[0];
+    const userId = userRecord?.userId;
+
+    if (!userId) {
+      log.debug({ perfilId }, 'Perfil não tem userId associado, ignorando conquistas automáticas');
+      return;
     }
-    
-    log.info({ userId, perfilId, event: event.name, count: novasConquistas.length }, 'Processamento de conquistas concluído com sucesso.');
-  } catch (err) {
-    log.error({ err, perfilId }, 'Falha ao processar conquistas');
-    // Propagamos o erro para garantir que o EventBus não marque o evento como processado (retry)
-    throw err;
+
+    // 2. Avaliar regras
+    const desbloqueadas = await conquistaEngine.verificarConquistas(
+      userId,
+      event.name,
+      payload.tentativaId,
+    );
+
+    // 3. Notificar via Socket (Realtime Feedback)
+    if (desbloqueadas.length > 0) {
+      desbloqueadas.forEach((c) => {
+        socketService.emitirConquista(userId, c);
+      });
+      log.info({ userId, count: desbloqueadas.length }, 'Novas conquistas desbloqueadas via evento');
+    }
+  } catch (err: unknown) {
+    log.error({ err, event: event.name }, 'Falha no processamento de conquistas');
   }
 }

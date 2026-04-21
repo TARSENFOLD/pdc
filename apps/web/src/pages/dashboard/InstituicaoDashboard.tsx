@@ -56,19 +56,19 @@ export function InstituicaoDashboard() {
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Experiências publicadas"
-          value={stats?.experienciasPublicadas ?? '—'}
+          value={stats?.experienciasPublicadas ?? '-'}
           icon={Building2}
           description="Experiências visíveis na plataforma"
         />
         <StatCard
           label="Inscrições totais"
-          value={stats?.inscricoesTotais ?? '—'}
+          value={stats?.inscricoesTotais ?? '-'}
           icon={ClipboardList}
           description="Estudantes inscritos nos vossos programas"
         />
         <StatCard
           label="Programas activos"
-          value={stats?.programasActivos ?? '—'}
+          value={stats?.programasActivos ?? '-'}
           icon={MapPin}
           description="Programas em curso"
         />

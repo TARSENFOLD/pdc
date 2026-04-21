@@ -9,9 +9,9 @@ mentoriaRoutes.use('*', verifyJwt);
 
 interface StrapiMentoria {
   id: string;
-  alunoId: string;
-  alunoNome: string;
-  alunoEmail: string;
+  estudanteId: string;
+  estudanteNome: string;
+  estudanteEmail: string;
   tipo: string;
   estado: string;
   createdAt: string;
@@ -27,9 +27,9 @@ mentoriaRoutes.get('/alunado', async (c) => {
     
     const mentorados = res.data.map((m) => ({
       id: m.id,
-      alunoId: m.alunoId,
-      alunoNome: m.alunoNome,
-      alunoEmail: m.alunoEmail,
+      estudanteId: m.estudanteId,
+      estudanteNome: m.estudanteNome,
+      estudanteEmail: m.estudanteEmail,
       mentoriaId: m.id,
       tipo: m.tipo,
       estado: m.estado,
@@ -37,7 +37,7 @@ mentoriaRoutes.get('/alunado', async (c) => {
     }));
 
     return c.json({ data: mentorados });
-  } catch (err) {
+  } catch (_err) {
     return c.json({ error: 'Erro ao carregar mentorados' }, 502);
   }
 });
@@ -48,14 +48,14 @@ mentoriaRoutes.get('/validar-projeto/:projetoId', async (c) => {
   const { id: mentorId } = c.get('user');
 
   try {
-    const res = await strapiGet<any>(`/projetos/${projetoId}`);
+    const res = await strapiGet<unknown>(`/projetos/${projetoId}`);
     const proj = res.data[0];
     
     if (!proj) return c.json({ error: 'Projeto não encontrado' }, 404);
     
-    // Logica de verificação de permissão do mentor sobre o aluno do projeto
-    const resVinculo = await strapiGet<any>('/vinculos', {
-      'filters[senderId][$eq]': proj.alunoId,
+    // Logica de verificação de permissão do mentor sobre o estudante do projeto
+    const resVinculo = await strapiGet<unknown>('/vinculos', {
+      'filters[senderId][$eq]': proj.estudanteId,
       'filters[receiverId][$eq]': mentorId,
       'filters[estado][$eq]': 'connected',
     });
@@ -65,7 +65,7 @@ mentoriaRoutes.get('/validar-projeto/:projetoId', async (c) => {
     }
 
     return c.json({ data: proj });
-  } catch (err) {
+  } catch (_err) {
     return c.json({ error: 'Erro ao validar projeto' }, 500);
   }
 });

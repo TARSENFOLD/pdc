@@ -30,7 +30,7 @@ export function CursoPublicoDetailPage() {
           '@type': 'Course',
           name: curso.titulo,
           description: curso.descricao,
-          provider: { '@type': 'Organization', name: 'PDC — Por Dentro do Curso' },
+          provider: { '@type': 'Organization', name: 'PDC - Por Dentro do Curso' },
         }}
       />
       <div className="mx-auto max-w-3xl">

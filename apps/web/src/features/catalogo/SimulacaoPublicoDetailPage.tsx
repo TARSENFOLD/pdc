@@ -6,14 +6,19 @@ import { SEOHead } from '@/components/layout/SEOHead';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Search } from 'lucide-react';
 
+import type { SimulacaoPublica } from '@pdc/shared';
+
 const TIPOS: Record<string, string> = { '1': 'Vídeo Guiado', '2': 'Laboratório Externo', '3': 'Ambiente Interactivo' };
 
 export function SimulacaoPublicoDetailPage() {
   const { slug } = useParams<{ slug: string }>();
 
-  const { data: sim, isLoading, isError } = useQuery({
+  const { data: sim, isLoading, isError } = useQuery<SimulacaoPublica | null>({
     queryKey: ['catalogo-simulacao', slug],
-    queryFn: () => catalogoApi.getSimulacao(slug ?? ''),
+    queryFn: async () => {
+      if (!slug) return null;
+      return catalogoApi.getSimulacao(slug);
+    },
     enabled: !!slug,
   });
 
@@ -36,7 +41,7 @@ export function SimulacaoPublicoDetailPage() {
 
         <div className="mt-6 flex flex-wrap gap-2">
           <Badge variant="warning">{TIPOS[String(sim.tipo)] ?? 'Simulação'}</Badge>
-          {sim.area ? <Badge variant="info">{sim.area}</Badge> : null}
+          {sim.area && <Badge variant="info">{sim.area}</Badge>}
           {sim.nivel ? <Badge variant="outline">{sim.nivel}</Badge> : null}
         </div>
 
@@ -46,7 +51,7 @@ export function SimulacaoPublicoDetailPage() {
         <div className="mt-8 rounded-xl border border-border bg-surface p-6">
           <h2 className="text-lg font-semibold text-text-primary">O que vais experimentar</h2>
           <ul className="mt-3 space-y-2 text-sm text-text-secondary">
-            <li>• Cenário realista de {sim.area ?? 'trabalho profissional'}</li>
+            {sim.area && <li>• Cenário realista de {sim.area}</li>}
             <li>• Relatório de perfil vocacional no final</li>
           </ul>
         </div>

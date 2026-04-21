@@ -20,7 +20,7 @@ import { PrivacidadePage } from '@/pages/PrivacidadePage';
 const ReputacaoPage = React.lazy(() => import('@/features/reputacao/ReputacaoPage').then(m => ({ default: m.ReputacaoPage })));
 
 // --- Lazy-loaded /app/* pages ---
-const AlunoDashboard = React.lazy(() => import('@/pages/dashboard/AlunoDashboard').then(m => ({ default: m.AlunoDashboard })));
+const EstudanteDashboard = React.lazy(() => import('@/pages/dashboard/EstudanteDashboard').then(m => ({ default: m.EstudanteDashboard })));
 const MentorDashboard = React.lazy(() => import('@/pages/dashboard/MentorDashboard').then(m => ({ default: m.MentorDashboard })));
 const InstituicaoDashboard = React.lazy(() => import('@/pages/dashboard/InstituicaoDashboard').then(m => ({ default: m.InstituicaoDashboard })));
 const ModeradorDashboard = React.lazy(() => import('@/pages/dashboard/ModeradorDashboard').then(m => ({ default: m.ModeradorDashboard })));
@@ -81,17 +81,17 @@ const PropostasPage = React.lazy(() => import('@/features/instituicao/PropostasP
 const RelatoriosInstituicaoPage = React.lazy(() => import('@/features/instituicao/RelatoriosInstituicaoPage').then(m => ({ default: m.RelatoriosInstituicaoPage })));
 const BrandingPage = React.lazy(() => import('@/features/instituicao/BrandingPage').then(m => ({ default: m.BrandingPage })));
 
-const MeusCursosPage = React.lazy(() => import('@/features/aluno/MeusCursosPage').then(m => ({ default: m.MeusCursosPage })));
-const GuardadosPage = React.lazy(() => import('@/features/aluno/GuardadosPage').then(m => ({ default: m.GuardadosPage })));
-const CertificadosPage = React.lazy(() => import('@/features/aluno/CertificadosPage').then(m => ({ default: m.CertificadosPage })));
-const RankingPage = React.lazy(() => import('@/features/aluno/RankingPage').then(m => ({ default: m.RankingPage })));
+const MeusCursosPage = React.lazy(() => import('@/features/estudante/MeusCursosPage').then(m => ({ default: m.MeusCursosPage })));
+const GuardadosPage = React.lazy(() => import('@/features/estudante/GuardadosPage').then(m => ({ default: m.GuardadosPage })));
+const CertificadosPage = React.lazy(() => import('@/features/estudante/CertificadosPage').then(m => ({ default: m.CertificadosPage })));
+const RankingPage = React.lazy(() => import('@/features/estudante/RankingPage').then(m => ({ default: m.RankingPage })));
 
 const MentorCursosPage = React.lazy(() => import('@/features/mentor/MentorCursosPage').then(m => ({ default: m.MentorCursosPage })));
 const CriarCursoPage = React.lazy(() => import('@/features/mentor/CriarCursoPage').then(m => ({ default: m.CriarCursoPage })));
 const MentorSimulacoesPage = React.lazy(() => import('@/features/mentor/MentorSimulacoesPage').then(m => ({ default: m.MentorSimulacoesPage })));
 const CriarSimulacaoPage = React.lazy(() => import('@/features/mentor/CriarSimulacaoPage').then(m => ({ default: m.CriarSimulacaoPage })));
 const UploadConteudoPage = React.lazy(() => import('@/features/mentor/UploadConteudoPage').then(m => ({ default: m.UploadConteudoPage })));
-const AlunosInscritosPage = React.lazy(() => import('@/features/mentor/AlunosInscritosPage').then(m => ({ default: m.AlunosInscritosPage })));
+const EstudantesInscritosPage = React.lazy(() => import('@/features/mentor/EstudantesInscritosPage').then(m => ({ default: m.EstudantesInscritosPage })));
 const MentoradosPage = React.lazy(() => import('@/features/mentor/MentoradosPage').then(m => ({ default: m.MentoradosPage })));
 const MentorAnalyticsPage = React.lazy(() => import('@/features/mentor/MentorAnalyticsPage').then(m => ({ default: m.MentorAnalyticsPage })));
 
@@ -110,7 +110,7 @@ const ProgramasCatalogoPage = React.lazy(() => import('@/features/catalogo/Progr
 const ProgramaDetailPage = React.lazy(() => import('@/features/catalogo/ProgramaDetailPage').then(m => ({ default: m.ProgramaDetailPage })));
 
 const ROLE_DASHBOARD: Record<Role, string> = {
-  aluno: '/app/dashboard/aluno',
+  estudante: '/app/dashboard/estudante',
   mentor: '/app/dashboard/mentor',
   instituicao: '/app/dashboard/instituicao',
   moderador: '/app/dashboard/moderador',
@@ -131,7 +131,7 @@ function DashboardRedirect() {
 
   if (!user) return <Navigate to="/login" replace />;
   
-  const target = ROLE_DASHBOARD[user.role] ?? '/app/dashboard/aluno';
+  const target = ROLE_DASHBOARD[user.role] ?? '/app/dashboard/estudante';
   return <Navigate to={target} replace />;
 }
 
@@ -158,7 +158,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <DashboardRedirect /> },
-      { path: 'dashboard/aluno', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><AlunoDashboard /></Suspense> },
+      { path: 'dashboard/estudante', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><EstudanteDashboard /></Suspense> },
       { path: 'dashboard/mentor', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><MentorDashboard /></Suspense> },
       { path: 'dashboard/instituicao', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><InstituicaoDashboard /></Suspense> },
       { path: 'dashboard/moderador', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ModeradorDashboard /></Suspense> },
@@ -181,11 +181,11 @@ export const router = createBrowserRouter([
       { path: 'mentorias', element: <MentoriaListPage /> },
       { path: 'conquistas', element: <ConquistasPage /> },
 
-      // Aluno
-      { path: 'meus-cursos', element: <RoleGuard allowed={['aluno']}><MeusCursosPage /></RoleGuard> },
-      { path: 'guardados', element: <RoleGuard allowed={['aluno']}><GuardadosPage /></RoleGuard> },
-      { path: 'certificados', element: <RoleGuard allowed={['aluno']}><CertificadosPage /></RoleGuard> },
-      { path: 'ranking', element: <RoleGuard allowed={['aluno']}><RankingPage /></RoleGuard> },
+      // Estudante
+      { path: 'meus-cursos', element: <RoleGuard allowed={['estudante']}><MeusCursosPage /></RoleGuard> },
+      { path: 'guardados', element: <RoleGuard allowed={['estudante']}><GuardadosPage /></RoleGuard> },
+      { path: 'certificados', element: <RoleGuard allowed={['estudante']}><CertificadosPage /></RoleGuard> },
+      { path: 'ranking', element: <RoleGuard allowed={['estudante']}><RankingPage /></RoleGuard> },
 
       // Mentor
       { path: 'mentor/cursos', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentorCursosPage /></RoleGuard> },
@@ -195,7 +195,7 @@ export const router = createBrowserRouter([
       { path: 'mentor/simulacoes/criar', element: <RoleGuard allowed={['mentor', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
       { path: 'mentor/simulacoes/:id/editar', element: <RoleGuard allowed={['mentor', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
       { path: 'mentor/upload', element: <RoleGuard allowed={['mentor', 'super_admin']}><UploadConteudoPage /></RoleGuard> },
-      { path: 'mentor/alunos/inscritos', element: <RoleGuard allowed={['mentor', 'super_admin']}><AlunosInscritosPage /></RoleGuard> },
+      { path: 'mentor/estudantes/inscritos', element: <RoleGuard allowed={['mentor', 'super_admin']}><EstudantesInscritosPage /></RoleGuard> },
       { path: 'mentor/mentorados', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentoradosPage /></RoleGuard> },
       { path: 'mentor/analytics', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentorAnalyticsPage /></RoleGuard> },
 

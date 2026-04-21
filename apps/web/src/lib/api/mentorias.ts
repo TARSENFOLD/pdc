@@ -7,11 +7,11 @@ import type {
   MentoriaTipo,
 } from '@pdc/shared';
 
-export interface AlunoMentorado {
+export interface EstudanteMentorado {
   id: string;
-  alunoId: string;
-  alunoNome: string;
-  alunoEmail: string;
+  estudanteId: string;
+  estudanteNome: string;
+  estudanteEmail: string;
   mentoriaId: string;
   tipo: MentoriaTipo;
   estado: string;
@@ -42,8 +42,8 @@ export const mentoriasApi = {
 
   getStats: () => http.get<MentorStats>('/mentorias/stats'),
 
-  getMentorados: () => http.get<AlunoMentorado[]>('/mentorias/mentorados'),
+  getMentorados: () => http.get<EstudanteMentorado[]>('/mentorias/mentorados'),
 
-  getAlunosInscritos: (page?: number) =>
-    http.get<{ data: Inscricao[], pagination: Pagination }>(`/mentorias/alunos/inscritos?page=${(page ?? 1).toString()}`),
+  getEstudantesInscritos: (page?: number) =>
+    http.get<{ data: Inscricao[], pagination: Pagination }>(`/mentorias/estudantes/inscritos?page=${(page ?? 1).toString()}`),
 };

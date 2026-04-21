@@ -42,7 +42,7 @@ const pgQ = z.object({
 
 function sid(v: string | number): string { return typeof v === 'number' ? v.toString() : v; }
 
-function toMeta(meta: StrapiListResponse<any>['meta']): CatalogoMeta {
+function toMeta(meta: StrapiListResponse<unknown>['meta']): CatalogoMeta {
   const p = meta.pagination;
   return { page: p.page, pageSize: p.pageSize, total: p.total, pageCount: p.pageCount };
 }

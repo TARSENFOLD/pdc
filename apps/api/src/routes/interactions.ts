@@ -63,7 +63,7 @@ interactionRoutes.get('/like/status', zValidator('query', z.object({
   const user = c.get('user');
   const { targetType, targetId } = c.req.valid('query');
 
-  const countReq = await strapiGet<any>('/likes', {
+  const countReq = await strapiGet<unknown>('/likes', {
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
     'pagination[withCount]': 'true',

@@ -2,7 +2,7 @@
 
 exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve calcular o perfil corretamente para: Engenheiro Focado (Estável) 1`] = `
 {
-  "alunoId": "aluno-engenheiro-focado",
+  "estudanteId": "estudante-engenheiro-focado",
   "aptidao": 8.3,
   "consistencia": 9.6,
   "dedicacao": 8,
@@ -14,7 +14,7 @@ exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve
 
 exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve calcular o perfil corretamente para: Estudante em Transição (Pivô Vocacional) 1`] = `
 {
-  "alunoId": "aluno-transicao",
+  "estudanteId": "estudante-transicao",
   "aptidao": 7,
   "consistencia": 0,
   "dedicacao": 10,
@@ -24,9 +24,9 @@ exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve
 }
 `;
 
-exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve calcular o perfil corretamente para: O Aluno Errático (Dados Incompletos) 1`] = `
+exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve calcular o perfil corretamente para: O Estudante Errático (Dados Incompletos) 1`] = `
 {
-  "alunoId": "aluno-erratico",
+  "estudanteId": "estudante-erratico",
   "aptidao": 5,
   "consistencia": 0,
   "dedicacao": 4,
@@ -38,7 +38,7 @@ exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve
 
 exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve calcular o perfil corretamente para: O Artista Explorador (Explorador) 1`] = `
 {
-  "alunoId": "aluno-artista-explorador",
+  "estudanteId": "estudante-artista-explorador",
   "aptidao": 7.3,
   "consistencia": 8.2,
   "dedicacao": 10,
@@ -50,7 +50,7 @@ exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve
 
 exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve calcular o perfil corretamente para: O Cientista Social (Persistente) 1`] = `
 {
-  "alunoId": "aluno-cientista-social",
+  "estudanteId": "estudante-cientista-social",
   "aptidao": 7,
   "consistencia": 10,
   "dedicacao": 10,
@@ -62,7 +62,7 @@ exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve
 
 exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve calcular o perfil corretamente para: O Cirurgião (O Cirurgião) 1`] = `
 {
-  "alunoId": "aluno-cirurgiao",
+  "estudanteId": "estudante-cirurgiao",
   "aptidao": 9.6,
   "consistencia": 9.5,
   "dedicacao": 10,
@@ -74,7 +74,7 @@ exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve
 
 exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve calcular o perfil corretamente para: O Gestor Impulsivo (O Gestor Impulsivo) 1`] = `
 {
-  "alunoId": "aluno-gestor-impulsivo",
+  "estudanteId": "estudante-gestor-impulsivo",
   "aptidao": 7.3,
   "consistencia": 2.1,
   "dedicacao": 10,
@@ -86,7 +86,7 @@ exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve
 
 exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve calcular o perfil corretamente para: O Hacker Hesitante (O Hacker Hesitante) 1`] = `
 {
-  "alunoId": "aluno-hacker",
+  "estudanteId": "estudante-hacker",
   "aptidao": 9,
   "consistencia": 7.3,
   "dedicacao": 10,
@@ -98,7 +98,7 @@ exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve
 
 exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve calcular o perfil corretamente para: O Mestre da Gestão (Elite) 1`] = `
 {
-  "alunoId": "aluno-mestre-gestao",
+  "estudanteId": "estudante-mestre-gestao",
   "aptidao": 10,
   "consistencia": 10,
   "dedicacao": 10,
@@ -110,7 +110,7 @@ exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve
 
 exports[`vocacionalService > Personas Arquétipo (Characterization Tests) > deve calcular o perfil corretamente para: O Procrastinador (Baixo Volume) 1`] = `
 {
-  "alunoId": "aluno-procrastinador",
+  "estudanteId": "estudante-procrastinador",
   "aptidao": 5.5,
   "consistencia": 9.5,
   "dedicacao": 4,

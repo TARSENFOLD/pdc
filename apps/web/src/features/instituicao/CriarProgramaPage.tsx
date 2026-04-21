@@ -16,9 +16,9 @@ export function CriarProgramaPage() {
     defaultValues: {
       titulo: '',
       descricao: '',
-      tipo: 'standard' as any,
-      area: 'GESTAO' as any,
-      modalidade: 'PRESENCIAL' as any,
+      tipo: 'standard',
+      area: 'GESTAO',
+      modalidade: 'PRESENCIAL',
       vagas: 1,
     }
   });
@@ -41,7 +41,7 @@ export function CriarProgramaPage() {
         <form 
           onSubmit={(e) => { 
             void handleSubmit((data) => { 
-              mutation.mutate(data as CriarProgramaPayload); 
+              mutation.mutate(data); 
             })(e); 
           }} 
           className="space-y-4"

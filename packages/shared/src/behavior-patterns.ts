@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const BehaviorPatternSchema = z.object({
   id: z.string().optional(),
-  perfil: z.string(), // ID do Perfil/Aluno
+  perfil: z.string(), // ID do Perfil/Estudante
   domainId: z.string(), // Slug da área vocacional ou domínio técnico
   successRate: z.number().min(0).max(1),
   technicalScore: z.number().min(0).max(10),

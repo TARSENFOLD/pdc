@@ -23,3 +23,7 @@ export type AreaVocacional = z.infer<typeof AreaVocacionalSchema>;
 export const ModalidadeSchema = z.enum(['presencial', 'online', 'hibrido']);
 
 export type Modalidade = z.infer<typeof ModalidadeSchema>;
+
+export const EstadoEditorialSchema = z.enum(['draft', 'review', 'published', 'rejected']);
+
+export type EstadoEditorial = z.infer<typeof EstadoEditorialSchema>;

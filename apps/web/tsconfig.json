@@ -19,9 +19,10 @@
     "exactOptionalPropertyTypes": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@pdc/shared": ["../../packages/shared/src/index"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "../../packages/shared/src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

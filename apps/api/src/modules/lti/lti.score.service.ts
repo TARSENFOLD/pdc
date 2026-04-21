@@ -8,16 +8,25 @@ export interface LtiScoreResult {
   reason?: string;
 }
 
+interface PerfilWithLti extends PerfilCompleto {
+  lti_context?: {
+    lineitemUrl?: string;
+    iss?: string;
+  };
+  ltiSub?: string;
+  userId?: string;
+}
+
 export const ltiScoreService = {
   async sendScoreFromContext(perfilId: string, _tentativaId: string, score: number): Promise<LtiScoreResult> {
     try {
       // 1. Buscar perfil e contexto LTI
-      const resPerfil = await strapiGet<PerfilCompleto>(`/perfis/${perfilId}`);
+      const resPerfil = await strapiGet<PerfilWithLti>(`/perfis/${perfilId}`);
       
       const perfil = resPerfil.data[0];
       if (!perfil) return { status: 'retryable_error', reason: 'perfil-not-found' };
 
-      const ltiContext = (perfil as any).lti_context;
+      const ltiContext = perfil.lti_context;
       if (!ltiContext || !ltiContext.lineitemUrl) {
         return { status: 'skipped', reason: 'no-lti-context' };
       }
@@ -26,7 +35,7 @@ export const ltiScoreService = {
       const iss = ltiContext.iss;
       if (!iss) return { status: 'retryable_error', reason: 'no-issuer-in-context' };
 
-      const resPlat = await strapiGet<any>('/lti-plataformas', {
+      const resPlat = await strapiGet<{ id: string | number }>('/lti-plataformas', {
         'filters[issuer][$eq]': iss,
         'filters[ativo][$eq]': 'true',
       });
@@ -41,7 +50,7 @@ export const ltiScoreService = {
 
       // 3. Enviar via AGS
       await ltiAgsService.sendScore(ltiContext.lineitemUrl, {
-        userId: (perfil as any).ltiSub || (perfil as any).userId || String(perfil.id),
+        userId: perfil.ltiSub || perfil.userId || String(perfil.id),
         scoreGiven: score,
         scoreMaximum: 100,
         activityProgress: 'Completed',

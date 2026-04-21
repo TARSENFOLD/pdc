@@ -4,8 +4,8 @@ import { z } from 'zod';
 import pino from 'pino';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import { socketService } from '../modules/realtime/socket.service.js';
-import { persistirReputacao } from '../modules/reputation/reputation.service.js';
+import { eventBus } from '../modules/events/event-bus.js';
+import { DomainEventName } from '../modules/events/types.js';
 
 const log = pino({ name: 'routes:vinculos' });
 type Vars = { Variables: AuthVariables };
@@ -79,18 +79,12 @@ vinculoRoutes.post('/:id/pedir', async (c) => {
       criadoEm: new Date().toISOString()
     });
 
-    const resDest = await strapiGet<StrapiPerfilMini>(`/perfis/${destinatarioPerfilId}`);
-    const destinatario = resDest.data[0];
-    
-    if (destinatario) {
-      socketService.emitirNotificacao(destinatario.userId, {
-        id: crypto.randomUUID(),
-        tipo: 'info',
-        titulo: 'Novo Pedido de Vínculo',
-        corpo: `${solicitantePerfil.nome} deseja conectar-se contigo.`,
-        timestamp: new Date().toISOString()
-      });
-    }
+    // G15: Impacto no Ecossistema
+    await eventBus.publishWithOutbox(DomainEventName.VINCULO_SOLICITADO, {
+      vinculoId: resPost.data.id,
+      solicitanteId: String(solicitantePerfil.id),
+      destinatarioId: String(destinatarioPerfilId)
+    });
 
     return c.json(resPost.data, 201);
   } catch (err) {
@@ -122,16 +116,18 @@ vinculoRoutes.patch('/:id/resolver', zValidator('json', z.object({ status: z.enu
       resolvidoEm: new Date().toISOString()
     });
 
+    // G15: Impacto no Ecossistema
     if (status === 'aprovado') {
-      void persistirReputacao(String(existing.solicitante.id));
-      void persistirReputacao(String(existing.destinatario.id));
-
-      socketService.emitirNotificacao(existing.solicitante.userId, {
-        id: crypto.randomUUID(),
-        tipo: 'sucesso',
-        titulo: 'Vínculo Confirmado',
-        corpo: `${existing.destinatario.nome} aceitou a tua ligação.`,
-        timestamp: new Date().toISOString()
+      await eventBus.publishWithOutbox(DomainEventName.VINCULO_APROVADO, {
+        vinculoId,
+        solicitanteId: String(existing.solicitante.id),
+        destinatarioId: String(existing.destinatario.id)
+      });
+    } else {
+      await eventBus.publishWithOutbox(DomainEventName.VINCULO_REJEITADO, {
+        vinculoId,
+        solicitanteId: String(existing.solicitante.id),
+        destinatarioId: String(existing.destinatario.id)
       });
     }
 

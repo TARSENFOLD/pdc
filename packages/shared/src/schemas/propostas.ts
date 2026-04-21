@@ -8,7 +8,7 @@ export const PropostaSchema = z.object({
   tipo: PropostaTipoSchema,
   titulo: z.string(),
   mensagem: z.string(),
-  targetId: z.string(), // Aluno ou Instituição
+  targetId: z.string(), // Estudante ou Instituição
   senderId: z.string(),
   estado: z.enum(['pendente', 'aceite', 'rejeitada']),
   status: z.enum(['pendente', 'aceita', 'recusada', 'rejeitada']).optional(), // Suporte a status (alias de estado)

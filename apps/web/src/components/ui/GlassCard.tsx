@@ -24,12 +24,12 @@ export const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
       >
         {/* Halo de Terracota (Assinatura Tina) */}
         {halo && (
-          <div 
-            className="absolute -top-10 -left-10 w-32 h-32 blur-[40px] opacity-20 pointer-events-none" 
+          <div
+            className="absolute -top-10 -left-10 w-32 h-32 blur-[40px] opacity-20 pointer-events-none"
             style={{ backgroundColor: 'var(--accent-terracotta-glow)' }}
           />
         )}
-        
+
         <div className="relative z-10">
           {children}
         </div>

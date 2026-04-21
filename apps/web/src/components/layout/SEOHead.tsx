@@ -25,7 +25,7 @@ function setOrCreateMeta(attr: 'name' | 'property', key: string, content: string
 export function SEOHead({ title, description, image, url, type = 'website', jsonLd }: SEOProps) {
   useEffect(() => {
     const prev = document.title;
-    const fullTitle = `${title} | PDC — Por Dentro do Curso`;
+    const fullTitle = `${title} | PDC - Por Dentro do Curso`;
     document.title = fullTitle;
 
     const ogImage = image || DEFAULT_IMAGE;

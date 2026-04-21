@@ -13,6 +13,7 @@ export * from './LikeButton';
 export * from './BookmarkButton';
 export * from './RatingStars';
 export * from './ConectarButton';
+export * from './Toaster';
 export * from './Skeleton';
 export * from './EmptyState';
 export * from './AppErrorBoundary';

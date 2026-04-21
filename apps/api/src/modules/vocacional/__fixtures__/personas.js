@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.personas = void 0;
 exports.personas = [
     {
-        alunoId: 'aluno-cirurgiao',
+        estudanteId: 'estudante-cirurgiao',
         nome: 'O Cirurgião',
         arquétipo: 'O Cirurgião',
         area: 'Saúde',
@@ -16,7 +16,7 @@ exports.personas = [
         ],
     },
     {
-        alunoId: 'aluno-hacker',
+        estudanteId: 'estudante-hacker',
         nome: 'O Hacker Hesitante',
         arquétipo: 'O Hacker Hesitante',
         area: 'Tecnologia',
@@ -30,7 +30,7 @@ exports.personas = [
         ],
     },
     {
-        alunoId: 'aluno-gestor-impulsivo',
+        estudanteId: 'estudante-gestor-impulsivo',
         nome: 'O Gestor Impulsivo',
         arquétipo: 'O Gestor Impulsivo',
         area: 'Gestão',
@@ -46,7 +46,7 @@ exports.personas = [
         ],
     },
     {
-        alunoId: 'aluno-engenheiro-focado',
+        estudanteId: 'estudante-engenheiro-focado',
         nome: 'Engenheiro Focado',
         arquétipo: 'Estável',
         area: 'Engenharia',
@@ -58,7 +58,7 @@ exports.personas = [
         ],
     },
     {
-        alunoId: 'aluno-artista-explorador',
+        estudanteId: 'estudante-artista-explorador',
         nome: 'O Artista Explorador',
         arquétipo: 'Explorador',
         area: 'Artes',
@@ -72,7 +72,7 @@ exports.personas = [
         ],
     },
     {
-        alunoId: 'aluno-cientista-social',
+        estudanteId: 'estudante-cientista-social',
         nome: 'O Cientista Social',
         arquétipo: 'Persistente',
         area: 'Ciências Sociais',
@@ -85,7 +85,7 @@ exports.personas = [
         ],
     },
     {
-        alunoId: 'aluno-transicao',
+        estudanteId: 'estudante-transicao',
         nome: 'Estudante em Transição',
         arquétipo: 'Pivô Vocacional',
         area: 'Saúde -> Tecnologia',
@@ -98,7 +98,7 @@ exports.personas = [
         ],
     },
     {
-        alunoId: 'aluno-procrastinador',
+        estudanteId: 'estudante-procrastinador',
         nome: 'O Procrastinador',
         arquétipo: 'Baixo Volume',
         area: 'Tecnologia',
@@ -108,7 +108,7 @@ exports.personas = [
         ],
     },
     {
-        alunoId: 'aluno-mestre-gestao',
+        estudanteId: 'estudante-mestre-gestao',
         nome: 'O Mestre da Gestão',
         arquétipo: 'Elite',
         area: 'Gestão',
@@ -126,8 +126,8 @@ exports.personas = [
         ],
     },
     {
-        alunoId: 'aluno-erratico',
-        nome: 'O Aluno Errático',
+        estudanteId: 'estudante-erratico',
+        nome: 'O Estudante Errático',
         arquétipo: 'Dados Incompletos',
         area: 'Desconhecida',
         tentativas: [

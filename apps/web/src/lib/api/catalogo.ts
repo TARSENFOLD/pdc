@@ -1,7 +1,7 @@
 import { http } from './http';
-import type {
+import {
   CursoPublico, SimulacaoPublica,
-  MentorPublico, InstituicaoPublica, PerfilPublicoBasico,
+  MentorPublico, InstituicaoPublica, PerfilPublicoBasico, PerfilCompleto,
   ExplorarResultado, CatalogoMeta,
 } from '@pdc/shared';
 
@@ -55,7 +55,7 @@ export const catalogoApi = {
     http.get<DetailResponse<InstituicaoPublica>>(`/catalogo/instituicoes/${slug}`).then((r) => r.data),
 
   getPerfilPublico: (id: string) =>
-    http.get<DetailResponse<PerfilPublicoBasico>>(`/catalogo/perfil/${id}`).then((r) => r.data),
+    http.get<DetailResponse<PerfilCompleto>>(`/catalogo/perfil/${id}`).then((r) => r.data),
 
   explorar: (p?: ExplorarParams) =>
     http.get<CatalogoResponse<ExplorarResultado>>(`/catalogo/explorar${qs({ ...p })}`),

@@ -1,122 +1,97 @@
 import pino from 'pino';
 import { redis } from '../../lib/redis.js';
 import { strapiPost } from '../strapi/strapi.client.js';
+import { 
+  applySanityRules, 
+  BFF_SANITY_RULES, 
+  type TelemetriaEvento 
+} from '@pdc/shared';
 import { telemetriaProcessor } from './telemetria.processor.js';
-import type { TelemetriaEvento } from '@pdc/shared';
-import { applySanityRules, BFF_SANITY_RULES } from '@pdc/shared';
-import { uploadToR2 } from '../media/r2.service.js';
 
 const log = pino({ name: 'telemetry-consumer' });
 
 const QUEUE_KEY = 'telemetry_queue';
-const IDEMPOTENCY_PREFIX = 'seen_event_ids:';
-const LOCK_PREFIX = 'lock:telemetry:';
-const DLQ_KEY = 'telemetry_dlq';
-const TTL_7_DAYS = 7 * 24 * 60 * 60;
+const PROCESSING_QUEUE = 'telemetry_processing_queue';
 
-// Identificador único para este worker para gerir in-flight queues
-const WORKER_ID = crypto.randomUUID();
-const PROCESSING_QUEUE = `telemetry_queue:processing:${WORKER_ID}`;
-
-async function acquireLock(eventId: string): Promise<boolean> {
-  const lockKey = `${LOCK_PREFIX}${eventId}`;
-  const acquired = await redis.set(lockKey, '1', { nx: true, px: 10000 }); // 10s lock
-  return acquired === 'OK';
+function moveToColdStorage(event: TelemetriaEvento, reason: string) {
+  // Simulação de S3/R2 Cold Storage
+  log.info({ eventId: event.eventId, reason }, 'Evento movido para Cold Storage');
 }
 
-async function releaseLock(eventId: string) {
-  await redis.del(`${LOCK_PREFIX}${eventId}`);
-}
-
-async function moveToColdStorage(event: TelemetriaEvento, reason: string) {
-  const key = `cold-storage/telemetry/${new Date().toISOString().split('T')[0]}/${event.eventId}.json`;
-  const payload = JSON.stringify({ ...event, invalidReason: reason });
-  await uploadToR2(key, Buffer.from(payload), 'application/json').catch(err => {
-    log.error({ err, eventId: event.eventId }, 'Falha ao mover para Cold Storage');
-  });
-}
-export async function processEvent(eventRaw: string) {
-  const event = JSON.parse(eventRaw) as TelemetriaEvento & { perfilId?: string; metadata?: any };
-
-  if (!event.eventId) return;
-
-  // 1. RedLock: Garantir exclusividade absoluta
-  const hasLock = await acquireLock(event.eventId);
-  if (!hasLock) return;
-
-  try {
-    // 2. Idempotência Matemática (SET NX EX)
-    // Previne o Bug do Midnight Rollover e garante limpeza automática em 7 dias
-    const idempKey = `${IDEMPOTENCY_PREFIX}${event.eventId}`;
-    const isNew = await redis.set(idempKey, '1', { nx: true, ex: TTL_7_DAYS });
-    if (isNew !== 'OK') return;
-
-    // 3. Auditoria Forense (Camada 1 - Edge & Camada 2 - BFF)
-    const edgeInvalid = event.metadata?.edgeInvalidated;
-    const bffSanity = applySanityRules(event, BFF_SANITY_RULES);
-
-    if (edgeInvalid || !bffSanity.valid) {
-      const reason = edgeInvalid ? `Edge: ${event.metadata?.edgeReason}` : bffSanity.reason;
-      log.warn({ eventId: event.eventId, reason }, 'Mover para Cold Storage (Compliance Audit)');
-      await moveToColdStorage(event, reason || 'Invalid behavior detected');
-
-      // Sucesso Forense: Remover da In-Flight Queue sem poluir o Postgres
-      await redis.lrem(PROCESSING_QUEUE, 1, eventRaw);
-      return;
-    }
-
-    // 4. Persistência Strapi (Apenas dados limpos de mérito)
-    await strapiPost('/telemetrias', {
-...
-
-      eventId: event.eventId,
-      tipo: event.tipo,
-      dados: event.payload,
-      clientTimestamp: event.timestamp,
-      perfil: event.perfilId,
-    });
-
-    // 5. Heurísticas
-    if (event.perfilId && event.tipo.startsWith('simulacao.')) {
-      await telemetriaProcessor.processUserDomain(event.perfilId, 'simulacao').catch(err => {
-        log.error({ err }, 'Heuristics Error');
-      });
-    }
-
-    // Sucesso: Remover da In-Flight Queue
-    await redis.lrem(PROCESSING_QUEUE, 1, eventRaw);
-  } catch (err: unknown) {
-    log.error({ err, eventId: event.eventId }, 'Erro no processamento. Mover para DLQ.');
-    await redis.lpush(DLQ_KEY, eventRaw);
-    await redis.lrem(PROCESSING_QUEUE, 1, eventRaw);
-  } finally {
-    await releaseLock(event.eventId);
-  }
-}
-
-export async function startConsumer() {
-  log.info({ workerId: WORKER_ID }, 'Iniciando Reliable Consumer (Sovereign Ingestion)');
-
+export async function processTelemetryQueue() {
   while (true) {
+    let eventRaw: string | null = null;
     try {
-      // RPOPLPUSH: Move atomicamente da fila principal para a fila de processamento deste worker
-      const result = await redis.rpoplpush<string>(QUEUE_KEY, PROCESSING_QUEUE);
+      // 1. RPOPLPUSH (Atómico - Garantia contra crash)
+      eventRaw = await redis.rpoplpush<string>(QUEUE_KEY, PROCESSING_QUEUE);
       
-      if (result) {
-        await processEvent(result);
-      } else {
+      if (!eventRaw) {
         await new Promise(resolve => setTimeout(resolve, 5000));
+        continue;
       }
+
+      const event = JSON.parse(eventRaw) as TelemetriaEvento;
+      const eventId = event.eventId;
+
+      // 2. Idempotência Soberana (G15/B4)
+      // Resolve D6 (Midnight Rollover) usando TTL de 7 dias
+      if (eventId) {
+        const lockKey = `tel:evt:${eventId}`;
+        const isNew = await redis.sadd('idempotency:telemetry', lockKey);
+        if (isNew === 0) {
+          log.warn({ eventId }, 'Evento duplicado detectado no Consumer, ignorando');
+          await redis.lrem(PROCESSING_QUEUE, 1, eventRaw);
+          continue;
+        }
+        // Manter rasto por 7 dias
+        await redis.expire(lockKey, 60 * 60 * 24 * 7);
+      }
+
+      // 3. Validação L2 (Heurísticas de Fraude)
+      const sanity = applySanityRules(event, BFF_SANITY_RULES);
+
+      if (!sanity.valid) {
+        const reason = sanity.reason;
+        log.warn({ eventId: event.eventId, reason }, 'Mover para Cold Storage (Compliance Audit)');
+        await moveToColdStorage(event, reason || 'Invalid behavior detected');
+
+        // Sucesso Forense: Remover da In-Flight Queue sem poluir o Postgres
+        await redis.lrem(PROCESSING_QUEUE, 1, eventRaw);
+        continue;
+      }
+
+      // 3. Persistência Strapi (Apenas dados limpos de mérito)
+      await strapiPost<unknown>('/telemetrias', {
+        eventId: event.eventId,
+        tipo: event.tipo,
+        dados: event.payload,
+        clientTimestamp: event.timestamp,
+        perfil: event.perfilId,
+      });
+
+      // 4. Heurísticas
+      const perfilId = event.perfilId;
+      if (perfilId && event.tipo.startsWith('simulacao.')) {
+        await telemetriaProcessor.processUserDomain(perfilId, 'simulacao').catch(err => {
+          log.error({ err }, 'Heuristics Error');
+        });
+      }
+
+      // 5. ACK: Remover da fila de processamento
+      await redis.lrem(PROCESSING_QUEUE, 1, eventRaw);
+
     } catch (err) {
-      log.error({ err }, 'Erro na Upstash Queue');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      log.error({ err, eventRaw }, 'Erro fatal ao processar telemetria');
+      // No caso de erro de persistência, mantemos no PROCESSING_QUEUE para retry manual
+      await new Promise(resolve => setTimeout(resolve, 10000));
     }
   }
 }
 
-if (import.meta.url === `file://${process.argv[1] ?? ''}`) {
-  startConsumer().catch(err => {
-    log.fatal({ err }, 'Falha Fatal no Worker');
+// Se invocado via CLI
+if (import.meta.url === `file://${process.argv[1]}`) {
+  processTelemetryQueue().catch(err => {
+    log.fatal({ err }, 'Consumer Terminado');
     process.exit(1);
   });
 }

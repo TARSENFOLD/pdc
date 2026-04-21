@@ -20,7 +20,7 @@ interface TelemetriaRaw {
 
 /**
  * Motor de Performance e Verdade (O Músculo)
- * Processa dados psicométricos para gerar a assinatura comportamental do aluno.
+ * Processa dados psicométricos para gerar a assinatura comportamental do estudante.
  */
 export const telemetriaProcessor = {
   async processUserDomain(perfilId: string, domainId: string): Promise<void> {
@@ -144,7 +144,7 @@ export const telemetriaProcessor = {
     }
   },
 
-  async requestTinaInterpretation(perfilId: string, domainId: string, behavior: any): Promise<void> {
+  async requestTinaInterpretation(perfilId: string, domainId: string, behavior: BehaviorPattern): Promise<void> {
     try {
       const dynamicVerdict = await tinaService.gerarVereditoPsicometrico({
         phi: behavior.cognitiveFluidity,
@@ -153,7 +153,7 @@ export const telemetriaProcessor = {
         domainId
       });
 
-      const existing = await strapiGet<{ id: number; tinaSummary: any }>('/behavior-patterns', {
+      const existing = await strapiGet<{ id: number; tinaSummary: unknown }>('/behavior-patterns', {
         'filters[perfil][id][$eq]': perfilId,
         'filters[domainId][$eq]': domainId,
       });

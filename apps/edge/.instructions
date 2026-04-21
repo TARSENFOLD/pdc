@@ -1,0 +1,15 @@
+# CodeRabbit Instructions — Edge (apps/edge)
+
+Foco em Performance Extrema, Segurança RS256 e Resiliência.
+
+## ⚡ Performance na Edge
+- **Cold Starts**: Minimize dependências externas.
+- **Latency**: O processamento de telemetria deve ser invisível para o utilizador.
+
+## 🔐 Segurança JWS
+- **RS256**: Todo token de telemetria deve ser validado via RS256 usando o JWKS do BFF.
+- **Cache**: O JWKS deve ser cacheado localmente para evitar round-trips frequentes ao BFF.
+
+## 📡 Ingestão de Telemetria
+- **Resiliência**: Falhas temporárias no Upstash Redis não devem resultar em perda de dados (use mecanismos de retry se possível).
+- **Valid Events**: Apenas eventos permitidos em `@pdc/shared` devem ser processados.

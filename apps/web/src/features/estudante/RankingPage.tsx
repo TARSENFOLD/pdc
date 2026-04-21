@@ -81,11 +81,4 @@ export function RankingPage() {
   );
 }
 
-// Sub-component local para evitar conflito de import
-function Button({ children, variant, size, className, onClick }: any) {
-   return (
-     <button onClick={onClick} className={`inline-flex items-center justify-center font-bold transition-all ${variant === 'ghost' ? 'hover:bg-white/5' : 'bg-accent text-white'} ${size === 'md' ? 'h-10 px-4 text-sm' : ''} ${className}`}>
-        {children}
-     </button>
-   );
-}
+// Replaced local Button with the standard one from '@/components/ui'

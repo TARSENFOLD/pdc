@@ -72,7 +72,7 @@ function sid(val: string | number): string {
   return typeof val === 'number' ? val.toString() : val;
 }
 
-function toMeta(meta: StrapiListResponse<any>['meta']): CatalogoMeta {
+function toMeta(meta: StrapiListResponse<unknown>['meta']): CatalogoMeta {
   const p = meta.pagination;
   return { page: p.page, pageSize: p.pageSize, total: p.total, pageCount: p.pageCount };
 }
@@ -193,7 +193,7 @@ perfilPublicoRoutes.get('/:id', async (c) => {
   const d = res.data[0];
   if (!d) return c.json({ error: 'Utilizador não encontrado' }, 404);
 
-  const roleName = d.role?.name.toLowerCase() ?? 'aluno';
+  const roleName = d.role?.name.toLowerCase() ?? 'estudante';
   const perfil: PerfilPublicoBasico = {
     id: sid(d.id),
     nome: d.nome ?? d.username ?? '',

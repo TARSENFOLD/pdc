@@ -12,7 +12,7 @@ export interface AspirationalEmptyProps {
 }
 
 /**
- * AspirationalEmpty — Empty States com Promessa.
+ * AspirationalEmpty - Empty States com Promessa.
  * Epic 05: Nunca dizer apenas "Sem dados", mas sim o que virá depois.
  */
 export function AspirationalEmpty({

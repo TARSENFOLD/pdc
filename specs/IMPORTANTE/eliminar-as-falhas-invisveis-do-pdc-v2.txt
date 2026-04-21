@@ -1,0 +1,60 @@
+Caetano José (00:00.158)
+The submitted today details the technical of the PDC-V2 complex designed to process vocational and telemetry through a modern It is very dense no doubt. Quite. From what I from the the argument here is that the impeccable between the data distributed in the periphery and the persistence
+
+It's the pillar that sustains the reliability of all the infrastructure aimed at events. Exactly. Based on all this, sits on an incredibly large stack, designed for scalability and economy. Yes, and notice the front-end. They chose React 18, Convite 5 and Tailwind 4, all housed in Versailles. To guarantee that native PWA from Apple with GlassMorphism interface.
+
+And then you BFF, Backend for Frontend, is ultra light. They are using RAD on V4 and Node.js 24 on the Railway, to ensure a tight and an absurd And in the of persistence, CMS, the Strapi V5 with Postgrescuma with relational Well, and the on top of the is innovative but raises questions?
+
+is use of Cloudflare Workers on Edge. In parallel with Upstash Redis, exactly, to manage that massive of telemetry in very cheap and fast Ok, the architecture on paper is brilliant, but the weakness documented here is that this edge technology is silently due to serious scheme The TAS MISMATCH. This is exposed very clearly.
+
+Ask me, however, if we consider the profound of these invisible It's scary. The telemetry running on Edge tries to send the data to a field called Payload. But Strapi, deep down, is for a field called Data. It's the conflict they labeled as D20. And that's all. There's that nomenclature in the dates, the D22 Strapi's records StartEret.
+
+Caetano José (02:20.619)
+and Finish debt. In English? Yes. While BFF, which is making the bridge, sends Date Inicio and Date Fin in Portuguese. And the detail that left me most shocked was the D21 A crucial called Tentativa.metadata was completely omitted in the CMS. Completely ignored? The lethal here is the invisible loss of fundamental for an artificial intelligence
+
+And the worst part is that no system shoots an alarm because everyone thinks they their job. My question is how TypeScript doesn't get this? They have a strict system in BBF. TypeScript suffers from what we call network border The worker has his types, the BBF has his. But when comes to passing the JSON through the network they don't talk to each In words, the trusts that the neighbor will keep the agreement. Exactly.
+
+It's like having an ultra-fast like Cloudflare Workers, delivering thousands of letters. But the Strapi doesn't have the size And the postman takes the letter to the ground and leaves? Without warning anyone. And the letter, in this case, is the IA The pre-sent system so scalable, completely the intermediate validation layer. So the structural has to be to establish strict typing
+
+And a point-to-point Yes, end-to-end. A single that unites the Worker, the Runo and the database. How do we give concrete to solve this in practice? The first step is to create a package shared in Monorepo. Something like the ETHPDC Shared. And there we put all the schemes in ISO of V3. And we force both Edge Worker and Strapi to validate the exact against that package? Exactly.
+
+The second concrete is to the payload If you change the Edge already, we have to explicitly the payload for data in the BBF Before even invoking the Strapi It's explicit And to close the door to regressions, third example goes through continuous The CI have to extract the content type generated in the Strapi V5. And if the TypeScript detects discrepancies between the BBF Strapi
+
+Caetano José (04:41.432)
+The build has to fail immediately. Mathematical No doubt it. Well, let's look closely at the section that discusses resilience in architecture oriented to events. The Outbox Yes, because linking the integrity of data we have to see how the system deals with failures after the injection, right? Precisely. The resilience of a synchronized loses all its value if the mechanical of failure are not actively configured in production.
+
+And this promise of At Least Once, to deliver the event at least once, fails here. The weakness of Bung D2 is surreal. They have a repetitive the Outbox Replay. The file outbox-replay.ts exists in the code. But it only by command which is unthinkable.
+
+Exactly. It's running in the railway In words, the transactional that fail due to a momentary are marked eternally as a false You created an outbox that forgets. That completely the viability of essential such as calculation of achievements. The of gamification dies there. A student completes the course, the beeps for a millisecond and he never receives the digital
+
+Is the connection between network and resilience completely established in the material or is it area to potentially reinforced? Because, the network is never reliable. This optimism that network are rare is dangerous, especially with the BFF on railway and the storage spread by Cloudflare, the interruptions are a certainty. Completely. And having an outbox that requires a manual is like having an emergency generator that forces someone to go downstairs.
+
+to a thread when the light goes down. The suggestion here is clear. We have to automate the perpetual of the replay associating it with the BFF's The recovery of events must be autonomous and reactive. But how do we do that with concrete Do just a cron job on the railway? Calm down, can't be that simple. Yes, first step is to integrate a cron job or a worker dedicated to the railway.
+
+Caetano José (06:57.967)
+that will see the database of 5 in 5 minutes looking for stagnated But if we only that and the processing takes more than 5 minutes, next instance of the CronRoller will run over the first one. Then you start giving the same medal 5 times to the student, hence the second concrete certifying that each treatment is completely idempotent. Using the Redis you already have on the stack, Cef. Exactly. Before processing, the routine makes an SAD on the Redis to store the ID of the event.
+
+If there is and there is already, it that the worker is already dealing with it and is moving forward. It thus duplication in overposition. Very smart. And third concrete has to with the type of error. The material mentions errors in the LTI module of the entire learning tools Well, if a school revokes an access the integration LTI will give the error authorization. And the system cannot develop a retryable error in infinite It has to be a terminal otherwise it tops the entire
+
+Handling with permissions leads us to last big point. safety and the modeling of subscriptions. I see what you've achieve here with layer-by-layer but let's see how we can strengthen this. Because the shielding and the dynamic are the front line that essential to climb in a B2B B2C And the weakness described in the material is scary. The documentation exposes unacceptable risk The active of the Cloudflare R2 in a simple
+
+And with a graphic cloudflarestorage.txt is incredible when you it. We built a complex with failed closed resolvers and JWT in cookies edge TTP only, to later leave the forgotten master key in a local text It that bizarre between top-end and lack of basic security But there another parallel in the commercial The CMS Strapi is underutilized. It is the D1
+
+related to ADR 014. Exactly. The subscription scheme does not contain the fundamental of features and quotas. Which blocks your wave of entitlement. BFF cannot dynamically validate the levels of access to schools and students. Building on that point, and if we at this perspective of the editorial team, the people who sell the product. It's a nightmare. If a school changes from the basic to the premium,
+
+Caetano José (09:22.799)
+the team cannot simply go to the Strap and turn on a button. Because there are no dynamic features The engineer has to change the static approve a PR, run the CI and make a new entire infrastructure And thus a direct between the and the agile business So the suggestion is to immediately implement a structured of managing zero trust
+
+and in conjunction with the planned of the within CMS to isolate the technical of the commercial. With concrete Tomorrow morning, first step is to run all the keys exposed to Cloudflare R2 and Resend in an indirect way. Move them to the native secret of the Railway and ban sharing of credentials via Git.
+
+The second example is to to Strapi V5, as the ADR014 and update the content type. To include two JSON one for the features and one for the quotes. What allows the authorization in ONU to and apply these institutional instantly. And the sales team is autonomous. Brilliant! And the third concrete is in monitoring. You to integrate the Sentry.
+
+If the fails to read the privileges in the STRAP and because of a network the system has to assume a failed-closed Close access by default, case of doubt, yes. It is preferable to temporarily than to expose data from other schools. Well, let's recap our three central of today's analysis. Yes, let's do that. First, we need to harmonize the telemetry between Cloudflare Edge
+
+and the Strap to avoid data loss and save the metadata from the AI. Creating that shared with Zod. Second, effectively activate the recovery of the Outbox on Railway. We have to safeguard asynchronous and gamification with idempotent So as to medals repeated to students, And finally, centralize security and commercial model of subscriptions away from vulnerable text
+
+Caetano José (11:35.119)
+putting CMS to work for the team. I just to a note because as an engineer I'm focused on the defects, but the truth is that the economic and scalability of your project are excellent. Edge Computing, BFF, ONU, PWA The foundation is great. It's true. This endorsement of these arestas is the bridge to perfection of system. No doubt.
+
+So we invite those have to us to implement these architectural consolidations and of to submit the documentation for a future constructive here with us. We look forward to seeing evolution of the PDC-V2. A hug and until the next analysis.
+

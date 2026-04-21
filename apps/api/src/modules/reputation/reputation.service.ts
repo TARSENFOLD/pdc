@@ -46,7 +46,7 @@ function clamp(val: number, min: number, max: number): number {
  */
 async function countItems(path: string, params?: Record<string, string>): Promise<number> {
   try {
-    const res = await strapiGet<any>(path, {
+    const res = await strapiGet<unknown>(path, {
       'pagination[pageSize]': '1',
       ...params,
     });
@@ -239,8 +239,8 @@ export async function getReputacaoBreakdown(perfilId: string): Promise<Reputacao
   // 1. Check feature flag (R2.T6 Gate)
   const flags = await featureFlagService.getEffectiveFlags();
   if (!flags['REPUTATION_VISIBLE']) {
-    const err = new Error('Reputação desativada');
-    (err as any).status = 404;
+    const err = new Error('Reputação desativada') as Error & { status?: number };
+    err.status = 404;
     throw err;
   }
 

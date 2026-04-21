@@ -4,13 +4,17 @@ import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Badge, Button } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
+import type { InstituicaoPublica } from '@pdc/shared';
 
 export function InstituicaoPublicoPerfilPage() {
   const { slug } = useParams<{ slug: string }>();
 
-  const { data: inst, isLoading, isError } = useQuery({
+  const { data: inst, isLoading, isError } = useQuery<InstituicaoPublica | null>({
     queryKey: ['catalogo-instituicao', slug],
-    queryFn: () => catalogoApi.getInstituicao(slug ?? ''),
+    queryFn: async () => {
+      if (!slug) return null;
+      return catalogoApi.getInstituicao(slug);
+    },
     enabled: !!slug,
   });
 
@@ -21,15 +25,15 @@ export function InstituicaoPublicoPerfilPage() {
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
       <SEOHead
         title={inst.nome}
-        description={inst.descricao ?? `Instituição de ensino${inst.regiao ? ` na região de ${inst.regiao}` : ''}`}
-        image={inst.logoUrl}
-        url={`https://usepdc.com/instituicoes/${slug ?? ''}`}
+        description={inst.descricao || `Instituição de ensino${inst.regiao ? ` na região de ${inst.regiao}` : ''}`}
+        image={inst.logoUrl || undefined}
+        url={`https://usepdc.com/instituicoes/${slug || ''}`}
         type="profile"
         jsonLd={{
           '@type': 'EducationalOrganization',
           name: inst.nome,
-          description: inst.descricao,
-          url: `https://usepdc.com/instituicoes/${slug ?? ''}`,
+          description: inst.descricao || '',
+          url: `https://usepdc.com/instituicoes/${slug || ''}`,
         }}
       />
       <div className="mx-auto max-w-3xl">

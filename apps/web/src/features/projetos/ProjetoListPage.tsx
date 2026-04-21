@@ -14,17 +14,17 @@ import {
 } from 'lucide-react';
 import { http } from '@/lib/api/http';
 import { motion } from 'motion/react';
+import { APPLE_SPRING } from '@/lib/animations';
 import type { Projeto } from '@pdc/shared';
 
 function ProjetoCard({ proj, index }: { proj: Projeto; index: number }) {
-  // Ajuste do mapping para o novo contrato
-  const p = proj as any; // TODO: Strict type check after BFF sync
+  const p = proj;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
+      transition={{ ...APPLE_SPRING, delay: index * 0.05 }}
     >
       <Link to={`/app/projetos/${p.id}`} className="block group">
         <Card className="h-full bg-surface-raised/40 backdrop-blur-md border-white/5 overflow-hidden flex flex-col hover:bg-white/[0.02] hover:border-white/10 transition-all duration-500 rounded-[32px] shadow-2xl">
@@ -50,7 +50,7 @@ function ProjetoCard({ proj, index }: { proj: Projeto; index: number }) {
           
           <div className="p-8 flex-1 flex flex-col gap-4">
             <div className="flex items-center gap-3">
-               <Avatar src={p.autor?.foto?.url} fallback={p.autor?.nome?.[0] || 'T'} className="h-7 w-7 border border-accent/20" />
+               <Avatar src={p.autor?.foto?.url ?? undefined} fallback={p.autor?.nome[0] || 'T'} className="h-7 w-7 border border-accent/20" />
                <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">{p.autor?.nome || 'Talento PDC'}</span>
             </div>
 
@@ -134,7 +134,7 @@ export function ProjetoListPage() {
                 type="text"
                 placeholder="Procurar ativo..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); }}
                 className="w-full pl-12 pr-4 py-4 bg-surface-raised/20 backdrop-blur-md border border-white/5 rounded-2xl text-text-primary outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/50 transition-all font-medium"
               />
             </div>

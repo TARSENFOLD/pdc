@@ -9,7 +9,6 @@ import { CriarSimulacaoPayloadSchema } from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { type Tentativa, analyzeFluidity, analyzeFocus } from '@pdc/shared';
-import { telemetriaProcessor } from '../modules/telemetria/telemetria.processor.js';
 
 const log = pino({ name: 'routes:simulacoes' });
 type Vars = { Variables: AuthVariables };
@@ -83,7 +82,7 @@ simulacaoRoutes.get('/minhas', checkRole(['mentor', 'super_admin']), async (c) =
 simulacaoRoutes.get('/me/tentativas', async (c) => {
   const { id } = c.get('user');
   try {
-    const res = await strapiGet<any>('/tentativas', {
+    const res = await strapiGet<Tentativa>('/tentativas', {
       'filters[perfil][userId][$eq]': id,
       populate: 'simulacao',
       'sort': 'createdAt:desc',
@@ -128,6 +127,15 @@ simulacaoRoutes.post('/', checkRole(['mentor', 'super_admin']), zValidator('json
       estado: 'draft',
       slug: payload.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
     });
+
+    // G15: Impacto no Ecossistema
+    await eventBus.publishWithOutbox(DomainEventName.SIMULACAO_CRIADA, {
+      simulacaoId: res.data.id,
+      autorId,
+      titulo: payload.titulo,
+      area: payload.area
+    });
+
     return c.json(res, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
@@ -203,6 +211,16 @@ simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'moderador', 'super_ad
     // Actualizar estado
     await strapiPut<unknown>(`/simulacoes/${id}`, { estado });
 
+    // G15: Impacto no Ecossistema se for publicação
+    if (estado === 'published') {
+      await eventBus.publishWithOutbox(DomainEventName.SIMULACAO_PUBLICADA, {
+        simulacaoId: id,
+        autorId: sim.autorId,
+        titulo: sim.titulo,
+        area: sim.area
+      });
+    }
+
     return c.json({ success: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
@@ -210,8 +228,8 @@ simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'moderador', 'super_ad
   }
 });
 
-// POST /simulacoes/tentativas — iniciar tentativa (aluno apenas)
-simulacaoRoutes.post('/tentativas', checkRole(['aluno']), zValidator('json', iniciarSchema), async (c) => {
+// POST /simulacoes/tentativas — iniciar tentativa (estudante apenas)
+simulacaoRoutes.post('/tentativas', checkRole(['estudante']), zValidator('json', iniciarSchema), async (c) => {
   const { id: userId } = c.get('user');
   const { simulacaoId } = c.req.valid('json');
   try {
@@ -231,7 +249,7 @@ simulacaoRoutes.post('/tentativas', checkRole(['aluno']), zValidator('json', ini
     const tipo = sim.tipo;
     
     // Contar tentativas anteriores
-    const prevTentativas = await strapiGet<any>('/tentativas', {
+    const prevTentativas = await strapiGet<Tentativa>('/tentativas', {
       'filters[perfil][id][$eq]': perfilId,
       'filters[simulacao][id][$eq]': simulacaoId,
     });
@@ -239,7 +257,7 @@ simulacaoRoutes.post('/tentativas', checkRole(['aluno']), zValidator('json', ini
 
     // D22: Usamos dataInicio (PT) para alinhar com o domínio canónico (ADR-012).
     // Strapi tem aliases startedAt/finishedAt, mas BFF prefere PT.
-    const resPost = await strapiPost<any>('/tentativas', {
+    const resPost = await strapiPost<Tentativa>('/tentativas', {
       simulacao: simulacaoId,
       perfil: perfilId,
       dataInicio: new Date().toISOString(),
@@ -247,6 +265,14 @@ simulacaoRoutes.post('/tentativas', checkRole(['aluno']), zValidator('json', ini
       executorTipo: `tipo${tipo}`,
       status: 'em_progresso',
     });
+
+    // G15: Impacto no Ecossistema
+    await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_INICIADA, {
+      tentativaId: resPost.data.id,
+      perfilId: String(perfilId),
+      simulacaoId
+    });
+
     return c.json(resPost, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
@@ -254,8 +280,8 @@ simulacaoRoutes.post('/tentativas', checkRole(['aluno']), zValidator('json', ini
   }
 });
 
-// PUT /simulacoes/tentativas/:id — concluir tentativa (aluno apenas)
-simulacaoRoutes.put('/tentativas/:id', checkRole(['aluno']), zValidator('json', concluirSchema), async (c) => {
+// PUT /simulacoes/tentativas/:id — concluir tentativa (estudante apenas)
+simulacaoRoutes.put('/tentativas/:id', checkRole(['estudante']), zValidator('json', concluirSchema), async (c) => {
   const tentativaId = c.req.param('id');
   const { score, metadata } = c.req.valid('json');
   const user = c.get('user');
@@ -283,8 +309,14 @@ simulacaoRoutes.put('/tentativas/:id', checkRole(['aluno']), zValidator('json', 
 
     const data = resPut.data;
 
-    // R2.T5: Disparar processamento automático de mérito (Músculo)
-    // Buscamos o perfilId real através do userId para o processador
+    // G15: O impacto ecossistémico (Behavior, Ranking, Achievement, Notify) 
+    // é agora orquestrado pelo EventBus. O behaviorHook tratará do processamento psicométrico.
+    
+    // Obter area da simulação para o payload do evento
+    const resSimInfo = await strapiGet<Tentativa & { simulacao?: StrapiSimulacao }>(`/tentativas/${tentativaId}?populate=simulacao`);
+    const tentativaComSim = resSimInfo.data[0];
+    const area = tentativaComSim?.simulacao?.area || (metadata?.domainId as string) || 'geral';
+
     const resPerfilLookup = await strapiGet<{ id: string }>('/perfis', {
       'filters[userId][$eq]': user.id,
       'fields[0]': 'id',
@@ -292,18 +324,13 @@ simulacaoRoutes.put('/tentativas/:id', checkRole(['aluno']), zValidator('json', 
     const perfilIdReal = resPerfilLookup.data[0]?.id;
 
     if (perfilIdReal) {
-      // Executa de forma assíncrona para não atrasar a resposta da UI
-      // O domainId é extraído do metadata ou 'geral'
-      const domainId = (metadata?.domainId as string) || 'geral';
-      void telemetriaProcessor.processUserDomain(String(perfilIdReal), domainId);
+      await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_CONCLUIDA, {
+        tentativaId,
+        score: finalScore || 0,
+        perfilId: String(perfilIdReal),
+        area
+      });
     }
-
-    // Disparar evento de conclusão com payload tipado
-    eventBus.publishWithOutbox(DomainEventName.TENTATIVA_CONCLUIDA, {
-      tentativaId,
-      score: finalScore || 0,
-      perfilId: String(perfilIdReal),
-    }).catch(err => { log.error({ err }, 'Falha ao publicar evento tentativa.concluida'); });
 
     return c.json(data);
   } catch (err) {

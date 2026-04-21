@@ -23,7 +23,7 @@ export function TopBar({ onOpenMobileMenu }: TopBarProps) {
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => { document.removeEventListener('mousedown', handleClickOutside); };
   }, []);
 
   async function handleLogout() {
@@ -44,7 +44,7 @@ export function TopBar({ onOpenMobileMenu }: TopBarProps) {
         
         <div className="hidden lg:block">
           <p className="text-xs font-medium text-text-muted uppercase tracking-widest">
-            {user?.role === 'aluno' ? 'Painel do Estudante' : 'Painel de Decisão'}
+            {user?.role === 'estudante' ? 'Painel do Estudante' : 'Painel de Decisão'}
           </p>
         </div>
       </div>

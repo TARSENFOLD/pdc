@@ -39,7 +39,7 @@ interface NavGroup {
 type SidebarItem = NavLeaf | NavGroup;
 
 const ALL_ROLES: Role[] = [
-  'aluno', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin',
+  'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin',
 ];
 
 /**
@@ -51,34 +51,34 @@ const SIDEBAR_CONFIG: SidebarItem[] = [
   
   // HUB: APRENDER (Músculo Técnico)
   {
-    type: 'group', label: 'Aprender', icon: BookOpenText, roles: ['aluno'],
+    type: 'group', label: 'Aprender', icon: BookOpenText, roles: ['estudante'],
     domain: 'HUB_LEARN',
     children: [
-      { type: 'leaf', label: 'Simulações', to: '/app/simulacoes', icon: FlaskConical, roles: ['aluno'] },
-      { type: 'leaf', label: 'Cursos', to: '/app/cursos', icon: BookOpen, roles: ['aluno'] },
-      { type: 'leaf', label: 'Meus Cursos', to: '/app/meus-cursos', icon: CheckCircle, roles: ['aluno'] },
+      { type: 'leaf', label: 'Simulações', to: '/app/simulacoes', icon: FlaskConical, roles: ['estudante'] },
+      { type: 'leaf', label: 'Cursos', to: '/app/cursos', icon: BookOpen, roles: ['estudante'] },
+      { type: 'leaf', label: 'Meus Cursos', to: '/app/meus-cursos', icon: CheckCircle, roles: ['estudante'] },
     ],
   },
 
   // HUB: EXPLORAR (Músculo Institucional)
   {
-    type: 'group', label: 'Explorar', icon: Building2, roles: ['aluno'],
+    type: 'group', label: 'Explorar', icon: Building2, roles: ['estudante'],
     domain: 'HUB_EXPLORE',
     children: [
-      { type: 'leaf', label: 'Experiências', to: '/app/instituicao/experiencias', icon: MapPin, roles: ['aluno'] },
-      { type: 'leaf', label: 'Programas', to: '/app/instituicao/programas', icon: GraduationCap, roles: ['aluno'] },
-      { type: 'leaf', label: 'Catálogo', to: '/app/explorar', icon: ScrollText, roles: ['aluno'] },
+      { type: 'leaf', label: 'Experiências', to: '/app/instituicao/experiencias', icon: MapPin, roles: ['estudante'] },
+      { type: 'leaf', label: 'Programas', to: '/app/instituicao/programas', icon: GraduationCap, roles: ['estudante'] },
+      { type: 'leaf', label: 'Catálogo', to: '/app/explorar', icon: ScrollText, roles: ['estudante'] },
     ],
   },
 
   // HUB: MEU FUTURO (A Joia da Coroa)
   {
-    type: 'group', label: 'Meu Futuro', icon: Star, roles: ['aluno'],
+    type: 'group', label: 'Meu Futuro', icon: Star, roles: ['estudante'],
     domain: 'HUB_FUTURE',
     children: [
-      { type: 'leaf', label: 'Relatório Vocacional', to: '/app/perfil-vocacional', icon: Brain, roles: ['aluno'] },
-      { type: 'leaf', label: 'Reputação', to: '/app/reputacao', icon: Star, roles: ['aluno'] },
-      { type: 'leaf', label: 'Certificados', to: '/app/certificados', icon: Award, roles: ['aluno'] },
+      { type: 'leaf', label: 'Relatório Vocacional', to: '/app/perfil-vocacional', icon: Brain, roles: ['estudante'] },
+      { type: 'leaf', label: 'Reputação', to: '/app/reputacao', icon: Star, roles: ['estudante'] },
+      { type: 'leaf', label: 'Certificados', to: '/app/certificados', icon: Award, roles: ['estudante'] },
     ],
   },
 
@@ -276,8 +276,8 @@ function loadGroupState(role: Role): Record<string, boolean> {
     const raw = localStorage.getItem(getStorageKey(role));
     if (raw) return JSON.parse(raw) as Record<string, boolean>;
   } catch { /* ignore */ }
-  // Por defeito, os hubs principais de aluno estão abertos
-  return { 'Aprender:aluno': true, 'Meu Futuro:aluno': true };
+  // Por defeito, os hubs principais de estudante estão abertos
+  return { 'Aprender:estudante': true, 'Meu Futuro:estudante': true };
 }
 
 function saveGroupState(role: Role, state: Record<string, boolean>): void {

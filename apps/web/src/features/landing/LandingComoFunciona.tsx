@@ -12,7 +12,7 @@ const PASSOS: Array<{ num: string; titulo: string; descricao: string }> = [
     num: '2',
     titulo: 'A plataforma analisa',
     descricao:
-      'As tuas acções, tempo e decisões geram um perfil vocacional único — baseado em comportamento, não em respostas a questionários.',
+      'As tuas acções, tempo e decisões geram um perfil vocacional único - baseado em comportamento, não em respostas a questionários.',
   },
   {
     num: '3',

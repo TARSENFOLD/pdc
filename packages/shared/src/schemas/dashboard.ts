@@ -1,16 +1,16 @@
 import { z } from 'zod';
 
-export const AlunoStatsSchema = z.object({
+export const EstudanteStatsSchema = z.object({
   simulacoesConcluidas: z.number(),
   cursosEmProgresso: z.number(),
   conquistasTotal: z.number(),
 });
 
-export type AlunoStats = z.infer<typeof AlunoStatsSchema>;
+export type EstudanteStats = z.infer<typeof EstudanteStatsSchema>;
 
 export const MentorStatsSchema = z.object({
   mentoriasActivas: z.number(),
-  alunosOrientados: z.number(),
+  estudantesOrientados: z.number(),
   avaliacoesPendentes: z.number(),
 });
 

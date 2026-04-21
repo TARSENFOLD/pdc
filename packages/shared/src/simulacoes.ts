@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EstadoEditorialSchema } from './user.js';
+import { EstadoEditorialSchema } from './schemas/enums.js';
 import { AreaVocacionalSchema } from './schemas/enums.js';
 
 export const SimulacaoSchema = z.object({
@@ -15,6 +15,16 @@ export const SimulacaoSchema = z.object({
 });
 
 export type Simulacao = z.infer<typeof SimulacaoSchema>;
+
+export const SimulacaoPublicaSchema = z.object({
+  id: z.string(),
+  titulo: z.string(),
+  descricao: z.string(),
+  area: AreaVocacionalSchema,
+  tipo: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  capaUrl: z.string().url().optional().nullable(),
+});
+export type SimulacaoPublica = z.infer<typeof SimulacaoPublicaSchema>;
 
 export const CriarSimulacaoPayloadSchema = z.object({
   titulo: z.string().min(3).max(120),

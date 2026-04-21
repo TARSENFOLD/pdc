@@ -9,7 +9,7 @@ interface InscricaoPopulated {
   progressoPercentagem: number;
   concluido: boolean;
   updatedAt?: string;
-  aluno?: {
+  estudante?: {
     nome: string;
     email: string;
   };
@@ -18,16 +18,16 @@ interface InscricaoPopulated {
   };
 }
 
-export function AlunosInscritosPage() {
+export function EstudantesInscritosPage() {
   const { data, isLoading } = useQuery({
-    queryKey: ['mentor', 'alunos', 'inscritos'],
-    queryFn: () => mentoriasApi.getAlunosInscritos(),
+    queryKey: ['mentor', 'estudantes', 'inscritos'],
+    queryFn: () => mentoriasApi.getEstudantesInscritos(),
   });
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold font-sora">Alunos Inscritos</h1>
+        <h1 className="text-2xl font-bold font-sora">Estudantes Inscritos</h1>
         <div className="space-y-4">
           <ListRowSkeleton />
           <ListRowSkeleton />
@@ -41,11 +41,11 @@ export function AlunosInscritosPage() {
 
   const columns: Column<InscricaoPopulated>[] = [
     {
-      header: 'Nome do Aluno',
+      header: 'Nome do Estudante',
       accessor: (row) => (
         <div className="flex flex-col">
-          <span className="font-medium text-text-primary">{row.aluno?.nome || 'N/A'}</span>
-          <span className="text-xs text-text-muted">{row.aluno?.email || ''}</span>
+          <span className="font-medium text-text-primary">{row.estudante?.nome || 'N/A'}</span>
+          <span className="text-xs text-text-muted">{row.estudante?.email || ''}</span>
         </div>
       ),
     },
@@ -85,11 +85,11 @@ export function AlunosInscritosPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold font-sora">Alunos Inscritos</h1>
+      <h1 className="text-2xl font-bold font-sora">Estudantes Inscritos</h1>
       <Table 
         columns={columns} 
         data={inscricoes} 
-        emptyMessage="Nenhum aluno inscrito ainda."
+        emptyMessage="Nenhum estudante inscrito ainda."
       />
     </div>
   );

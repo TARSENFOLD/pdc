@@ -100,12 +100,12 @@ export default function FeedWeightsPage() {
     queryFn: () => feedApi.getWeights('trending'),
   });
 
-  const [geralWeights, setGeralWeights] = useState<FeedWeights>({
+  const [geralWeights, setGeralWeights] = useState({
     engagement: 0.2, completion: 0.15, rating: 0.15, recency: 0.15,
     reputation: 0.1, affinity: 0.15, time: 0.1,
   });
 
-  const [trendingWeights, setTrendingWeights] = useState<FeedWeights>({
+  const [trendingWeights, setTrendingWeights] = useState({
     engagement: 0.3, completion: 0.1, rating: 0.2, recency: 0.2,
     reputation: 0.1, affinity: 0.05, time: 0.05,
   });

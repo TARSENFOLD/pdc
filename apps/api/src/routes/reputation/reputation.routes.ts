@@ -32,7 +32,7 @@ reputationRoutes.get('/me', async (c) => {
         verified: true,
       }
     });
-  } catch (err) {
+  } catch (_err) {
     return c.json({ error: 'Erro ao carregar reputa\C3\A7\C3\A3o' }, 502);
   }
 });
@@ -60,7 +60,7 @@ reputationRoutes.get('/:perfilId', async (c) => {
         veteraniaMeses: Math.floor(months),
       }
     });
-  } catch (err) {
+  } catch (_err) {
     return c.json({ error: 'Erro ao carregar reputa\C3\A7\C3\A3o p\C3\BAblica' }, 502);
   }
 });

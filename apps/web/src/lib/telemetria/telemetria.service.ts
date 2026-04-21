@@ -72,7 +72,7 @@ export const telemetriaService = {
     if (token && !isCircuitOpen) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5s timeout (Transcript mandated)
+        const timeoutId = setTimeout(() => { controller.abort(); }, 1500); // 1.5s timeout (Transcript mandated)
 
         const response = await fetch(`${EDGE_URL}/telemetria/batch`, {
           method: 'POST',

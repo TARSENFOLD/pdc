@@ -7,15 +7,7 @@ import { http } from '@/lib/api/http';
 import { useSocket } from '@/hooks/useSocket';
 import { ArrowLeft, Send, Brain, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-interface Mensagem {
-  id: string;
-  conversaId: string;
-  remetenteId: string;
-  conteudo: string;
-  lida: boolean;
-  createdAt: string;
-}
+import { type Mensagem } from '@pdc/shared';
 
 export function ConversaPage() {
   const { conversaId } = useParams<{ conversaId: string }>();
@@ -25,10 +17,9 @@ export function ConversaPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  useSocket((novaMsg: Mensagem) => {
+  useSocket<Mensagem>((novaMsg) => {
     if (novaMsg.conversaId === conversaId) {
-      void queryClient.setQueryData(['mensagens', 'conversa', conversaId], (old: any) => ({
-        ...old,
+      void queryClient.setQueryData<{ data: Mensagem[] }>(['mensagens', 'conversa', conversaId], (old) => ({
         data: [...(old?.data ?? []), novaMsg]
       }));
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,7 +33,7 @@ export function ConversaPage() {
   });
 
   const enviarMutation = useMutation({
-    mutationFn: (conteudo: string) => http.post(`/mensagens/conversas/${conversaId}`, { conteudo }),
+    mutationFn: (conteudo: string) => http.post(`/mensagens/conversas/${conversaId ?? ''}`, { conteudo }),
     onSuccess: () => {
       setNovoConteudo('');
       void queryClient.invalidateQueries({ queryKey: ['mensagens', 'conversas'] });
@@ -64,7 +55,7 @@ export function ConversaPage() {
       <div className="flex-1 flex flex-col bg-surface border border-white/5 rounded-[32px] overflow-hidden shadow-2xl">
         <header className="p-6 border-b border-white/5 bg-white/[0.01] flex items-center justify-between">
            <div className="flex items-center gap-4">
-              <button onClick={() => navigate('/app/mensagens')} className="p-2 hover:bg-white/5 rounded-xl lg:hidden">
+              <button onClick={() => { navigate('/app/mensagens'); }} className="p-2 hover:bg-white/5 rounded-xl lg:hidden">
                  <ArrowLeft size={18} />
               </button>
               <Avatar src="" fallback="C" className="h-10 w-10 border border-white/10" />
@@ -110,7 +101,7 @@ export function ConversaPage() {
            <div className="flex items-center gap-4 bg-surface-alt border border-white/5 rounded-2xl p-2 px-4 focus-within:border-accent/40 transition-all">
               <textarea
                 value={novoConteudo}
-                onChange={(e) => setNovoConteudo(e.target.value)}
+                onChange={(e) => { setNovoConteudo(e.target.value); }}
                 onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }}}
                 placeholder="Escreve uma consulta técnica..."
                 className="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2 resize-none max-h-32"

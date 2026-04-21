@@ -61,7 +61,7 @@ export function ProjetoDetailPage() {
     return <div className="flex min-h-screen items-center justify-center bg-background p-4"><EmptyState icon={Search} variant="error" title="Erro ao carregar o projeto" description="Não foi possível carregar os dados deste projeto." /></div>;
   }
 
-  const isOwner = user?.id === projeto.alunoId;
+  const isOwner = user?.id === projeto.estudanteId;
   const canDelete = isOwner || user?.role === 'moderador' || user?.role === 'super_admin';
 
   return (

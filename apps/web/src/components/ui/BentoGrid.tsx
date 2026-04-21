@@ -14,7 +14,7 @@ export interface BentoTileProps {
 }
 
 /**
- * BentoGrid — Layout de tiles para Dashboards Role-Aware.
+ * BentoGrid - Layout de tiles para Dashboards Role-Aware.
  * Respeita o gap de 24px (--space-6) definido na Epic 05.
  */
 export function BentoGrid({ children, className }: BentoGridProps) {
@@ -29,7 +29,7 @@ export function BentoGrid({ children, className }: BentoGridProps) {
 }
 
 /**
- * BentoTile — Unidade individual do BentoGrid.
+ * BentoTile - Unidade individual do BentoGrid.
  * Suporta tamanhos variados e a regra da assimetria para momentos de autoridade.
  */
 export function BentoTile({ children, className, size = '1x1', asymmetric = false }: BentoTileProps) {
@@ -42,9 +42,9 @@ export function BentoTile({ children, className, size = '1x1', asymmetric = fals
 
   return (
     <div className={cn(
-      'bg-elevated border border-ink-tertiary/10 p-6 shadow-sm flex flex-col transition-all duration-300 hover:shadow-md',
+      'bg-[var(--surface-elevated)] border border-[var(--glass-border-light)] p-[var(--space-6)] shadow-[var(--elevation-1)] flex flex-col transition-all duration-300 hover:shadow-[var(--elevation-2)]',
       sizeClasses[size],
-      asymmetric ? 'asymmetric-a rounded-lg' : 'rounded-lg',
+      asymmetric ? 'rounded-[var(--radius-asym-a)]' : 'rounded-[var(--radius-lg)]',
       className
     )}>
       {children}

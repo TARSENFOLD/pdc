@@ -4,11 +4,12 @@ import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Avatar, Button } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
 import { Zap, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { MentorPublico } from '@pdc/shared';
 
 export function MentorPublicoPerfilPage() {
   const { id } = useParams<{ id: string }>();
 
-  const { data: mentor, isLoading, isError } = useQuery({
+  const { data: mentor, isLoading, isError } = useQuery<MentorPublico>({
     queryKey: ['catalogo-mentor', id],
     queryFn: () => catalogoApi.getMentor(id ?? ''),
     enabled: !!id,
@@ -21,15 +22,15 @@ export function MentorPublicoPerfilPage() {
     <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
       <SEOHead 
         title={mentor.nome}
-        description={mentor.bio ?? `Mentor especializado em ${mentor.areaEspecialidade ?? 'diversas áreas'}`}
-        image={mentor.avatarUrl}
+        description={mentor.bio || `Mentor especializado em ${mentor.areaEspecialidade || 'diversas áreas'}`}
+        image={mentor.avatarUrl || undefined}
         url={`https://usepdc.com/mentores/${id ?? ''}`}
         type="profile"
         jsonLd={{
           '@type': 'Person',
           name: mentor.nome,
-          description: mentor.bio,
-          jobTitle: mentor.areaEspecialidade,
+          description: mentor.bio || '',
+          jobTitle: mentor.areaEspecialidade || '',
         }}
       />
       <div className="mx-auto max-w-3xl">

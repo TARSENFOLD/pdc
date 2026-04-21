@@ -1,57 +1,49 @@
-# PDC v2 — Mapa de Funcionalidades e Requisitos
+# PDC v2 — Mapa de Requisitos (Sincronizado)
 
-Este ficheiro é a fonte de verdade para o estado de cada funcionalidade, sincronizado com a **Epic Canónica 02**.
+> **Status:** Restaurado a partir da Alma Original em 21 de Abril de 2026.
+> **Regra de Ouro:** Nenhum requisito é considerado "Done" sem passar pelo crivo do ESLint e do CodeRabbit.
 
-## 1. Núcleo de Decisão Vocacional
-| ID | Funcionalidade | Estado | Notas |
+## Legenda
+- **Estado:** `[ ]` Todo | `[x]` Done | `[~]` In Progress | `[-]` Descartado
+
+## 1. Fundação e Tooling (Fase 0)
+| ID | Requisito | Prioridade | Estado |
 | --- | --- | --- | --- |
-| N1 | Motor de Heurísticas $\phi$ e $R$ | ✅ | `@pdc/shared/heuristics.ts` |
-| N2 | Telemetria Edge-First (L1) | ✅ | Cloudflare Workers + Upstash |
-| N3 | Idempotência (UUID + outbox) | ✅ | Resiliência de eventos |
-| N4 | Sanity Validator dual-layer | ✅ | Anti-cheat |
-| N5 | Score derivado no BFF | ✅ | Substitui hardcode legacy |
-| N6 | Perfil Vocacional automático | ✅ | 6 dimensões + 4 tiers |
-| N7 | Reputação canónica | ✅ | Cache Redis |
-| N8 | Conquistas via Event Bus | ✅ | 12 regras |
-| N9 | Relatório Premium | 🟡 | Threaded insights pendentes |
+| REQ-0-001 | Monorepo npm workspaces | 🔴 | `[x]` |
+| REQ-0-002 | TypeScript estrito em todas as camadas | 🔴 | `[~]` |
+| REQ-0-005 | ESLint + Prettier (Zero Errors Target) | 🟠 | `[~]` |
+| REQ-0-008 | Docker Compose (Strapi + PG + Redis) | 🟠 | `[x]` |
 
-## 2. Conteúdo e Domínios
-| ID | Funcionalidade | Estado | Notas |
+## 2. Autenticação e Segurança (Fase 1)
+| ID | Requisito | Prioridade | Estado |
 | --- | --- | --- | --- |
-| C1 | Cursos (Hierarquia completa) | ✅ | Curso -> Módulo -> Item |
-| C2 | Simulações Tipo 1 (Vídeo) | ✅ | Player funcional |
-| C3 | Simulações Tipo 2 (Lab) | ✅ | Score real derivado |
-| C4 | Simulações Tipo 3 (Interativo) | ✅ | `Tipo3Player.tsx` |
-| C5 | Experiências (Marketing) | ✅ | Sempre gratuitas |
-| C6 | Programas (Contentores) | 🟡 | UI de gestão parcial |
-| C7 | Projetos (UGC) | ✅ | Camadas de privacidade |
-| C8 | Posts e Conquistas | ✅ | Feed social |
-| C9 | Quizzes e Tarefas | ✅ | Notas automáticas |
-| C10| Certificados | ✅ | `/estudante/certificados` |
+| REQ-1-002 | JWT em httpOnly cookies (SameSite=Strict) | 🔴 | `[x]` |
+| REQ-1-006 | RBAC com 6 roles no servidor | 🔴 | `[x]` |
+| REQ-1-009 | 2FA via Email (SendGrid) | 🟠 | `[x]` |
+| REQ-1-010 | 2FA via SMS (Twilio - Angola) | 🟡 | `[-]` |
 
-## 3. Transversais (Target Polimórfico)
-| ID | Funcionalidade | Estado | Notas |
+## 3. Core de Decisão Vocacional (Fase 2-4)
+| ID | Requisito | Prioridade | Estado |
 | --- | --- | --- | --- |
-| T1 | Like / Curtir | ✅ | Evento `interaction.like` |
-| T2 | Bookmark / Guardar | ✅ | Página `/guardados` |
-| T3 | Comentar | ✅ | Rate limit 10/min |
-| T4 | Avaliar (Rating) | 🟡 | Persistência PostgreSQL |
-| T5 | Partilhar | ⏳ | Por integrar |
-| T6 | Denunciar (Report) | ✅ | Fila para moderador |
-| T7 | Telemetria Global | ✅ | Coração do Oráculo |
-| T8 | Vínculos Bilaterais | 🟡 | Schema base ✅ |
-| T9 | Notificações Realtime | ✅ | Socket.IO |
+| REQ-4-001 | Simulações Tipo 1, 2 e 3 | 🔴 | `[x]` |
+| REQ-4-004 | Telemetria com idempotência Redis | 🔴 | `[x]` |
+| REQ-4-005 | Motor de Heurísticas ($\phi, R$) | 🔴 | `[x]` |
+| REQ-4-006 | Relatório Vocacional Premium | 🔴 | `[x]` |
+| REQ-4-014 | Feed com Algoritmo de Ranking | 🟠 | `[x]` |
 
-## 4. Plataforma
-| ID | Funcionalidade | Estado | Notas |
+## 4. Novas Diretrizes (Wave 3+)
+| ID | Requisito | Prioridade | Estado |
 | --- | --- | --- | --- |
-| P1 | Auth JWT httpOnly + RBAC | 🟡 | Rotação de tokens pendente |
-| P2 | OAuth + OTP (Twilio) | 🟡 | Twilio mockado |
-| P3 | 2FA Obrigatório | ✅ | Hardening completo |
-| P4 | FeatureRegistry SSOT | ✅ | 7 features + 6 HUBs |
-| P5 | Bootstrap 4 camadas | ✅ | Session/Caps/Security/UX |
-| P6 | Rate limiting | ✅ | Upstash |
-| P9 | Tina (Assistente IA) | 🟡 | Streaming instável |
+| REQ-W3-001 | Identidade Total: Telemetria identificada | 🔴 | `[~]` |
+| REQ-W3-002 | Hierarquia Institucional: Acesso ao rasto do aluno | 🔴 | `[ ]` |
+| REQ-W3-003 | Design Tokens Soul & Elite (Tailwind v4) | 🔴 | `[~]` |
+
+## 5. Requisitos Não-Funcionais
+| ID | Requisito | Prioridade | Estado |
+| --- | --- | --- | --- |
+| REQ-NF-001 | Zero `any` em todo o código | 🔴 | `[~]` |
+| REQ-NF-002 | Rule of 300: Máximo 300 linhas por ficheiro | 🟠 | `[~]` |
+| REQ-NF-003 | Lighthouse Performance ≥ 90 | 🟠 | `[ ]` |
 
 ---
-*Legenda: ✅ Implementado | 🟡 Parcial | ⏳ Por implementar | ⏸ Estacionado.*
+*Última auditoria: 21 de Abril de 2026.*

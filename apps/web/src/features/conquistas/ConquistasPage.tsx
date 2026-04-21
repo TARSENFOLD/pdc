@@ -5,8 +5,9 @@ import type { Conquista } from '@pdc/shared';
 import { cn } from '@/lib/utils';
 import { Trophy, ShieldCheck, Lock, Zap, Star, Target, Activity } from 'lucide-react';
 import { motion } from 'motion/react';
+import type { LucideIcon } from 'lucide-react';
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, LucideIcon> = {
   'explorador-vocacional': Target,
   'conclusao-de-curso': Trophy,
   'rede-em-crescimento': Zap,

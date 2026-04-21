@@ -13,18 +13,18 @@ const OLLAMA_BASE_URL = env.OLLAMA_BASE_URL;
 const OLLAMA_MODEL = env.OLLAMA_MODEL;
 
 export const aiService = {
-  async buildContexto(alunoId: string): Promise<string> {
-    const perfil = await vocacionalService.calcularPerfil(alunoId);
+  async buildContexto(estudanteId: string): Promise<string> {
+    const perfil = await vocacionalService.calcularPerfil(estudanteId);
     
     // Fix: Strapi client already flattens. Removed nested { data: ... }
     const tentativasRes = await strapiGet<{ id: number; simulacao?: { titulo: string } }>('/tentativas', {
-      'filters[alunoId][$eq]': alunoId,
+      'filters[estudanteId][$eq]': estudanteId,
       'filters[dataFim][$notNull]': 'true',
       'populate': 'simulacao',
     });
     
     const inscricoesRes = await strapiGet<{ id: number; curso?: { titulo: string } }>('/inscricoes', {
-      'filters[alunoId][$eq]': alunoId,
+      'filters[estudanteId][$eq]': estudanteId,
       'populate': 'curso',
     });
 
@@ -42,7 +42,7 @@ export const aiService = {
   async chat(messages: ChatMessage[], contexto: string, stream: boolean): Promise<Response> {
     const systemMessage: ChatMessage = {
       role: 'system',
-      content: `És o Tutor IA do PDC (Por Dentro do Curso). O teu objetivo é orientar alunos angolanos na sua jornada vocacional. Contexto do aluno: ${contexto}`,
+      content: `És o Tutor IA do PDC (Por Dentro do Curso). O teu objetivo é orientar estudantes angolanos na sua jornada vocacional. Contexto do estudante: ${contexto}`,
     };
 
     const fullMessages = [systemMessage, ...messages];

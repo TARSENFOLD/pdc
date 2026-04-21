@@ -72,7 +72,7 @@ export function CursosCatalogoPage() {
   });
 
   const cursos = data?.data ?? [];
-  const pageCount = data?.meta?.pageCount ?? 1;
+  const pageCount = data?.meta.pageCount ?? 1;
 
   const set = (k: string, v: string) => {
     const next = new URLSearchParams(sp);
@@ -141,7 +141,7 @@ export function CursosCatalogoPage() {
           <div className="py-24 text-center rounded-3xl border border-dashed border-border bg-surface-alt">
             <h3 className="text-lg font-bold text-text-primary">Nenhum curso encontrado</h3>
             <p className="mt-2 text-sm text-text-secondary">Tenta ajustar os filtros para encontrar o que procuras.</p>
-            <button onClick={() => setSp(new URLSearchParams())} className="mt-6 text-xs font-bold uppercase tracking-widest text-amber hover:underline">Limpar Filtros</button>
+            <button onClick={() => { setSp(new URLSearchParams()); }} className="mt-6 text-xs font-bold uppercase tracking-widest text-amber hover:underline">Limpar Filtros</button>
           </div>
         ) : (
           <>

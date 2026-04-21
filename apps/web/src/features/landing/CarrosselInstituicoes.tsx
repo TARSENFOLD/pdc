@@ -41,7 +41,7 @@ export function CarrosselInstituicoes() {
               {[...items, ...items].map((inst, i) => (
                 <Link
                   key={`${inst.id}-${i}`}
-                  to={`/instituicoes/${inst.slug || inst.id}`}
+                  to={`/instituicoes/${String(inst.slug || inst.id)}`}
                   className="flex flex-none items-center gap-4 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-500"
                 >
                   <div className="h-12 w-12 rounded-xl bg-surface-raised border border-border p-2 flex items-center justify-center shadow-sm">

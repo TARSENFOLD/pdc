@@ -66,6 +66,7 @@ export type TelemetriaTipo = z.infer<typeof TelemetriaTipoSchema>;
 export const TelemetriaEventoSchema = z.object({
   eventId: z.string().uuid(),
   tipo: TelemetriaTipoSchema,
+  perfilId: z.string().optional(),
   payload: z.record(z.unknown()).optional().default({}),
   timestamp: z.string(),
   clientTimestamp: z.number().optional(), 

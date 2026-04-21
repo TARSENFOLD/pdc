@@ -8,7 +8,7 @@ const FEATURES: Array<{ icon: ComponentType<LucideProps>; titulo: string; descri
   {
     icon: FlaskConical,
     titulo: 'Simulações práticas',
-    descricao: 'Vídeo guiado, laboratório externo ou ambiente interativo — experimenta o dia a dia real de cada profissão.',
+    descricao: 'Vídeo guiado, laboratório externo ou ambiente interativo - experimenta o dia a dia real de cada profissão.',
   },
   {
     icon: BarChart3,
@@ -23,7 +23,7 @@ const FEATURES: Array<{ icon: ComponentType<LucideProps>; titulo: string; descri
   {
     icon: Building2,
     titulo: 'Experiências institucionais',
-    descricao: 'Programas publicados por universidades e escolas angolanas — abertos e gratuitos.',
+    descricao: 'Programas publicados por universidades e escolas angolanas - abertos e gratuitos.',
   },
   {
     icon: Users,

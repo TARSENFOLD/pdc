@@ -15,20 +15,20 @@ const estadoVariant: Record<string, 'warning' | 'success' | 'error' | 'outline'>
 
 interface MentoriaExibicao extends Mentoria {
   mentorNome?: string;
-  alunoNome?: string;
+  estudanteNome?: string;
 }
 
 function MentoriaRow({ mentoria, onAction }: { mentoria: MentoriaExibicao; onAction: (id: string, action: 'aceitar' | 'recusar' | 'concluir') => void; }) {
   const { user } = useAuth();
   const isMentor = user?.role === 'mentor';
-  const isAluno = user?.role === 'aluno';
+  const isEstudante = user?.role === 'estudante';
 
   return (
     <div className="flex items-center justify-between rounded-lg border border-border bg-surface-raised p-4">
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-text-primary">{mentoria.mensagem}</p>
         <p className="mt-0.5 text-xs text-text-muted">
-          {isAluno ? `Mentor: ${mentoria.mentorNome ?? mentoria.mentorId}` : `Aluno: ${mentoria.alunoNome ?? mentoria.alunoId}`}
+          {isEstudante ? `Mentor: ${mentoria.mentorNome ?? mentoria.mentorId}` : `Estudante: ${mentoria.estudanteNome ?? mentoria.estudanteId}`}
         </p>
       </div>
       <div className="ml-4 flex shrink-0 items-center gap-2">
@@ -84,7 +84,7 @@ export function MentoriaListPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-text-primary">Mentorias</h1>
-        {user?.role === 'aluno' && (
+        {user?.role === 'estudante' && (
           <Button size="sm" onClick={() => { setModalOpen(true); }}>
             Solicitar Mentoria
           </Button>

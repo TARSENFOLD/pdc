@@ -4,7 +4,13 @@ import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
-import { CriarCursoPayloadSchema } from '@pdc/shared';
+import {
+  CriarCursoPayloadSchema,
+  Curso,
+  Inscricao,
+  Modulo,
+  BehaviorPattern
+} from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import pino from 'pino';
@@ -13,13 +19,7 @@ const log = pino({ name: 'cursos-routes' });
 
 type Vars = { Variables: AuthVariables };
 
-interface Curso {
-  id: string | number;
-  titulo: string;
-  autorId: string;
-  estado: 'draft' | 'review' | 'published' | 'archived';
-  categoria?: string;
-}
+// Using Curso from @pdc/shared
 
 // ── Route Schemas ───────────────────────────────────────────────────────────
 
@@ -50,34 +50,34 @@ cursoRoutes.get('/', zValidator('query', cursoQuerySchema), async (c) => {
 
   try {
     // 1. Buscar cursos publicados
-    const res = await strapiGet<Curso>('/cursos', params as any);
+    const res = await strapiGet<Curso>('/cursos', params);
     
     // 2. Lógica Soberana de Match (End-to-End)
-    // Se for aluno, filtramos por mérito behaviorista
-    if (user.role === 'aluno') {
-      const patternsRes = await strapiGet<any>('/behavior-patterns', {
+    // Se for estudante, filtramos por mérito behaviorista
+    if (user.role === 'estudante') {
+      const patternsRes = await strapiGet<BehaviorPattern>('/behavior-patterns', {
         'filters[perfil][userId][$eq]': user.id,
       });
       const pattern = patternsRes.data[0];
 
       // Enriquecer os cursos com metadados de bloqueio
-      const enrichedData = res.data.map((curso: any) => {
-        const regras = curso.regrasAcesso;
-        let bloqueado = false;
-        let motivo = '';
+      const enrichedData = res.data.map((curso) => {
+        const rules = curso.regrasAcesso;
+        let blocked = false;
+        let reason = '';
 
-        if (regras && pattern) {
-          if (regras.minFluidez && pattern.cognitiveFluidity < regras.minFluidez) {
-            bloqueado = true;
-            motivo = 'Fluidez insuficiente';
+        if (rules && pattern) {
+          if (rules.minFluidez && (pattern.cognitiveFluidity || 0) < rules.minFluidez) {
+            blocked = true;
+            reason = 'Fluidez insuficiente';
           }
-          if (regras.minResiliencia && pattern.resilienceIndex < regras.minResiliencia) {
-            bloqueado = true;
-            motivo = 'Resiliência insuficiente';
+          if (rules.minResiliencia && (pattern.resilienceIndex || 0) < rules.minResiliencia) {
+            blocked = true;
+            reason = 'Resiliência insuficiente';
           }
         }
 
-        return { ...curso, bloqueado, motivoBloqueio: motivo };
+        return { ...curso, bloqueado: blocked, motivoBloqueio: reason };
       });
 
       return c.json({ ...res, data: enrichedData });
@@ -115,8 +115,8 @@ cursoRoutes.get('/meus', checkRole(['mentor', 'instituicao', 'super_admin']), as
 cursoRoutes.get('/me/inscricoes', async (c) => {
   const { id } = c.get('user');
   try {
-    const res = await strapiGet<any>('/inscricoes', {
-      'filters[alunoId][$eq]': id,
+    const res = await strapiGet<Inscricao>('/inscricoes', {
+      'filters[estudanteId][$eq]': id,
       populate: 'curso.capa',
     });
     return c.json(res);
@@ -170,7 +170,7 @@ cursoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zVali
     // 2. Criar Módulos e Itens em Cascata (Sovereign Cascading)
     if (modulos && modulos.length > 0) {
       for (const mod of modulos) {
-        const modRes = await strapiPost<any>('/modulos', {
+        const modRes = await strapiPost<Modulo>('/modulos', {
           titulo: mod.titulo,
           ordem: mod.ordem,
           curso: cursoId
@@ -179,7 +179,7 @@ cursoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zVali
         const moduloId = modRes.data.id;
         
         for (const item of mod.itens) {
-          await strapiPost('/modulo-items', {
+          await strapiPost<unknown>('/modulo-items', {
             ...item,
             modulo: moduloId
           });
@@ -190,14 +190,14 @@ cursoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zVali
     // 3. CAMADA 5: IMPACTO NO ECOSSISTEMA
     // Disparar evento para o Event Bus. O impacto (Feed, Match, Conquista) é autônomo.
     await eventBus.publishWithOutbox(DomainEventName.CURSO_PUBLICADO, {
-      cursoId,
+      cursoId: String(cursoId),
       autorId,
       titulo: cursoData.titulo,
-      area: cursoData.area,
+      area: String(cursoData.area),
       regrasAcesso: cursoData.regrasAcesso
     });
 
-    log.info({ cursoId, autorId }, 'Curso materializado com sucesso e impacto disparado.');
+    log.info({ cursoId: String(cursoId), autorId }, 'Curso materializado com sucesso e impacto disparado.');
     
     return c.json(res, 201);
   } catch (err: unknown) {
@@ -271,7 +271,7 @@ cursoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'moderador'
     }
 
     // Actualizar estado
-    await strapiPut<unknown>(`/cursos/${id}`, { estado });
+    await strapiPut<{ estado: string }>(`/cursos/${id}`, { estado });
 
     return c.json({ success: true });
   } catch (err: unknown) {
@@ -280,14 +280,14 @@ cursoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'moderador'
   }
 });
 
-// POST /cursos/:id/inscricao — aluno apenas
-cursoRoutes.post('/:id/inscricao', checkRole(['aluno']), async (c) => {
+// POST /cursos/:id/inscricao — estudante apenas
+cursoRoutes.post('/:id/inscricao', checkRole(['estudante']), async (c) => {
   const cursoId = c.req.param('id');
-  const { id: alunoId } = c.get('user');
+  const { id: estudanteId } = c.get('user');
   try {
-    const res = await strapiPost<unknown>('/inscricoes', {
+    const res = await strapiPost<Inscricao>('/inscricoes', {
       cursoId,
-      alunoId,
+      estudanteId,
       dataInscricao: new Date().toISOString(),
       concluido: false,
       progressoPercentagem: 0,

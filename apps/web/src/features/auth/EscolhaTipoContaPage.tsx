@@ -61,7 +61,7 @@ export function EscolhaTipoContaPage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-4 inline-flex items-center rounded-full bg-surface-raised px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber border border-amber/20"
           >
-            PDC v2 — Onboarding
+            PDC v2 - Onboarding
           </motion.div>
           <motion.h1 
             initial={{ opacity: 0 }}

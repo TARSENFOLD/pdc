@@ -250,7 +250,7 @@ export default function LoginPage() {
                 type="email" 
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); }}
                 onFocus={handleTypingFocus}
                 onBlur={handleInputBlur}
                 placeholder="nome@exemplo.com"
@@ -264,7 +264,7 @@ export default function LoginPage() {
                 type="password" 
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); }}
                 onFocus={handleTypingFocus}
                 onBlur={handleInputBlur}
                 placeholder="••••••••"

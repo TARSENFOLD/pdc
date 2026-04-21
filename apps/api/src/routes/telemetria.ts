@@ -1,7 +1,12 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import pino from 'pino';
-import { TelemetriaEventoSchema, TelemetriaBatchSchema, type TelemetriaEvento } from '@pdc/shared';
+import { 
+  TelemetriaEventoSchema, 
+  TelemetriaBatchSchema, 
+  type TelemetriaEvento,
+  type BehaviorPattern
+} from '@pdc/shared';
 
 const log = pino({ name: 'telemetria-routes' });
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
@@ -87,7 +92,7 @@ telemetriaRoutes.post('/batch', zValidator('json', TelemetriaBatchSchema), async
   const user = c.get('user');
   const { events } = c.req.valid('json');
 
-  const results: any[] = [];
+  const results: Array<{ eventId: string; ok: boolean; duplicado?: boolean }> = [];
   for (let i = 0; i < events.length; i += CONCURRENCY) {
     const chunk = events.slice(i, i + CONCURRENCY);
     const settled = await Promise.allSettled(chunk.map(evt => processEvent(evt, user.id)));
@@ -138,7 +143,7 @@ telemetriaRoutes.get('/summary', async (c) => {
       porTipo,
       ultimoEvento: res.data[0]?.clientTimestamp || null,
     });
-  } catch (err: unknown) {
+  } catch (_err: unknown) {
     return c.json({ error: 'Erro summary' }, 500);
   }
 });
@@ -148,7 +153,7 @@ telemetriaRoutes.get('/patterns', async (c) => {
   const user = c.get('user');
   const { perfilId } = c.req.query();
 
-  // Segurança Soberana: Mentor pode ver perfis, Aluno vê apenas o seu
+  // Segurança Soberana: Mentor pode ver perfis, Estudante vê apenas o seu
   if (perfilId && user.role !== 'mentor' && user.role !== 'super_admin') {
     return c.json({ error: 'Acesso negado ao Oráculo' }, 403);
   }
@@ -157,7 +162,7 @@ telemetriaRoutes.get('/patterns', async (c) => {
     const resolvedPerfilId = perfilId || await resolvePerfilId(user.id);
     if (!resolvedPerfilId) return c.json([]);
 
-    const res = await strapiGet<any>('/behavior-patterns', {
+    const res = await strapiGet<BehaviorPattern>('/behavior-patterns', {
       'filters[perfil][id][$eq]': resolvedPerfilId,
       'sort': 'lastUpdatedAt:desc',
     });

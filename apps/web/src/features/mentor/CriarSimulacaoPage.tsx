@@ -117,7 +117,7 @@ export function CriarSimulacaoPage() {
             <label className="text-sm font-medium text-text-secondary">Descrição</label>
             <textarea 
               className="flex min-h-[120px] w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder="O que o aluno deve fazer nesta simulação?"
+              placeholder="O que o estudante deve fazer nesta simulação?"
               {...register('descricao')}
             />
             {errors.descricao && <p className="text-xs text-error font-medium">{errors.descricao.message}</p>}

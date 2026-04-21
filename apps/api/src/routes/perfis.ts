@@ -7,6 +7,7 @@ import { strapiGet, strapiPut, strapiPutRaw } from '../modules/strapi/strapi.cli
 import { serializePublicProfile, serializePrivateProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
 import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 import { getTier } from '../modules/reputation/reputation.service.js';
+import { eventBus } from '../modules/events/event-bus.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -85,6 +86,13 @@ perfilRoutes.put('/me', zValidator('json', UpdatePerfilPayloadSchema), async (c)
       const perfil = resGet.data[0];
       const docId = perfil?.documentId || String(perfil?.id);
       const resPut = await strapiPut<StrapiPerfilRaw>(`/perfis/${docId}`, body);
+      
+      // G15: Impacto no Ecossistema
+      void eventBus.publishWithOutbox('perfil.atualizado', {
+        perfilId: String(perfil?.id),
+        ...body
+      });
+
       return c.json(resPut.data);
     }
 
@@ -97,23 +105,23 @@ perfilRoutes.put('/me', zValidator('json', UpdatePerfilPayloadSchema), async (c)
   }
 });
 
-// GET /perfis/me/stats — dashboard aluno stats
-perfilRoutes.get('/me/stats', checkRole(['aluno']), async (c) => {
+// GET /perfis/me/stats — dashboard estudante stats
+perfilRoutes.get('/me/stats', checkRole(['estudante']), async (c) => {
   const user = c.get('user');
   const id = user.id;
   try {
     const [telemetria, inscricoes, conquistas] = await Promise.all([
-      strapiGet<any>('/telemetrias', {
+      strapiGet<unknown>('/telemetrias', {
         'filters[userId][$eq]': id,
         'filters[tipo][$eq]': 'simulacao.completed',
         'pagination[pageSize]': '1',
       }),
-      strapiGet<any>('/inscricoes', {
-        'filters[alunoId][$eq]': id,
+      strapiGet<unknown>('/inscricoes', {
+        'filters[estudanteId][$eq]': id,
         'filters[concluido][$eq]': 'false',
         'pagination[pageSize]': '1',
       }),
-      strapiGet<any>('/conquistas', {
+      strapiGet<unknown>('/conquistas', {
         'filters[userId][$eq]': id,
         'filters[desbloqueada][$eq]': 'true',
         'pagination[pageSize]': '1',

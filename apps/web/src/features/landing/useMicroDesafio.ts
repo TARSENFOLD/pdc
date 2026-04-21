@@ -2,9 +2,10 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSocket } from '../../lib/realtime/useSocket';
 import { telemetriaService } from '../../lib/telemetria/telemetria.service';
 import {
-  type Area, type MicroDesafioState, type Veredito, type PerguntaData,
+  type Area, type MicroDesafioState, type PerguntaData,
   detectarArea, AREA_LABEL, PERGUNTAS_FALLBACK,
 } from './microDesafioData';
+import { type LandingQuestionsResponse, LandingVereditoSchema } from '@pdc/shared';
 
 const API_URL: string =
   (import.meta.env['VITE_API_URL'] as string | undefined) ?? '/api';
@@ -82,8 +83,8 @@ export function useMicroDesafio() {
 
       if (!res.ok) throw new Error('Falha ao obter perguntas');
 
-      const data = await res.json();
-      const dynamicPerguntas = data.perguntas || [];
+      const data = (await res.json()) as LandingQuestionsResponse;
+      const dynamicPerguntas = data.perguntas;
 
       setPerguntas(dynamicPerguntas.length > 0 ? dynamicPerguntas : PERGUNTAS_FALLBACK);
       setState((s) => ({ ...s, fase: 'pergunta' }));
@@ -135,17 +136,7 @@ export function useMicroDesafio() {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('No JSON');
 
-      const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-      
-      const v: Veredito = {
-        area: String(parsed.area),
-        score: Number(parsed.score),
-        arquetipo: String(parsed.arquetipo),
-        proximoPasso: typeof parsed.proximoPasso === 'string' ? parsed.proximoPasso : '',
-        simulacoes: Array.isArray(parsed.simulacoes)
-          ? (parsed.simulacoes as string[]).map(String)
-          : [],
-      };
+      const v = LandingVereditoSchema.parse(JSON.parse(jsonMatch[0]));
 
       setState((s) => ({ ...s, fase: 'veredito', veredito: v }));
       void telemetriaService

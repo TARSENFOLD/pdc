@@ -4,6 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { Card, Button, Spinner } from '../../components/ui';
+import { motion } from 'motion/react';
+import { APPLE_SPRING } from '../../lib/animations';
 import type { Simulacao } from '@pdc/shared';
 
 interface Props {
@@ -11,7 +13,7 @@ interface Props {
 }
 
 /**
- * Tipo3Player — Shell Funcional (R2.T5)
+ * Tipo3Player - Shell Funcional (R2.T5)
  * Player para simulações de Alta Fidelidade (Tipo 3).
  * Implementa o ciclo de vida de telemetria canónico e derivação de score no BFF.
  */
@@ -68,7 +70,7 @@ export const Tipo3Player = ({ simulacao }: Props) => {
     try {
       const duracao = Math.floor((Date.now() - startTimestamp.current) / 1000);
       
-      // Concluir tentativa (Derivação no BFF — R2.T4)
+      // Concluir tentativa (Derivação no BFF - R2.T4)
       await simulacoesApi.concluirTentativa({
         tentativaId,
         metadata: { 
@@ -162,13 +164,18 @@ export const Tipo3Player = ({ simulacao }: Props) => {
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--color-accent)_0%,_transparent_70%)]" />
         
         {isSubmitting ? (
-          <div className="z-10 max-w-md animate-in fade-in zoom-in duration-500">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={APPLE_SPRING}
+            className="z-10 max-w-md"
+          >
             <div className="h-24 w-24 rounded-full bg-accent/10 border-2 border-accent/20 flex items-center justify-center mx-auto mb-6">
                <Brain size={40} className="text-accent animate-pulse" />
             </div>
             <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Processando Padrões</h2>
             <p className="text-text-muted text-sm mb-8">A calcular o teu desempenho biométrico e a enviar para a Engine de Reputação...</p>
-          </div>
+          </motion.div>
         ) : (
           <div className="z-10 max-w-md">
             <Activity size={48} className="text-accent mx-auto mb-6 animate-pulse" />

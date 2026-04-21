@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { Hono } from 'hono';
+import { Hono, type Context, type Next } from 'hono';
 import { simulacaoRoutes } from './simulacoes.js';
 import { strapiGet, strapiPut } from '../modules/strapi/strapi.client.js';
 
@@ -16,14 +16,14 @@ vi.mock('../modules/events/event-bus.js', () => ({
 }));
 
 vi.mock('../modules/auth/auth.middleware.js', () => ({
-  verifyJwt: async (c: any, next: any) => {
-    c.set('user', { id: 'user-123', role: 'aluno' });
+  verifyJwt: async (c: Context, next: Next) => {
+    c.set('user', { id: 'user-123', role: 'estudante' });
     await next();
   },
 }));
 
 vi.mock('../modules/auth/rbac.middleware.js', () => ({
-  checkRole: () => async (_c: any, next: any) => {
+  checkRole: () => async (_c: Context, next: Next) => {
     await next();
   },
 }));
@@ -38,11 +38,11 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
   it('deve derivar score alto para persona "Cirurgião" (focusStability=95)', async () => {
     vi.mocked(strapiPut).mockResolvedValueOnce({
       data: { id: 'tent-1', score: 9.75, status: 'concluida', perfil: 'perf-1' }
-    } as any);
+    } as unknown);
 
     vi.mocked(strapiGet).mockResolvedValueOnce({
       data: [{ id: 'perf-1' }]
-    } as any);
+    } as unknown);
 
     const res = await app.request('/simulacoes/tentativas/tent-1', {
       method: 'PUT',
@@ -64,11 +64,11 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
   it('deve derivar score baixo para persona "Hacker Hesitante" (focusStability=40)', async () => {
     vi.mocked(strapiPut).mockResolvedValueOnce({
       data: { id: 'tent-2', score: 4.75, status: 'concluida', perfil: 'perf-2' }
-    } as any);
+    } as unknown);
 
     vi.mocked(strapiGet).mockResolvedValueOnce({
       data: [{ id: 'perf-2' }]
-    } as any);
+    } as unknown);
 
     const res = await app.request('/simulacoes/tentativas/tent-2', {
       method: 'PUT',

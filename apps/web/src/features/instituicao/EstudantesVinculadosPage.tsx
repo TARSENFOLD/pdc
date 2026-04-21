@@ -19,10 +19,9 @@ export function EstudantesVinculadosPage() {
 
   const mutation = useMutation({
     mutationFn: () => propostasApi.criar({
-      targetId: selectedStudent?.id ?? '',
+      estudanteId: selectedStudent?.id ?? '',
       titulo: titulo || `Proposta de ${tipo}`,
-      mensagem,
-      tipo,
+      descricao: mensagem,
     }),
     onSuccess: () => {
       toast({ title: 'Proposta enviada!' });
@@ -43,21 +42,21 @@ export function EstudantesVinculadosPage() {
   const columns: Column<PerfilCompleto>[] = [
     { 
       header: 'Estudante', 
-      accessor: (aluno: PerfilCompleto) => (
+      accessor: (estudante: PerfilCompleto) => (
         <div className="flex items-center gap-3">
-          <Avatar src={aluno.avatarUrl || undefined} fallback={aluno.nome[0] || 'E'} />
+          <Avatar src={estudante.avatarUrl || undefined} fallback={estudante.nome[0] || 'E'} />
           <div>
-            <div className="font-medium">{aluno.nome}</div>
-            <div className="text-xs text-muted-foreground">{aluno.email}</div>
+            <div className="font-medium">{estudante.nome}</div>
+            <div className="text-xs text-muted-foreground">{estudante.email}</div>
           </div>
         </div>
       )
     },
-    { header: 'Área de Interesse', accessor: (aluno: PerfilCompleto) => String((aluno as any).areasInteresse?.[0] || 'N/A') },
+    { header: 'Área de Interesse', accessor: (estudante: PerfilCompleto) => estudante.areasInteresse[0] || 'N/A' },
     { 
       header: 'Ações', 
-      accessor: (aluno: PerfilCompleto) => (
-        <Button size="sm" onClick={() => { setSelectedStudent(aluno); }}>
+      accessor: (estudante: PerfilCompleto) => (
+        <Button size="sm" onClick={() => { setSelectedStudent(estudante); }}>
           Enviar Proposta
         </Button>
       )

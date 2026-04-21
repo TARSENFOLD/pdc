@@ -1,6 +1,6 @@
 import pino from 'pino';
 import { env } from '../../lib/env.js';
-import { type StrapiListResponse, type StrapiSingleResponse } from './strapi.types.js';
+import { type StrapiListResponse, type StrapiSingleResponse } from '@pdc/shared';
 
 const log = pino({ name: 'strapi-client' });
 
@@ -31,7 +31,7 @@ const BASE_DELAY = 300;
 function normalize<T>(response: T): T {
   if (response == null || typeof response !== 'object') return response;
 
-  const res = response as Record<string, unknown>;
+  const res = response as unknown as Record<string, unknown>;
   const data = res['data'];
 
   if (data == null) return response;
@@ -47,7 +47,7 @@ function normalize<T>(response: T): T {
       }
       return item;
     });
-  } else if (typeof data === 'object' && 'attributes' in data) {
+  } else if (typeof data === 'object' && 'attributes' in data && data !== null) {
     const entry = data as { id: unknown; attributes: Record<string, unknown> };
     res['data'] = { id: entry.id, ...entry.attributes };
   }

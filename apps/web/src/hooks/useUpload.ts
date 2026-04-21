@@ -25,11 +25,11 @@ export function useUpload() {
       // Usando fetch nativo para capturar progresso se necessário, 
       // ou apenas o http helper se preferirmos simplicidade E2E.
       // Para o Patamar Mundial, implementamos com XHR para progresso real.
-      
+
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', `${import.meta.env.VITE_API_URL || '/api'}/media/upload`);
-        
+
         // Autenticação (buscamos o token do cookie ou localStorage se necessário, 
         // mas o middleware verifyJwt espera o token nos cookies por padrão no nosso boilerplate)
         xhr.withCredentials = true;
