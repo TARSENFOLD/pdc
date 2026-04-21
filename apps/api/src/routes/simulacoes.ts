@@ -24,11 +24,6 @@ const iniciarSchema = z.object({
   simulacaoId: z.string().min(1),
 });
 
-const concluirSchema = z.object({
-  score: z.number().optional(),
-  metadata: z.record(z.unknown()).optional(),
-});
-
 interface StrapiSimulacao {
   id: string | number;
   titulo: string;
@@ -280,22 +275,25 @@ simulacaoRoutes.post('/tentativas', checkRole(['estudante']), zValidator('json',
   }
 });
 
+const concluirSchema = z.object({
+  metadata: z.record(z.unknown()).optional(),
+});
+
 // PUT /simulacoes/tentativas/:id — concluir tentativa (estudante apenas)
 simulacaoRoutes.put('/tentativas/:id', checkRole(['estudante']), zValidator('json', concluirSchema), async (c) => {
   const tentativaId = c.req.param('id');
-  const { score, metadata } = c.req.valid('json');
+  const { metadata } = c.req.valid('json');
   const user = c.get('user');
-  
-  // R2.T4: Derivação de score no BFF
-  let finalScore = score;
-  if (metadata?.tipo === 2) {
-    const phi = (Number(metadata.focusStability) || 100) / 100;
-    const resFluidity = analyzeFluidity(phi);
-    const resFocus = analyzeFocus(phi);
-    // Média simples entre Fluidity (Phi) e Focus (Stability)
-    finalScore = (resFluidity.score + resFocus.score) / 2;
-    log.info({ tentativaId, finalScore, phi }, 'Score Tipo 2 derivado no BFF');
-  }
+
+  // G2-T3 Anti-Fraude: Derivação de score no BFF SEMPRE.
+  // Qualquer score cliente-side é ignorado. O Oráculo é soberano.
+  const phi = (Number(metadata?.focusStability) || 50) / 100;
+  const resFluidity = analyzeFluidity(phi);
+  const resFocus = analyzeFocus(phi);
+
+  // Média ponderada (DNA Biomecânico)
+  const finalScore = (resFluidity.score * 0.4) + (resFocus.score * 0.6);
+  log.info({ tentativaId, finalScore, phi }, 'Score Soberano derivado no BFF');
 
   try {
     // D21/D22: Persistimos metadata da simulação e data de fim em PT.
