@@ -41,7 +41,7 @@ export function SimulacaoPublicoDetailPage() {
 
         <div className="mt-6 flex flex-wrap gap-2">
           <Badge variant="warning">{TIPOS[String(sim.tipo)] ?? 'Simulação'}</Badge>
-          {sim.area && <Badge variant="info">{sim.area}</Badge>}
+          <Badge variant="info">{sim.area}</Badge>
           {sim.nivel ? <Badge variant="outline">{sim.nivel}</Badge> : null}
         </div>
 
@@ -51,7 +51,7 @@ export function SimulacaoPublicoDetailPage() {
         <div className="mt-8 rounded-xl border border-border bg-surface p-6">
           <h2 className="text-lg font-semibold text-text-primary">O que vais experimentar</h2>
           <ul className="mt-3 space-y-2 text-sm text-text-secondary">
-            {sim.area && <li>• Cenário realista de {sim.area}</li>}
+            <li>• Cenário realista de {sim.area}</li>
             <li>• Relatório de perfil vocacional no final</li>
           </ul>
         </div>

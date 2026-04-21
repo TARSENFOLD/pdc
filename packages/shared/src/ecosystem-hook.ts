@@ -15,10 +15,10 @@ export interface EcosystemHookContext {
 export interface EcosystemHookResult {
   status: 'sent' | 'skipped' | 'retryable_error' | 'fatal_error';
   reason?: string;
-  data?: any;
+  data?: unknown;
 }
 
-export interface EcosystemHook<TPayload = any> {
+export interface EcosystemHook<TPayload = unknown> {
   name: EcosystemHookName;
   dependencies: EcosystemHookName[];
   idempotencyKey: (event: DomainEvent<TPayload>) => string;

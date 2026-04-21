@@ -6,7 +6,7 @@ import {
   type EcosystemHookResult,
   type BaseDomainEventPayload
 } from '@pdc/shared';
-import { reputationService } from '../reputation/reputation.service.js';
+import * as reputationService from '../reputation/reputation.service.js';
 import pino from 'pino';
 
 const log = pino({ name: 'ranking-hook' });
@@ -18,6 +18,7 @@ export const rankingHook: EcosystemHook = {
   idempotencyKey: (event) => `ranking:${event.id}`,
 
   execute: async (event: DomainEvent<BaseDomainEventPayload>): Promise<EcosystemHookResult> => {
+    const payload = event.payload;
     const meritEvents = [
       DomainEventName.CURSO_PUBLICADO,
       DomainEventName.SIMULACAO_PUBLICADA,
@@ -33,7 +34,7 @@ export const rankingHook: EcosystemHook = {
       return { status: 'skipped', reason: 'not-a-merit-event' };
     }
 
-    const autorId = event.payload.autorId || event.payload.perfilId || event.payload.userId;
+    const autorId = payload.autorId || payload.perfilId || payload.userId;
 
     if (!autorId) {
       return { status: 'fatal_error', reason: 'autorId-missing-in-payload' };

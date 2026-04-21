@@ -28,20 +28,21 @@ export const notifyHook: EcosystemHook = {
     const { results } = context;
 
     // 1. Processar Conquistas (Hook 4)
-    const achievementResult = results[EcosystemHookName.ACHIEVEMENT];
-    if (achievementResult?.status === 'sent' && achievementResult.data?.desbloqueadas) {
-      const { userId, desbloqueadas } = achievementResult.data as { userId: string; desbloqueadas: unknown[] };
+    const achievementResult = results[EcosystemHookName.ACHIEVEMENT] as EcosystemHookResult | undefined;
+    if (achievementResult?.status === 'sent' && achievementResult.data) {
+      const data = achievementResult.data as { userId: string; desbloqueadas: unknown[] };
+      const { userId, desbloqueadas } = data;
       desbloqueadas.forEach((conquista) => {
         socketService.emitirConquista(userId, conquista);
       });
     }
 
     // 2. Persistir Notificação no Strapi (Audit Trail)
-    const perfilId = payload.perfilId || payload.autorId || payload.userId;
-    if (perfilId) {
+    const pId = payload.perfilId || payload.autorId || payload.userId;
+    if (pId) {
       try {
         await strapiPost<unknown>('/notificacoes', {
-          perfil: String(perfilId),
+          perfil: String(pId),
           tipo: 'sistema',
           titulo: 'Actividade Processada',
           corpo: `O teu evento ${event.name} foi integrado no ecossistema.`,

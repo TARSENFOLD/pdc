@@ -6,16 +6,19 @@ build/
 .turbo/
 
 # Ambiente
-# ── ENVIRONMENT ──
+# ── ENVIRONMENT (PROTEÇÃO TOTAL G15) ──
 .env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
 .env.local
-.env.*.local
 .env.production
 .env.staging
-.env.example.production
-.env.example.staging
-apps/api/.env.production
-apps/api/.env.staging
+.env.development
+*.env
+
 
 # Logs
 *.log

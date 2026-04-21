@@ -104,6 +104,8 @@ export interface BaseDomainEventPayload {
   perfilId?: string | number;
   autorId?: string | number;
   userId?: string | number;
+  tentativaId?: string | number;
+  id?: string | number;
   [key: string]: unknown;
 }
 
