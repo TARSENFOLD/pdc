@@ -21,6 +21,7 @@ const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'ARQUITETURA', label: 'Arquitetura' },
   { value: 'TURISMO_HOTELARIA', label: 'Turismo e Hotelaria' },
   { value: 'DESPORTO', label: 'Desporto' },
+  { value: 'OUTRA', label: 'Outra' },
 ];
 
 const CTA_LABELS: Record<string, string> = {

@@ -14,7 +14,7 @@ O PDC v2 utiliza um modelo de autoridade baseado em roles soberanas:
 
 | Role | Slug | Descrição |
 |------|------|-----------|
-| **Estudante** | `estudante` | Utilizador principal (antigo `aluno`). Procura orientação vocacional. |
+| **Estudante** | `estudante` | Utilizador principal. Procura orientação vocacional e participa em simulações. |
 | **Mentor** | `mentor` | Profissional ou académico que guia os estudantes. |
 | **Instituição** | `instituicao` | Entidade de ensino que publica cursos e experiências. |
 | **Comité Científico** | `comite_cientifico` | Responsável pela validação metodológica das simulações. |
@@ -36,13 +36,14 @@ O sistema utiliza dois tipos de tokens para garantir a integridade dos dados:
 ### 2. Telemetry Token (RS256 - Soberano)
 - **Onde:** Header `Authorization: Bearer <token>` em pedidos para a Edge.
 - **Uso:** Apenas para escrita de factos de telemetria na L1.
-- **Autoridade:** Assinado pelo BFF com chave privada; validado pela Edge via JWKS público.
+- **Autoridade:** Assinado pelo BFF com chave privada RS256; validado pela Edge via JWKS público.
+- **JWKS:** Disponível em `/.well-known/jwks.json`.
 - **Obtenção:** Disponível via endpoint `/bootstrap` após login.
 
 ---
 
 ## POST /auth/register
-Regista um novo utilizador.
+Regista um novo utilizador. Default role: `estudante`.
 
 ```json
 {
@@ -56,7 +57,8 @@ Regista um novo utilizador.
 ---
 
 ## POST /auth/login
-Autentica um utilizador. Emite cookies de sessão.
+Autentica um utilizador via credenciais locais. Emite cookies de sessão.
+Se o sistema detectar necessidade de MFA, retornará `{ "requiresOtp": true, "canal": "email" }`.
 
 ---
 
@@ -88,12 +90,56 @@ Endpoint vital para a inicialização da PWA. Retorna o estado completo da aplic
 }
 ```
 
+### Lógica de População
+1. **Session**: Extraída via cookie `access_token`. O BFF injeta a Role e o `perfilId` real vindos do Strapi.
+2. **Capabilities**: Resolução híbrida entre o Registry de Features (L2) e overrides específicos da instituição (Strapi).
+3. **Security**: Emissão do Telemetry Token (RS256) se o utilizador estiver autenticado.
+4. **UX**: Preferências de interface (tema, idioma).
+
 ---
 
-## Novos Fluxos de Autoridade
-- **OAuth Google/LinkedIn:** `/auth/oauth/google`
-- **OTP Gateway:** `/auth/otp/request` (Twilio mockado em Dev)
-- **2FA Hardening:** `/auth/2fa/verify`
+## 🌐 Fluxos de OAuth 2.0 (Google & LinkedIn)
+
+O sistema suporta autenticação social via:
+- `GET /auth/google`: Redireciona para o consentimento da Google.
+- `GET /auth/linkedin`: Redireciona para o consentimento do LinkedIn.
+
+Pós-login bem sucedido, o utilizador é redirecionado para a plataforma principal com cookies de sessão ativos.
+
+---
+
+## 📱 One-Time Password (OTP) & MFA
+
+Utilizado para validação de identidade e 2FA.
+
+### POST /auth/otp/send
+Solicita o envio de um código de 6 dígitos.
+- **Canais:** `email` ou `sms`.
+- **Rate Limit:** Máximo 3 pedidos a cada 10 minutos. O limite é aplicado por **identificador de contacto** (email/telemóvel) e por **endereço IP** para prevenir abuso.
+- **Validade:** O código expira após 10 minutos.
+
+```json
+{
+  "canal": "sms",
+  "phone": "+244900000000"
+}
+```
+
+### POST /auth/otp/verify
+Valida o código recebido pelo utilizador.
+- **Efeito:** Se válido, completa o desafio de login e emite os tokens finais.
+- **Tentativas:** Máximo 5 tentativas falhadas antes de invalidar o código (requer novo envio).
+- **Cliente:** Em caso de expiração, o cliente deve tratar o erro `otp_expired` e oferecer reenvio; em caso de bloqueio, tratar `otp_locked` e aguardar novo envio.
+
+```json
+{
+  "otp": "123456",
+  "canal": "sms"
+}
+```
+
+> [!NOTE]
+> Em ambiente de desenvolvimento, o gateway de SMS (Twilio) pode ser mockado seguindo as diretivas de `spec:IMPORTANTE/02`.
 
 ---
 *Doc is Law — Sincronizado com spec:IMPORTANTE/03 e ADR-018.*

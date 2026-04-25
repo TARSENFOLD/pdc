@@ -22,6 +22,14 @@ export const Features = {
   'TINA_GLOBAL_ASSISTANT': 'BETA',
   'SIM_TIPO_3': 'ALPHA',
   'MENSAGENS_INBOX': 'HIDDEN', // Fachada, não expor no bootstrap
+  
+  // Wave 4 - Elite Hubs (Sovereign Infrastructure)
+  'HUB_LEARN': 'STABLE',
+  'HUB_EXPLORE': 'STABLE',
+  'HUB_FUTURE': 'STABLE',
+  'HUB_COMMUNITY': 'STABLE',
+  'HUB_MENTOR': 'STABLE',
+  'HUB_INSTITUTION': 'STABLE',
 } as const;
 
 export type FeatureKey = keyof typeof Features;

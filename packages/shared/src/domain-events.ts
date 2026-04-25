@@ -28,6 +28,7 @@ export enum DomainEventName {
   EXPERIENCIA_QA_RESPONDIDA = 'experiencia.qa.respondida',
 
   // --- Programa ---
+  PROGRAMA_CRIADO = 'programa.criado',
   PROGRAMA_PUBLICADO = 'programa.publicado',
   PROGRAMA_APROVADO = 'programa.aprovado', // Moderador
   PROGRAMA_INSCRICAO = 'programa.inscricao',
@@ -46,8 +47,9 @@ export enum DomainEventName {
   PROJETO_SELO_ATRIBUIDO = 'projeto.selo_atribuido',
 
   // --- Post/Conquista ---
-  POST_PUBLICADO = 'post.publicado',
-  CONQUISTA_DESBLOQUEADA = 'conquista.desbloqueada',
+  POST_PUBLICADO = 'post.published',
+  POST_SUBMETIDO = 'post.submitted',
+  CONQUISTA_DESBLOQUEADA = 'achievement.unlocked',
   COMENTARIO_CRIADO = 'comentario.criado',
   LIKE_ADICIONADO = 'like.adicionado',
   BOOKMARK_ADICIONADO = 'bookmark.adicionado',
@@ -106,6 +108,14 @@ export const DomainEventSchema = z.object({
   timestamp: z.string().datetime(),
   correlationId: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
+  hookResults: z.record(
+    z.string(), 
+    z.object({
+      status: z.enum(['sent', 'skipped', 'retryable_error', 'fatal_error']),
+      reason: z.string().optional(),
+      data: z.unknown().optional(),
+    })
+  ).optional(), // Resultados G15 persistidos
 });
 
 /**
@@ -177,6 +187,7 @@ export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
   [DomainEventName.EXPERIENCIA_QA_RESPONDIDA]: z.object({ experienciaId: z.string(), perguntaId: z.string(), autorId: z.string() }),
 
   // --- Programa ---
+  [DomainEventName.PROGRAMA_CRIADO]: ContentPublishSchema.extend({ programaId: z.string(), criadorTipo: z.string() }),
   [DomainEventName.PROGRAMA_PUBLICADO]: ContentPublishSchema.extend({ programaId: z.string(), instituicaoId: z.string() }),
   [DomainEventName.PROGRAMA_APROVADO]: z.object({ programaId: z.string(), aprovadorId: z.string() }),
   [DomainEventName.PROGRAMA_INSCRICAO]: z.object({ programaId: z.string(), estudanteId: z.string() }),
@@ -195,7 +206,8 @@ export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
   [DomainEventName.PROJETO_SELO_ATRIBUIDO]: z.object({ projetoId: z.string(), seloId: z.string(), avaliadorId: z.string() }),
 
   // --- Post/Conquista ---
-  [DomainEventName.POST_PUBLICADO]: ContentPublishSchema.extend({ postId: z.string() }),
+  [DomainEventName.POST_PUBLICADO]: ContentPublishSchema.extend({ postId: z.string(), autorId: z.string() }),
+  [DomainEventName.POST_SUBMETIDO]: ContentPublishSchema.extend({ postId: z.string(), autorId: z.string(), moderacaoRequerida: z.boolean() }),
   [DomainEventName.CONQUISTA_DESBLOQUEADA]: z.object({ perfilId: z.string(), conquistaSlug: z.string() }),
   [DomainEventName.COMENTARIO_CRIADO]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string() }),
   [DomainEventName.LIKE_ADICIONADO]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string() }),

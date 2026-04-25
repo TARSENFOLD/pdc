@@ -28,6 +28,8 @@ export const SimulacaoPublicaSchema = z.object({
 });
 export type SimulacaoPublica = z.infer<typeof SimulacaoPublicaSchema>;
 
+export const TipoLabSchema = z.enum(['sandbox', 'prova', 'desafio', 'experimento']);
+
 export const CriarSimulacaoPayloadSchema = z.object({
   titulo: z.string().min(3).max(120),
   descricao: z.string().min(10).max(2000),
@@ -35,6 +37,24 @@ export const CriarSimulacaoPayloadSchema = z.object({
   tipo: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   capaUrl: z.string().url().optional(),
   iframeUrl: z.string().url().optional(),
+  materiaisLab: z.array(z.object({
+    id: z.string(),
+    label: z.string(),
+    url: z.string().url().optional(),
+  })).optional(),
+  criteriosAvaliacao: z.object({
+    pesos: z.object({
+      fluidez: z.number().min(0).max(100),
+      resiliencia: z.number().min(0).max(100),
+      foco: z.number().min(0).max(100),
+    }),
+  }).refine(
+    (data) => data.pesos.fluidez + data.pesos.resiliencia + data.pesos.foco === 100,
+    { message: 'A soma dos pesos deve ser exatamente 100%' }
+  ).optional(),
+  tentativasMaximas: z.number().int().min(0).default(0),
+  tipoLab: TipoLabSchema.optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 export type CriarSimulacaoPayload = z.infer<typeof CriarSimulacaoPayloadSchema>;

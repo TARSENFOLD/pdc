@@ -136,10 +136,95 @@ export const personas: PersonaFixture[] = [
     estudanteId: 'estudante-erratico',
     nome: 'O Estudante Errático',
     arquétipo: 'Dados Incompletos',
-    area: 'Desconhecida',
+    area: 'Outra',
     tentativas: [
-      { id: 't50', simulacaoId: 'sim-unknown', score: 10, dataFim: '2026-04-15T10:00:00Z' },
-      { id: 't51', simulacaoId: 'sim-unknown', score: undefined, dataFim: '2026-04-16T10:00:00Z' },
+      { id: 't50', simulacaoId: 'sim-outra', score: 10, dataFim: '2026-04-15T10:00:00Z' },
+      { id: 't51', simulacaoId: 'sim-outra', score: undefined, dataFim: '2026-04-16T10:00:00Z' },
+    ],
+  },
+  {
+    estudanteId: 'estudante-jurista',
+    nome: 'O Jurista Metódico',
+    arquétipo: 'Persistente',
+    area: 'Direito',
+    tentativas: [
+      { id: 'j1', simulacaoId: 'sim-direito', score: 8, dataFim: '2026-04-01T10:00:00Z' },
+      { id: 'j2', simulacaoId: 'sim-direito', score: 9, dataFim: '2026-04-02T10:00:00Z' },
+      { id: 'j3', simulacaoId: 'sim-direito', score: 9, dataFim: '2026-04-03T10:00:00Z' },
+    ],
+  },
+  {
+    estudanteId: 'estudante-educador',
+    nome: 'A Educadora Vocacional',
+    arquétipo: 'Estável',
+    area: 'Educação',
+    tentativas: [
+      { id: 'e1', simulacaoId: 'sim-educacao', score: 8, dataFim: '2026-04-01T10:00:00Z' },
+      { id: 'e2', simulacaoId: 'sim-educacao', score: 9, dataFim: '2026-04-02T10:00:00Z' },
+      { id: 'e3', simulacaoId: 'sim-educacao', score: 8, dataFim: '2026-04-03T10:00:00Z' },
+    ],
+  },
+  {
+    estudanteId: 'estudante-agronomista',
+    nome: 'O Agronomista Inovador',
+    arquétipo: 'Explorador',
+    area: 'Ciências Agrárias',
+    tentativas: [
+      { id: 'a1', simulacaoId: 'sim-ciencias-agrarias', score: 7, dataFim: '2026-04-01T10:00:00Z' },
+      { id: 'a2', simulacaoId: 'sim-ciencias-agrarias', score: 8, dataFim: '2026-04-02T10:00:00Z' },
+      { id: 'a3', simulacaoId: 'sim-ciencias-agrarias', score: 9, dataFim: '2026-04-03T10:00:00Z' },
+    ],
+  },
+  {
+    estudanteId: 'estudante-comunicador',
+    nome: 'O Comunicador Global',
+    arquétipo: 'Explorador',
+    area: 'Comunicação',
+    tentativas: [
+      { id: 'c1', simulacaoId: 'sim-comunicacao', score: 9, dataFim: '2026-04-01T10:00:00Z' },
+      { id: 'c2', simulacaoId: 'sim-comunicacao', score: 10, dataFim: '2026-04-02T10:00:00Z' },
+    ],
+  },
+  {
+    estudanteId: 'estudante-naturalista',
+    nome: 'A Naturalista Curiosa',
+    arquétipo: 'Persistente',
+    area: 'Ciências Naturais',
+    tentativas: [
+      { id: 'n1', simulacaoId: 'sim-ciencias-naturais', score: 8, dataFim: '2026-04-01T10:00:00Z' },
+      { id: 'n2', simulacaoId: 'sim-ciencias-naturais', score: 9, dataFim: '2026-04-02T10:00:00Z' },
+    ],
+  },
+  {
+    estudanteId: 'estudante-arquiteto',
+    nome: 'O Arquiteto Visionário',
+    arquétipo: 'Elite',
+    area: 'Arquitetura',
+    tentativas: [
+      { id: 'ar1', simulacaoId: 'sim-arquitetura', score: 10, dataFim: '2026-04-01T10:00:00Z' },
+      { id: 'ar2', simulacaoId: 'sim-arquitetura', score: 10, dataFim: '2026-04-02T10:00:00Z' },
+      { id: 'ar3', simulacaoId: 'sim-arquitetura', score: 9, dataFim: '2026-04-03T10:00:00Z' },
+    ],
+  },
+  {
+    estudanteId: 'estudante-hoteleiro',
+    nome: 'A Gestora de Hospitalidade',
+    arquétipo: 'Estável',
+    area: 'Turismo e Hotelaria',
+    tentativas: [
+      { id: 'th1', simulacaoId: 'sim-turismo-hotelaria', score: 8, dataFim: '2026-04-01T10:00:00Z' },
+      { id: 'th2', simulacaoId: 'sim-turismo-hotelaria', score: 8, dataFim: '2026-04-02T10:00:00Z' },
+    ],
+  },
+  {
+    estudanteId: 'estudante-atleta',
+    nome: 'O Atleta Competitivo',
+    arquétipo: 'Elite',
+    area: 'Desporto',
+    tentativas: [
+      { id: 'ds1', simulacaoId: 'sim-desporto', score: 10, dataFim: '2026-04-01T10:00:00Z' },
+      { id: 'ds2', simulacaoId: 'sim-desporto', score: 10, dataFim: '2026-04-02T10:00:00Z' },
+      { id: 'ds3', simulacaoId: 'sim-desporto', score: 9, dataFim: '2026-04-03T10:00:00Z' },
     ],
   },
 ];

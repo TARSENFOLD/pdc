@@ -21,10 +21,10 @@ pdc-v2/
 
 ## 🏛️ As 4 Camadas de Autoridade
 
-1.  **L1: Factos (Edge)** — Cloudflare Workers. Captura telemetria densa (biomechanics, focus, visibility) com validação JWS RS256.
-2.  **L2: Cérebro Matemático (Shared + BFF)** — Implementação determinística das fórmulas de Fluidez ($\phi$), Resiliência ($R$) e Foco.
-3.  **L3: Verniz IA (Tina)** — Camada de interpretação generativa (DeepSeek) que transforma scores matemáticos em linguagem humana.
-4.  **L4: Core (Hono + Strapi)** — Fonte da verdade para identidade, conteúdo e persistência soberana.
+1.  **L1: Factos (Edge)** — Cloudflare Workers. Captura telemetria densa (biomechanics, focus, visibility) com validação **JWS RS256**. Garante que factos brutos são selados na origem.
+2.  **L2: Cérebro Matemático (Shared + BFF)** — Implementação determinística das fórmulas de Fluidez ($\phi$), Resiliência ($R$) e Foco. Processamento assíncrono via **Upstash Redis Queue**.
+3.  **L3: Verniz IA (Tina)** — Camada de interpretação generativa (**DeepSeek V3**) que transforma scores matemáticos em linguagem humana narrativa (RAG).
+4.  **L4: Core (Hono + Strapi)** — Fonte da verdade para identidade, conteúdo e persistência soberana. Onde reside o contrato de "Doc is Law".
 
 ---
 
@@ -39,12 +39,12 @@ graph TD
 
     subgraph L2["L2: Cérebro Matemático"]
         QUEUE["Upstash Redis (Queue)"]
-        BFF_CONS["BFF Consumer (Worker)"]
+        BFF_CONS["BFF Consumer (Isolado)"]
         SHARED["@pdc/shared (Heurísticas)"]
     end
 
     subgraph L3["L3: Verniz IA"]
-        TINA["DeepSeek-V3 (RAG)"]
+        TINA["DeepSeek-V3 / R1 (RAG)"]
     end
 
     subgraph L4["L4: Core"]
@@ -64,7 +64,7 @@ graph TD
     BFF_API --"Upload Direct"--> R2
     
     STRAPI --"7. Contexto"--> TINA
-    TINA --"8. Insights"--> STRAPI
+    TINA --"8. Insights Narrativos"--> STRAPI
 ```
 
 ---
@@ -81,41 +81,43 @@ O PDC v2 utiliza dois padrões de tokens distintos para isolar autoridade e gara
 ### Fluxo de Validação RS256
 1.  **Emissão**: O BFF assina o token com a chave privada RS256 e entrega-o ao cliente via `bootstrap`.
 2.  **Verificação**: O Edge Worker obtém a chave pública via JWKS endpoint (`/.well-known/jwks.json`) exposto pelo BFF.
-3.  **Cache**: O Edge Worker faz cache do conjunto de chaves por 1 hora para evitar latência.
+3.  **Segurança**: O `kid` (Key ID) garante rotação de chaves sem downtime. O Edge Worker faz cache do conjunto de chaves por 60 segundos (spec E2-T3).
 
 ---
 
-## 🛠️ Stack Tecnológica Auditada
+## 🛠️ Stack Tecnológica Auditada (B2)
 
-| Camada | Tecnologia | Versão |
-|--------|-----------|--------|
-| **Frontend** | React | 18.3.1 |
-| **Frontend Build** | Vite | 6.0.0 |
-| **Design System** | TailwindCSS | 4.0.0 |
-| **Animações** | Motion | 11.11.0 |
-| **Edge Runtime** | Cloudflare Workers | Wrangler 3 |
-| **BFF Framework** | Hono | 4.12.13 |
-| **Runtime BFF** | Node.js | 24.13.0 |
-| **Base de Dados** | PostgreSQL | 16 |
-| **Cache & Queue** | Upstash Redis | 1.34.0 |
-| **Storage** | Cloudflare R2 (S3) | SDK v3 |
-| **Realtime** | Socket.IO | 4.8.0 |
-| **E-mail** | Resend | 6.12.0 |
-| **JWT/JWS** | Jose | 5.9.0 |
-| **IA Generativa** | DeepSeek | V3 / R1 |
-| **Observabilidade** | Sentry | 10.47.0 |
-| **Deploy Frontend** | Cloudflare Pages | — |
-| **Deploy BFF** | Railway | — |
+| Camada | Tecnologia | Versão | Notas |
+|--------|-----------|--------|-------|
+| **Frontend** | React | 19.2.5 | PWA Moderno |
+| **Frontend Build** | Vite | 8.0.9 | — |
+| **Design System** | TailwindCSS | 4.2.4 | — |
+| **Animações** | Motion | 11.11.0 | Antigo Framer Motion |
+| **Visual FX** | GSAP | 3.15.0 | Core de animações neurais |
+| **Edge Runtime** | Cloudflare Workers | Wrangler 3.0 | — |
+| **BFF Framework** | Hono | 4.12.15 | — |
+| **Runtime BFF** | Node.js | 24.15.0 | — |
+| **Base de Dados** | PostgreSQL | 16 | Via Railway |
+| **CMS** | Strapi | 5.43.0 | Headless Soberano |
+| **Cache & Queue** | Upstash Redis | 1.34.0 | Global Low Latency |
+| **Storage** | Cloudflare R2 | SDK v3 | Compatível com S3 |
+| **Realtime** | Socket.IO | 4.8.0 | Sync bidirecional |
+| **E-mail** | Resend | 6.12.0 | — |
+| **JWT/JWS** | Jose | 5.9.0 | Zero-dependency |
+| **IA Generativa** | DeepSeek | V3 / R1 | — |
+| **Observabilidade** | Sentry | 10.47.0 | — |
+| **Deploy Frontend** | Cloudflare Pages | — | Coordenado com spec:E5 |
+| **Deploy BFF** | Railway | — | — |
 
 ---
 
 ## Ciclo de Vida de um Evento (G15)
 
-1.  **Ação**: Utilizador executa uma escrita de domínio no BFF.
+1.  **Ação**: Utilizador (ex: **Estudante**) executa uma escrita de domínio no BFF.
 2.  **Outbox**: BFF persiste o evento em `domain-events` (processed=false).
-3.  **Hooks**: O `EventBus` dispara 5 hooks canónicos (Ranking, Feed, Match, Achievement, Notify).
+3.  **Hooks**: O `EventBus` dispara hooks canónicos (Ranking, Feed, Match, Achievement, Notify).
 4.  **Finalização**: Após sucesso dos hooks, o evento é marcado como processado.
-5.  **Replay**: Em caso de falha, o `outbox-worker` isolado reprocessa o evento até ao sucesso.
+5.  **Replay**: Em caso de falha, o `outbox-worker` isolado reprocessa o evento.
 
 ---
-*Doc is Law — Última auditoria: 21 de Abril de 2026 (Ref: B2).*
+*Doc is Law — Última auditoria: 22 de Abril de 2026 (Ref: B2/G15).*

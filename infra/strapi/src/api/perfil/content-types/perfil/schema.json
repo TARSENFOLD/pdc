@@ -18,12 +18,13 @@
     "tipo": {
       "type": "enumeration",
       "enum": [
-        "aluno",
+        "estudante",
         "mentor",
         "instituicao",
         "moderador",
+        "comite_cientifico",
         "super_admin",
-        "comite_cientifico"
+        "patrocinador"
       ],
       "required": true
     },

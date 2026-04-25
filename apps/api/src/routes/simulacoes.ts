@@ -287,7 +287,9 @@ simulacaoRoutes.put('/tentativas/:id', checkRole(['estudante']), zValidator('jso
 
   // G2-T3 Anti-Fraude: Derivação de score no BFF SEMPRE.
   // Qualquer score cliente-side é ignorado. O Oráculo é soberano.
-  const phi = (Number(metadata?.focusStability) || 50) / 100;
+  const parsedFocus = Number(metadata?.focusStability);
+  const rawFocus = Number.isNaN(parsedFocus) ? 50 : parsedFocus;
+  const phi = Math.max(0, Math.min(100, rawFocus)) / 100;
   const resFluidity = analyzeFluidity(phi);
   const resFocus = analyzeFocus(phi);
 

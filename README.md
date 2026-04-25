@@ -109,7 +109,7 @@ npm run start:consumer -w apps/api
 npm run replay-outbox -w apps/api
 ```
 
-### 4. Qualidade e Testes (k6 scripts em tests/k6/*)
+### 4. Qualidade e Testes (Playwright & k6) <a id="playwright-e2e-section"></a>
 ```bash
 npm run typecheck       # Verificação de tipos global
 npm run lint            # Linting de autoridade

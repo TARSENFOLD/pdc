@@ -5,7 +5,6 @@ import { InscricaoComCursoSchema } from './cursos.js';
 
 export const RoleSchema = z.enum([
   'estudante',
-  'estudante', // Legacy alias
   'mentor',
   'instituicao',
   'moderador',
@@ -15,6 +14,20 @@ export const RoleSchema = z.enum([
 ]);
 
 export type Role = z.infer<typeof RoleSchema>;
+
+/** Accepts legacy 'aluno' and maps it to canonical 'estudante'. */
+export const LegacyRoleSchema = z
+  .union([RoleSchema, z.literal('aluno')])
+  .transform((v) => (v === 'aluno' ? 'estudante' : v));
+
+export type LegacyRole = z.input<typeof LegacyRoleSchema>;
+
+/** Normalise a role from persistent storage — maps legacy 'aluno' → 'estudante'. */
+export function normalizeTipo(tipo: string): Role {
+  if (tipo === 'aluno') return 'estudante';
+  const parsed = RoleSchema.safeParse(tipo);
+  return parsed.success ? parsed.data : 'estudante';
+}
 
 export const UserSchema = z.object({
   id: z.string(),
@@ -27,6 +40,8 @@ export const UserSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   bio: z.string().optional().nullable(),
+  areasInteresse: z.array(z.string()).optional().default([]),
+  conquistas: z.array(ConquistaSchema).optional().default([]),
 });
 
 export type User = z.infer<typeof UserSchema>;

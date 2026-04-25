@@ -43,8 +43,8 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'set -a && source apps/api/.env && set +a && npx tsx apps/api/src/index.ts',
-      url: 'http://localhost:3001/health',
+      command: 'npm run dev -w apps/api',
+      url: 'http://localhost:3001/bootstrap',
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
     },

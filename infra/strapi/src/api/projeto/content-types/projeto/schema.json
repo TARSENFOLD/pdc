@@ -13,11 +13,20 @@
     "slug": { "type": "uid", "targetField": "titulo", "unique": true },
     "titulo": { "type": "string", "required": true },
     "descricao": { "type": "text" },
+    "abstract": { "type": "json" },
+    "core": { "type": "json" },
+    "modos": { "type": "json" },
+    "selo": {
+      "type": "enumeration",
+      "enum": ["aptidao_validada", "comite_aprovado", "mentor_endorsed"]
+    },
     "area": {
       "type": "enumeration",
       "enum": [
-        "ENGENHARIA", "SAUDE", "TECNOLOGIA", "AGRONOMIA", "GESTAO",
-        "EDUCACAO", "DIREITO", "CIENCIAS_SOCIAIS", "ARTES", "OUTRO"
+        "SAUDE", "ENGENHARIA", "TECNOLOGIA", "DIREITO", "GESTAO",
+        "EDUCACAO", "ARTES", "CIENCIAS_AGRARIAS", "CIENCIAS_SOCIAIS",
+        "COMUNICACAO", "CIENCIAS_NATURAIS", "ARQUITETURA",
+        "TURISMO_HOTELARIA", "DESPORTO", "OUTRA"
       ]
     },
     "estado": {
@@ -40,6 +49,12 @@
       "default": "publico"
     },
     "buscandoParceiros": { "type": "boolean", "default": false },
-    "criadoEm": { "type": "datetime" }
+    "criadoEm": { "type": "datetime" },
+    "pedidosAcesso": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::projeto-acesso-pedido.projeto-acesso-pedido",
+      "mappedBy": "projeto"
+    }
   }
 }

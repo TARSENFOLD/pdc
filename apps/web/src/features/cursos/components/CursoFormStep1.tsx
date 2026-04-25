@@ -88,15 +88,30 @@ export const CursoFormStep1 = ({ payload, setPayload, upload, isUploading, progr
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-3 block">Área Vocacional</label>
-              <select 
+              <select
                 className="w-full bg-surface-raised/50 border border-border rounded-xl p-4 text-text-primary"
-                value={payload.area}
-                onChange={e => { setPayload({...payload, area: e.target.value as AreaVocacional}); }}
+                value={payload.area || ''}
+                onChange={e => { 
+                  const val = e.target.value;
+                  setPayload({...payload, area: val ? (val as AreaVocacional) : undefined}); 
+                }}
               >
-                <option value="TECNOLOGIA">Tecnologia</option>
+                <option value="" disabled>Selecione uma área</option>
+                <option value="SAUDE">Saúde</option>
                 <option value="ENGENHARIA">Engenharia</option>
+                <option value="TECNOLOGIA">Tecnologia</option>
+                <option value="DIREITO">Direito</option>
                 <option value="GESTAO">Gestão</option>
+                <option value="EDUCACAO">Educação</option>
                 <option value="ARTES">Artes</option>
+                <option value="CIENCIAS_AGRARIAS">Ciências Agrárias</option>
+                <option value="CIENCIAS_SOCIAIS">Ciências Sociais</option>
+                <option value="COMUNICACAO">Comunicação</option>
+                <option value="CIENCIAS_NATURAIS">Ciências Naturais</option>
+                <option value="ARQUITETURA">Arquitetura</option>
+                <option value="TURISMO_HOTELARIA">Turismo e Hotelaria</option>
+                <option value="DESPORTO">Desporto</option>
+                <option value="OUTRA">Outra</option>
               </select>
             </div>
             <div>

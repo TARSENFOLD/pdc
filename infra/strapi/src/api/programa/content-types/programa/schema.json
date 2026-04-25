@@ -13,16 +13,52 @@
     "titulo": { "type": "string", "required": true },
     "slug": { "type": "uid", "targetField": "titulo", "unique": true },
     "descricao": { "type": "text" },
+    "proposito": { "type": "text" },
+    "metodologia": { "type": "text" },
+    "cronograma": { "type": "json" },
+    "regrasMatricula": { "type": "json" },
+    "precoPolicy": { "type": "json" },
+    "criadorTipo": {
+      "type": "enumeration",
+      "enum": ["mentor", "instituicao"]
+    },
     "instituicao": {
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::instituicao.instituicao"
     },
+    "responsavel": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "cursos": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::curso.curso"
+    },
+    "experiencias": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::experiencia.experiencia"
+    },
+    "simulacoes": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::simulacao.simulacao"
+    },
+    "projetos": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::projeto.projeto"
+    },
     "area": {
       "type": "enumeration",
       "enum": [
-        "ENGENHARIA", "SAUDE", "TECNOLOGIA", "AGRONOMIA", "GESTAO",
-        "EDUCACAO", "DIREITO", "CIENCIAS_SOCIAIS", "ARTES", "OUTRO"
+        "SAUDE", "ENGENHARIA", "TECNOLOGIA", "DIREITO", "GESTAO",
+        "EDUCACAO", "ARTES", "CIENCIAS_AGRARIAS", "CIENCIAS_SOCIAIS",
+        "COMUNICACAO", "CIENCIAS_NATURAIS", "ARQUITETURA",
+        "TURISMO_HOTELARIA", "DESPORTO", "OUTRA"
       ]
     },
     "estado": {

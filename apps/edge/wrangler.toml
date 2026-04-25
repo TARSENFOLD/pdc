@@ -4,18 +4,38 @@ compatibility_date = "2024-04-03"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-UPSTASH_REDIS_REST_URL = "https://your-upstash-url.upstash.io"
 BFF_URL = "http://localhost:3000"
 
-# Rotas de execução do Edge
-# Descomentar quando o [dominio-pdc] for estabelecido
-# routes = [
-#   { pattern = "edge.[dominio-pdc]/*", custom_domain = true }
-# ]
-
-# Bindings de segredo devem ser configurados EXCLUSIVAMENTE via:
-# wrangler secret put TELEMETRY_SECRET
-# wrangler secret put UPSTASH_REDIS_REST_TOKEN
+# Secrets configurados EXCLUSIVAMENTE via:
+#   wrangler secret put TELEMETRY_SECRET
+#   wrangler secret put UPSTASH_REDIS_REST_TOKEN
+#   wrangler secret put UPSTASH_REDIS_REST_URL
 
 [observability]
 enabled = true
+
+# ── Staging (branch: develop) ────────────────────────────────────────────────
+[env.staging]
+name = "pdc-v2-edge-ingestor-staging"
+routes = [{ pattern = "edge-staging.usepdc.com/*", custom_domain = true }]
+
+[env.staging.vars]
+BFF_URL = "https://bff-staging.usepdc.com"
+
+# Secrets for staging (set via):
+#   wrangler secret put TELEMETRY_SECRET --env staging
+#   wrangler secret put UPSTASH_REDIS_REST_TOKEN --env staging
+#   wrangler secret put UPSTASH_REDIS_REST_URL --env staging
+
+# ── Production (branch: main) ────────────────────────────────────────────────
+[env.production]
+name = "pdc-v2-edge-ingestor"
+routes = [{ pattern = "edge.usepdc.com/*", custom_domain = true }]
+
+[env.production.vars]
+BFF_URL = "https://bff.usepdc.com"
+
+# Secrets for production (set via):
+#   wrangler secret put TELEMETRY_SECRET --env production
+#   wrangler secret put UPSTASH_REDIS_REST_TOKEN --env production
+#   wrangler secret put UPSTASH_REDIS_REST_URL --env production

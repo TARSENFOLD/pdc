@@ -22,18 +22,34 @@ async function main() {
 
   try {
     // ─── 3. ÁREAS VOCACIONAIS E INSTITUIÇÕES ────────────────────────
-    const areas = ['Engenharia', 'Saúde', 'Gestão', 'Artes', 'Tecnologia', 'Ciências Sociais'];
+    const areas: Array<{ label: string; enum: string; slug: string }> = [
+      { label: 'Saúde',              enum: 'SAUDE',             slug: 'saude' },
+      { label: 'Engenharia',         enum: 'ENGENHARIA',        slug: 'engenharia' },
+      { label: 'Tecnologia',         enum: 'TECNOLOGIA',        slug: 'tecnologia' },
+      { label: 'Direito',            enum: 'DIREITO',           slug: 'direito' },
+      { label: 'Gestão',             enum: 'GESTAO',            slug: 'gestao' },
+      { label: 'Educação',           enum: 'EDUCACAO',          slug: 'educacao' },
+      { label: 'Artes',              enum: 'ARTES',             slug: 'artes' },
+      { label: 'Ciências Agrárias',  enum: 'CIENCIAS_AGRARIAS', slug: 'ciencias-agrarias' },
+      { label: 'Ciências Sociais',   enum: 'CIENCIAS_SOCIAIS',  slug: 'ciencias-sociais' },
+      { label: 'Comunicação',        enum: 'COMUNICACAO',       slug: 'comunicacao' },
+      { label: 'Ciências Naturais',  enum: 'CIENCIAS_NATURAIS', slug: 'ciencias-naturais' },
+      { label: 'Arquitetura',        enum: 'ARQUITETURA',       slug: 'arquitetura' },
+      { label: 'Turismo e Hotelaria',enum: 'TURISMO_HOTELARIA', slug: 'turismo-hotelaria' },
+      { label: 'Desporto',           enum: 'DESPORTO',          slug: 'desporto' },
+      { label: 'Outra',              enum: 'OUTRA',             slug: 'outra' },
+    ];
     
     // ─── 3.1 SIMULAÇÕES (R2.T5) ──────────────────────────────────────
     console.log('🧪 Criando Simulações (Diversidade de Tipos)...');
     for (let i = 0; i < areas.length; i++) {
       const area = areas[i];
-      const tipo = (i % 3) + 1; // Alternar entre Tipo 1, 2 e 3
-      await findOrCreate('api::simulacao.simulacao', { slug: `sim-${area.toLowerCase().replace(' ', '-')}` }, {
-        titulo: `Simulação Profissional: ${area}`,
-        slug: `sim-${area.toLowerCase().replace(' ', '-')}`,
-        descricao: `Teste as tuas habilidades práticas no domínio de ${area}. Fidelity Level ${tipo}.`,
-        area: area.toUpperCase(),
+      const tipo = (i % 3) + 1;
+      await findOrCreate('api::simulacao.simulacao', { slug: `sim-${area.slug}` }, {
+        titulo: `Simulação Profissional: ${area.label}`,
+        slug: `sim-${area.slug}`,
+        descricao: `Teste as tuas habilidades práticas no domínio de ${area.label}. Fidelity Level ${tipo}.`,
+        area: area.enum,
         tipo,
         estado: 'published',
       });
@@ -62,8 +78,8 @@ async function main() {
     const mentorProfiles = [];
     for (let i = 1; i <= 30; i++) {
       const area = areas[i % areas.length];
-      const nome = `Mentor(a) ${area} #${i}`;
-      
+      const nome = `Mentor(a) ${area.label} #${i}`;
+
       const user = await findOrCreate('plugin::users-permissions.user', { email: `mentor${i}@pdc.ao` }, {
         username: `mentor${i}`,
         email: `mentor${i}@pdc.ao`,
@@ -76,8 +92,8 @@ async function main() {
         nome,
         tipo: 'mentor',
         userId: user.documentId,
-        headline: i <= 6 ? `Mentor(a) Elite e Global de ${area}` : `Especialista em ${area}`,
-        areaFormacao: area,
+        headline: i <= 6 ? `Mentor(a) Elite e Global de ${area.label}` : `Especialista em ${area.label}`,
+        areaFormacao: area.label,
         reputacao: i <= 6 ? 98 : 70 + (i % 20),
       });
       mentorProfiles.push(perfil);
@@ -102,7 +118,7 @@ async function main() {
 
       const perfil = await findOrCreate('api::perfil.perfil', { userId: user.documentId }, {
         nome: `${archetype.nome} #${i}`,
-        tipo: 'aluno',
+        tipo: 'estudante',
         userId: user.documentId,
         areaInteresse: [archetype.area],
       });
@@ -114,7 +130,7 @@ async function main() {
     console.log('🧠 Injetando Matriz de Behavior Patterns (Telemetria Idempotente)...');
     for (const alunoData of alunos) {
       const { perfil, archetype } = alunoData;
-      const domainId = archetype.area.toLowerCase().replace(' ', '-');
+      const domainId = archetype.area.toLowerCase().replaceAll(' ', '-');
 
       // Coerência Matemática (W1-T5): Phi e Resiliência mapeados aos arquétipos originais das fixtures
       let cognitiveFluidity = 5.0;

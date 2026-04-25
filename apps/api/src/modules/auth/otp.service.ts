@@ -5,6 +5,12 @@ import { env } from '../../lib/env.js';
 
 const log = pino({ name: 'otp-service' });
 
+function maskPhone(phone: string): string {
+  if (!phone) return 'unknown';
+  if (phone.length < 8) return '***';
+  return `${phone.slice(0, 4)}***${phone.slice(-3)}`;
+}
+
 export const otpService = {
   generateOtp(): string {
     return randomInt(100000, 999999).toString();
@@ -82,20 +88,48 @@ export const otpService = {
     }
   },
 
+  validateE164(phone: string): boolean {
+    return /^\+[1-9]\d{1,14}$/.test(phone);
+  },
+
+  async checkSmsRateLimit(phone: string): Promise<void> {
+    if (!hasRedis) {
+      throw new Error('Serviço de SMS temporariamente indisponível (Redis OFF)');
+    }
+    const key = `otp:sms:ratelimit:${phone}`;
+    // Atomic INCR + EXPIRE (600s = 10min per doc intent)
+    const results = await redis.multi().incr(key).expire(key, 600).exec();
+    
+    // @upstash/redis devolve [result1, result2]
+    // ioredis devolve [[err, result1], [err, result2]]
+    const firstResult = results[0];
+    const count = Array.isArray(firstResult) ? (firstResult[1] as number) : (firstResult as number);
+
+    if (count > 3) {
+      throw Object.assign(new Error('Limite de SMS excedido. Tenta novamente em 10 minutos.'), { status: 429 });
+    }
+  },
+
   async sendOtpSms(phone: string, otp: string): Promise<void> {
+    if (!this.validateE164(phone)) {
+      throw Object.assign(new Error('Número de telefone inválido. Use o formato E.164 (ex: +244923456789).'), { status: 400 });
+    }
+
+    await this.checkSmsRateLimit(phone);
+
     const accountSid = env.TWILIO_ACCOUNT_SID;
     const authToken = env.TWILIO_AUTH_TOKEN;
     const from = env.TWILIO_PHONE_NUMBER;
 
     if (!accountSid || !authToken || !from) {
-      throw new Error('Variáveis Twilio (SID, AUTH_TOKEN, PHONE_NUMBER) não configuradas');
+      throw new Error('Variáveis Twilio (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER) não configuradas');
     }
 
     const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
     const body = new URLSearchParams({
       From: from,
       To: phone,
-      Body: `Código PDC: ${otp}`,
+      Body: `O teu código PDC é: ${otp}. Válido por 10 minutos. Não partilhes este código.`,
     });
 
     const res = await fetch(
@@ -112,8 +146,12 @@ export const otpService = {
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({}));
-      log.error({ err: error }, 'Twilio error');
-      throw new Error('Falha ao enviar SMS de OTP');
+      // Sanitização de PII no erro da Twilio
+      const { to, To, from, From, ...safeError } = error as Record<string, unknown>;
+      log.error({ err: safeError, phone: maskPhone(phone) }, 'Twilio error');
+      throw new Error('Falha ao enviar SMS de OTP via Twilio');
     }
+
+    log.info({ phone: maskPhone(phone) }, 'OTP SMS enviado via Twilio');
   },
 };

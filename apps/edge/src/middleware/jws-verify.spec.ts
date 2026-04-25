@@ -14,7 +14,7 @@ describe('jwsVerifyMiddleware', () => {
         header: vi.fn(),
       },
       env: {
-        BFF_URL: 'http://mock-bff.local',
+        BFF_URL: 'http://localhost:3000',
       },
       json: vi.fn((data, status) => ({ data, status })),
       set: vi.fn(),
@@ -36,6 +36,15 @@ describe('jwsVerifyMiddleware', () => {
     const response: any = await jwsVerifyMiddleware(mockContext as Context, mockNext);
     expect(response.status).toBe(500);
     expect(response.data.error).toContain('BFF_URL ausente');
+  });
+
+  it('deve rejeitar BFF_URL sem HTTPS em produção', async () => {
+    mockContext.req.header.mockReturnValue('Bearer um-token');
+    mockContext.env.BFF_URL = 'http://api.exemplo.com';
+    
+    const response: any = await jwsVerifyMiddleware(mockContext as Context, mockNext);
+    expect(response.status).toBe(500);
+    expect(response.data.error).toContain('BFF_URL deve usar HTTPS');
   });
 
   it('deve rejeitar token com payload inválido ou expirado (simulando falha de parse)', async () => {

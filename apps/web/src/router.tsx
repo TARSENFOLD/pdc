@@ -38,7 +38,7 @@ const ConfiguracoesPage = React.lazy(() => import('@/features/perfil/Configuraco
 
 const ProjetoListPage = React.lazy(() => import('@/features/projetos/ProjetoListPage').then(m => ({ default: m.ProjetoListPage })));
 const ProjetoDetailPage = React.lazy(() => import('@/features/projetos/ProjetoDetailPage').then(m => ({ default: m.ProjetoDetailPage })));
-const ProjetoFormPage = React.lazy(() => import('@/features/projetos/ProjetoFormPage').then(m => ({ default: m.ProjetoFormPage })));
+const ProjetoFormPage = React.lazy(() => import('@/features/projetos/ProjetoFormPage'));
 
 const MentoriaListPage = React.lazy(() => import('@/features/mentorias/MentoriaListPage').then(m => ({ default: m.MentoriaListPage })));
 const ConquistasPage = React.lazy(() => import('@/features/conquistas/ConquistasPage').then(m => ({ default: m.ConquistasPage })));
@@ -75,7 +75,7 @@ const ValidacaoCientificaPage = React.lazy(() => import('@/features/comite/Valid
 const InstituicaoExperienciasPage = React.lazy(() => import('@/features/instituicao/InstituicaoExperienciasPage').then(m => ({ default: m.InstituicaoExperienciasPage })));
 const CriarExperienciaPage = React.lazy(() => import('@/features/instituicao/CriarExperienciaPage').then(m => ({ default: m.CriarExperienciaPage })));
 const InstituicaoProgramasPage = React.lazy(() => import('@/features/instituicao/InstituicaoProgramasPage').then(m => ({ default: m.InstituicaoProgramasPage })));
-const CriarProgramaPage = React.lazy(() => import('@/features/instituicao/CriarProgramaPage').then(m => ({ default: m.CriarProgramaPage })));
+const CriarProgramaPage = React.lazy(() => import('@/features/instituicao/CriarProgramaPage'));
 const EstudantesVinculadosPage = React.lazy(() => import('@/features/instituicao/EstudantesVinculadosPage').then(m => ({ default: m.EstudantesVinculadosPage })));
 const PropostasPage = React.lazy(() => import('@/features/instituicao/PropostasPage').then(m => ({ default: m.PropostasPage })));
 const RelatoriosInstituicaoPage = React.lazy(() => import('@/features/instituicao/RelatoriosInstituicaoPage').then(m => ({ default: m.RelatoriosInstituicaoPage })));

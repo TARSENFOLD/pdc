@@ -3,6 +3,7 @@ import { redis } from '../../lib/redis.js';
 import { env } from '../../lib/env.js';
 import { createHash, randomUUID } from 'node:crypto';
 import type { User, Role } from '@pdc/shared';
+import { normalizeTipo } from '@pdc/shared';
 import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
 
@@ -30,21 +31,14 @@ interface StrapiPerfilData {
   foto?: { url?: string } | null;
 }
 
-const VALID_ROLES: Set<string> = new Set([
-  'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin', 'patrocinador',
-]);
 
 function resolveRole(strapiRoleName: string | undefined, perfilTipo: string | undefined): Role {
-  if (perfilTipo && VALID_ROLES.has(perfilTipo)) {
-    return perfilTipo as Role;
+  if (perfilTipo) {
+    return normalizeTipo(perfilTipo);
   }
   const normalized = strapiRoleName?.toLowerCase();
-  
-  // Mapeamento de legado/apelidos para canónico
-  if (normalized === 'estudante') return 'estudante';
-
-  if (normalized && VALID_ROLES.has(normalized)) {
-    return normalized as Role;
+  if (normalized) {
+    return normalizeTipo(normalized);
   }
   return 'estudante';
 }

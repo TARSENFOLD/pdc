@@ -195,10 +195,10 @@ export interface DashboardEstudante {
   insightsTina: string[];
 }
 
-export { MentorPublico, InstituicaoPublica, PerfilPublico, PerfilPublicoBasico } from './user.js';
-export { CursoPublico } from './cursos.js';
-export { SimulacaoPublica } from './simulacoes.js';
-export { ExperienciaPublica } from './experiencias.js';
+export type { MentorPublico, InstituicaoPublica, PerfilPublico, PerfilPublicoBasico } from './user.js';
+export type { CursoPublico } from './cursos.js';
+export type { SimulacaoPublica } from './simulacoes.js';
+export type { ExperienciaPublica } from './experiencias.js';
 
 export const CreateCommentPayloadSchema = z.object({
   targetId: z.string(),

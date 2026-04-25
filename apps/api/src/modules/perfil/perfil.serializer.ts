@@ -1,4 +1,5 @@
 import type { VisibilitySettings, FieldVisibility, ReputacaoTier } from '@pdc/shared';
+import { normalizeTipo } from '@pdc/shared';
 
 export interface StrapiPerfil {
   id: string | number;
@@ -60,7 +61,7 @@ export function serializePublicProfile(
   const result: PublicProfileResult = {
     id: sid(perfil.id),
     nome: perfil.nome ?? '',
-    role: perfil.tipo ?? 'estudante',
+    role: normalizeTipo(perfil.tipo ?? 'estudante'),
     reputacaoTier: perfil.reputacaoTier,
     avatarUrl: perfil.foto?.url ?? perfil.avatarUrl,
     headline: perfil.headline,
@@ -88,7 +89,7 @@ export function serializePrivateProfile(perfil: StrapiPerfil) {
     website: perfil.website,
     socialLinks: perfil.socialLinks,
     avatarUrl: perfil.foto?.url ?? perfil.avatarUrl,
-    role: perfil.tipo ?? 'estudante',
+    role: normalizeTipo(perfil.tipo ?? 'estudante'),
     reputacao: perfil.reputacao ?? 0,
     reputacaoTier: perfil.reputacaoTier,
     areasInteresse: perfil.areasInteresse,

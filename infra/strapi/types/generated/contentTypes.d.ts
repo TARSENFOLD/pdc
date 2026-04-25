@@ -798,16 +798,21 @@ export interface ApiCursoCurso extends Struct.CollectionTypeSchema {
   attributes: {
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
@@ -956,16 +961,21 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
   attributes: {
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
@@ -1320,16 +1330,21 @@ export interface ApiMentoriaMentoria extends Struct.CollectionTypeSchema {
   attributes: {
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     createdAt: Schema.Attribute.DateTime;
@@ -1527,16 +1542,21 @@ export interface ApiPerfilVocacionalPerfilVocacional
     aptidaoTecnica: Schema.Attribute.Float;
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     certeza: Schema.Attribute.Enumeration<['baixa', 'media', 'alta']>;
@@ -1645,12 +1665,13 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     telefone: Schema.Attribute.String;
     tipo: Schema.Attribute.Enumeration<
       [
-        'aluno',
+        'estudante',
         'mentor',
         'instituicao',
         'moderador',
-        'super_admin',
         'comite_cientifico',
+        'super_admin',
+        'patrocinador',
       ]
     > &
       Schema.Attribute.Required;
@@ -1724,27 +1745,39 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
   attributes: {
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    criadorTipo: Schema.Attribute.Enumeration<['mentor', 'instituicao']>;
+    cronograma: Schema.Attribute.JSON;
+    cursos: Schema.Attribute.Relation<'manyToMany', 'api::curso.curso'>;
     dataFim: Schema.Attribute.DateTime;
     dataInicio: Schema.Attribute.DateTime;
     descricao: Schema.Attribute.Text;
     duracao: Schema.Attribute.String;
     estado: Schema.Attribute.Enumeration<['draft', 'published', 'archived']> &
       Schema.Attribute.DefaultTo<'draft'>;
+    experiencias: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::experiencia.experiencia'
+    >;
     instituicao: Schema.Attribute.Relation<
       'manyToOne',
       'api::instituicao.instituicao'
@@ -1756,11 +1789,21 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.Private;
     metadata: Schema.Attribute.JSON;
+    metodologia: Schema.Attribute.Text;
     modalidade: Schema.Attribute.Enumeration<
       ['presencial', 'online', 'hibrido']
     >;
+    precoPolicy: Schema.Attribute.JSON;
+    projetos: Schema.Attribute.Relation<'manyToMany', 'api::projeto.projeto'>;
+    proposito: Schema.Attribute.Text;
     publishedAt: Schema.Attribute.DateTime;
+    regrasMatricula: Schema.Attribute.JSON;
     requisitos: Schema.Attribute.Text;
+    responsavel: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
+    simulacoes: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::simulacao.simulacao'
+    >;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
     tipo: Schema.Attribute.Enumeration<['standard', 'shadowapro', 'eduvisit']> &
@@ -1770,6 +1813,45 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     vagas: Schema.Attribute.Integer;
+  };
+}
+
+export interface ApiProjetoAcessoPedidoProjetoAcessoPedido
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'projeto_acesso_pedidos';
+  info: {
+    displayName: 'Projeto Acesso Pedido';
+    pluralName: 'projeto-acesso-pedidos';
+    singularName: 'projeto-acesso-pedido';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    dataResposta: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::projeto-acesso-pedido.projeto-acesso-pedido'
+    > &
+      Schema.Attribute.Private;
+    motivo: Schema.Attribute.Text;
+    perfilSolicitante: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::perfil.perfil'
+    >;
+    projeto: Schema.Attribute.Relation<'manyToOne', 'api::projeto.projeto'>;
+    publishedAt: Schema.Attribute.DateTime;
+    status: Schema.Attribute.Enumeration<
+      ['pendente', 'aprovado', 'rejeitado']
+    > &
+      Schema.Attribute.DefaultTo<'pendente'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
   };
 }
 
@@ -1784,24 +1866,31 @@ export interface ApiProjetoProjeto extends Struct.CollectionTypeSchema {
     draftAndPublish: true;
   };
   attributes: {
+    abstract: Schema.Attribute.JSON;
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
     buscandoParceiros: Schema.Attribute.Boolean &
       Schema.Attribute.DefaultTo<false>;
     colaboradores: Schema.Attribute.JSON;
+    core: Schema.Attribute.JSON;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1818,8 +1907,16 @@ export interface ApiProjetoProjeto extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.Private;
     mediaUrls: Schema.Attribute.JSON;
+    modos: Schema.Attribute.JSON;
+    pedidosAcesso: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::projeto-acesso-pedido.projeto-acesso-pedido'
+    >;
     publishedAt: Schema.Attribute.DateTime;
     repositorioUrl: Schema.Attribute.String;
+    selo: Schema.Attribute.Enumeration<
+      ['aptidao_validada', 'comite_aprovado', 'mentor_endorsed']
+    >;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
     titulo: Schema.Attribute.String & Schema.Attribute.Required;
@@ -1947,16 +2044,21 @@ export interface ApiSimulacaoSimulacao extends Struct.CollectionTypeSchema {
   attributes: {
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
@@ -2772,6 +2874,7 @@ declare module '@strapi/strapi' {
       'api::perfil.perfil': ApiPerfilPerfil;
       'api::post.post': ApiPostPost;
       'api::programa.programa': ApiProgramaPrograma;
+      'api::projeto-acesso-pedido.projeto-acesso-pedido': ApiProjetoAcessoPedidoProjetoAcessoPedido;
       'api::projeto.projeto': ApiProjetoProjeto;
       'api::proposta.proposta': ApiPropostaProposta;
       'api::rating.rating': ApiRatingRating;

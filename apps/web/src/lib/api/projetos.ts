@@ -1,5 +1,5 @@
 import { http } from './http.js';
-import type { Projeto, CriarProjetoPayload, ProjetoFilters } from '@pdc/shared';
+import type { Projeto, CriarProjetoPayload, ProjetoFilters, PedidoAcesso } from '@pdc/shared';
 
 export const projetosApi = {
   list: (filters?: ProjetoFilters) => {
@@ -24,4 +24,10 @@ export const projetosApi = {
     http.put<Projeto>(`/projetos/${id}`, payload),
 
   remove: (id: string) => http.delete<{ ok: boolean }>(`/projetos/${id}`),
+
+  requestAccess: (id: string, motivo?: string) =>
+    http.post<PedidoAcesso>(`/projetos/${id}/pedidos-acesso`, { motivo }),
+
+  respondPedido: (id: string, pedidoId: string, status: 'aprovado' | 'rejeitado') =>
+    http.put<PedidoAcesso>(`/projetos/${id}/pedidos-acesso/${pedidoId}`, { status }),
 };

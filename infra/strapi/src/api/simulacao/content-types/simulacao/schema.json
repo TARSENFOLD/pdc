@@ -27,8 +27,10 @@
     "area": {
       "type": "enumeration",
       "enum": [
-        "ENGENHARIA", "SAUDE", "TECNOLOGIA", "AGRONOMIA", "GESTAO",
-        "EDUCACAO", "DIREITO", "CIENCIAS_SOCIAIS", "ARTES", "OUTRO"
+        "SAUDE", "ENGENHARIA", "TECNOLOGIA", "DIREITO", "GESTAO",
+        "EDUCACAO", "ARTES", "CIENCIAS_AGRARIAS", "CIENCIAS_SOCIAIS",
+        "COMUNICACAO", "CIENCIAS_NATURAIS", "ARQUITETURA",
+        "TURISMO_HOTELARIA", "DESPORTO", "OUTRA"
       ]
     },
     "estado": {

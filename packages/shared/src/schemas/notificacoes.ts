@@ -22,8 +22,8 @@ export type ContadorNotificacoes = z.infer<typeof ContadorNotificacoesSchema>;
 export const NotificacaoRealtimeSchema = z.object({
   id: z.string(),
   titulo: z.string(),
-  corpo: z.string(),
-  tipo: z.enum(['info', 'sucesso', 'aviso', 'erro', 'vinculo_pedido', 'vinculo_aprovado']),
+  mensagem: z.string(), // Substitui 'corpo' para manter consistência com o Strapi
+  tipo: z.enum(['info', 'sucesso', 'aviso', 'erro', 'vinculo_pedido', 'vinculo_aprovado', 'conquista', 'sistema']),
   timestamp: z.string().datetime(),
 });
 

@@ -125,20 +125,27 @@ export function CriarSimulacaoPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <select 
+              <label htmlFor="area-select" className="text-sm font-medium text-text-secondary">Área</label>
+              <select
+                id="area-select"
                 className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
                 {...register('area')}
               >
-                <option value="TECNOLOGIA">Tecnologia</option>
                 <option value="SAUDE">Saúde</option>
                 <option value="ENGENHARIA">Engenharia</option>
+                <option value="TECNOLOGIA">Tecnologia</option>
+                <option value="DIREITO">Direito</option>
                 <option value="GESTAO">Gestão</option>
                 <option value="EDUCACAO">Educação</option>
-                <option value="DIREITO">Direito</option>
-                <option value="CIENCIAS_SOCIAIS">Ciências Sociais</option>
                 <option value="ARTES">Artes</option>
-                <option value="AGRONOMIA">Agronomia</option>
-                <option value="OUTRO">Outro</option>
+                <option value="CIENCIAS_AGRARIAS">Ciências Agrárias</option>
+                <option value="CIENCIAS_SOCIAIS">Ciências Sociais</option>
+                <option value="COMUNICACAO">Comunicação</option>
+                <option value="CIENCIAS_NATURAIS">Ciências Naturais</option>
+                <option value="ARQUITETURA">Arquitetura</option>
+                <option value="TURISMO_HOTELARIA">Turismo e Hotelaria</option>
+                <option value="DESPORTO">Desporto</option>
+                <option value="OUTRA">Outra</option>
               </select>
             </div>
 
