@@ -22,14 +22,14 @@ export function AppLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-canvas">
       {/* ── Desktop sidebar (fixed) ── */}
       <aside
         className="hidden lg:flex"
         style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
       >
         <div
-          className="fixed top-0 bottom-0 flex flex-col border-r border-border bg-surface-alt shadow-2xl"
+          className="fixed top-0 bottom-0 flex flex-col border-r border-ink-tertiary/10 bg-recessed shadow-2xl"
           style={{ width: SIDEBAR_WIDTH }}
         >
           <SidebarContent />
@@ -71,7 +71,7 @@ export function AppLayout() {
               animate={reduced ? { opacity: 1 } : { x: 0 }}
               exit={reduced ? { opacity: 0 } : { x: -SIDEBAR_WIDTH }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface-alt lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 flex flex-col border-r border-ink-tertiary/10 bg-recessed lg:hidden"
               style={{ width: SIDEBAR_WIDTH }}
             >
               <SidebarContent onNavigate={() => { setDrawerOpen(false); }} />

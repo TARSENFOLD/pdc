@@ -1,9 +1,23 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Spinner, Table, Pagination, Avatar, Button, Badge } from '@/components/ui';
+import { Spinner, Table, Pagination, Avatar, Button, Badge, type BadgeVariant } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
 import { http } from '@/lib/api/http';
 import type { User } from '@pdc/shared';
+
+function getBadgeVariant(role: string): BadgeVariant {
+  const map: Record<string, BadgeVariant> = {
+    estudante: 'info',
+    aluno: 'info',
+    mentor: 'success',
+    instituicao: 'warning',
+    moderador: 'error',
+    comite_cientifico: 'default',
+    super_admin: 'super_admin',
+    patrocinador: 'default',
+  };
+  return map[role] || 'default';
+}
 
 interface UtilizadoresResponse {
   data: User[];
@@ -49,8 +63,8 @@ export function ModeradorUtilizadoresPage() {
             size="sm"
           />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-text-primary truncate">{u.nome}</p>
-            <p className="text-xs text-text-secondary truncate">{u.email}</p>
+            <p className="text-sm font-medium text-ink-primary truncate">{u.nome}</p>
+            <p className="text-xs text-ink-secondary truncate">{u.email}</p>
           </div>
         </div>
       ),
@@ -58,7 +72,7 @@ export function ModeradorUtilizadoresPage() {
     {
       header: 'Role',
       accessor: (u: User) => (
-        <Badge variant={u.role}>{u.role.replace('_', ' ')}</Badge>
+        <Badge variant={getBadgeVariant(u.role)}>{u.role.replace('_', ' ')}</Badge>
       ),
     },
     {
@@ -93,7 +107,7 @@ export function ModeradorUtilizadoresPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-text-primary">Gestao de Utilizadores</h1>
+      <h1 className="text-2xl font-bold text-ink-primary">Gestao de Utilizadores</h1>
 
       {isLoading ? (
         <div className="flex justify-center py-20">

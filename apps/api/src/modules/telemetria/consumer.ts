@@ -34,17 +34,16 @@ export async function processTelemetryQueue() {
       const eventId = event.eventId;
 
       // 2. Idempotência Soberana (G15/B4)
-      // Resolve D6 (Midnight Rollover) usando TTL de 7 dias
+      // Resolve D6 (Midnight Rollover) usando TTL de 7 dias per eventId (SET NX EX)
       if (eventId) {
         const lockKey = `tel:evt:${eventId}`;
-        const isNew = await redis.sadd('idempotency:telemetry', lockKey);
-        if (isNew === 0) {
-          log.warn({ eventId }, 'Evento duplicado detectado no Consumer, ignorando');
+        const isNew = await redis.set(lockKey, '1', { nx: true, ex: 60 * 60 * 24 * 7 });
+        
+        if (!isNew) {
+          log.warn({ eventId }, 'Evento duplicado detectado no Consumer (Sovereign Idempotency), ignorando');
           await redis.lrem(PROCESSING_QUEUE, 1, eventRaw);
           continue;
         }
-        // Manter rasto por 7 dias
-        await redis.expire(lockKey, 60 * 60 * 24 * 7);
       }
 
       // 3. Validação L2 (Heurísticas de Fraude)

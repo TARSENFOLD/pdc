@@ -80,10 +80,10 @@ export function RegistoInstituicaoPage() {
   if (success) {
     return (
       <AuthSplitLayout role="instituicao">
-        <div className="max-w-md rounded-2xl border border-border bg-surface p-8 text-center shadow-xl">
+        <div className="max-w-md rounded-2xl border border-ink-tertiary/10 bg-elevated p-8 text-center shadow-xl">
           <CheckCircle size={48} aria-hidden={true} className="text-emerald-500 mx-auto" />
-          <h1 className="mt-6 text-2xl font-bold text-text-primary">Registo submetido</h1>
-          <p className="mt-3 text-text-secondary">
+          <h1 className="mt-6 text-2xl font-bold text-ink-primary">Registo submetido</h1>
+          <p className="mt-3 text-ink-secondary">
             A vossa conta institucional será validada rigorosamente pela nossa equipa de conformidade. Receberão um email quando o acesso for libertado.
           </p>
           <Link to="/login" className="mt-8 inline-block rounded-xl bg-emerald-500 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.03] hover:bg-emerald-600">
@@ -96,9 +96,9 @@ export function RegistoInstituicaoPage() {
 
   return (
     <AuthSplitLayout role="instituicao">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8 shadow-sm">
-        <h1 className="text-2xl font-bold text-text-primary">Conta Institucional</h1>
-        <p className="mt-1 text-sm text-text-secondary">Publica experiências e atrai os melhores talentos para a tua instituição.</p>
+      <div className="w-full max-w-md rounded-2xl border border-ink-tertiary/10 bg-elevated p-8 shadow-sm">
+        <h1 className="text-2xl font-bold text-ink-primary">Conta Institucional</h1>
+        <p className="mt-1 text-sm text-ink-secondary">Publica experiências e atrai os melhores talentos para a tua instituição.</p>
 
         <div className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-xs text-emerald-400 leading-relaxed">
           <AlertTriangle size={14} aria-hidden={true} className="inline-block mr-1.5 align-text-bottom" /> 
@@ -115,17 +115,17 @@ export function RegistoInstituicaoPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-secondary">Tipo</label>
+              <label className="text-sm font-medium text-ink-secondary">Tipo</label>
               <select required value={form.tipo} onChange={(e) => { handleChange('tipo', e.target.value as RegistoInstituicaoPayload['tipo']); }}
-                className="flex h-10 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+                className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
                 {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-secondary">Região</label>
+              <label className="text-sm font-medium text-ink-secondary">Região</label>
               <select required value={form.regiao} onChange={(e) => { handleChange('regiao', e.target.value); }}
-                className="flex h-10 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+                className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
                 <option value="">Seleciona…</option>
                 {REGIOES.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
@@ -133,9 +133,9 @@ export function RegistoInstituicaoPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-secondary">Documento de acreditação (PDF, máx 10 MB)</label>
+            <label className="text-sm font-medium text-ink-secondary">Documento de acreditação (PDF, máx 10 MB)</label>
             <input ref={fileRef} type="file" accept=".pdf" onChange={handleFileChange}
-              className="block w-full text-sm text-text-secondary file:mr-4 file:rounded-md file:border-0 file:bg-emerald-500/10 file:text-emerald-400 file:px-3 file:py-2 file:text-xs file:font-bold hover:file:bg-emerald-500/20 cursor-pointer" />
+              className="block w-full text-sm text-ink-secondary file:mr-4 file:rounded-md file:border-0 file:bg-emerald-500/10 file:text-emerald-400 file:px-3 file:py-2 file:text-xs file:font-bold hover:file:bg-emerald-500/20 cursor-pointer" />
             {docFile ? <p className="text-xs font-medium text-emerald-500 mt-1">✓ {docFile.name}</p> : null}
             {docError ? <p className="text-xs text-error mt-1">{docError}</p> : null}
           </div>
@@ -143,7 +143,7 @@ export function RegistoInstituicaoPage() {
           <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600" isLoading={mutation.isPending}>Registar Instituição →</Button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-text-muted">
+        <p className="mt-8 text-center text-sm text-ink-tertiary">
           <Link to="/criar-conta" className="inline-flex items-center gap-1 text-emerald-400 hover:underline">
             <ArrowLeft size={16} aria-hidden={true} />
             Voltar para escolha de perfil

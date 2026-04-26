@@ -20,10 +20,10 @@ export function CertificadosPage() {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 mb-3 px-3 py-1 uppercase tracking-widest text-[9px] font-black">Merit Certification</Badge>
-          <h1 className="text-4xl font-black text-text-primary tracking-tighter font-display">
+          <h1 className="text-4xl font-black text-ink-primary tracking-tighter font-display">
             Os Meus <span className="text-accent">Certificados</span>
           </h1>
-          <p className="text-text-secondary mt-2 max-w-lg leading-relaxed text-sm">
+          <p className="text-ink-secondary mt-2 max-w-lg leading-relaxed text-sm">
             Documentos oficiais de proficiência validados por telemetria comportamento e mérito académico.
           </p>
         </div>
@@ -46,7 +46,7 @@ export function CertificadosPage() {
                 <Card key={i} className="p-8 border-dashed border-white/10 bg-white/1 relative flex flex-col items-center text-center">
                   <div className="absolute top-4 right-4 text-accent/40"><Lock size={14} /></div>
                   <div className="h-16 w-16 rounded-2xl bg-white/5 flex items-center justify-center mb-6">
-                     <Award size={32} className="text-text-muted" />
+                     <Award size={32} className="text-ink-tertiary" />
                   </div>
                   <div className="h-4 w-32 bg-white/5 rounded-full mb-3" />
                   <div className="h-3 w-48 bg-white/5 rounded-full" />
@@ -63,7 +63,7 @@ export function CertificadosPage() {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: idx * 0.1 }}
             >
-              <Card className="group relative overflow-hidden bg-surface-alt border-white/5 hover:border-accent/30 transition-all shadow-2xl p-0">
+              <Card className="group relative overflow-hidden bg-recessed border-white/5 hover:border-accent/30 transition-all shadow-2xl p-0">
                  {/* Certificate Aesthetic Header */}
                  <div className="h-2 w-full bg-linear-to-r from-accent/20 via-accent to-accent/20" />
                  
@@ -76,17 +76,17 @@ export function CertificadosPage() {
                     </div>
 
                     <div className="space-y-1">
-                       <h3 className="text-xl font-bold text-text-primary leading-tight tracking-tight group-hover:text-accent transition-colors">
+                       <h3 className="text-xl font-bold text-ink-primary leading-tight tracking-tight group-hover:text-accent transition-colors">
                          {cert.curso?.titulo ?? 'Certificação de Mérito'}
                        </h3>
-                       <p className="text-[10px] text-text-muted uppercase font-bold tracking-widest">
+                       <p className="text-[10px] text-ink-tertiary uppercase font-bold tracking-widest">
                          Emitido pelo PDC decision engine
                        </p>
                     </div>
 
                     <div className="pt-4 border-t border-white/5 flex items-center gap-2">
                        <div className="h-2 w-2 rounded-full bg-success" />
-                       <span className="text-[10px] font-mono font-bold text-text-secondary uppercase">
+                       <span className="text-[10px] font-mono font-bold text-ink-secondary uppercase">
                          Concluído em {new Date(cert.dataConclusao ?? cert.dataInscricao).toLocaleDateString('pt-AO')}
                        </span>
                     </div>
@@ -103,7 +103,7 @@ export function CertificadosPage() {
 
                  {/* Security Seal Detail */}
                  <div className="absolute -bottom-4 -right-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <ShieldCheck size={120} className="text-text-primary" />
+                    <ShieldCheck size={120} className="text-ink-primary" />
                  </div>
               </Card>
             </motion.div>
@@ -112,13 +112,13 @@ export function CertificadosPage() {
       )}
 
       <footer className="pt-10 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
-        <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest flex items-center gap-2">
+        <p className="text-[10px] font-bold text-ink-tertiary uppercase tracking-widest flex items-center gap-2">
           <Zap size={14} className="text-accent" />
           Certificação imutável registada na Blockchain de Mérito PDC (W5)
         </p>
         <div className="flex gap-4">
-           <button className="text-[10px] font-black text-text-muted uppercase tracking-widest hover:text-text-primary transition-all">Verificabilidade Pública</button>
-           <button className="text-[10px] font-black text-text-muted uppercase tracking-widest hover:text-text-primary transition-all">Termos de Emissão</button>
+           <button className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest hover:text-ink-primary transition-all">Verificabilidade Pública</button>
+           <button className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest hover:text-ink-primary transition-all">Termos de Emissão</button>
         </div>
       </footer>
     </div>

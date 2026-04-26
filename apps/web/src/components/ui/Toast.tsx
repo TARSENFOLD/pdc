@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as ToastPrimitive from '@radix-ui/react-toast';
 import { cn } from '@/lib/utils';
 
-export type ToastVariant = 'default' | 'success' | 'error' | 'info' | 'warning';
+export type ToastVariant = 'default' | 'success' | 'error' | 'info' | 'warning' | 'destructive';
 
 export interface ToastProps extends ToastPrimitive.ToastProps {
   variant?: ToastVariant;
@@ -33,11 +33,12 @@ const Toast = React.forwardRef<
   ToastProps
 >(({ className, variant = 'default', title, description, action, ...props }, ref) => {
   const variants: Record<ToastVariant, string> = {
-    default: 'bg-surface border-border text-text-primary',
-    success: 'bg-surface border-success/50 text-success',
-    error: 'bg-surface border-error/50 text-error',
-    info: 'bg-surface border-blue-500/50 text-blue-500',
-    warning: 'bg-surface border-amber/50 text-amber',
+    default: 'bg-canvas border-ink-tertiary/10 text-ink-primary',
+    success: 'bg-canvas border-success/50 text-success',
+    error: 'bg-canvas border-error/50 text-error',
+    destructive: 'bg-error text-white border-error',
+    info: 'bg-canvas border-blue-500/50 text-blue-500',
+    warning: 'bg-canvas border-accent/50 text-accent',
   };
 
   return (
@@ -59,7 +60,7 @@ const Toast = React.forwardRef<
         )}
       </div>
       {action}
-      <ToastPrimitive.Close className="absolute right-2 top-2 rounded-md p-1 text-text-muted opacity-0 transition-opacity hover:text-text-primary focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100">
+      <ToastPrimitive.Close className="absolute right-2 top-2 rounded-md p-1 text-ink-tertiary opacity-0 transition-opacity hover:text-ink-primary focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -90,7 +91,7 @@ const ToastAction = React.forwardRef<
   <ToastPrimitive.Action
     ref={ref}
     className={cn(
-      'inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-amber disabled:pointer-events-none disabled:opacity-50',
+      'inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-ink-tertiary/10 bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-elevated focus:outline-none focus:ring-2 focus:ring-accent disabled:pointer-events-none disabled:opacity-50',
       className
     )}
     {...props}

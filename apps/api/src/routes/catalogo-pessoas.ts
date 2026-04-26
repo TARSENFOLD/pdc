@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { AreaVocacionalSchema } from '@pdc/shared';
-import { strapiGet } from '../modules/strapi/strapi.client.js';
+import { strapiGet, strapiGetRaw } from '../modules/strapi/strapi.client.js';
 import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 import { serializePublicProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
 import type {
@@ -82,10 +82,7 @@ function buildPagination(p: Record<string, string>, page: number, limit: number)
   p['pagination[pageSize]'] = limit.toString();
 }
 
-function publishedFilter(p: Record<string, string>): void {
-  p['filters[estado][$eq]'] = 'published';
-  p['filters[visibilidade][$eq]'] = 'publico';
-}
+
 
 // ─── Mentores ─────────────────────────────────────────────────────────────────
 
@@ -111,20 +108,26 @@ function mapMentor(d: StrapiMentor): MentorPublico {
 
 mentoresRoutes.get('/', zValidator('query', mentorFilters), async (c) => {
   const q = c.req.valid('query');
-  const p: Record<string, string> = { populate: 'avatar' };
-  buildPagination(p, q.page, q.limit);
+  const p: Record<string, string> = { }; 
+  
   p['filters[role][name][$eq]'] = 'mentor';
   p['filters[aprovado][$eq]'] = 'true';
+  
   if (q.area) p['filters[areaEspecialidade][$eq]'] = q.area;
   if (q.disponivel !== undefined) p['filters[disponivel][$eq]'] = String(q.disponivel);
+
+  buildPagination(p, q.page, q.limit);
+  
   const res = await strapiGet<StrapiMentor>('/users', p);
-  return c.json({ data: res.data.map(mapMentor), meta: toMeta(res.meta) });
+  return c.json({ 
+    data: res.data.map(mapMentor), 
+    meta: toMeta(res.meta) 
+  });
 });
 
 mentoresRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
-  const res = await strapiGet<StrapiMentor>(`/users/${id}`, { populate: 'avatar' });
-  const d = res.data[0];
+  const d = await strapiGetRaw<StrapiMentor>(`/users/${id}`, { }); // populate: 'avatar' removed
   if (!d) return c.json({ error: 'Mentor não encontrado' }, 404);
   return c.json({ data: mapMentor(d) });
 });
@@ -147,8 +150,8 @@ function mapInst(d: StrapiInstituicao): InstituicaoPublica {
 
 instituicoesRoutes.get('/', zValidator('query', instFilters), async (c) => {
   const q = c.req.valid('query');
-  const p: Record<string, string> = { populate: 'logo' };
-  publishedFilter(p);
+  const p: Record<string, string> = { }; // populate: 'logo' removed
+  // publishedFilter(p);
   buildPagination(p, q.page, q.limit);
   if (q.tipo) p['filters[tipo][$eq]'] = q.tipo;
   if (q.regiao) p['filters[regiao][$eq]'] = q.regiao;
@@ -158,8 +161,8 @@ instituicoesRoutes.get('/', zValidator('query', instFilters), async (c) => {
 
 instituicoesRoutes.get('/:slug', async (c) => {
   const slug = c.req.param('slug');
-  const p: Record<string, string> = { 'filters[slug][$eq]': slug, populate: 'logo' };
-  publishedFilter(p);
+  const p: Record<string, string> = { 'filters[slug][$eq]': slug }; // populate: 'logo' removed
+  // publishedFilter(p);
   const res = await strapiGet<StrapiInstituicao>('/instituicoes', p);
   const first = res.data[0];
   if (!first) return c.json({ error: 'Instituição não encontrada' }, 404);
@@ -190,7 +193,7 @@ perfilPublicoRoutes.get('/:id', async (c) => {
     return c.json({ data: serializePublicProfile(first as unknown as StrapiPerfil) });
   }
 
-  const res = await strapiGet<StrapiUserPublic>(`/users/${id}`, { populate: 'avatar,role' });
+  const res = await strapiGet<StrapiUserPublic>(`/users/${id}`, { }); // populate: 'avatar,role' removed
   const d = res.data[0];
   if (!d) return c.json({ error: 'Utilizador não encontrado' }, 404);
 

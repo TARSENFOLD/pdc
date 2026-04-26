@@ -35,6 +35,10 @@
     "attempts": {
       "type": "integer",
       "default": 0
+    },
+    "hookResults": {
+      "type": "json",
+      "default": {}
     }
   }
 }

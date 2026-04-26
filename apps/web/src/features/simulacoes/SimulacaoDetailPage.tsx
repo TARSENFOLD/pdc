@@ -46,7 +46,7 @@ export const SimulacaoDetailPage = () => {
   if (loading) return <div className="flex justify-center p-12"><Spinner /></div>;
   if (!simulacao) return (
     <div className="text-center py-20">
-      <p className="text-text-muted mb-4">Simulação não encontrada.</p>
+      <p className="text-ink-tertiary mb-4">Simulação não encontrada.</p>
       <Link to="/app/simulacoes">
         <Button variant="secondary">Voltar para lista</Button>
       </Link>
@@ -57,7 +57,7 @@ export const SimulacaoDetailPage = () => {
     <div className="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-bottom duration-500">
       <div className="flex items-center gap-2">
         <Link to="/app/simulacoes">
-          <Button variant="ghost" size="sm" className="text-text-muted hover:text-text-primary">
+          <Button variant="ghost" size="sm" className="text-ink-tertiary hover:text-ink-primary">
             ← Voltar para simulações
           </Button>
         </Link>
@@ -80,25 +80,25 @@ export const SimulacaoDetailPage = () => {
                 <BookmarkButton targetType="simulacao" targetId={id ?? ''} initialBookmarked={isBookmarked} />
               </div>
             </div>
-            <div className="prose max-w-none text-text-secondary">
+            <div className="prose max-w-none text-ink-secondary">
               <p className="text-xl leading-relaxed">{simulacao.descricao}</p>
             </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-surface p-8 space-y-4">
-            <h3 className="text-lg font-bold text-text-primary">O que vais aprender:</h3>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-text-secondary">
+          <div className="rounded-xl border border-ink-tertiary/10 bg-elevated p-8 space-y-4">
+            <h3 className="text-lg font-bold text-ink-primary">O que vais aprender:</h3>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-ink-secondary">
               <li className="flex items-center gap-2">
-                <span className="text-amber text-xl">✓</span> Contexto real do dia-a-dia
+                <span className="text-accent text-xl">✓</span> Contexto real do dia-a-dia
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-amber text-xl">✓</span> Tomada de decisão crítica
+                <span className="text-accent text-xl">✓</span> Tomada de decisão crítica
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-amber text-xl">✓</span> Feedback vocacional imediato
+                <span className="text-accent text-xl">✓</span> Feedback vocacional imediato
               </li>
               <li className="flex items-center gap-2">
-                <span className="text-amber text-xl">✓</span> Pontuação para o teu perfil
+                <span className="text-accent text-xl">✓</span> Pontuação para o teu perfil
               </li>
             </ul>
           </div>
@@ -115,14 +115,14 @@ export const SimulacaoDetailPage = () => {
             )}
             
             <div className="space-y-4">
-              <div className="flex justify-between text-sm py-2 border-b border-border">
-                <span className="text-text-secondary">Tipo</span>
-                <span className="font-bold text-text-primary">Tipo {String(simulacao.tipo)}</span>
+              <div className="flex justify-between text-sm py-2 border-b border-ink-tertiary/10">
+                <span className="text-ink-secondary">Tipo</span>
+                <span className="font-bold text-ink-primary">Tipo {String(simulacao.tipo)}</span>
               </div>
               {'area' in simulacao && (
-                <div className="flex justify-between text-sm py-2 border-b border-border">
-                  <span className="text-text-secondary">Área</span>
-                  <span className="font-bold text-text-primary">{String((simulacao as Record<string, unknown>).area)}</span>
+                <div className="flex justify-between text-sm py-2 border-b border-ink-tertiary/10">
+                  <span className="text-ink-secondary">Área</span>
+                  <span className="font-bold text-ink-primary">{String((simulacao as Record<string, unknown>).area)}</span>
                 </div>
               )}
               

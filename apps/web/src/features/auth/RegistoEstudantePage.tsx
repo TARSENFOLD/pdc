@@ -83,9 +83,9 @@ export function RegistoEstudantePage() {
 
   return (
     <AuthSplitLayout role="estudante">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8 shadow-sm">
-        <h1 className="text-2xl font-bold text-text-primary">Conta de Estudante</h1>
-        <p className="mt-1 text-sm text-text-secondary">Preenche os dados para desbloquear o teu <span className="text-amber font-bold">Perfil Vocacional Completo</span>.</p>
+      <div className="w-full max-w-md rounded-2xl border border-ink-tertiary/10 bg-elevated p-8 shadow-sm">
+        <h1 className="text-2xl font-bold text-ink-primary">Conta de Estudante</h1>
+        <p className="mt-1 text-sm text-ink-secondary">Preenche os dados para desbloquear o teu <span className="text-accent font-bold">Perfil Vocacional Completo</span>.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {error ? <div className="rounded-lg border border-error/20 bg-error/10 p-3 text-sm text-error">{error}</div> : null}
@@ -95,17 +95,17 @@ export function RegistoEstudantePage() {
           <Input label="Palavra-passe" type="password" required minLength={8} placeholder="Mínimo 8 caracteres" value={form.password} onChange={(e) => { handleChange('password', e.target.value); }} />
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-secondary">Área de interesse</label>
+            <label className="text-sm font-medium text-ink-secondary">Área de interesse</label>
             <select required value={form.areaInteresse} onChange={(e) => { handleChange('areaInteresse', e.target.value as AreaVocacional); }}
-              className="flex h-10 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber">
+              className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
               {AREAS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
             </select>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-secondary">Nível de ensino</label>
+            <label className="text-sm font-medium text-ink-secondary">Nível de ensino</label>
             <select required value={form.nivelEnsino} onChange={(e) => { handleChange('nivelEnsino', e.target.value); }}
-              className="flex h-10 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber">
+              className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
               <option value="">Seleciona…</option>
               {NIVEIS.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
@@ -114,8 +114,8 @@ export function RegistoEstudantePage() {
           <Button type="submit" className="w-full" isLoading={mutation.isPending}>Registar e Continuar →</Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-text-muted">
-          <Link to="/criar-conta" className="inline-flex items-center gap-1 text-amber hover:underline">
+        <p className="mt-6 text-center text-sm text-ink-tertiary">
+          <Link to="/criar-conta" className="inline-flex items-center gap-1 text-accent hover:underline">
             <ArrowLeft size={16} aria-hidden={true} />
             Voltar para escolha de perfil
           </Link>

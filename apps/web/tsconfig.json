@@ -17,12 +17,12 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-    "baseUrl": ".", "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@pdc/shared": ["../../packages/shared/src/index"]
     }
   },
-  "include": ["src", "../../packages/shared/src"],
+  "include": ["src", "scripts", "../../packages/shared/src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

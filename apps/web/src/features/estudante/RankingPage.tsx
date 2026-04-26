@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Card, Spinner, Avatar, Badge } from '@/components/ui';
+import { Card, Spinner, Avatar, Badge, Button } from '@/components/ui';
 import { http } from '@/lib/api/http';
 import { Zap, Trophy, Star, ArrowUpRight } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -28,10 +28,10 @@ export function RankingPage() {
     <div className="mx-auto max-w-4xl space-y-10 pb-20 animate-in fade-in duration-1000">
       <header className="text-center space-y-4">
         <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 px-3 py-1 uppercase tracking-widest text-[9px] font-black">Global Leaderboard</Badge>
-        <h1 className="text-5xl font-black text-text-primary tracking-tighter font-display">
+        <h1 className="text-5xl font-black text-ink-primary tracking-tighter font-display">
           Elite do <span className="text-accent">Mérito</span>
         </h1>
-        <p className="text-text-secondary max-w-lg mx-auto leading-relaxed text-sm">
+        <p className="text-ink-secondary max-w-lg mx-auto leading-relaxed text-sm">
           Os talentos que estão a moldar o futuro de Angola através do rigor técnico e resiliência.
         </p>
       </header>
@@ -44,19 +44,19 @@ export function RankingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.05 }}
           >
-            <Card className="p-5 flex items-center justify-between bg-surface border-white/5 hover:border-accent/20 transition-all group">
+            <Card className="p-5 flex items-center justify-between bg-elevated border-white/5 hover:border-accent/20 transition-all group">
                <div className="flex items-center gap-6">
-                  <span className="font-mono font-black text-2xl text-text-muted group-hover:text-accent transition-colors w-8">
+                  <span className="font-mono font-black text-2xl text-ink-tertiary group-hover:text-accent transition-colors w-8">
                     {(idx + 1).toString().padStart(2, '0')}
                   </span>
                   <Avatar src={t.avatarUrl} fallback={t.nome[0]} className="h-12 w-12 border-2 border-white/10" />
                   <div>
-                    <h3 className="font-bold text-text-primary group-hover:text-accent transition-colors">{t.nome}</h3>
+                    <h3 className="font-bold text-ink-primary group-hover:text-accent transition-colors">{t.nome}</h3>
                     <div className="flex items-center gap-3 mt-1">
-                       <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest flex items-center gap-1">
+                       <span className="text-[10px] text-ink-tertiary font-bold uppercase tracking-widest flex items-center gap-1">
                           <Zap size={10} className="text-accent" /> {t.xp.toLocaleString()} XP
                        </span>
-                       <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest flex items-center gap-1">
+                       <span className="text-[10px] text-ink-tertiary font-bold uppercase tracking-widest flex items-center gap-1">
                           <Star size={10} className="text-accent-trust" /> {t.reputacao} Rep
                        </span>
                     </div>
@@ -73,7 +73,7 @@ export function RankingPage() {
       </div>
 
       <footer className="pt-10 flex flex-col items-center gap-6 border-t border-white/5">
-         <div className="flex items-center gap-2 text-[10px] font-black text-text-muted uppercase tracking-[0.3em]">
+         <div className="flex items-center gap-2 text-[10px] font-black text-ink-tertiary uppercase tracking-[0.3em]">
             <Trophy size={14} className="text-accent" /> Actualizado em tempo real pelo Oráculo
          </div>
       </footer>

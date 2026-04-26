@@ -26,32 +26,60 @@ estudanteRoutes.get('/dashboard', async (c) => {
     // 1. Buscar perfil real do utilizador
     const resPerfil = await strapiGet<PerfilCompleto>('/perfis', {
       'filters[userId][$eq]': userId,
-      'populate': 'foto,conquistas,inscricoes.curso'
+      'populate': ['foto', 'conquistas', 'inscricoes.curso']
     });
     
     const perfil = resPerfil.data[0];
-    if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
+    
+    // Fallback gracioso: estudante sem perfil ainda vê dashboard aspiracional
+    if (!perfil) {
+      const dashboardData: DashboardEstudante = {
+        stats: { xp: 0, reputacao: 0, conquistasCount: 0, vinkulosCount: 0, pulseVariacao: 0 },
+        match: { area: 'Tecnologia', score: 0, insight: 'Completa o teu perfil vocacional para descobrires as tuas áreas de maior afinidade.', directive: 'PERFIL PENDENTE' },
+        behavior: null,
+        progressoCursos: [],
+        proximaAcao: { label: 'Completar Perfil', to: '/app/perfil-vocacional' },
+        insightsTina: ['Bem-vindo à plataforma. O teu percurso começa com o preenchimento do perfil vocacional.'],
+      };
+      return c.json(dashboardData);
+    }
 
     const perfilId = String(perfil.id);
 
-    // 2. Buscar vínculos e padrões vocacionais
-    const [vinculosRes, vocacionalRes] = await Promise.all([
-      strapiGet<Vinculo>('/vinculos', {
-        'filters[$or][0][solicitante][id][$eq]': perfilId,
-        'filters[$or][1][destinatario][id][$eq]': perfilId,
-        'filters[estado][$eq]': 'connected'
-      }),
-      strapiGet<PerfilVocacional>('/perfil-vocacionals', {
-        'filters[perfil][id][$eq]': perfilId,
-        'sort': 'createdAt:desc',
-        'pagination[pageSize]': '1'
-      })
-    ]);
+    // 2. Buscar vínculos e padrões vocacionais (com fallback para arrays vazios)
+    let vinculosRes: { data: Vinculo[] } = { data: [] };
+    let vocacionalRes: { data: PerfilVocacional[] } = { data: [] };
+    
+    try {
+      [vinculosRes, vocacionalRes] = await Promise.all([
+        strapiGet<Vinculo>('/vinculos', {
+          'filters[$or][0][solicitante][id][$eq]': perfilId,
+          'filters[$or][1][destinatario][id][$eq]': perfilId,
+          'filters[estado][$eq]': 'connected'
+        }),
+        strapiGet<PerfilVocacional>('/perfil-vocacionals', {
+          'filters[perfil][id][$eq]': perfilId,
+          'sort': 'createdAt:desc',
+          'pagination[pageSize]': '1'
+        })
+      ]);
+    } catch {
+      // Fallback silencioso: telemetria vazia não bloqueia dashboard
+      vinculosRes = { data: [] };
+      vocacionalRes = { data: [] };
+    }
 
     const lastPattern = vocacionalRes.data[0];
     const areaPrincipal = perfil.areaInteresse || 'Tecnologia';
     
-    const recomendacoes = await vocacionalService.gerarRecomendacoes(lastPattern || null);
+    // Recomendações com tratamento seguro
+    let recomendacoes: { id: string }[] = [];
+    try {
+      const recs = await vocacionalService.gerarRecomendacoes(lastPattern || null);
+      recomendacoes = recs.map(r => ({ id: r.id }));
+    } catch {
+      recomendacoes = [];
+    }
 
     const dashboardData: DashboardEstudante = {
       stats: {
@@ -63,9 +91,11 @@ estudanteRoutes.get('/dashboard', async (c) => {
       },
       match: {
         area: areaPrincipal,
-        score: lastPattern?.scoreGlobal || 75,
-        insight: `Com base nas tuas últimas interações, a tua afinidade com ${areaPrincipal} continua a solidificar-se.`,
-        directive: 'RECOMENDAÇÃO DE ALTA FIDELIDADE',
+        score: lastPattern?.scoreGlobal || 0,
+        insight: lastPattern 
+          ? `Com base nas tuas últimas interações, a tua afinidade com ${areaPrincipal} continua a solidificar-se.`
+          : 'Ainda sem dados suficientes. Completa uma simulação para obteres o teu match vocacional.',
+        directive: lastPattern ? 'RECOMENDAÇÃO DE ALTA FIDELIDADE' : 'MATCH PENDENTE',
       },
       behavior: lastPattern ? {
         domainId: lastPattern.areaMatch,
@@ -79,17 +109,18 @@ estudanteRoutes.get('/dashboard', async (c) => {
         progresso: i.progressoPercentagem || 0,
       })) || [],
       proximaAcao: {
-        label: 'Continuar Simulação',
-        to: `/app/simulacao/${recomendacoes[0]?.id ?? '1'}`,
+        label: recomendacoes.length > 0 ? 'Continuar Simulação' : 'Iniciar Simulação',
+        to: recomendacoes[0]?.id ? `/app/simulacao/${recomendacoes[0].id}` : '/app/simulacoes',
       },
-      insightsTina: [
+      insightsTina: lastPattern ? [
         `A tua resiliência ao erro em ${areaPrincipal} está acima da média. Considera explorar desafios mais complexos.`,
         'Verificamos um padrão de hesitação em gestão de projetos. Um curso de Agile pode ser benéfico.'
-      ],
+      ] : ['Completa o teu perfil vocacional para receberes insights personalizados do Oráculo.'],
     };
 
     return c.json(dashboardData);
   } catch (error: unknown) {
+    // Erro 5xx real (ex: Strapi down) - retorna erro para UI mostrar tela de retry
     const message = error instanceof Error ? error.message : 'Erro interno';
     return c.json({ error: message }, 500);
   }

@@ -39,7 +39,7 @@ ratingRoutes.post('/', zValidator('json', z.object({
       return c.json({ success: true, action: 'updated' });
     }
 
-    const resPost = await strapiPost<unknown>('/ratings', {
+    const resPost = await strapiPost<{ id: string | number }>('/ratings', {
       userId,
       targetType,
       targetId,
@@ -54,13 +54,15 @@ ratingRoutes.post('/', zValidator('json', z.object({
     });
     const perfilId = resPerfil.data[0]?.id;
 
-    await eventBus.publishWithOutbox(DomainEventName.RATING_CRIADO, {
-      ratingId: resPost.data.id,
-      perfilId: String(perfilId),
-      targetType,
-      targetId,
-      valor
-    });
+    if (resPost.data) {
+      await eventBus.publishWithOutbox(DomainEventName.RATING_CRIADO, {
+        ratingId: String(resPost.data.id),
+        perfilId: String(perfilId),
+        targetType,
+        targetId,
+        valor
+      });
+    }
 
     return c.json({ success: true, action: 'created' }, 201);
   } catch (_err) {

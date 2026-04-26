@@ -32,8 +32,8 @@ export function MentoradosPage() {
         <div className="flex items-center gap-3">
           <Avatar fallback={row.estudanteNome[0] || '?'} size="sm" />
           <div className="flex flex-col">
-            <span className="font-medium text-text-primary">{row.estudanteNome}</span>
-            <span className="text-xs text-text-muted">{row.estudanteEmail}</span>
+            <span className="font-medium text-ink-primary">{row.estudanteNome}</span>
+            <span className="text-xs text-ink-tertiary">{row.estudanteEmail}</span>
           </div>
         </div>
       ),

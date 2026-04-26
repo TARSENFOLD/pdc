@@ -67,8 +67,8 @@ export function ConfiguracoesPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <header>
-        <h1 className="font-display text-3xl font-bold text-text-primary tracking-tight">Configurações</h1>
-        <p className="text-text-secondary">Personaliza a tua experiência de autoridade no PDC.</p>
+        <h1 className="font-display text-3xl font-bold text-ink-primary tracking-tight">Configurações</h1>
+        <p className="text-ink-secondary">Personaliza a tua experiência de autoridade no PDC.</p>
       </header>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
@@ -83,7 +83,7 @@ export function ConfiguracoesPage() {
                 className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
                   activeTab === tab.id
                     ? 'bg-accent text-white shadow-lg shadow-accent/20'
-                    : 'text-text-secondary hover:bg-surface-raised hover:text-text-primary'
+                    : 'text-ink-secondary hover:bg-elevated hover:text-ink-primary'
                 }`}
               >
                 <Icon size={18} />
@@ -95,21 +95,21 @@ export function ConfiguracoesPage() {
 
         {/* Content */}
         <main className="lg:col-span-3">
-          <div className="rounded-3xl border border-white/5 bg-surface p-8 shadow-sm">
+          <div className="rounded-3xl border border-white/5 bg-elevated p-8 shadow-sm">
             {activeTab === 'aparencia' && (
               <div className="space-y-8">
                 <div>
-                  <h3 className="text-lg font-bold text-text-primary tracking-tight">Tema da Interface</h3>
-                  <p className="text-sm text-text-secondary">Escolhe entre o modo claro ou escuro (Sovereign Tech-Terracota).</p>
-                  <div className="mt-6 flex items-center gap-4 rounded-2xl bg-surface-alt p-4 border border-white/5">
+                  <h3 className="text-lg font-bold text-ink-primary tracking-tight">Tema da Interface</h3>
+                  <p className="text-sm text-ink-secondary">Escolhe entre o modo claro ou escuro (Sovereign Tech-Terracota).</p>
+                  <div className="mt-6 flex items-center gap-4 rounded-2xl bg-recessed p-4 border border-white/5">
                     <ThemeToggle />
-                    <span className="text-sm font-medium text-text-primary">Alternar tema atual</span>
+                    <span className="text-sm font-medium text-ink-primary">Alternar tema atual</span>
                   </div>
                 </div>
                 
                 <div className="border-t border-white/5 pt-8">
-                  <h3 className="text-lg font-bold text-text-primary tracking-tight">Idioma</h3>
-                  <p className="text-sm text-text-secondary">Atualmente disponível apenas em Português.</p>
+                  <h3 className="text-lg font-bold text-ink-primary tracking-tight">Idioma</h3>
+                  <p className="text-sm text-ink-secondary">Atualmente disponível apenas em Português.</p>
                   <div className="mt-4 flex items-center gap-2 text-accent">
                     <Globe size={16} />
                     <span className="text-sm font-bold">Português (Angola)</span>
@@ -120,8 +120,8 @@ export function ConfiguracoesPage() {
 
             {activeTab === 'privacidade' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-bold text-text-primary tracking-tight">Visibilidade do Perfil</h3>
-                <p className="text-sm text-text-secondary mb-6">Controla quem pode ver os detalhes do teu perfil público (Privacidade V2).</p>
+                <h3 className="text-lg font-bold text-ink-primary tracking-tight">Visibilidade do Perfil</h3>
+                <p className="text-sm text-ink-secondary mb-6">Controla quem pode ver os detalhes do teu perfil público (Privacidade V2).</p>
                 
                 {isLoading ? (
                   <div className="flex justify-center py-12"><Spinner size="lg" /></div>
@@ -135,8 +135,8 @@ export function ConfiguracoesPage() {
                       { key: 'reputacao', label: 'Pontuação de Reputação' },
                       { key: 'conquistas', label: 'Badges e Conquistas' },
                     ].map((field) => (
-                      <div key={field.key} className="flex items-center justify-between rounded-xl bg-surface-alt p-4 border border-white/5">
-                        <span className="text-sm font-medium text-text-primary">{field.label}</span>
+                      <div key={field.key} className="flex items-center justify-between rounded-xl bg-recessed p-4 border border-white/5">
+                        <span className="text-sm font-medium text-ink-primary">{field.label}</span>
                         <VisibilitySelect 
                           value={visSettings[field.key as keyof VisibilitySettings] ?? 'privado'} 
                           onChange={(v) => { handleVisibilityChange(field.key as keyof VisibilitySettings, v); }} 
@@ -150,8 +150,8 @@ export function ConfiguracoesPage() {
 
             {activeTab === 'notificacoes' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-bold text-text-primary tracking-tight">Preferências de Email</h3>
-                <p className="text-sm text-text-secondary mb-6">Escolhe quais notificações desejas receber no teu email.</p>
+                <h3 className="text-lg font-bold text-ink-primary tracking-tight">Preferências de Email</h3>
+                <p className="text-sm text-ink-secondary mb-6">Escolhe quais notificações desejas receber no teu email.</p>
                 
                 {isLoading ? (
                   <div className="flex justify-center py-12"><Spinner size="lg" /></div>
@@ -168,10 +168,10 @@ export function ConfiguracoesPage() {
 
             {activeTab === 'seguranca' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-bold text-text-primary tracking-tight">Segurança da Conta</h3>
+                <h3 className="text-lg font-bold text-ink-primary tracking-tight">Segurança da Conta</h3>
                 <div className="rounded-2xl border border-accent/20 bg-accent/5 p-6 backdrop-blur-sm">
                   <h4 className="font-bold text-accent">Autenticação de Dois Factores (2FA)</h4>
-                  <p className="mt-2 text-sm text-text-secondary">Adiciona uma camada extra de segurança à tua conta usando um código de verificação no teu email.</p>
+                  <p className="mt-2 text-sm text-ink-secondary">Adiciona uma camada extra de segurança à tua conta usando um código de verificação no teu email.</p>
                   <Button className="mt-6" variant="secondary" size="sm" disabled>
                     Configurar 2FA (Em breve)
                   </Button>
@@ -196,7 +196,7 @@ function VisibilitySelect({ value, onChange }: { value: string, onChange: (v: st
     <select 
       value={value} 
       onChange={(e) => { onChange(e.target.value); }}
-      className="rounded-lg border border-white/10 bg-surface p-2 text-xs font-bold text-text-primary focus:ring-1 focus:ring-accent"
+      className="rounded-lg border border-white/10 bg-canvas p-2 text-xs font-bold text-ink-primary focus:ring-1 focus:ring-accent"
     >
       <option value="publico">Público</option>
       <option value="vinculos">Apenas Vínculos</option>
@@ -207,14 +207,14 @@ function VisibilitySelect({ value, onChange }: { value: string, onChange: (v: st
 
 function NotifToggle({ label, desc, checked, onChange }: { label: string, desc: string, checked: boolean, onChange: () => void }) {
   return (
-    <div className="flex items-start justify-between rounded-xl bg-surface-alt p-4 border border-white/5 transition-all hover:bg-white/[0.02]">
+    <div className="flex items-start justify-between rounded-xl bg-recessed p-4 border border-white/5 transition-all hover:bg-white/[0.02]">
       <div className="space-y-1">
-        <div className="text-sm font-bold text-text-primary tracking-tight">{label}</div>
-        <div className="text-xs text-text-secondary leading-relaxed">{desc}</div>
+        <div className="text-sm font-bold text-ink-primary tracking-tight">{label}</div>
+        <div className="text-xs text-ink-secondary leading-relaxed">{desc}</div>
       </div>
       <button 
         onClick={onChange}
-        className={`relative h-6 w-11 rounded-full transition-all duration-300 ${checked ? 'bg-accent' : 'bg-surface-raised border border-white/10'}`}
+        className={`relative h-6 w-11 rounded-full transition-all duration-300 ${checked ? 'bg-accent' : 'bg-elevated border border-white/10'}`}
       >
         <div className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all shadow-sm ${checked ? 'left-6' : 'left-1'}`} />
       </button>

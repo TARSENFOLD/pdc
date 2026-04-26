@@ -3,7 +3,6 @@ import { redis } from '../../lib/redis.js';
 import { env } from '../../lib/env.js';
 import { createHash, randomUUID } from 'node:crypto';
 import type { User, Role } from '@pdc/shared';
-import { normalizeTipo } from '@pdc/shared';
 import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
 
@@ -29,16 +28,25 @@ interface StrapiPerfilData {
   bio?: string;
   reputacao?: number;
   foto?: { url?: string } | null;
+  areasInteresse?: string[];
+  conquistas?: any[];
 }
 
+const VALID_ROLES: Set<string> = new Set([
+  'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin', 'patrocinador',
+]);
 
 function resolveRole(strapiRoleName: string | undefined, perfilTipo: string | undefined): Role {
-  if (perfilTipo) {
-    return normalizeTipo(perfilTipo);
+  if (perfilTipo && VALID_ROLES.has(perfilTipo)) {
+    return perfilTipo as Role;
   }
   const normalized = strapiRoleName?.toLowerCase();
-  if (normalized) {
-    return normalizeTipo(normalized);
+  
+  // Mapeamento de legado/apelidos para canónico
+  if (normalized === 'estudante' || normalized === 'aluno') return 'estudante';
+
+  if (normalized && VALID_ROLES.has(normalized)) {
+    return normalized as Role;
   }
   return 'estudante';
 }
@@ -128,7 +136,7 @@ export const authService = {
 
     const resPerfil = await strapiGet<StrapiPerfilData>('/perfis', {
       'filters[userId][$eq]': id,
-      'populate': 'foto',
+      'populate': ['foto', 'conquistas'],
     });
 
     const perfilData = resPerfil.data?.[0] ?? null;
@@ -175,6 +183,8 @@ export const authService = {
       createdAt: u.createdAt ?? new Date().toISOString(),
       updatedAt: u.updatedAt ?? new Date().toISOString(),
       bio: perfil?.bio,
+      areasInteresse: perfil?.areasInteresse ?? [],
+      conquistas: perfil?.conquistas ?? [],
     };
   },
 };

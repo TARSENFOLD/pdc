@@ -66,7 +66,7 @@ export function TutorChat() {
     return (
       <button
         onClick={() => { setOpen(true); }}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-amber text-background shadow-lg transition-transform hover:scale-105"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-background shadow-lg transition-transform hover:scale-105"
         aria-label="Abrir tutor IA"
       >
         <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -77,11 +77,11 @@ export function TutorChat() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex w-85 flex-col overflow-hidden rounded-lg border border-border shadow-2xl" style={{ height: 480, background: 'var(--surface-raised)' }}>
+    <div className="fixed bottom-6 right-6 z-50 flex w-85 flex-col overflow-hidden rounded-lg border border-ink-tertiary/10 shadow-2xl" style={{ height: 480, background: 'var(--surface-raised)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <span className="text-sm font-semibold text-amber">Tutor IA</span>
-        <button onClick={() => { setOpen(false); }} className="text-text-muted hover:text-text-primary" aria-label="Fechar chat">
+      <div className="flex items-center justify-between border-b border-ink-tertiary/10 px-4 py-3">
+        <span className="text-sm font-semibold text-accent">Tutor IA</span>
+        <button onClick={() => { setOpen(false); }} className="text-ink-tertiary hover:text-ink-primary" aria-label="Fechar chat">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -91,15 +91,15 @@ export function TutorChat() {
       {/* Messages */}
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.length === 0 && (
-          <p className="text-center text-xs text-text-muted">Coloca a tua dúvida ao tutor.</p>
+          <p className="text-center text-xs text-ink-tertiary">Coloca a tua dúvida ao tutor.</p>
         )}
         {messages.map((m, i) => (
           <div
             key={i}
             className={`max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
               m.role === 'user'
-                ? 'ml-auto bg-amber text-background'
-                : 'bg-surface-raised text-text-secondary'
+                ? 'ml-auto bg-accent text-background'
+                : 'bg-elevated text-ink-secondary'
             }`}
           >
             {m.text || (streaming && i === messages.length - 1 ? '...' : '')}
@@ -111,19 +111,19 @@ export function TutorChat() {
       {/* Input */}
       <form
         onSubmit={(e) => { e.preventDefault(); void handleSend(); }}
-        className="flex gap-2 border-t border-border p-3"
+        className="flex gap-2 border-t border-ink-tertiary/10 p-3"
       >
         <input
           value={input}
           onChange={(e) => { setInput(e.target.value); }}
           placeholder="Escreve aqui..."
           disabled={streaming}
-          className="flex-1 rounded-lg bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted outline-none focus:ring-1 focus:ring-amber"
+          className="flex-1 rounded-lg bg-elevated px-3 py-2 text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:ring-1 focus:ring-accent"
         />
         <button
           type="submit"
           disabled={streaming || !input.trim()}
-          className="rounded-lg bg-amber px-3 py-2 text-sm font-semibold text-background disabled:opacity-40"
+          className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-background disabled:opacity-40"
         >
           Enviar
         </button>

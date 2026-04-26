@@ -42,12 +42,12 @@ export function DenunciaDetailPage() {
   });
 
   if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
-  if (!denuncia) return <p className="py-12 text-center text-text-secondary">Denúncia não encontrada.</p>;
+  if (!denuncia) return <p className="py-12 text-center text-ink-secondary">Denúncia não encontrada.</p>;
 
   return (
     <div className="max-w-4xl space-y-6">
       <div className="flex items-center gap-4">
-        <h1 className="text-2xl font-bold text-text-primary">Detalhes da Denúncia</h1>
+        <h1 className="text-2xl font-bold text-ink-primary">Detalhes da Denúncia</h1>
         <Badge variant={denuncia.estado === 'pendente' ? 'warning' : denuncia.estado === 'resolvida' ? 'success' : 'info'}>
           {denuncia.estado.replace('_', ' ')}
         </Badge>
@@ -55,20 +55,20 @@ export function DenunciaDetailPage() {
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-2 p-6 space-y-4">
-          <h2 className="font-semibold text-lg text-text-primary">Conteúdo Reportado</h2>
-          <div className="p-4 bg-background border border-border rounded-lg space-y-2">
-            <p className="text-sm text-text-secondary">Tipo: <span className="text-text-primary font-medium">{denuncia.conteudoTipo}</span></p>
-            <p className="text-sm text-text-secondary">ID do Recurso: <span className="text-text-primary font-mono text-xs">{denuncia.conteudoId}</span></p>
-            <div className="pt-2 border-t border-border mt-2">
-              <p className="text-sm font-medium text-text-primary mb-1">Motivo/Descrição:</p>
-              <p className="text-text-primary whitespace-pre-wrap text-sm">{denuncia.motivo}</p>
+          <h2 className="font-semibold text-lg text-ink-primary">Conteúdo Reportado</h2>
+          <div className="p-4 bg-canvas border border-ink-tertiary/10 rounded-lg space-y-2">
+            <p className="text-sm text-ink-secondary">Tipo: <span className="text-ink-primary font-medium">{denuncia.conteudoTipo}</span></p>
+            <p className="text-sm text-ink-secondary">ID do Recurso: <span className="text-ink-primary font-mono text-xs">{denuncia.conteudoId}</span></p>
+            <div className="pt-2 border-t border-ink-tertiary/10 mt-2">
+              <p className="text-sm font-medium text-ink-primary mb-1">Motivo/Descrição:</p>
+              <p className="text-ink-primary whitespace-pre-wrap text-sm">{denuncia.motivo}</p>
             </div>
           </div>
-          <p className="text-xs text-text-secondary">Reportado em: {new Date(denuncia.criadaEm).toLocaleString()}</p>
+          <p className="text-xs text-ink-secondary">Reportado em: {new Date(denuncia.criadaEm).toLocaleString()}</p>
         </Card>
 
         <Card className="p-6 space-y-4">
-          <h2 className="font-semibold text-lg text-text-primary">Denunciante</h2>
+          <h2 className="font-semibold text-lg text-ink-primary">Denunciante</h2>
           {denuncia.denunciante ? (
             <div className="flex items-center gap-3">
               <Avatar 
@@ -77,26 +77,26 @@ export function DenunciaDetailPage() {
                 size="md" 
               />
               <div className="min-w-0">
-                <p className="text-sm font-medium text-text-primary truncate">{denuncia.denunciante.nome}</p>
-                <p className="text-xs text-text-secondary truncate">{denuncia.denunciante.email}</p>
+                <p className="text-sm font-medium text-ink-primary truncate">{denuncia.denunciante.nome}</p>
+                <p className="text-xs text-ink-secondary truncate">{denuncia.denunciante.email}</p>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-text-secondary">ID: {denuncia.denuncianteId}</p>
+            <p className="text-sm text-ink-secondary">ID: {denuncia.denuncianteId}</p>
           )}
         </Card>
       </div>
 
       {denuncia.estado !== 'resolvida' && (
         <Card className="p-6">
-          <h2 className="font-semibold text-lg text-text-primary mb-4">Resolver Denúncia</h2>
+          <h2 className="font-semibold text-lg text-ink-primary mb-4">Resolver Denúncia</h2>
           <div className="space-y-4">
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-text-secondary">Ação a tomar</label>
+              <label className="text-sm font-medium text-ink-secondary">Ação a tomar</label>
               <select
                 value={accao}
                 onChange={(e) => { setAccao(e.target.value as DenunciaAccao); }}
-                className="w-full max-w-xs rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus-outline-none focus:ring-2 focus:ring-amber"
+                className="w-full max-w-xs rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus-outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="remover_conteudo">Remover conteúdo</option>
                 <option value="advertir">Avisar utilizador</option>
@@ -105,11 +105,11 @@ export function DenunciaDetailPage() {
               </select>
             </div>
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-text-secondary">Nota de resolução</label>
+              <label className="text-sm font-medium text-ink-secondary">Nota de resolução</label>
               <textarea
                 value={nota}
                 onChange={(e) => { setNota(e.target.value); }}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber min-h-[100px]"
+                className="w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[100px]"
                 placeholder="Descreva o motivo desta decisão…"
               />
             </div>

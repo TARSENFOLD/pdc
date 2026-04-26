@@ -1,21 +1,30 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CriarCursoPayloadSchema, type CriarCursoPayload } from '@pdc/shared';
+import { CriarCursoPayloadSchema } from '@pdc/shared';
+import type { z } from 'zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { http } from '@/lib/api/http';
-import { Button, Badge } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
 import { CourseBaseInfo } from './components/CourseBaseInfo';
 import { CourseMeritGuard } from './components/CourseMeritGuard';
 import { CourseCurriculum } from './components/CourseCurriculum';
+import { BuilderShell, BuilderSection, BuilderActionsBar } from '@/components/builders';
+import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
+import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '@/lib/auth/AuthContext';
+
+type FormValues = z.infer<typeof CriarCursoPayloadSchema>;
 
 export function SovereignCourseBuilder() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [lastEventId, setLastEventId] = useState<string | null>(null);
 
-  const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<CriarCursoPayload>({
-    resolver: zodResolver(CriarCursoPayloadSchema),
+  const form = useForm<FormValues>({
+    resolver: zodResolver(CriarCursoPayloadSchema) as any,
     defaultValues: {
       titulo: '',
       descricao: '',
@@ -27,14 +36,21 @@ export function SovereignCourseBuilder() {
     }
   });
 
+  const { register, control, watch, setValue, formState: { errors } } = form;
   const modulosArray = useFieldArray({ control, name: 'modulos' });
 
   const mutation = useMutation({
-    mutationFn: (data: CriarCursoPayload) => http.post('/cursos', data),
-    onSuccess: () => {
+    mutationFn: (data: FormValues) => http.post('/cursos', data),
+    onSuccess: (res: any) => {
       void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
       toast({ title: 'Curso Soberano Materializado!', description: 'O impacto no ecossistema foi disparado.' });
-      navigate('/app/dashboard/instituicao');
+      
+      const eventId = res.eventId || res.data?.eventId;
+      if (eventId) {
+        setLastEventId(eventId);
+      } else {
+        navigate('/app/dashboard/instituicao');
+      }
     },
     onError: (err: any) => toast({ 
       title: 'Falha na Materialização', 
@@ -43,38 +59,87 @@ export function SovereignCourseBuilder() {
     })
   });
 
-  return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <header className="mb-12 text-center">
-        <Badge variant="warning" className="mb-4">E2E G15 Architecture</Badge>
-        <h1 className="text-4xl font-black text-text-primary tracking-tight uppercase">Course Sovereign Builder</h1>
-        <p className="text-text-secondary mt-2">Define o currículo, impõe as regras de mérito e domina o ecossistema.</p>
-      </header>
+  const handleSave = () => {
+    const data = form.getValues();
+    mutation.mutate(data as FormValues);
+  };
 
-      <form onSubmit={(e) => void handleSubmit((data) => mutation.mutate(data))(e)} className="space-y-8">
-        
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <CourseBaseInfo 
-              register={register} 
-              errors={errors} 
-              onCapaUploaded={(url) => setValue('capaUrl', url)} 
+  return (
+    <>
+      <BuilderShell
+        form={form as any}
+        title="Sovereign Course Builder"
+        description="Define o currículo, impõe as regras de mérito e domina o ecossistema."
+        state="draft"      breadcrumbs={[
+        { label: 'Início', to: '/app' },
+        { label: 'Cursos', to: '/app/mentor/cursos' },
+        { label: 'Novo Curso' }
+      ]}
+      sections={[
+        { id: 'info', label: 'Identidade' },
+        { id: 'merit', label: 'Regras de Mérito' },
+        { id: 'curriculum', label: 'Currículo Soberano' },
+      ]}
+      actions={
+        <BuilderActionsBar
+          state="draft"
+          userRole={user?.role || 'instituicao'}
+          onSaveDraft={handleSave}
+          onSubmitReview={handleSave}
+          onPublish={handleSave}
+          isSubmitting={mutation.isPending}
+        />
+      }
+    >
+      <BuilderSection
+        value="info"
+        title="Identidade do Curso"
+        description="Título, descrição e capa do conteúdo pedagógico."
+      >
+        <CourseBaseInfo 
+          register={register} 
+          errors={errors} 
+          onCapaUploaded={(url) => setValue('capaUrl', url)} 
+        />
+      </BuilderSection>
+
+      <BuilderSection
+        value="merit"
+        title="Regras de Mérito"
+        description="Define os pré-requisitos biomecânicos para aceder ao curso."
+      >
+        <CourseMeritGuard register={register} watch={watch} />
+      </BuilderSection>
+
+      <BuilderSection
+        value="curriculum"
+        title="Currículo Soberano"
+        description="Estrutura de módulos e itens de aprendizagem."
+      >
+        <CourseCurriculum register={register} modulosArray={modulosArray} />
+      </BuilderSection>
+    </BuilderShell>
+
+    <AnimatePresence>
+      {lastEventId && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-canvas/95 backdrop-blur-md"
+        >
+          <div className="w-full max-w-xl">
+            <EcosystemImpactPanel 
+              eventId={lastEventId} 
+              variant="full"
+              onComplete={() => {
+                setTimeout(() => navigate('/app/dashboard/instituicao'), 3000);
+              }}
             />
           </div>
-          <div className="lg:col-span-1">
-            <CourseMeritGuard register={register} watch={watch} />
-          </div>
-        </section>
-
-        <CourseCurriculum register={register} modulosArray={modulosArray} />
-
-        <footer className="pt-12 border-t border-white/5 flex justify-end gap-4">
-           <Button type="button" variant="ghost" onClick={() => navigate(-1)}>Abortar Missão</Button>
-           <Button type="submit" size="lg" className="px-12 bg-accent hover:bg-accent-hover text-white shadow-xl shadow-accent/20" disabled={mutation.isPending}>
-             {mutation.isPending ? 'A Materializar...' : 'Publicar e Injetar no Ecossistema'}
-           </Button>
-        </footer>
-      </form>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 }

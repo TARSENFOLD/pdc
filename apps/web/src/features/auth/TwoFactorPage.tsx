@@ -77,13 +77,13 @@ export default function TwoFactorPage() {
       <div className="w-full max-w-md relative">
         <div className="absolute -inset-1 bg-gradient-to-r from-accent/20 to-transparent blur-2xl opacity-20 pointer-events-none" />
         
-        <div className="relative rounded-3xl bg-surface-raised/40 backdrop-blur-2xl p-8 lg:p-10 shadow-2xl border border-white/5 overflow-hidden">
+        <div className="relative rounded-3xl bg-elevated/40 backdrop-blur-2xl p-8 lg:p-10 shadow-2xl border border-white/5 overflow-hidden">
           <div className="mb-10 text-center">
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 text-accent border border-accent/20 animate-pulse-subtle">
               <ShieldCheck size={32} strokeWidth={2.5} />
             </div>
-            <h1 className="text-3xl font-black text-text-primary tracking-tight mb-3">Verificação.</h1>
-            <p className="text-text-secondary font-medium px-4">
+            <h1 className="text-3xl font-black text-ink-primary tracking-tight mb-3">Verificação.</h1>
+            <p className="text-ink-secondary font-medium px-4">
               Introduz o código de 6 dígitos enviado para o teu{' '}
               <span className="text-accent font-bold">{canal === 'email' ? 'email' : 'telemóvel'}</span>
             </p>
@@ -102,7 +102,7 @@ export default function TwoFactorPage() {
             )}
 
             <div className="space-y-3">
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-[0.2em] ml-1">Código de Segurança</label>
+              <label className="block text-xs font-bold text-ink-tertiary uppercase tracking-[0.2em] ml-1">Código de Segurança</label>
               <input
                 type="text"
                 required
@@ -110,7 +110,7 @@ export default function TwoFactorPage() {
                 pattern="[0-9]*"
                 inputMode="numeric"
                 autoFocus
-                className="w-full rounded-2xl bg-black/40 border border-white/10 p-5 text-center text-4xl tracking-[0.4em] text-text-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all font-mono placeholder:text-white/5"
+                className="w-full rounded-2xl bg-black/40 border border-white/10 p-5 text-center text-4xl tracking-[0.4em] text-ink-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all font-mono placeholder:text-white/5"
                 placeholder="000000"
                 value={otp}
                 onChange={(e) => { setOtp(e.target.value.replace(/[^0-9]/g, '')); }}
@@ -120,7 +120,7 @@ export default function TwoFactorPage() {
             <Button
               type="submit"
               disabled={isLoading || otp.length !== 6}
-              className="w-full p-6 bg-text-primary text-background font-black uppercase tracking-widest rounded-2xl hover:bg-accent hover:text-white transition-all transform active:scale-[0.98]"
+              className="w-full p-6 bg-ink-primary text-canvas font-black uppercase tracking-widest rounded-2xl hover:bg-accent hover:text-white transition-all transform active:scale-[0.98]"
             >
               {isLoading ? 'A Validar Autoridade...' : 'Verificar e Aceder'}
             </Button>
@@ -131,7 +131,7 @@ export default function TwoFactorPage() {
               type="button"
               onClick={() => { void handleResend(); }}
               disabled={isResending || countdown > 0}
-              className="group flex items-center gap-2 text-sm font-bold text-text-muted hover:text-accent transition-colors disabled:opacity-40"
+              className="group flex items-center gap-2 text-sm font-bold text-ink-tertiary hover:text-accent transition-colors disabled:opacity-40"
             >
               <RefreshCw size={14} className={isResending ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} />
               {isResending ? 'A reenviar...' : countdown > 0 ? `Aguarde ${String(countdown)}s` : 'Reenviar código de acesso'}
@@ -139,7 +139,7 @@ export default function TwoFactorPage() {
 
             <button
               onClick={() => { navigate('/login', { replace: true }); }}
-              className="flex items-center gap-2 text-xs font-bold text-text-muted uppercase tracking-widest hover:text-text-primary transition-colors"
+              className="flex items-center gap-2 text-xs font-bold text-ink-tertiary uppercase tracking-widest hover:text-ink-primary transition-colors"
             >
               <ArrowLeft size={12} />
               Voltar ao Login
@@ -148,7 +148,7 @@ export default function TwoFactorPage() {
         </div>
 
         {/* Detalhe Mono-espaçado de Elite */}
-        <div className="mt-8 text-center text-[10px] font-mono text-text-muted/40 uppercase tracking-[0.3em]">
+        <div className="mt-8 text-center text-[10px] font-mono text-ink-tertiary/40 uppercase tracking-[0.3em]">
           Security Layer: OTP_V2_ENFORCED <br />
           Sovereign Identity Protection
         </div>

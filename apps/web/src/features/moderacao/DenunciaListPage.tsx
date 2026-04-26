@@ -35,7 +35,7 @@ export function DenunciaListPage() {
     {
       header: 'Ações',
       accessor: (d: Denuncia) => (
-        <Link to={`/app/moderacao/denuncias/${d.id}`} className="text-amber hover:underline font-medium">
+        <Link to={`/app/moderacao/denuncias/${d.id}`} className="text-accent hover:underline font-medium">
           Ver
         </Link>
       ),
@@ -45,12 +45,12 @@ export function DenunciaListPage() {
   return (
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-text-primary">Moderação de Denúncias</h1>
+        <h1 className="text-2xl font-bold text-ink-primary">Moderação de Denúncias</h1>
         <div className="flex gap-2">
           <select
             value={estado}
             onChange={(e) => { setEstado(e.target.value as DenunciaEstado | ''); setPage(1); }}
-            className="h-9 rounded-md border border-border bg-surface-raised px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber"
+            className="h-9 rounded-md border border-ink-tertiary/10 bg-elevated px-3 text-sm text-ink-primary focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="">Todos estados</option>
             <option value="pendente">Pendente</option>
@@ -60,7 +60,7 @@ export function DenunciaListPage() {
           <select
             value={tipo}
             onChange={(e) => { setTipo(e.target.value); setPage(1); }}
-            className="h-9 rounded-md border border-border bg-surface-raised px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber"
+            className="h-9 rounded-md border border-ink-tertiary/10 bg-elevated px-3 text-sm text-ink-primary focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="">Todos tipos</option>
             <option value="projeto">Projeto</option>

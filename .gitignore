@@ -62,10 +62,9 @@ infra/strapi/public/uploads/
 
 # Nao versionar / Local
 nao_versionar/
-# Playwright
+awesome-design-md/
 test-results/
 playwright-report/
 coverage/
-
-# Wrangler
 .wrangler/
+node_modules/

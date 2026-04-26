@@ -45,13 +45,13 @@ export default defineConfig({
     {
       command: 'npm run dev -w apps/api',
       url: 'http://localhost:3001/bootstrap',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 30_000,
     },
     {
       command: 'npm run dev -w apps/web',
       url: 'http://localhost:5173',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 30_000,
     },
   ],

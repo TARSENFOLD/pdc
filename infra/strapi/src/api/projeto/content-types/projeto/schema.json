@@ -12,21 +12,18 @@
   "attributes": {
     "slug": { "type": "uid", "targetField": "titulo", "unique": true },
     "titulo": { "type": "string", "required": true },
-    "descricao": { "type": "text" },
-    "abstract": { "type": "json" },
-    "core": { "type": "json" },
-    "modos": { "type": "json" },
-    "selo": {
-      "type": "enumeration",
-      "enum": ["aptidao_validada", "comite_aprovado", "mentor_endorsed"]
-    },
+    "descricao": { "type": "text", "description": "⚠️ DEPRECATED — usar abstract. Mantido por retrocompatibilidade." },
+    "abstract": { "type": "text", "description": "Resumo público do projeto (camada pública)" },
+    "core": { "type": "text", "description": "Detalhes privados do projeto (camada core) — acesso controlado por ACL" },
+    "modos": { "type": "json", "description": "Modos do projeto: exposicao, colaboracao, mentoria, financiamento" },
+    "acessoCoreACL": { "type": "json", "description": "ACL de acesso ao core: lista de perfis aprovados" },
+    "votos": { "type": "json", "description": "Sistema de votos/endorsamentos do projeto" },
+    "historicoEstados": { "type": "json", "description": "Audit trail de transições de estado editorial" },
     "area": {
       "type": "enumeration",
       "enum": [
-        "SAUDE", "ENGENHARIA", "TECNOLOGIA", "DIREITO", "GESTAO",
-        "EDUCACAO", "ARTES", "CIENCIAS_AGRARIAS", "CIENCIAS_SOCIAIS",
-        "COMUNICACAO", "CIENCIAS_NATURAIS", "ARQUITETURA",
-        "TURISMO_HOTELARIA", "DESPORTO", "OUTRA"
+        "ENGENHARIA", "SAUDE", "TECNOLOGIA", "AGRONOMIA", "GESTAO",
+        "EDUCACAO", "DIREITO", "CIENCIAS_SOCIAIS", "ARTES", "OUTRO"
       ]
     },
     "estado": {
@@ -39,7 +36,7 @@
       "relation": "manyToOne",
       "target": "api::perfil.perfil"
     },
-    "colaboradores": { "type": "json" },
+    "colaboradores": { "type": "json", "description": "⚠️ DEPRECATED — usar acessoCoreACL. Mantido por retrocompatibilidade." },
     "tags": { "type": "json" },
     "mediaUrls": { "type": "json" },
     "repositorioUrl": { "type": "string" },
@@ -49,12 +46,6 @@
       "default": "publico"
     },
     "buscandoParceiros": { "type": "boolean", "default": false },
-    "criadoEm": { "type": "datetime" },
-    "pedidosAcesso": {
-      "type": "relation",
-      "relation": "oneToMany",
-      "target": "api::projeto-acesso-pedido.projeto-acesso-pedido",
-      "mappedBy": "projeto"
-    }
+    "criadoEm": { "type": "datetime" }
   }
 }

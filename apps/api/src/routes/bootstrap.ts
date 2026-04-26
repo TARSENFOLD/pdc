@@ -23,7 +23,7 @@ bootstrapRoutes.get('/', async (c) => {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
       const dbUser = await authService.getUserById(payload.sub as string);
-      
+
       // Injectamos a Role real e Perfil (que está guardado no Strapi)
       userPayload = {
         id: dbUser.id,
@@ -31,7 +31,7 @@ bootstrapRoutes.get('/', async (c) => {
         role: dbUser.role,
         perfilId: dbUser.perfilId || undefined,
       };
-      
+
       // Instituição ID para extração de Flags override se existir no token
       instituicaoId = payload.instituicaoId ? parseInt(payload.instituicaoId as string, 10) : undefined;
 

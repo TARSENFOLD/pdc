@@ -1,6 +1,12 @@
-# PDC v2 — Strategic Roadmap
+Este roadmap define a trajectória de execução técnica do PDC v2, organizada em waves temáticas.
 
-Este roadmap define a trajectória de execução técnica do PDC v2, organizada em 5 Waves temáticas.
+## 📱 Mobile-First (Faixa Transversal)
+> **Checklist Obrigatória para o Fecho de Qualquer Wave:**
+> - [ ] Touch targets ≥ 44px (auditado via axe-core)
+> - [ ] Viewport meta tag correcta (`width=device-width, initial-scale=1, viewport-fit=cover`)
+> - [ ] Safe-area-inset padding para notches (iOS/Android)
+> - [ ] Performance Lighthouse Mobile ≥ 90
+> - [ ] Offline-ready (PWA Manifest + Service Worker funcional)
 
 ## Taxonomia Híbrida (G1)
 
@@ -51,42 +57,50 @@ O projeto migrou do modelo M*/Onda* para W*-T*. Identificadores antigos são pre
 | W1-T4 | Edge dual-write + Upstash queue + BFF consumer (full ingestion pipeline) | ✅ | Telemetry |
 | W1-T5 | Seed narrativo (4 áreas vocacionais + 10 instituições + 30 mentores + 100 alunos) | ✅ | Data |
 
-## Wave 2: Motor Vocacional & LTI
+## Wave 2.5: Sync Constitucional (Hardening)
 | ID | Task | Status | Context |
 |----|------|--------|---------|
-| W2-T1 | Heuristics shared + Sanity validator dupla (edge + BFF) | ✅ | Core |
-| W2-T2 | Event bus interno + Outbox pattern (Strapi domain events) | ✅ | Feature |
-| W2-EXT | Constelação Neural — Hero Landing Page Adaptive | ✅ | Design |
-| W2-T3 | LTI Grade Passback + Conquistas como event subscribers | ✅ | LTI |
-| W2-T4 | Sim Tipo 2 score real (substituir hardcoded 8.5 + telemetry-driven) | ✅ | Reputation |
-| W2-T5 | Sim Tipo 3 player (criar Tipo3Player.tsx + telemetria nativa + scoring) | ✅ | Simulation |
-| W2-T6 | GET /reputacao/me endpoint separado + ReputacaoBreakdown schema + Relatório Vocacional Premium MVP | ✅ | Dashboard |
+| W2.5-E1 | Migração F10 (15 áreas vocacionais + slug 'estudante') | ⏳ | Debt |
+| W2.5-E2 | Edge Worker Hardening (Idempotência + Bugfixes) | ⏳ | Security |
+| W2.5-E3 | Schemas Canónicos Programa + Projeto (Abstract vs Core) | ⏳ | Shared |
+| W2.5-E4 | Wave 2 Debt Closeout (D1 Consolidação + OTP + Tina) | ⏳ | Core |
+| W2.5-E5 | Migração Frontend Vercel → Cloudflare Pages | ⏳ | Infra |
 
-## Wave 3: Design System de Autoridade (PRÓXIMO BLOCO)
+## Wave 3: Design System de Autoridade
 | ID | Task | Status | Context |
 |----|------|--------|---------|
-| W3-T1 | Token audit + purga hardcoded colors (27 ui components + outros) | ⏳ | Design |
-| W3-T2 | Design primitives — Glassmorphism + BentoGrid + Padrões africanos 3% | ⏳ | UI |
-| W3-T3 | i18n setup + extracção PT mecânica + Strapi i18n.localized opt-in | ⏳ | Global |
-| W3-T4 | a11y endurece (axe gate ERROR + contrast AA/AAA + touch targets ≥44px + focus visible) | ⏳ | Accessibility |
+| W3-T1 | Token audit + purga hardcoded colors (tokens.css) | ✅ | Design |
+| W3-T2 | Design primitives — Glassmorphism + BentoGrid + Padrões africanos | ✅ | UI |
+| W3-T3 | i18n setup + extracção PT mecânica + Strapi localized | ⏳ | Global |
+| W3-T4 | a11y endurece (axe gate ERROR + contrast AA/AAA + touch targets) | ⏳ | Accessibility |
 | W3-T5 | Visual regression baseline + lint rules de design system | ⏳ | Polish |
 
 ## Wave 4: Dashboards & Hubs
 | ID | Task | Status | Context |
 |----|------|--------|---------|
-| W4-T1 | MensagensPage build-from-scratch (inbox + busca + filtros role + realtime) | ⏸ | depende de W3 |
-| W4-T2 | Feed completo 4 fontes (Geral Vocacional Institucional Trending) + Comments com moderação | ⏸ | depende de W3 |
-| W4-T3 | Dashboard Bento Grid + Top Bar Glass Header (Command+K) + Sidebar slim audit | ⏳ | B2B |
+| W4-T1 | MensagensPage UI build (inbox + busca + realtime) | ✅ | UI |
+| W4-T2 | Feed completo 4 fontes (Geral/Voc/Inst/Trend) + Comments | ⏳ | Logic |
+| W4-T3 | Dashboard Bento Grid + Top Bar Glass Header (Command+K) | ✅ | UI |
 | W4-T4 | Reputação Bento role-aware + Hub de Oportunidades 'Match Terminal' | ⏳ | Marketplace |
-| W4-T5 | Empty States aspiracionais + Threaded Insights (anotações Tina laterais no Relatório) | ⏳ | Polish |
+| W4-T5 | Threaded Insights (anotações Tina laterais no Relatório) | ⏳ | AI |
 
 ## Wave 5: Gamificação & Produção
 | ID | Task | Status | Context |
 |----|------|--------|---------|
-| W5-T1 | Micro-interações em ≥80% elementos clicáveis (hover, click feedback, loading, page transitions) | ⏳ | Polish |
-| W5-T2 | Gamificação profissional (Tier Bronze→Diamond + Talent Bounties + Streaks + notificações inteligentes) | ⏳ | Retention |
-| W5-T3 | EN como segunda língua activa (traduzir strings PT → EN + QA) | ⏳ | Retention |
-| W5-T4 | Production polish (Lighthouse ≥90 mobile + a11y full audit + cleanup deprecated endpoints) | ⏳ | Scale |
+| W5-T1 | Micro-interações em ≥80% elementos (hover, transitions) | ⏳ | Polish |
+| W5-T2 | Gamificação profissional (Tier Silver→Diamond + Streaks) | ⏳ | Retention |
+| W5-T3 | EN como segunda língua activa (QA strings) | ⏳ | Scale |
+| W5-T4 | cleanup deprecated endpoints + Production Polish | ⏳ | Scale |
+
+## Wave 6: Mobile Release
+| ID | Task | Status | Context |
+|----|------|--------|---------|
+| W6-T1 | PWA Production-Grade (manifest + icons + offline) | ⏳ | Release |
+| W6-T2 | Capacitor iOS build + signing + TestFlight | ⏳ | Store |
+| W6-T3 | TWA Android build + Play Console Internal Track | ⏳ | Store |
+| W6-T4 | App Store Connect submission | ⏳ | Release |
+| W6-T5 | Play Store submission | ⏳ | Release |
+| W6-T6 | App Store Assets (Screenshots, Descriptions) | ⏳ | Creative |
 
 ---
 *Regra de Ouro: Uma Wave só termina quando o typecheck está verde e o CI está aprovado.*

@@ -81,7 +81,7 @@ O PDC v2 utiliza dois padrões de tokens distintos para isolar autoridade e gara
 ### Fluxo de Validação RS256
 1.  **Emissão**: O BFF assina o token com a chave privada RS256 e entrega-o ao cliente via `bootstrap`.
 2.  **Verificação**: O Edge Worker obtém a chave pública via JWKS endpoint (`/.well-known/jwks.json`) exposto pelo BFF.
-3.  **Segurança**: O `kid` (Key ID) garante rotação de chaves sem downtime. O Edge Worker faz cache do conjunto de chaves por 60 segundos (spec E2-T3).
+3.  **Segurança**: O `kid` (Key ID) garante rotação de chaves sem downtime. O Edge Worker faz cache do conjunto de chaves por 1 hora.
 
 ---
 
@@ -89,16 +89,16 @@ O PDC v2 utiliza dois padrões de tokens distintos para isolar autoridade e gara
 
 | Camada | Tecnologia | Versão | Notas |
 |--------|-----------|--------|-------|
-| **Frontend** | React | 19.2.5 | PWA Moderno |
-| **Frontend Build** | Vite | 8.0.9 | — |
-| **Design System** | TailwindCSS | 4.2.4 | — |
+| **Frontend** | React | 18.3.1 | PWA Moderno |
+| **Frontend Build** | Vite | 6.0.0 | — |
+| **Design System** | TailwindCSS | 4.0.0 | — |
 | **Animações** | Motion | 11.11.0 | Antigo Framer Motion |
 | **Visual FX** | GSAP | 3.15.0 | Core de animações neurais |
 | **Edge Runtime** | Cloudflare Workers | Wrangler 3.0 | — |
-| **BFF Framework** | Hono | 4.12.15 | — |
-| **Runtime BFF** | Node.js | 24.15.0 | — |
+| **BFF Framework** | Hono | 4.12.14 | — |
+| **Runtime BFF** | Node.js | 24.13.0 | — |
 | **Base de Dados** | PostgreSQL | 16 | Via Railway |
-| **CMS** | Strapi | 5.43.0 | Headless Soberano |
+| **CMS** | Strapi | 5.42.1 | Headless Soberano |
 | **Cache & Queue** | Upstash Redis | 1.34.0 | Global Low Latency |
 | **Storage** | Cloudflare R2 | SDK v3 | Compatível com S3 |
 | **Realtime** | Socket.IO | 4.8.0 | Sync bidirecional |

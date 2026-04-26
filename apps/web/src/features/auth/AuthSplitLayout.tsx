@@ -90,25 +90,25 @@ export function AuthSplitLayout({ role, children }: AuthSplitLayoutProps) {
   const { headline, bullets } = COPY[role];
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-canvas">
       {/* Left branding panel - hidden on mobile */}
-      <div className="hidden w-1/2 flex-col items-center justify-center bg-surface px-12 text-center lg:flex">
-        <Link to="/" className="mb-10 text-2xl font-bold tracking-tight text-amber">
+      <div className="hidden w-1/2 flex-col items-center justify-center bg-canvas px-12 text-center lg:flex">
+        <Link to="/" className="mb-10 text-2xl font-bold tracking-tight text-accent">
           PDC
         </Link>
 
-        <div className="text-amber">
+        <div className="text-accent">
           <PencilIllustration />
         </div>
 
-        <h2 className="mt-8 max-w-sm text-2xl font-bold leading-snug text-text-primary">
+        <h2 className="mt-8 max-w-sm text-2xl font-bold leading-snug text-ink-primary">
           {headline}
         </h2>
 
         <ul className="mt-6 space-y-3 text-left">
           {bullets.map((b) => (
-            <li key={b} className="flex items-start gap-2 text-sm text-text-secondary">
-              <CheckCircle size={16} aria-hidden={true} className="mt-0.5 shrink-0 text-amber" />
+            <li key={b} className="flex items-start gap-2 text-sm text-ink-secondary">
+              <CheckCircle size={16} aria-hidden={true} className="mt-0.5 shrink-0 text-accent" />
               {b}
             </li>
           ))}
@@ -119,7 +119,7 @@ export function AuthSplitLayout({ role, children }: AuthSplitLayoutProps) {
       <div className="flex w-full flex-col lg:w-1/2">
         {/* Back link - visible on both mobile (top) and desktop (top-left of form area) */}
         <div className="p-4 lg:p-8">
-          <Link to="/criar-conta" className="inline-flex items-center gap-2 text-sm font-medium text-amber hover:text-amber-hover transition-colors">
+          <Link to="/criar-conta" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover transition-colors">
             <ArrowLeft size={18} aria-hidden={true} />
             Voltar
           </Link>

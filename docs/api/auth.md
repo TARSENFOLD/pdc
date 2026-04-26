@@ -115,8 +115,7 @@ Utilizado para validação de identidade e 2FA.
 ### POST /auth/otp/send
 Solicita o envio de um código de 6 dígitos.
 - **Canais:** `email` ou `sms`.
-- **Rate Limit:** Máximo 3 pedidos a cada 10 minutos. O limite é aplicado por **identificador de contacto** (email/telemóvel) e por **endereço IP** para prevenir abuso.
-- **Validade:** O código expira após 10 minutos.
+- **Rate Limit:** Máximo 3 pedidos a cada 10 minutos por utilizador.
 
 ```json
 {
@@ -128,8 +127,6 @@ Solicita o envio de um código de 6 dígitos.
 ### POST /auth/otp/verify
 Valida o código recebido pelo utilizador.
 - **Efeito:** Se válido, completa o desafio de login e emite os tokens finais.
-- **Tentativas:** Máximo 5 tentativas falhadas antes de invalidar o código (requer novo envio).
-- **Cliente:** Em caso de expiração, o cliente deve tratar o erro `otp_expired` e oferecer reenvio; em caso de bloqueio, tratar `otp_locked` e aguardar novo envio.
 
 ```json
 {

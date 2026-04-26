@@ -21,25 +21,25 @@ export function AdminRelatoriosPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-text-primary">Relatórios</h1>
+      <h1 className="text-2xl font-bold text-ink-primary">Relatórios</h1>
       {data?.semDados ? (
-        <div className="rounded-2xl border border-amber/20 bg-amber/5 p-6">
-          <p className="text-amber text-sm font-medium"><AlertTriangle size={16} aria-hidden={true} className="inline-block mr-1 align-text-bottom" /> Ainda não há dados suficientes para gerar relatórios.</p>
-          <p className="text-text-muted text-xs mt-1">Os relatórios serão gerados automaticamente à medida que os utilizadores interagem com a plataforma.</p>
+        <div className="rounded-2xl border border-accent/20 bg-accent/5 p-6">
+          <p className="text-accent text-sm font-medium"><AlertTriangle size={16} aria-hidden={true} className="inline-block mr-1 align-text-bottom" /> Ainda não há dados suficientes para gerar relatórios.</p>
+          <p className="text-ink-tertiary text-xs mt-1">Os relatórios serão gerados automaticamente à medida que os utilizadores interagem com a plataforma.</p>
         </div>
       ) : null}
       <div className="grid gap-6 sm:grid-cols-3">
         <Card className="p-6">
-          <p className="text-sm font-medium text-text-secondary">Total Estudantes</p>
-          <p className="mt-2 text-3xl font-bold text-amber">{data?.totalEstudantes ?? 0}</p>
+          <p className="text-sm font-medium text-ink-secondary">Total Estudantes</p>
+          <p className="mt-2 text-3xl font-bold text-accent">{data?.totalEstudantes ?? 0}</p>
         </Card>
         <Card className="p-6">
-          <p className="text-sm font-medium text-text-secondary">Estudantes Ativos</p>
-          <p className="mt-2 text-3xl font-bold text-amber">{data?.estudantesAtivos ?? 0}</p>
+          <p className="text-sm font-medium text-ink-secondary">Estudantes Ativos</p>
+          <p className="mt-2 text-3xl font-bold text-accent">{data?.estudantesAtivos ?? 0}</p>
         </Card>
         <Card className="p-6">
-          <p className="text-sm font-medium text-text-secondary">Taxa de Retenção</p>
-          <p className="mt-2 text-3xl font-bold text-amber">{data?.taxaRetencao ?? 0}%</p>
+          <p className="text-sm font-medium text-ink-secondary">Taxa de Retenção</p>
+          <p className="mt-2 text-3xl font-bold text-accent">{data?.taxaRetencao ?? 0}%</p>
         </Card>
       </div>
     </div>

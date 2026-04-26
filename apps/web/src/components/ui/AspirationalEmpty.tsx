@@ -7,32 +7,31 @@ export interface AspirationalEmptyProps {
   icon: LucideIcon;
   title: string;
   description: string;
+  action?: ReactNode;
   children?: ReactNode;
   className?: string;
 }
 
 /**
- * AspirationalEmpty - Empty States com Promessa.
- * Epic 05: Nunca dizer apenas "Sem dados", mas sim o que virá depois.
+ * AspirationalEmpty — Estado vazio premium que inspira ação.
+ * Cumpre o rigor "Soul & Elite" (Spec 05).
  */
-export function AspirationalEmpty({
-  icon: Icon,
-  title,
-  description,
-  children,
-  className
+export function AspirationalEmpty({ 
+  icon: Icon, 
+  title, 
+  description, 
+  action,
+  children, 
+  className 
 }: AspirationalEmptyProps) {
   return (
-    <Card className={cn(
-      'flex flex-col items-center justify-center text-center p-12 bg-recessed border-dashed border-ink-tertiary/20 opacity-80 rounded-2xl',
-      className
-    )}>
-      <div className="h-16 w-16 rounded-[24px] bg-accent/5 flex items-center justify-center text-accent mb-6">
-        <Icon size={32} />
+    <Card className={cn("flex flex-col items-center text-center p-12 border-ink-tertiary/10 bg-elevated/30 backdrop-blur-md", className)}>
+      <div className="p-4 rounded-full bg-accent/5 text-accent mb-6 animate-pulse">
+        <Icon size={40} strokeWidth={1.5} />
       </div>
       
-      <div className="max-w-xs space-y-2">
-        <h3 className="font-display text-xl font-bold text-ink-primary tracking-tight">
+      <div className="max-w-md space-y-2">
+        <h3 className="font-display text-2xl font-black tracking-tight text-ink-primary">
           {title}
         </h3>
         <p className="text-sm text-ink-secondary leading-relaxed">
@@ -40,8 +39,9 @@ export function AspirationalEmpty({
         </p>
       </div>
 
-      {children && (
-        <div className="mt-8">
+      {(action || children) && (
+        <div className="mt-8 flex flex-col items-center gap-4">
+          {action}
           {children}
         </div>
       )}

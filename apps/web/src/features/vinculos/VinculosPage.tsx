@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { http } from '@/lib/api/http';
 import { Users, UserPlus, ShieldCheck, ArrowUpRight, Filter, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import type { VinculoTipo, PerfilPublico, VinculoComPerfil } from '@pdc/shared';
+import type { VinculoComPerfil } from '@pdc/shared';
 
 export function VinculosPage() {
   const { user } = useAuth();
@@ -54,24 +54,24 @@ export function VinculosPage() {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 mb-3 px-3 py-1 uppercase tracking-widest text-[9px] font-black">Social Network</Badge>
-          <h1 className="text-4xl font-black text-text-primary tracking-tighter font-display">
+          <h1 className="text-4xl font-black text-ink-primary tracking-tighter font-display">
             A Minha <span className="text-accent">Rede</span>
           </h1>
-          <p className="text-text-secondary mt-2 max-w-lg leading-relaxed text-sm">
+          <p className="text-ink-secondary mt-2 max-w-lg leading-relaxed text-sm">
             Conexões de elite validadas por mérito e autoridade técnica.
           </p>
         </div>
         <div className="flex gap-2">
            <div className="relative">
-             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-             <input placeholder="Procurar na rede..." className="bg-surface-alt border border-white/5 rounded-xl pl-10 pr-4 py-2 text-sm focus:border-accent/40 outline-none w-64" />
+             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-tertiary" size={16} />
+             <input placeholder="Procurar na rede..." className="bg-recessed border border-white/5 rounded-xl pl-10 pr-4 py-2 text-sm focus:border-accent/40 outline-none w-64" />
            </div>
-           <Button variant="secondary" size="md" className="bg-surface-alt border-white/5 px-3"><Filter size={18} /></Button>
+           <Button variant="secondary" size="md" className="bg-recessed border-white/5 px-3"><Filter size={18} /></Button>
         </div>
       </header>
 
       <Tabs defaultValue="pedidos" onValueChange={setTabActiva} className="w-full">
-        <TabsList className="bg-surface-alt p-1 rounded-2xl border border-white/5 w-fit">
+        <TabsList className="bg-recessed p-1 rounded-2xl border border-white/5 w-fit">
           <TabsTrigger value="pedidos" className="rounded-xl px-8 py-2.5 font-bold data-[state=active]:bg-accent data-[state=active]:text-white transition-all">
             Pedidos {pendentes?.data && pendentes.data.length > 0 && <span className="ml-2 bg-white/20 px-1.5 rounded-md text-[10px]">{pendentes.data.length}</span>}
           </TabsTrigger>
@@ -94,23 +94,23 @@ export function VinculosPage() {
               <AnimatePresence>
                 {pendentes?.data.map((v, idx) => (
                   <motion.div key={v.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
-                    <Card className="p-6 bg-surface border-white/5 rounded-[32px] space-y-6 shadow-xl">
+                    <Card className="p-6 bg-elevated border-white/5 rounded-[32px] space-y-6 shadow-xl">
                       <div className="flex items-center gap-4">
                         <Avatar src={v.solicitante.avatarUrl || undefined} fallback={v.solicitante.nome[0]} className="h-14 w-14 border-2 border-accent/20" />
                         <div>
-                          <h4 className="font-bold text-text-primary tracking-tight">{v.solicitante.nome}</h4>
-                          <Badge variant="outline" className="text-[8px] uppercase border-white/10 text-text-muted mt-1">{v.solicitante.role}</Badge>
+                          <h4 className="font-bold text-ink-primary tracking-tight">{v.solicitante.nome}</h4>
+                          <Badge variant="outline" className="text-[8px] uppercase border-white/10 text-ink-tertiary mt-1">{v.solicitante.role}</Badge>
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <Button 
-                          onClick={() => { resolverMutation.mutate({ id: v.id, status: 'aprovado' }); }}
+                          onClick={() => { resolverMutation.mutate({ id: String(v.id), status: 'aprovado' }); }}
                           disabled={resolverMutation.isPending}
                           className="flex-1 bg-accent text-white font-bold rounded-xl h-11"
                         >Aceitar</Button>
                         <Button 
                           variant="ghost"
-                          onClick={() => { resolverMutation.mutate({ id: v.id, status: 'rejeitado' }); }}
+                          onClick={() => { resolverMutation.mutate({ id: String(v.id), status: 'rejeitado' }); }}
                           className="flex-1 border border-white/5 rounded-xl h-11"
                         >Recusar</Button>
                       </div>
@@ -138,7 +138,7 @@ export function VinculosPage() {
               {active?.data.map((v) => {
                 const outro = v.solicitante.id === user?.id ? v.destinatario : v.solicitante;
                 return (
-                  <Card key={v.id} className="p-6 bg-surface border-white/5 rounded-[32px] group hover:border-accent/30 transition-all">
+                  <Card key={v.id} className="p-6 bg-elevated border-white/5 rounded-[32px] group hover:border-accent/30 transition-all">
                     <div className="flex flex-col items-center text-center space-y-4">
                        <div className="relative">
                           <Avatar src={outro.avatarUrl || undefined} fallback={outro.nome[0]} className="h-20 w-24 rounded-[24px] border-2 border-white/5 group-hover:border-accent/20 transition-all" />
@@ -147,8 +147,8 @@ export function VinculosPage() {
                           </div>
                        </div>
                        <div>
-                          <h4 className="font-bold text-text-primary truncate w-full">{outro.nome}</h4>
-                          <p className="text-[10px] text-text-muted uppercase font-black tracking-widest mt-1">{outro.role}</p>
+                          <h4 className="font-bold text-ink-primary truncate w-full">{outro.nome}</h4>
+                          <p className="text-[10px] text-ink-tertiary uppercase font-black tracking-widest mt-1">{outro.role}</p>
                        </div>
                        <Button variant="ghost" size="sm" className="w-full border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest">
                           Enviar Mensagem <ArrowUpRight size={12} className="ml-2 text-accent" />

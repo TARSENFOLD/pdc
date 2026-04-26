@@ -1,130 +1,109 @@
-import { useAuth } from '@/lib/auth/AuthContext';
-import { Search, Bell, Menu, UserCircle, Settings, LogOut, ChevronDown } from 'lucide-react';
-import { motion } from 'motion/react';
-import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Avatar } from '../ui/Avatar';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Search, Menu, Command, MessageSquare } from 'lucide-react';
+import { RoleChipMenu } from '@/components/topbar/RoleChipMenu';
+import { NotificationsDropdown } from '@/components/topbar/NotificationsDropdown';
+import { CommandPalette } from '@/components/topbar/CommandPalette';
 
 interface TopBarProps {
   onOpenMobileMenu: () => void;
 }
 
 export function TopBar({ onOpenMobileMenu }: TopBarProps) {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
-  // Close dropdown on click outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        // Guardrail: Não abrir se estiver num campo de texto
+        if (
+          e.target instanceof HTMLInputElement ||
+          e.target instanceof HTMLTextAreaElement ||
+          (e.target as HTMLElement)?.isContentEditable
+        ) {
+          return;
+        }
+
+        e.preventDefault();
+        setIsCommandPaletteOpen((open) => !open);
       }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => { document.removeEventListener('mousedown', handleClickOutside); };
+    };
+
+    document.addEventListener('keydown', down);
+    return () => document.removeEventListener('keydown', down);
   }, []);
 
-  async function handleLogout() {
-    await logout();
-    navigate('/login', { replace: true });
-  }
-
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md sm:px-6 lg:px-8">
-      {/* ── Esquerda: Logo Mobile + Breadcrumbs ── */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => { onOpenMobileMenu(); }}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-alt text-text-secondary hover:text-text-primary lg:hidden"
-        >
-          <Menu size={18} />
-        </button>
-        
-        <div className="hidden lg:block">
-          <p className="text-xs font-medium text-text-muted uppercase tracking-widest">
-            {user?.role === 'estudante' ? 'Painel do Estudante' : 'Painel de Decisão'}
-          </p>
-        </div>
-      </div>
-
-      {/* ── Centro: Busca Global (Cmd+K) ── */}
-      <div className="hidden md:flex flex-1 max-w-md mx-8">
-        <div className="relative w-full group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-amber transition-colors" size={16} />
-          <input
-            type="text"
-            placeholder="Procurar carreiras, mentores ou simulações... (⌘K)"
-            className="h-10 w-full rounded-xl border border-border bg-surface-alt pl-10 pr-4 text-sm text-text-primary ring-amber focus:border-amber focus:outline-none focus:ring-1 transition-all"
-          />
-        </div>
-      </div>
-
-      {/* ── Direita: Notificações + IA Status + Perfil ── */}
-      <div className="flex items-center gap-3">
-        {/* IA Status Indicator */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-raised border border-border">
-          <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-          <span className="text-[10px] font-bold text-text-secondary uppercase tracking-tighter">Tina Active</span>
-        </div>
-
-        {/* Notificações */}
-        <button className="relative p-2 text-text-secondary hover:text-text-primary transition-colors">
-          <Bell size={20} />
-          <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-amber border-2 border-background" />
-        </button>
-
-        {/* User Dropdown */}
-        <div className="relative" ref={dropdownRef}>
+    <>
+      <CommandPalette 
+        open={isCommandPaletteOpen} 
+        onOpenChange={setIsCommandPaletteOpen} 
+      />
+      
+      <header 
+        className="sticky top-0 z-30 flex h-14 w-full items-center justify-between border-b px-4 backdrop-blur-[var(--glass-blur)] sm:px-6 lg:px-8"
+        style={{ 
+          borderColor: 'var(--glass-border-light)', 
+          backgroundColor: 'var(--surface-overlay)' 
+        }}
+      >
+        {/* ── Esquerda: Logo Mobile + Breadcrumbs ── */}
+        <div className="flex items-center gap-4">
           <button
-            onClick={() => { setDropdownOpen(!dropdownOpen); }}
-            className="flex items-center gap-2 rounded-full border border-border bg-surface-raised p-1 pr-3 transition-all hover:bg-surface-alt"
+            onClick={() => { onOpenMobileMenu(); }}
+            className="flex h-11 w-11 items-center justify-center rounded-xl border transition-colors lg:hidden"
+            style={{ 
+              borderColor: 'var(--glass-border-light)', 
+              backgroundColor: 'var(--surface-elevated)',
+              color: 'var(--ink-secondary)'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ink-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ink-secondary)'; }}
           >
-            <Avatar 
-              size="sm" 
-              src={user?.avatarUrl || undefined} 
-              alt={user?.nome} 
-              tier={user?.reputacaoTier}
-              className="border-none"
-            />
-            <div className="hidden lg:block text-left">
-              <p className="max-w-[80px] truncate text-xs font-bold text-text-primary">{user?.nome.split(' ')[0]}</p>
-            </div>
-            <ChevronDown size={14} className={`text-text-muted transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+            <Menu size={20} />
           </button>
-
-          {dropdownOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              className="absolute right-0 mt-2 w-48 origin-top-right rounded-2xl border border-border bg-surface p-2 shadow-xl"
-            >
-              <Link
-                to="/app/perfil"
-                onClick={() => { setDropdownOpen(false); }}
-                className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
-              >
-                <UserCircle size={18} /> O meu Perfil
-              </Link>
-              <Link
-                to="/app/configuracoes"
-                onClick={() => { setDropdownOpen(false); }}
-                className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-text-secondary hover:bg-surface-raised hover:text-text-primary transition-colors"
-              >
-                <Settings size={18} /> Configurações
-              </Link>
-              <div className="my-1 border-t border-border" />
-              <button
-                onClick={() => void handleLogout()}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-error hover:bg-error/10 transition-colors"
-              >
-                <LogOut size={18} /> Sair
-              </button>
-            </motion.div>
-          )}
         </div>
-      </div>
-    </header>
+
+        {/* ── Centro: Busca Global (Cmd+K) ── */}
+        <div className="hidden md:flex flex-1 max-w-md mx-8">
+          <button 
+            onClick={() => setIsCommandPaletteOpen(true)}
+            className="relative w-full group text-left"
+          >
+            <div className="relative w-full">
+              <Search 
+                className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors text-ink-tertiary group-hover:text-accent" 
+                size={16} 
+              />
+              <div
+                className="h-11 w-full rounded-xl border pl-10 pr-4 text-sm transition-all flex items-center justify-between bg-elevated-recessed border-white/5 text-ink-tertiary hover:border-accent/40"
+              >
+                <span>Procurar carreiras ou rotas...</span>
+                <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium">
+                  <Command className="h-2.5 w-2.5" /> K
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* ── Direita: Mensagens + Notificações + Perfil ── */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Mensagens */}
+          <Link
+            to="/app/mensagens"
+            className="relative flex items-center justify-center w-11 h-11 rounded-xl text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--surface-recessed)] transition-colors min-h-[44px] min-w-[44px]"
+            title="Mensagens"
+          >
+            <MessageSquare size={20} />
+          </Link>
+
+          {/* Notificações */}
+          <NotificationsDropdown />
+
+          {/* User Dropdown - Role Chip Menu */}
+          <RoleChipMenu />
+        </div>      </header>
+    </>
   );
 }

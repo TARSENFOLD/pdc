@@ -43,12 +43,12 @@ export async function replayUnprocessedEvents() {
       try {
         // AWAIT IMPORTANTE: Aguarda a conclusão dos handlers (RedLock, external calls, etc)
         await eventBus.publish({
-          id: crypto.randomUUID(), // Gerar ID de execução única para o replay
+          id: evt.correlationId, // Reutiliza identidade canónica para garantir idempotência
           name: evt.name as any,
           payload: evt.payload as any,
           timestamp: evt.createdAt,
           correlationId: evt.correlationId
-        });
+        }, evt.documentId);
 
         // Sucesso Total
         await strapiPut(`/domain-events/${evt.documentId}`, {

@@ -22,8 +22,8 @@ export function MentorAnalyticsPage() {
       label: 'Mentorias Activas',
       value: data?.mentoriasActivas || 0,
       icon: Clock,
-      color: 'text-amber',
-      bg: 'bg-amber/10',
+      color: 'text-accent',
+      bg: 'bg-accent/10',
     },
     {
       label: 'Estudantes Orientados',
@@ -43,7 +43,7 @@ export function MentorAnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold font-sora text-text-primary">Métricas de Mentor</h1>
+      <h1 className="text-2xl font-bold font-sora text-ink-primary">Métricas de Mentor</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {stats.map((stat) => (
@@ -52,15 +52,15 @@ export function MentorAnalyticsPage() {
               <stat.icon className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-sm font-medium text-text-muted">{stat.label}</p>
-              <p className="text-3xl font-bold text-text-primary mt-1">{stat.value}</p>
+              <p className="text-sm font-medium text-ink-tertiary">{stat.label}</p>
+              <p className="text-3xl font-bold text-ink-primary mt-1">{stat.value}</p>
             </div>
           </Card>
         ))}
       </div>
 
-      <Card className="p-8 border-dashed border-2 border-border/40 bg-surface/30 flex flex-col items-center justify-center text-center">
-        <p className="text-text-muted">Mais métricas detalhadas (progresso médio, taxa de sucesso, etc.) estarão disponíveis em breve.</p>
+      <Card className="p-8 border-dashed border-2 border-ink-tertiary/10/40 bg-elevated/30 flex flex-col items-center justify-center text-center">
+        <p className="text-ink-tertiary">Mais métricas detalhadas (progresso médio, taxa de sucesso, etc.) estarão disponíveis em breve.</p>
       </Card>
     </div>
   );

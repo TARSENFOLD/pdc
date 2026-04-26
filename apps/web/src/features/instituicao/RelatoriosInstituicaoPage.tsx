@@ -20,7 +20,7 @@ export function RelatoriosInstituicaoPage() {
   const expData = experiencias?.data ?? [];
 
   const columns: Column<ExperienciaMinha>[] = [
-    { header: 'Experiência', accessor: 'titulo', className: 'font-bold text-text-primary' },
+    { header: 'Experiência', accessor: 'titulo', className: 'font-bold text-ink-primary' },
     { 
       header: 'Taxa de Conversão', 
       accessor: (_exp: ExperienciaMinha) => (
@@ -49,14 +49,14 @@ export function RelatoriosInstituicaoPage() {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 mb-3 px-3 py-1 uppercase tracking-widest text-[9px] font-black">Institutional Intelligence</Badge>
-          <h1 className="text-4xl font-black text-text-primary tracking-tighter font-display">
+          <h1 className="text-4xl font-black text-ink-primary tracking-tighter font-display">
             Oráculo de <span className="text-accent">Retenção</span>
           </h1>
-          <p className="text-text-secondary mt-2 max-w-lg leading-relaxed text-sm">
+          <p className="text-ink-secondary mt-2 max-w-lg leading-relaxed text-sm">
             Análise preditiva de capital humano e eficácia de recrutamento vocacional.
           </p>
         </div>
-        <Button variant="secondary" size="sm" className="bg-surface-alt border-white/5 font-bold uppercase tracking-widest text-[10px]">
+        <Button variant="secondary" size="sm" className="bg-recessed border-white/5 font-bold uppercase tracking-widest text-[10px]">
           <Download size={14} className="mr-2" /> Exportar Relatório Executivo
         </Button>
       </header>
@@ -64,64 +64,64 @@ export function RelatoriosInstituicaoPage() {
       {/* ── Bento Grid: Strategic KPIs ── */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4 auto-rows-[160px]">
         {/* KPI 1: Evasão Projetada (The Hero Metric) */}
-        <Card className="md:col-span-3 lg:col-span-2 row-span-2 p-8 bg-surface-alt border-accent/20 relative overflow-hidden flex flex-col justify-between shadow-2xl">
+        <Card className="md:col-span-3 lg:col-span-2 row-span-2 p-8 bg-recessed border-accent/20 relative overflow-hidden flex flex-col justify-between shadow-2xl">
           <div className="absolute top-0 right-0 p-4 opacity-10">
             <TrendingDown size={120} className="text-accent" />
           </div>
           <div className="space-y-1 relative z-10">
              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-accent">Redução de Evasão</p>
-             <h3 className="text-sm font-medium text-text-muted">Impacto Estimado no 1º Ano</h3>
+             <h3 className="text-sm font-medium text-ink-tertiary">Impacto Estimado no 1º Ano</h3>
           </div>
           <div className="relative z-10">
-             <span className="text-7xl font-black font-mono tracking-tighter text-text-primary">-22<span className="text-4xl text-accent">%</span></span>
-             <p className="text-xs text-text-secondary mt-2 leading-relaxed">
+             <span className="text-7xl font-black font-mono tracking-tighter text-ink-primary">-22<span className="text-4xl text-accent">%</span></span>
+             <p className="text-xs text-ink-secondary mt-2 leading-relaxed">
                Estudantes que vivem experiências PDC têm <span className="text-success font-bold">80% mais chance</span> de concluir o percurso académico.
              </p>
           </div>
         </Card>
 
         {/* KPI 2: Talentos de Elite Detectados */}
-        <Card className="md:col-span-3 lg:col-span-2 p-8 bg-surface border-white/5 flex flex-col justify-between">
+        <Card className="md:col-span-3 lg:col-span-2 p-8 bg-elevated border-white/5 flex flex-col justify-between">
            <div className="flex justify-between items-start">
-              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Talentos de Elite</p>
+              <p className="text-[10px] font-bold text-ink-tertiary uppercase tracking-widest">Talentos de Elite</p>
               <Target size={18} className="text-accent" />
            </div>
            <div className="flex items-baseline gap-2">
               <span className="text-5xl font-black font-mono tracking-tighter">450</span>
-              <span className="text-xs font-bold text-text-muted uppercase">Top 1% Angola</span>
+              <span className="text-xs font-bold text-ink-tertiary uppercase">Top 1% Angola</span>
            </div>
         </Card>
 
         {/* KPI 3: Inscrições Activas */}
-        <Card className="md:col-span-3 lg:col-span-2 p-8 bg-surface border-white/5 flex flex-col justify-between">
+        <Card className="md:col-span-3 lg:col-span-2 p-8 bg-elevated border-white/5 flex flex-col justify-between">
            <div className="flex justify-between items-start">
-              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Captação Qualificada</p>
+              <p className="text-[10px] font-bold text-ink-tertiary uppercase tracking-widest">Captação Qualificada</p>
               <Users size={18} className="text-accent" />
            </div>
            <div className="flex items-baseline gap-2">
               <span className="text-5xl font-black font-mono tracking-tighter">{stats?.inscricoesTotais ?? 0}</span>
-              <span className="text-xs font-bold text-text-muted uppercase">Interessados</span>
+              <span className="text-xs font-bold text-ink-tertiary uppercase">Interessados</span>
            </div>
         </Card>
 
         {/* Mini KPI 4: Match Behavioral */}
-        <Card className="md:col-span-3 lg:col-span-2 p-6 bg-surface border-white/5 flex items-center gap-6">
+        <Card className="md:col-span-3 lg:col-span-2 p-6 bg-elevated border-white/5 flex items-center gap-6">
            <div className="h-12 w-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent">
               <ShieldCheck size={24} />
            </div>
            <div>
-              <p className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Precisão de Match</p>
+              <p className="text-[9px] font-bold text-ink-tertiary uppercase tracking-widest">Precisão de Match</p>
               <p className="text-xl font-black font-mono">94.8%</p>
            </div>
         </Card>
 
         {/* Mini KPI 5: Programas Activos */}
-        <Card className="md:col-span-3 lg:col-span-2 p-6 bg-surface border-white/5 flex items-center gap-6">
+        <Card className="md:col-span-3 lg:col-span-2 p-6 bg-elevated border-white/5 flex items-center gap-6">
            <div className="h-12 w-12 rounded-2xl bg-accent/10 flex items-center justify-center text-accent">
               <Zap size={24} />
            </div>
            <div>
-              <p className="text-[9px] font-bold text-text-muted uppercase tracking-widest">Programas Activos</p>
+              <p className="text-[9px] font-bold text-ink-tertiary uppercase tracking-widest">Programas Activos</p>
               <p className="text-xl font-black font-mono">{stats?.programasActivos ?? 0}</p>
            </div>
         </Card>
@@ -130,16 +130,16 @@ export function RelatoriosInstituicaoPage() {
       {/* ── Data Section: Performance by Experience ── */}
       <section className="space-y-6">
         <div className="flex items-center justify-between px-2">
-           <h3 className="text-xl font-bold font-display tracking-tight text-text-primary flex items-center gap-2">
+           <h3 className="text-xl font-bold font-display tracking-tight text-ink-primary flex items-center gap-2">
              <BarChart3 size={20} className="text-accent" />
              Análise por Unidade Curricular
            </h3>
-           <Badge variant="outline" className="border-white/5 text-text-muted text-[10px] uppercase font-bold">Últimos 30 dias</Badge>
+           <Badge variant="outline" className="border-white/5 text-ink-tertiary text-[10px] uppercase font-bold">Últimos 30 dias</Badge>
         </div>
-        <Card className="overflow-hidden border-white/5 bg-surface-alt shadow-sm rounded-[32px]">
+        <Card className="overflow-hidden border-white/5 bg-recessed shadow-sm rounded-[32px]">
            <Table columns={columns} data={expData} />
            {expData.length === 0 && (
-             <div className="py-20 text-center text-text-muted text-sm italic">
+             <div className="py-20 text-center text-ink-tertiary text-sm italic">
                Nenhuma unidade curricular com dados de telemetria suficientes.
              </div>
            )}
@@ -147,21 +147,21 @@ export function RelatoriosInstituicaoPage() {
       </section>
 
       {/* ── Visual Insight: Talent Cluster (Simulated DataViz) ── */}
-      <Card className="p-8 bg-surface border-white/5 rounded-[32px] grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+      <Card className="p-8 bg-elevated border-white/5 rounded-[32px] grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
          <div className="md:col-span-1 space-y-4">
             <h4 className="text-lg font-bold tracking-tight">Cluster de Talentos</h4>
-            <p className="text-xs text-text-secondary leading-relaxed">
+            <p className="text-xs text-ink-secondary leading-relaxed">
               Distribuição comportamental dos estudantes que interagiram com a sua instituição. 
               Foco predominante em <span className="text-accent font-bold">Fluidez Cognitiva</span>.
             </p>
             <div className="pt-4 flex flex-col gap-2">
-               <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-text-muted">
+               <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-ink-tertiary">
                   <div className="h-2 w-2 rounded-full bg-accent" /> Analítico (65%)
                </div>
-               <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-text-muted">
+               <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-ink-tertiary">
                   <div className="h-2 w-2 rounded-full bg-success" /> Prático (20%)
                </div>
-               <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-text-muted">
+               <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-ink-tertiary">
                   <div className="h-2 w-2 rounded-full bg-blue-400" /> Criativo (15%)
                </div>
             </div>

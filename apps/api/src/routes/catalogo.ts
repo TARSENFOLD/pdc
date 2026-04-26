@@ -51,10 +51,7 @@ function addPg(p: Record<string, string>, page: number, limit: number): void {
   p['pagination[page]'] = page.toString();
   p['pagination[pageSize]'] = limit.toString();
 }
-function addPublished(p: Record<string, string>): void {
-  p['filters[estado][$eq]'] = 'published';
-  p['filters[visibilidade][$eq]'] = 'publico';
-}
+
 
 function mapCurso(d: StrapiCurso): CursoPublico {
   return {
@@ -86,8 +83,8 @@ const cursoQ = pgQ.extend({
 
 catalogoRoutes.get('/cursos', zValidator('query', cursoQ), async (c) => {
   const q = c.req.valid('query');
-  const p: Record<string, string> = { populate: 'capa,autor' };
-  addPublished(p); addPg(p, q.page, q.limit);
+  const p: Record<string, string> = { 'filters[estado][$eq]': 'published' }; 
+  addPg(p, q.page, q.limit);
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
   if (q.idioma) p['filters[idioma][$eq]'] = q.idioma;
@@ -99,8 +96,10 @@ catalogoRoutes.get('/cursos', zValidator('query', cursoQ), async (c) => {
 
 catalogoRoutes.get('/cursos/:slug', async (c) => {
   const slug = c.req.param('slug');
-  const p: Record<string, string> = { 'filters[slug][$eq]': slug, populate: 'capa,autor,modulos' };
-  addPublished(p);
+  const p: Record<string, string> = { 
+    'filters[slug][$eq]': slug,
+    'filters[estado][$eq]': 'published'
+  }; 
   const res = await strapiGet<StrapiCurso>('/cursos', p);
   const first = res.data[0];
   if (!first) return c.json({ error: 'Curso não encontrado' }, 404);
@@ -117,8 +116,8 @@ const simQ = pgQ.extend({
 
 catalogoRoutes.get('/simulacoes', zValidator('query', simQ), async (c) => {
   const q = c.req.valid('query');
-  const p: Record<string, string> = { populate: 'capa' };
-  addPublished(p); addPg(p, q.page, q.limit);
+  const p: Record<string, string> = { 'filters[estado][$eq]': 'published' }; 
+  addPg(p, q.page, q.limit);
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.tipo !== undefined) p['filters[tipo][$eq]'] = q.tipo.toString();
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
@@ -130,8 +129,10 @@ catalogoRoutes.get('/simulacoes', zValidator('query', simQ), async (c) => {
 
 catalogoRoutes.get('/simulacoes/:slug', async (c) => {
   const slug = c.req.param('slug');
-  const p: Record<string, string> = { 'filters[slug][$eq]': slug, populate: 'capa' };
-  addPublished(p);
+  const p: Record<string, string> = { 
+    'filters[slug][$eq]': slug,
+    'filters[estado][$eq]': 'published'
+  }; 
   const res = await strapiGet<StrapiSimulacao>('/simulacoes', p);
   const first = res.data[0];
   if (!first) return c.json({ error: 'Simulação não encontrada' }, 404);
@@ -144,8 +145,8 @@ const expQ = pgQ.extend({ area: AreaVocacionalSchema.optional(), nivel: z.string
 
 catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
   const q = c.req.valid('query');
-  const p: Record<string, string> = { populate: 'capa,instituicao' };
-  addPublished(p); addPg(p, q.page, q.limit);
+  const p: Record<string, string> = { 'filters[estado][$eq]': 'published' }; 
+  addPg(p, q.page, q.limit);
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
   

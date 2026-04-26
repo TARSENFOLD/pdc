@@ -17,6 +17,12 @@
       "type": "enumeration",
       "enum": ["automatica", "manual", "institucional", "plataforma"]
     },
+    "origem": {
+      "type": "enumeration",
+      "enum": ["auto", "manual"],
+      "default": "auto",
+      "description": "Origem da conquista: auto-gerada pelo sistema ou manual pelo utilizador"
+    },
     "categoria": { "type": "string" },
     "midias": {
       "type": "media",

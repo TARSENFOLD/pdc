@@ -30,15 +30,15 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       success: 'bg-green-500/10 text-green-600 border-green-500/20',
       error: 'bg-red-500/10 text-red-600 border-red-500/20',
       warning: 'bg-accent/10 text-accent border-accent/20',
-      info: 'bg-cobalt/10 text-cobalt border-cobalt/20',
+      info: 'bg-institutional-cobalt/10 text-institutional-cobalt border-institutional-cobalt/20',
       admin: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
       mentor: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
       estudante: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
       instituicao: 'bg-pink-500/10 text-pink-600 border-pink-500/20',
       moderador: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
-      comite_cientifico: 'bg-cobalt/10 text-cobalt border-cobalt/20',
+      comite_cientifico: 'bg-institutional-cobalt/10 text-institutional-cobalt border-institutional-cobalt/20',
       super_admin: 'bg-red-500/10 text-red-600 border-red-500/20',
-      patrocinador: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+      patrocinador: 'bg-accent/10 text-accent border-accent/20',
       secondary: 'bg-recessed text-ink-secondary border-ink-tertiary/10',
     };
 

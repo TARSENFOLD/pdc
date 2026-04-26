@@ -1,334 +1,211 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CriarProgramaPayloadSchema, type CriarProgramaPayload, type CronogramaEtapa } from '@pdc/shared';
+import { CriarProgramaPayloadSchema, type CriarProgramaPayload } from '@pdc/shared';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { programasApi } from '@/lib/api/programas';
-import { Button, Card, Input } from '@/components/ui';
+import { Input, Select } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
+import { BuilderShell, BuilderSection, BuilderActionsBar } from '@/components/builders';
+import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
+import { motion, AnimatePresence } from 'motion/react';
+import { Layers, Coins } from 'lucide-react';
+import { useAuth } from '@/lib/auth/AuthContext';
 
-function CronogramaBuilder({
-  etapas,
-  onChange,
-}: {
-  etapas: (CronogramaEtapa & { id?: string })[];
-  onChange: (etapas: (CronogramaEtapa & { id?: string })[]) => void;
-}) {
-  function addEtapa() {
-    onChange([...etapas, { id: crypto.randomUUID(), titulo: '', dataInicio: '', dataFim: '', responsavel: '' }]);
-  }
-
-  function removeEtapa(id?: string) {
-    onChange(etapas.filter((e) => e.id !== id));
-  }
-
-  function updateEtapa(id: string | undefined, field: keyof CronogramaEtapa, value: string) {
-    const updated = etapas.map((e) => (e.id === id ? { ...e, [field]: value } : e));
-    onChange(updated);
-  }
-
-  return (
-    <div className="space-y-3">
-      {etapas.map((etapa) => (
-        <div key={etapa.id} className="rounded-md border border-border bg-surface-raised p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-text-secondary">Etapa</span>
-            <button
-              type="button"
-              onClick={() => { removeEtapa(etapa.id); }}
-              className="text-xs text-error hover:underline"
-            >
-              Remover
-            </button>
-          </div>
-          <Input
-            placeholder="Título da etapa"
-            value={etapa.titulo}
-            onChange={(e) => { updateEtapa(etapa.id, 'titulo', e.target.value); }}
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs text-text-muted">Data início</label>
-              <input
-                type="date"
-                value={etapa.dataInicio?.slice(0, 10) ?? ''}
-                onChange={(e) => { updateEtapa(etapa.id, 'dataInicio', e.target.value); }}
-                className="mt-1 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-text-muted">Data fim</label>
-              <input
-                type="date"
-                value={etapa.dataFim?.slice(0, 10) ?? ''}
-                onChange={(e) => { updateEtapa(etapa.id, 'dataFim', e.target.value); }}
-                className="mt-1 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-          <Input
-            placeholder="Responsável (nome ou cargo)"
-            value={etapa.responsavel ?? ''}
-            onChange={(e) => { updateEtapa(etapa.id, 'responsavel', e.target.value); }}
-          />
-        </div>
-      ))}
-      <Button type="button" variant="secondary" size="sm" onClick={addEtapa}>
-        + Adicionar Etapa
-      </Button>
-    </div>
-  );
-}
-
-export default function CriarProgramaPage() {
+export function CriarProgramaPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [etapas, setEtapas] = useState<CronogramaEtapa[]>([]);
+  const { user } = useAuth();
+  const [lastEventId, setLastEventId] = useState<string | null>(null);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-  } = useForm<CriarProgramaPayload>({
+  const form = useForm<CriarProgramaPayload>({
     resolver: zodResolver(CriarProgramaPayloadSchema),
     defaultValues: {
       titulo: '',
-      descricao: '',
       proposito: '',
       metodologia: '',
       tipo: 'standard',
       area: 'GESTAO',
       modalidade: 'presencial',
-      criadorTipo: 'instituicao',
-      vagas: 1,
-    },
+      vagas: 10,
+      cursosIds: [],
+      experienciasIds: [],
+      simulacoesIds: [],
+      projetosIds: [],
+    }
   });
+
+  const { register, formState: { errors } } = form;
 
   const mutation = useMutation({
-    mutationFn: (data: CriarProgramaPayload) => {
-      const payload: CriarProgramaPayload = {
-        ...data,
-        cronograma: etapas.length > 0 ? { etapas } : undefined,
-      };
-      return programasApi.create(payload);
-    },
-    onSuccess: () => {
+    mutationFn: (data: CriarProgramaPayload) => programasApi.create(data),
+    onSuccess: (res: any) => {
       void queryClient.invalidateQueries({ queryKey: ['programas', 'meus'] });
-      toast({ title: 'Programa criado!' });
-      navigate('/app/dashboard/instituicao');
+      toast({ title: 'Programa Materializado!', description: 'O ecossistema foi atualizado com a nova oferta.' });
+      
+      if (res.data?.eventId) {
+        setLastEventId(res.data.eventId);
+      } else {
+        navigate('/app/dashboard/instituicao');
+      }
     },
-    onError: () => toast({ title: 'Erro ao criar', variant: 'error' }),
+    onError: (err: any) => toast({ 
+      title: 'Erro na criação', 
+      description: err.response?.data?.error || 'Erro desconhecido',
+      variant: 'error' 
+    })
   });
 
-  const tipoOptions = [
-    { value: 'standard', label: 'Standard' },
-    { value: 'shadowapro', label: 'Shadow a Pro' },
-    { value: 'eduvisit', label: 'EduVisita' },
-  ];
-
-  const areaOptions = [
-    'SAUDE', 'ENGENHARIA', 'TECNOLOGIA', 'DIREITO', 'GESTAO',
-    'EDUCACAO', 'ARTES', 'CIENCIAS_AGRARIAS', 'CIENCIAS_SOCIAIS',
-    'COMUNICACAO', 'CIENCIAS_NATURAIS', 'ARQUITETURA',
-    'TURISMO_HOTELARIA', 'DESPORTO', 'OUTRA',
-  ];
+  const handleSave = () => {
+    const data = form.getValues();
+    mutation.mutate(data);
+  };
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold mb-2">Novo Programa de Acesso</h1>
-      <p className="text-sm text-text-secondary mb-6">Preenche os 5 elementos canónicos para garantir a qualidade do programa.</p>
-
-      <Card className="p-6">
-        <form
-          onSubmit={(e) => {
-            void handleSubmit((data) => {
-              mutation.mutate(data);
-            })(e);
-          }}
-          className="space-y-6"
-        >
-          {/* Básico */}
-          <section className="space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted">Informação Base</h2>
-
-            <Input
-              label="Título *"
-              {...register('titulo')}
-              error={errors.titulo?.message}
+    <>
+      <BuilderShell
+        form={form as any}
+        title="Arquitetura de Programa de Acesso"
+        description="Agrupa ativos educativos, define o propósito e governa o acesso ao talento."
+        state="draft"      breadcrumbs={[
+        { label: 'Início', to: '/app' },
+        { label: 'Programas', to: '/app/catalogo/programas' },
+        { label: 'Novo Programa' }
+      ]}
+      sections={[
+        { id: 'proposito', label: 'Propósito' },
+        { id: 'metodologia', label: 'Metodologia' },
+        { id: 'conteudos', label: 'Conteúdos' },
+        { id: 'inscricao', label: 'Inscrição' },
+      ]}
+      actions={
+        <BuilderActionsBar
+          state="draft"
+          userRole={user?.role || 'instituicao'}
+          onSaveDraft={handleSave}
+          onSubmitReview={handleSave}
+          onPublish={handleSave}
+          isSubmitting={mutation.isPending}
+        />
+      }
+    >
+      <BuilderSection
+        value="proposito"
+        title="Propósito e Identidade"
+        description="O valor diferenciador e objetivo pedagógico central."
+      >
+        <div className="space-y-6">
+          <Input label="Título do Programa" {...register('titulo')} error={errors.titulo?.message} />
+          <div className="space-y-1">
+            <label className="text-sm font-bold uppercase tracking-widest text-ink-tertiary">Objetivo Soberano (Propósito)</label>
+            <textarea 
+              className="flex min-h-[120px] w-full rounded-xl border border-ink-tertiary/20 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
+              {...register('proposito')}
             />
+            {errors.proposito && <p className="text-xs text-accent-danger">{errors.proposito.message}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+             <Select label="Domínio Vocacional" {...register('area')}>
+                <option value="GESTAO">Gestão</option>
+                <option value="TECNOLOGIA">Tecnologia</option>
+                <option value="SAUDE">Saúde</option>
+                <option value="DIREITO">Direito</option>
+             </Select>
+             <Select label="Tipo de Programa" {...register('tipo')}>
+                <option value="standard">Standard</option>
+                <option value="shadowapro">Shadow a Pro</option>
+                <option value="eduvisit">EduVisita</option>
+             </Select>
+          </div>
+        </div>
+      </BuilderSection>
 
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Descrição</label>
-              <textarea
-                className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                {...register('descricao')}
-              />
-            </div>
+      <BuilderSection
+        value="metodologia"
+        title="Metodologia e Recursos"
+        description="Como o programa é entregue e que meios são disponibilizados."
+      >
+        <div className="space-y-6">
+          <div className="space-y-1">
+            <label className="text-sm font-bold uppercase tracking-widest text-ink-tertiary">Descrição Metodológica</label>
+            <textarea 
+              className="flex min-h-[120px] w-full rounded-xl border border-ink-tertiary/20 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
+              {...register('metodologia')}
+            />
+            {errors.metodologia && <p className="text-xs text-accent-danger">{errors.metodologia.message}</p>}
+          </div>
+          <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Recursos Didáticos (JSON Spec)</p>
+          <div className="p-4 border border-ink-tertiary/10 rounded-xl bg-recessed/30 italic text-sm text-ink-secondary">
+            Mapeamento de recursos técnicos e infraestrutura disponível em breve.
+          </div>
+        </div>
+      </BuilderSection>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Tipo *</label>
-                <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  {...register('tipo')}
-                >
-                  {tipoOptions.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
+      <BuilderSection
+        value="conteudos"
+        title="Conteúdos Agrupados"
+        description="Integração de cursos, simulações e experiências práticas."
+      >
+        <div className="p-6 border border-dashed border-ink-tertiary/20 rounded-2xl bg-recessed/30 text-center space-y-4">
+           <Layers size={32} className="mx-auto text-ink-tertiary opacity-40" />
+           <p className="text-sm text-ink-secondary max-w-xs mx-auto">
+             Seletor de conteúdos do catálogo para agregação soberana disponível na próxima iteração.
+           </p>
+           <div className="text-[9px] font-black uppercase tracking-widest text-ink-tertiary opacity-60">
+              Módulos: {form.watch('cursosIds')?.length || 0} · Simul: {form.watch('simulacoesIds')?.length || 0}
+           </div>
+        </div>
+      </BuilderSection>
+
+      <BuilderSection
+        value="inscricao"
+        title="Regras de Inscrição e Preço"
+        description="Governação de acesso e política comercial."
+      >
+        <div className="space-y-8">
+           <div className="grid grid-cols-2 gap-4">
+              <Select label="Modalidade" {...register('modalidade')}>
+                <option value="presencial">Presencial</option>
+                <option value="online">Online</option>
+                <option value="hibrido">Híbrido</option>
+              </Select>
+              <Input label="Vagas Totais" type="number" {...register('vagas', { valueAsNumber: true })} />
+           </div>
+           <div className="space-y-4">
+              <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest flex items-center gap-2">
+                <Coins size={14} className="text-accent" /> Política de Preços
+              </p>
+              <div className="p-4 rounded-xl border border-accent/20 bg-accent/5">
+                 <p className="text-xs text-ink-secondary leading-relaxed">
+                   Os programas seguem a precificação dinâmica baseada em mérito. Define o valor base e as bolsas de excelência (em breve).
+                 </p>
               </div>
+           </div>
+        </div>
+      </BuilderSection>
+    </BuilderShell>
 
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Área *</label>
-                <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  {...register('area')}
-                >
-                  {areaOptions.map((a) => (
-                    <option key={a} value={a}>{a.replaceAll('_', ' ')}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Modalidade</label>
-                <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  {...register('modalidade')}
-                >
-                  <option value="presencial">Presencial</option>
-                  <option value="online">Online</option>
-                  <option value="hibrido">Híbrido</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Criado por</label>
-                <select
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  {...register('criadorTipo')}
-                >
-                  <option value="instituicao">Instituição</option>
-                  <option value="mentor">Mentor</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Vagas"
-                type="number"
-                min={1}
-                {...register('vagas', { valueAsNumber: true })}
-              />
-              <Input
-                label="Duração"
-                placeholder="ex: 3 meses"
-                {...register('duracao')}
-              />
-            </div>
-          </section>
-
-          {/* 5 Elementos Canónicos */}
-          <section className="space-y-4 border-t border-border pt-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted">
-              5 Elementos Canónicos
-            </h2>
-
-            {/* 1. Propósito */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium">
-                Propósito *{' '}
-                <span className="text-xs font-normal text-text-muted">Qual o objetivo principal deste programa?</span>
-              </label>
-              <textarea
-                className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                {...register('proposito')}
-              />
-              {errors.proposito && (
-                <p className="text-xs text-error">{errors.proposito.message}</p>
-              )}
-            </div>
-
-            {/* 2. Metodologia */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium">
-                Metodologia{' '}
-                <span className="text-xs font-normal text-text-muted">Como o programa é conduzido?</span>
-              </label>
-              <textarea
-                className="flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                {...register('metodologia')}
-              />
-            </div>
-
-            {/* 3. Cronograma */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Cronograma{' '}
-                <span className="text-xs font-normal text-text-muted">Etapas e datas do programa</span>
-              </label>
-              <CronogramaBuilder etapas={etapas} onChange={setEtapas} />
-            </div>
-
-            {/* 4. Regras de Matrícula */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium">
-                Regras de Matrícula{' '}
-                <span className="text-xs font-normal text-text-muted">Critérios de admissão</span>
-              </label>
-              <textarea
-                className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="ex: Estudantes do 3º ano de Engenharia com média ≥ 14 valores"
-                {...register('requisitos')}
-              />
-            </div>
-
-            {/* 5. Datas */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Data de Início</label>
-                <input
-                  type="date"
-                  className="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm"
-                  value={watch('dataInicio')?.slice(0, 10) ?? ''}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      // Interpret local midnight to avoid day shift in ISO conversion
-                      const [y, m, d] = e.target.value.split('-').map(Number);
-                      setValue('dataInicio', new Date(y, m - 1, d).toISOString());
-                    }
-                  }}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Data de Fim</label>
-                <input
-                  type="date"
-                  className="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm"
-                  value={watch('dataFim')?.slice(0, 10) ?? ''}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      // Interpret local midnight to avoid day shift in ISO conversion
-                      const [y, m, d] = e.target.value.split('-').map(Number);
-                      setValue('dataFim', new Date(y, m - 1, d).toISOString());
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </section>
-
-          <Button type="submit" className="w-full" disabled={mutation.isPending}>
-            {mutation.isPending ? 'A criar...' : 'Criar Programa'}
-          </Button>
-        </form>
-      </Card>
-    </div>
+    <AnimatePresence>
+      {lastEventId && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-canvas/95 backdrop-blur-md"
+        >
+          <div className="w-full max-w-xl">
+            <EcosystemImpactPanel 
+              eventId={lastEventId} 
+              variant="full"
+              onComplete={() => {
+                setTimeout(() => navigate('/app/dashboard/instituicao'), 3000);
+              }}
+            />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 }

@@ -77,19 +77,19 @@ export function FilaAprovacaoPage() {
     {
       header: 'Titulo',
       accessor: (item: ItemFila) => (
-        <p className="text-sm font-medium text-text-primary">{item.titulo}</p>
+        <p className="text-sm font-medium text-ink-primary">{item.titulo}</p>
       ),
     },
     {
       header: 'Autor',
       accessor: (item: ItemFila) => (
-        <p className="text-sm text-text-secondary">{item.autorNome}</p>
+        <p className="text-sm text-ink-secondary">{item.autorNome}</p>
       ),
     },
     {
       header: 'Submetido em',
       accessor: (item: ItemFila) => (
-        <p className="text-sm text-text-secondary">
+        <p className="text-sm text-ink-secondary">
           {new Date(item.submittedAt).toLocaleDateString('pt-PT')}
         </p>
       ),
@@ -127,7 +127,7 @@ export function FilaAprovacaoPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-text-primary">Fila de Aprovacao</h1>
+      <h1 className="text-2xl font-bold text-ink-primary">Fila de Aprovacao</h1>
 
       <Tabs
         defaultValue="curso"
@@ -151,7 +151,7 @@ export function FilaAprovacaoPage() {
             </div>
           ) : (data?.data ?? []).length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-text-secondary">Nada para revisar nesta categoria.</p>
+              <p className="text-ink-secondary">Nada para revisar nesta categoria.</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -192,7 +192,7 @@ export function FilaAprovacaoPage() {
 
         <div className="py-6 space-y-4">
           <div>
-            <label className="text-sm font-medium text-text-secondary block mb-2">
+            <label className="text-sm font-medium text-ink-secondary block mb-2">
               Motivo da rejeicao (minimo 10 caracteres)
             </label>
             <textarea
@@ -201,9 +201,9 @@ export function FilaAprovacaoPage() {
               placeholder="Explica o motivo da rejeicao..."
               maxLength={500}
               rows={4}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber resize-none"
+              className="w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus:outline-none focus:ring-2 focus:ring-accent resize-none"
             />
-            <p className="text-xs text-text-secondary mt-2">
+            <p className="text-xs text-ink-secondary mt-2">
               {motivo.length.toString()}/500
             </p>
           </div>

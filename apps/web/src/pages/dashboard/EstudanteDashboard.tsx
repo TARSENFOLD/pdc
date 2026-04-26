@@ -84,14 +84,25 @@ export function EstudanteDashboard() {
 
   if (isLoading) return <div className="flex h-screen items-center justify-center bg-canvas"><Spinner size="lg" /></div>;
 
-  if (isError || !dash) return (
+  // Erro 5xx real (Strapi down, etc) - mostra tela de erro com retry
+  if (isError) return (
     <div className="p-8 text-center text-red-500 bg-canvas min-h-screen flex flex-col items-center justify-center gap-4">
       <p className="font-bold font-display text-2xl">Erro ao sincronizar o teu Oráculo.</p>
       <Button onClick={() => { window.location.reload(); }} variant="secondary">Tentar novamente</Button>
     </div>
   );
 
-  const { stats, behavior, progressoCursos, match, proximaAcao, insightsTina } = dash;
+  // Fallback para dados vazios (nunca mostra erro para estudante novo)
+  const safeDash: DashboardData = dash || {
+    stats: { xp: 0, reputacao: 0, conquistasCount: 0, vinkulosCount: 0, pulseVariacao: 0 },
+    behavior: null,
+    progressoCursos: [],
+    match: { area: 'Tecnologia', score: 0, directive: 'MATCH PENDENTE', insight: 'Completa o teu perfil vocacional para descobrires as tuas áreas de maior afinidade.' },
+    proximaAcao: { label: 'Completar Perfil', to: '/app/perfil-vocacional' },
+    insightsTina: ['Bem-vindo à plataforma. O teu percurso começa com o preenchimento do perfil vocacional.'],
+  };
+
+  const { stats, behavior, progressoCursos, match, proximaAcao, insightsTina } = safeDash;
 
   return (
     <motion.div 
@@ -132,30 +143,75 @@ export function EstudanteDashboard() {
             <Target size={280} className="text-accent" />
           </div>
 
-          <div className="relative z-10 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-accent text-ink-on-accent text-[9px] font-black tracking-[0.2em] uppercase">
-              {match.directive}
-            </div>
-            <h2 className="text-4xl font-black text-ink-primary tracking-tighter leading-[1.05] sm:text-6xl font-display">
-              Match em <span className="text-accent italic">{match.area}</span> com {match.score}% de autoridade.
-            </h2>
-            <p className="text-ink-secondary text-lg font-medium leading-relaxed max-w-md">
-              {match.insight}
-            </p>
-          </div>
+          {match.score === 0 ? (
+            <AspirationalEmpty
+              icon={Target}
+              title="Match Vocacional"
+              description={match.insight}
+              className="h-full bg-transparent border-none"
+            >
+              <Link to={proximaAcao.to}>
+                <AsymmetricButton className="h-12 bg-ink-primary text-canvas font-black uppercase tracking-widest text-[11px] hover:bg-accent hover:text-ink-on-accent shadow-xl transition-all px-8">
+                  {proximaAcao.label} <ChevronRight size={16} className="ml-2" />
+                </AsymmetricButton>
+              </Link>
+            </AspirationalEmpty>
+          ) : (
+            <>
+              <div className="relative z-10 space-y-6">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-accent text-ink-on-accent text-[9px] font-black tracking-[0.2em] uppercase">
+                  {match.directive}
+                </div>
+                <h2 className="text-4xl font-black text-ink-primary tracking-tighter leading-[1.05] sm:text-6xl font-display">
+                  Match em <span className="text-accent italic">{match.area}</span> com {match.score}% de autoridade.
+                </h2>
+                <p className="text-ink-secondary text-lg font-medium leading-relaxed max-w-md">
+                  {match.insight}
+                </p>
+              </div>
 
-          <div className="relative z-10 mt-10 flex flex-col sm:flex-row items-center gap-4">
-            <Link to={proximaAcao.to} className="w-full sm:w-auto">
-              <AsymmetricButton className="w-full h-14 bg-ink-primary text-canvas font-black uppercase tracking-widest text-[11px] hover:bg-accent hover:text-ink-on-accent shadow-xl transition-all px-10">
-                {proximaAcao.label} <ChevronRight size={16} className="ml-2" />
-              </AsymmetricButton>
-            </Link>
-            <Link to="/app/perfil-vocacional" className="w-full sm:w-auto">
-              <Button variant="secondary" className="w-full h-14 rounded-xl border-ink-tertiary/10 bg-recessed text-ink-primary font-black uppercase tracking-widest text-[11px] px-10 hover:bg-canvas/50 transition-all">
-                Relatório Detalhado <ArrowUpRight size={16} className="ml-2" />
-              </Button>
-            </Link>
-          </div>
+              <div className="relative z-10 mt-10 flex flex-col sm:flex-row items-center gap-4">
+                <Link to={proximaAcao.to} className="w-full sm:w-auto">
+                  <AsymmetricButton className="w-full h-14 bg-ink-primary text-canvas font-black uppercase tracking-widest text-[11px] hover:bg-accent hover:text-ink-on-accent shadow-xl transition-all px-10">
+                    {proximaAcao.label} <ChevronRight size={16} className="ml-2" />
+                  </AsymmetricButton>
+                </Link>
+                <Link to="/app/perfil-vocacional" className="w-full sm:w-auto">
+                  <Button variant="secondary" className="w-full h-14 rounded-xl border-ink-tertiary/10 bg-recessed text-ink-primary font-black uppercase tracking-widest text-[11px] px-10 hover:bg-elevated/50 transition-all">
+                    Relatório Detalhado <ArrowUpRight size={16} className="ml-2" />
+                  </Button>
+                </Link>
+              </div>
+              {/* CTAs canónicos — Premium AsymmetricButtons */}
+              <div className="relative z-10 mt-6 flex flex-wrap gap-3">
+                <Link to="/app/feed/criar">
+                  <AsymmetricButton className="h-12 px-6 border-accent/20 text-accent hover:bg-accent hover:text-ink-on-accent font-black uppercase tracking-widest text-[10px]">
+                    Criar Post
+                  </AsymmetricButton>
+                </Link>
+                <Link to="/app/conquistas/criar">
+                  <AsymmetricButton className="h-12 px-6 border-accent/20 text-accent hover:bg-accent hover:text-ink-on-accent font-black uppercase tracking-widest text-[10px]">
+                    Registar Marco
+                  </AsymmetricButton>
+                </Link>
+                <Link to="/app/simulacoes">
+                  <AsymmetricButton className="h-12 px-6 bg-accent/10 border-accent/30 text-accent hover:bg-accent hover:text-ink-on-accent font-black uppercase tracking-widest text-[10px]">
+                    Continuar Simulação
+                  </AsymmetricButton>
+                </Link>
+                <Link to="/app/cursos">
+                  <AsymmetricButton className="h-12 px-6 border-ink-tertiary/20 text-ink-secondary hover:border-accent/30 hover:text-accent font-black uppercase tracking-widest text-[10px]">
+                    Explorar Cursos
+                  </AsymmetricButton>
+                </Link>
+                <Link to="/app/conquistas">
+                  <AsymmetricButton className="h-12 px-6 border-ink-tertiary/20 text-ink-secondary hover:border-accent/30 hover:text-accent font-black uppercase tracking-widest text-[10px]">
+                    Ver Conquistas
+                  </AsymmetricButton>
+                </Link>
+              </div>
+            </>
+          )}
         </BentoTile>
 
         {/* Behavior Pattern */}
@@ -173,10 +229,18 @@ export function EstudanteDashboard() {
           </div>
 
           {!behavior ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-2 opacity-30">
-              <Activity size={24} className="text-ink-tertiary" />
-              <p className="text-[9px] uppercase font-black tracking-widest">Calculando Heurísticas</p>
-            </div>
+            <AspirationalEmpty
+              icon={Brain}
+              title="Assinatura DNA"
+              description="Completa simulações para revelares o teu perfil comportamental e receberes análises preditivas personalizadas."
+              className="flex-1 bg-transparent border-none py-4"
+            >
+              <Link to="/app/simulacoes">
+                <Button variant="secondary" size="sm" className="font-black uppercase tracking-widest text-[10px]">
+                  Explorar Simulações
+                </Button>
+              </Link>
+            </AspirationalEmpty>
           ) : (
             <div className="mt-6 grid grid-cols-3 gap-6 relative z-10">
               {[
@@ -213,7 +277,7 @@ export function EstudanteDashboard() {
         {/* Global Stats: Reputação */}
         <BentoTile size="1x1">
           <Link to="/app/reputacao" className="flex flex-col h-full justify-between group">
-            <div className="h-10 w-10 rounded-xl bg-cobalt/5 flex items-center justify-center text-cobalt border border-cobalt/10 group-hover:scale-110 transition-transform">
+            <div className="h-10 w-10 rounded-xl bg-institutional-cobalt/5 flex items-center justify-center text-institutional-cobalt border border-institutional-cobalt/10 group-hover:scale-110 transition-transform">
               <Star size={20} />
             </div>
             <div>
@@ -248,18 +312,31 @@ export function EstudanteDashboard() {
 
       {/* Tina Insights */}
       <motion.section variants={item} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {insightsTina.map((insight: string, idx: number) => (
-          <GlassCard key={idx} halo={idx === 0} className="border-accent/10">
-            <div className="flex gap-4 items-start">
+        {insightsTina.length > 0 ? (
+          insightsTina.map((insight: string, idx: number) => (
+            <GlassCard key={idx} halo={idx === 0} className="border-accent/10">
+              <div className="flex gap-4 items-start">
+                <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
+                  <Brain size={16} />
+                </div>
+                <p className="text-sm font-medium italic text-ink-primary leading-relaxed">
+                  "{insight}"
+                </p>
+              </div>
+            </GlassCard>
+          ))
+        ) : (
+          <GlassCard className="border-accent/10 md:col-span-2">
+            <div className="flex gap-4 items-center justify-center py-8">
               <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
                 <Brain size={16} />
               </div>
-              <p className="text-sm font-medium italic text-ink-primary leading-relaxed">
-                "{insight}"
+              <p className="text-sm font-medium italic text-ink-secondary">
+                O Oráculo está a aguardar os teus primeiros dados para gerar insights personalizados.
               </p>
             </div>
           </GlassCard>
-        ))}
+        )}
       </motion.section>
 
       {/* Courses Section */}

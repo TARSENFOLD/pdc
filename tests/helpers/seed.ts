@@ -25,31 +25,48 @@ const TEST_ACCOUNTS: TestAccount[] = [
 ];
 
 function buildRegistrationRequest(account: TestAccount): { url: string; body: Record<string, unknown> } {
-  const base = { email: account.email, password: account.password };
+  const base = { email: account.email, password: account.password, nome: account.nome };
 
   switch (account.role) {
     case 'mentor':
       return {
         url: `${API_URL}/auth/register/mentor`,
-        body: { ...base, nome: account.nome, areaEspecialidade: 'ENGENHARIA' },
+        body: { 
+          ...base, 
+          especialidade: 'Engenharia de Software',
+          areasAtuacao: ['TECNOLOGIA', 'ENGENHARIA'],
+          areaEspecialidade: 'TECNOLOGIA' 
+        },
       };
     case 'instituicao':
       return {
         url: `${API_URL}/auth/register/instituicao`,
-        body: { ...base, nomeInstituicao: account.nome, regiao: 'Lisboa', tipo: 'Universidade' },
+        body: { 
+          ...base, 
+          nomeInstituicao: account.nome, 
+          regiao: 'Luanda', 
+          tipo: 'universidade',
+          nif: '5000123456'
+        },
       };
     // aluno, moderador, super_admin all register as estudante
-    // (moderador/super_admin roles must be promoted via Strapi admin after seeding)
     default:
       return {
         url: `${API_URL}/auth/register/estudante`,
-        body: { ...base, nome: account.nome, areaInteresse: 'TECNOLOGIA', nivelEnsino: 'Secundário' },
+        body: { 
+          ...base, 
+          areaInteresse: 'TECNOLOGIA', 
+          nivelEnsino: 'Licenciatura' 
+        },
       };
   }
 }
 
 async function tryRegister(account: TestAccount): Promise<void> {
   const { url, body } = buildRegistrationRequest(account);
+
+  // Add small delay to avoid rate limiting
+  await new Promise(r => setTimeout(r, 500));
 
   const res = await fetch(url, {
     method: 'POST',
@@ -67,6 +84,9 @@ async function tryRegister(account: TestAccount): Promise<void> {
 }
 
 async function verifyLoginWorks(account: TestAccount): Promise<void> {
+  // Add small delay to avoid rate limiting
+  await new Promise(r => setTimeout(r, 500));
+
   const res = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

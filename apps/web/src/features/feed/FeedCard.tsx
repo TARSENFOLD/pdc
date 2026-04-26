@@ -32,14 +32,14 @@ function getLink(item: FeedItem): string {
 
 export function FeedCard({ item }: { item: FeedItem }) {
   return (
-    <div className="py-5 border-b border-border/40 hover:bg-surface-raised transition-colors group">
+    <div className="py-5 border-b border-ink-tertiary/10/40 hover:bg-elevated transition-colors group">
       <div className="flex justify-between items-start mb-3">
         <div className="flex flex-col gap-1">
-          <Badge variant="outline" className="w-fit text-[10px] font-bold uppercase tracking-wider border-none bg-surface-raised/50">
+          <Badge variant="outline" className="w-fit text-[10px] font-bold uppercase tracking-wider border-none bg-elevated/50">
             {TIPO_LABELS[item.tipo] ?? item.tipo}
           </Badge>
           <Link to={getLink(item)}>
-            <h3 className="text-lg font-bold text-text-primary group-hover:text-amber transition-colors leading-snug">
+            <h3 className="text-lg font-bold text-ink-primary group-hover:text-accent transition-colors leading-snug">
               {item.titulo}
             </h3>
           </Link>
@@ -51,14 +51,14 @@ export function FeedCard({ item }: { item: FeedItem }) {
         )}
       </div>
 
-      <p className="text-sm text-text-secondary line-clamp-2 mb-4">
+      <p className="text-sm text-ink-secondary line-clamp-2 mb-4">
         {item.descricao}
       </p>
 
-      <div className="flex items-center gap-4 mb-4 text-xs text-text-secondary">
+      <div className="flex items-center gap-4 mb-4 text-xs text-ink-secondary">
         <div className="flex items-center gap-1.5">
-          <Star className="w-3.5 h-3.5 text-amber fill-amber" />
-          <span className="font-medium text-text-primary">{(item.stats?.ratingMedia ?? 0).toFixed(1)}</span>
+          <Star className="w-3.5 h-3.5 text-accent fill-accent" />
+          <span className="font-medium text-ink-primary">{(item.stats?.ratingMedia ?? 0).toFixed(1)}</span>
           <span>({String(item.stats?.ratingTotal ?? 0)})</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -89,7 +89,7 @@ export function FeedCard({ item }: { item: FeedItem }) {
           />
         </div>
         <Link to={getLink(item)}>
-          <Button size="sm" variant="ghost" className="gap-1.5 text-amber">
+          <Button size="sm" variant="ghost" className="gap-1.5 text-accent">
             <ExternalLink className="w-3.5 h-3.5" />
             {ACTION_LABELS[item.tipo] ?? 'Ver'}
           </Button>

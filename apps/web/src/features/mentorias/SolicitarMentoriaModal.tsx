@@ -13,7 +13,7 @@ interface Props {
   onClose: () => void;
 }
 
-const selectCls = 'w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber';
+const selectCls = 'w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus:outline-none focus:ring-2 focus:ring-accent';
 
 export function SolicitarMentoriaModal({ open, onClose }: Props) {
   const qc = useQueryClient();
@@ -70,10 +70,10 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
 
   return (
     <Modal open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <h2 className="text-lg font-semibold text-text-primary">Solicitar Mentoria</h2>
+      <h2 className="text-lg font-semibold text-ink-primary">Solicitar Mentoria</h2>
       <form onSubmit={handleSubmit} className="mt-4 space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">Mentor</label>
+          <label className="mb-1 block text-xs font-medium text-ink-secondary">Mentor</label>
           {loadingMentores ? (
             <Spinner size="sm" />
           ) : (
@@ -81,7 +81,7 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
               value={mentorId}
               onChange={(e) => { setMentorId(e.target.value); }}
               required
-              className="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber"
+              className="w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="">Selecionar mentor…</option>
               {mentores.map((m) => (
@@ -94,7 +94,7 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">Tipo de mentoria</label>
+          <label className="mb-1 block text-xs font-medium text-ink-secondary">Tipo de mentoria</label>
           <select
             value={tipo}
             onChange={(e) => { setTipo(e.target.value as MentoriaTipo); }}
@@ -108,7 +108,7 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
 
         {tipo === 'acompanhamento_curso' && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-secondary">Curso</label>
+            <label className="mb-1 block text-xs font-medium text-ink-secondary">Curso</label>
             <select
               value={cursoId}
               onChange={(e) => { setCursoId(e.target.value); }}
@@ -125,7 +125,7 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
 
         {tipo === 'revisao_projeto' && (
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-secondary">Projecto</label>
+            <label className="mb-1 block text-xs font-medium text-ink-secondary">Projecto</label>
             <select
               value={projetoId}
               onChange={(e) => { setProjetoId(e.target.value); }}
@@ -141,7 +141,7 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
         )}
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">
+          <label className="mb-1 block text-xs font-medium text-ink-secondary">
             Preço proposto (USD) - 0 = gratuita
           </label>
           <input
@@ -153,14 +153,14 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
             className={selectCls}
           />
           {Number(preco) > 0 && (
-            <p className="mt-1 text-xs text-text-muted">
+            <p className="mt-1 text-xs text-ink-tertiary">
               Comissão PDC (20%): ${(Number(preco) * 0.20).toFixed(2)} - Recebes: ${(Number(preco) * 0.80).toFixed(2)}
             </p>
           )}
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">Mensagem</label>
+          <label className="mb-1 block text-xs font-medium text-ink-secondary">Mensagem</label>
           <textarea
             value={mensagem}
             onChange={(e) => { setMensagem(e.target.value); }}
@@ -169,7 +169,7 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
             maxLength={500}
             rows={4}
             placeholder="Descreve o que procuras nesta mentoria…"
-            className="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-amber"
+            className="w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary placeholder:text-ink-tertiary focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
 

@@ -8,10 +8,29 @@ import {
   type BaseDomainEventPayload
 } from '@pdc/shared';
 import { socketService } from '../realtime/socket.service.js';
-import { strapiPost } from '../strapi/strapi.client.js';
+import { strapiPost, strapiGet } from '../strapi/strapi.client.js';
 import pino from 'pino';
 
 const log = pino({ name: 'notify-hook' });
+
+async function resolvePerfilId(payload: BaseDomainEventPayload): Promise<string | undefined> {
+  if (payload.perfilId) return String(payload.perfilId);
+
+  const lookupUserId = payload.autorId || payload.userId;
+  if (!lookupUserId) return undefined;
+
+  try {
+    const res = await strapiGet<{ id: string }>('/perfis', {
+      'filters[userId][$eq]': String(lookupUserId),
+      'fields[0]': 'id',
+    });
+    const id = res.data[0]?.id;
+    return id ? String(id) : undefined;
+  } catch (err) {
+    log.warn({ err, lookupUserId }, 'Falha ao resolver perfilId via userId');
+    return undefined;
+  }
+}
 
 export const notifyHook: EcosystemHook = {
   name: EcosystemHookName.NOTIFY,
@@ -51,24 +70,47 @@ export const notifyHook: EcosystemHook = {
       return { status: 'sent' }; // O chat para aqui (não cria audit trail default)
     }
 
-    // 2. Processar Conquistas (Hook 4)
-    const achievementResult = results[EcosystemHookName.ACHIEVEMENT];
-    if (achievementResult?.status === 'sent' && achievementResult.data) {
-      const { userId, desbloqueadas } = achievementResult.data as { userId: string; desbloqueadas: { slug: string; titulo: string; descricao: string }[] };
-      desbloqueadas.forEach((conquista) => {
-        socketService.emitirConquista(userId, conquista);
-      });
+    // 2. Resolve real perfil relation id — never persist a raw userId as perfil
+    const pId = await resolvePerfilId(payload);
+    if (!pId) {
+      log.warn({ eventName: event.name }, 'perfilId não resolvido — persistência de notificação ignorada (best-effort)');
     }
 
-    // 2. Persistir Notificação no Strapi (Audit Trail)
-    const pId = payload.perfilId || payload.autorId || payload.userId;
+    // 3. Processar Conquistas (Hook 4)
+    const achievementResult = results[EcosystemHookName.ACHIEVEMENT];
+    
+    if (achievementResult?.status === 'sent' && achievementResult.data) {
+      const { userId, desbloqueadas } = achievementResult.data as { userId: string; desbloqueadas: { slug: string; titulo: string; descricao: string }[] };
+      
+      await Promise.allSettled(desbloqueadas.map(async (conquista) => {
+        // 1. Fanout Realtime
+        socketService.emitirConquista(userId, conquista);
+        
+        // 2. Persistência de Notificação de Conquista
+        if (pId) {
+          await strapiPost<unknown>('/notificacoes', {
+            perfil: String(pId),
+            tipo: 'conquista',
+            titulo: `Conquista Desbloqueada: ${conquista.titulo}`,
+            mensagem: conquista.descricao, // Novo schema Strapi (obrigatório)
+            corpo: conquista.descricao, // Retrocompatibilidade
+            eventId: event.id,
+            lida: false
+          }).catch(err => log.error({ err }, 'Falha ao persistir notificação de conquista'));
+        }
+      }));
+    }
+
+    // 4. Persistir Notificação no Strapi (Audit Trail)
     if (pId) {
       try {
+        const mensagemAudit = `O teu evento ${event.name} foi integrado no ecossistema.`;
         await strapiPost<unknown>('/notificacoes', {
           perfil: String(pId),
-          tipo: 'sistema',
+          tipo: 'sucesso', // Semântica real para o audit trail de sucesso
           titulo: 'Actividade Processada',
-          corpo: `O teu evento ${event.name} foi integrado no ecossistema.`,
+          mensagem: mensagemAudit, // Novo schema Strapi (obrigatório)
+          corpo: mensagemAudit, // Retrocompatibilidade
           eventId: event.id,
           lida: false
         });

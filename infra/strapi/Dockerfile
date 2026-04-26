@@ -1,16 +1,17 @@
 # Build stage
 FROM node:20-alpine AS build
 WORKDIR /opt/app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json ./
+RUN npm install
 COPY . .
 RUN npm run build
 
 # Runtime stage
 FROM node:20-alpine
+RUN apk add --no-cache curl
 WORKDIR /opt/app
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY package.json ./
+RUN npm install --omit=dev
 COPY --from=build /opt/app/dist ./dist
 COPY --from=build /opt/app/config ./config
 COPY --from=build /opt/app/database ./database

@@ -39,7 +39,7 @@ export function CourseCurriculum({ register, modulosArray }: Props) {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
             >
-              <Card className="p-6 border-white/5 bg-surface-alt/30 relative group">
+              <Card className="p-6 border-white/5 bg-recessed/30 relative group">
                 <div className="flex items-start gap-4">
                   <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center font-black text-accent">{index + 1}</div>
                   <div className="flex-1 space-y-4">
@@ -52,17 +52,17 @@ export function CourseCurriculum({ register, modulosArray }: Props) {
                     
                     {/* Conteúdos do Módulo */}
                     <div className="pl-4 border-l-2 border-white/5 space-y-3">
-                       <div className="flex items-center gap-2 text-[10px] font-black text-text-muted uppercase tracking-widest mb-2">
+                       <div className="flex items-center gap-2 text-[10px] font-black text-ink-tertiary uppercase tracking-widest mb-2">
                          <BookOpen size={12} /> Conteúdos do Módulo
                        </div>
                        <div className="flex gap-3">
-                         <select {...register(`modulos.${index}.itens.0.tipo` as const)} className="bg-surface border border-white/10 rounded-lg px-3 py-1 text-xs">
+                         <select {...register(`modulos.${index}.itens.0.tipo` as const)} className="bg-canvas border border-white/10 rounded-lg px-3 py-1 text-xs">
                            <option value="video">🎥 Vídeo</option>
                            <option value="tarefa">🛠️ Tarefa Prática</option>
                            <option value="quiz">🧠 Quiz</option>
                            <option value="texto">📄 Texto</option>
                          </select>
-                         <Input className="h-8 text-xs bg-surface/50" {...register(`modulos.${index}.itens.0.titulo` as const)} placeholder="Título do Conteúdo" />
+                         <Input className="h-8 text-xs bg-canvas/50" {...register(`modulos.${index}.itens.0.titulo` as const)} placeholder="Título do Conteúdo" />
                        </div>
                     </div>
                   </div>

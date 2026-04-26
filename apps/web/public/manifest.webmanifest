@@ -1,20 +1,57 @@
 {
+  "id": "/",
   "name": "PDC — Por Dentro do Curso",
   "short_name": "PDC",
+  "description": "Experimenta profissões e cursos através de simulações práticas antes de te matriculares. Toma a decisão certa com base no teu próprio comportamento.",
+  "lang": "pt-AO",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#f59e0b",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait",
+  "background_color": "#0E0D0C",
+  "theme_color": "#D2691E",
+  "categories": ["education", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-source.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "/screenshots/mobile-1.png", "sizes": "375x812", "type": "image/png", "form_factor": "narrow", "label": "Feed de Conquistas" },
+    { "src": "/screenshots/mobile-2.png", "sizes": "375x812", "type": "image/png", "form_factor": "narrow", "label": "Simulação Vocacional" },
+    { "src": "/screenshots/mobile-3.png", "sizes": "375x812", "type": "image/png", "form_factor": "narrow", "label": "Perfil do Estudante" },
+    { "src": "/screenshots/desktop-1.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "Dashboard Institucional" },
+    { "src": "/screenshots/desktop-2.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "Hub de Oportunidades" },
+    { "src": "/screenshots/desktop-3.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "Match Terminal" }
+  ],
+  "shortcuts": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "name": "Iniciar Simulação",
+      "short_name": "Simulação",
+      "url": "/simulacoes/nova",
+      "description": "Inicia uma nova simulação de carreira"
     },
     {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "name": "Feed",
+      "short_name": "Feed",
+      "url": "/feed",
+      "description": "Ver o feed de conquistas e actividade"
+    },
+    {
+      "name": "Mensagens",
+      "short_name": "Mensagens",
+      "url": "/mensagens",
+      "description": "Ver e enviar mensagens"
+    },
+    {
+      "name": "Perfil",
+      "short_name": "Perfil",
+      "url": "/perfil",
+      "description": "Ver e editar o teu perfil"
     }
   ]
 }

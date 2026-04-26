@@ -154,6 +154,18 @@
       "relation": "oneToMany",
       "target": "api::behavior-pattern.behavior-pattern",
       "mappedBy": "perfil"
+    },
+    "inscricoes": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::inscricao.inscricao",
+      "mappedBy": "perfil"
+    },
+    "feedPosts": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::feed-post.feed-post",
+      "mappedBy": "autor"
     }
   }
 }

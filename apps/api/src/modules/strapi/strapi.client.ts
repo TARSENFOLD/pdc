@@ -93,7 +93,12 @@ export async function strapiGet<T>(
 ): Promise<StrapiListResponse<T>> {
   const url = new URL(`${STRAPI_URL}/api${path}`);
   if (params) {
-    for (const [k, v] of Object.entries(params)) {
+    for (let [k, v] of Object.entries(params)) {
+      // Auto-convert comma-separated populate to array for Strapi v5
+      if (k === 'populate' && typeof v === 'string' && v.includes(',')) {
+        v = v.split(',').map(s => s.trim());
+      }
+
       if (Array.isArray(v)) {
         v.forEach((val, i) => {
           url.searchParams.append(`${k}[${i}]`, val);
@@ -103,8 +108,10 @@ export async function strapiGet<T>(
       }
     }
   }
+  log.info({ url: url.toString() }, `Strapi GET ${path}`);
   const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() }, TIMEOUT);
   if (!res.ok) {
+    log.error({ url: url.toString(), status: res.status }, `Strapi GET ${path} falhou`);
     throw new Error(`Strapi GET ${path} falhou: ${res.status.toString()}`);
   }
   const json = (await res.json()) as StrapiListResponse<T>;

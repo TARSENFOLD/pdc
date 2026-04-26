@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/useToast';
+import { useUpload } from '@/hooks/useUpload';
 import { 
   ArrowLeft, 
   Layout
 } from 'lucide-react';
 import { http } from '@/lib/api/http';
-import { useUpload } from '@/hooks/useUpload';
+
 import { AnimatePresence } from 'motion/react';
 import type { CriarCursoPayload, StrapiSingleResponse, Curso } from '@pdc/shared';
 import { CursoFormStep1 } from './components/CursoFormStep1';
@@ -15,6 +16,7 @@ import { CursoFormSidebar } from './components/CursoFormSidebar';
 
 export const CriarCursoPage = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { upload, isUploading, progress } = useUpload();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
@@ -27,9 +29,10 @@ export const CriarCursoPage = () => {
     visibilidade: 'publico',
     thumbnailUrl: '',
     regrasAcesso: {
-      minFluidez: 4,
-      minResiliencia: 5
-    }
+      minFluidez: 0,
+      minResiliencia: 0,
+      minFoco: 0,
+    },
   });
 
   const [modulos, setModulos] = useState<Array<{ titulo: string; itens: Array<{ titulo: string; tipo: string; conteudo: string }> }>>([]);
@@ -47,7 +50,8 @@ export const CriarCursoPage = () => {
         thumbnailUrl: payload.thumbnailUrl || '',
         regrasAcesso: {
           minFluidez: payload.regrasAcesso?.minFluidez || 4,
-          minResiliencia: payload.regrasAcesso?.minResiliencia || 5
+          minResiliencia: payload.regrasAcesso?.minResiliencia || 5,
+          minFoco: payload.regrasAcesso?.minFoco || 0
         },
         modulos: modulos.map((m, idx) => ({
           titulo: m.titulo,
@@ -80,8 +84,8 @@ export const CriarCursoPage = () => {
     <div className="mx-auto max-w-5xl space-y-12 pb-32 px-4 animate-in fade-in duration-700">
       
       <nav className="flex items-center justify-between pt-12">
-        <button onClick={() => { navigate(-1); }} className="group flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-text-muted hover:text-accent transition-all">
-          <div className="h-8 w-8 rounded-full border border-border flex items-center justify-center group-hover:border-accent/30 transition-colors">
+        <button onClick={() => { navigate(-1); }} className="group flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-ink-tertiary hover:text-accent transition-all">
+          <div className="h-8 w-8 rounded-full border border-ink-tertiary/10 flex items-center justify-center group-hover:border-accent/30 transition-colors">
             <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> 
           </div>
           Cancelar Construção
@@ -95,10 +99,10 @@ export const CriarCursoPage = () => {
         <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-xl bg-accent/10 border border-accent/20 text-accent text-[11px] font-black uppercase tracking-[0.2em] mb-6">
           <Layout size={16} /> Oficina de Conteúdo Soberano
         </div>
-        <h1 className="text-5xl font-black tracking-tighter text-text-primary sm:text-7xl font-display leading-[0.9]">
+        <h1 className="text-5xl font-black tracking-tighter text-ink-primary sm:text-7xl font-display leading-[0.9]">
            Materializar <br /> <span className="text-accent italic">Conhecimento.</span>
         </h1>
-        <p className="text-text-secondary mt-6 text-xl font-medium max-w-2xl leading-relaxed opacity-80">
+        <p className="text-ink-secondary mt-6 text-xl font-medium max-w-2xl leading-relaxed opacity-80">
           Define a identidade, as regras de mérito e a trilha biomecânica do teu curso.
         </p>
       </header>

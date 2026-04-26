@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { http } from '../api/http.js';
 
 interface UploadResult {
   url: string;

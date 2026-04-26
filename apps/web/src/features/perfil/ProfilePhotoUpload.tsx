@@ -131,7 +131,7 @@ export function ProfilePhotoUpload({ currentUrl, onSuccess }: Props) {
         className="hidden"
       />
       
-      <p className="text-[10px] text-text-muted font-medium max-w-[200px] text-center leading-relaxed">
+      <p className="text-[10px] text-ink-tertiary font-medium max-w-[200px] text-center leading-relaxed">
         Usa uma foto clara. O Oráculo utiliza a tua identidade visual para gerar autoridade no Feed.
       </p>
     </div>

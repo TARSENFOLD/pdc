@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { experienciasApi } from '@/lib/api/experiencias';
-import { Card, Button, Table, Badge, Spinner, type Column } from '@/components/ui';
+import { Card, Button, Table, Spinner, type Column } from '@/components/ui';
+import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 import type { ExperienciaMinha } from '@pdc/shared';
 
 export function InstituicaoExperienciasPage() {
@@ -20,9 +21,7 @@ export function InstituicaoExperienciasPage() {
     { 
       header: 'Estado', 
       accessor: (exp: ExperienciaMinha) => (
-        <Badge variant={exp.estado === 'published' ? 'success' : exp.estado === 'review' ? 'warning' : 'default'}>
-          {exp.estado.toUpperCase()}
-        </Badge>
+        <EditorialStateBadge state={exp.estado} />
       )
     },
     { header: 'Vagas', accessor: (exp: ExperienciaMinha) => exp.vagas ?? 'Ilimitadas' },

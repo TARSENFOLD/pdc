@@ -54,21 +54,21 @@ export function UploadConteudoPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-sora">Upload de Conteúdo</h1>
-        <p className="text-text-muted mt-1">Envia ficheiros (PDF, imagens, etc.) para usar nos teus cursos e simulações.</p>
+        <p className="text-ink-tertiary mt-1">Envia ficheiros (PDF, imagens, etc.) para usar nos teus cursos e simulações.</p>
       </div>
 
-      <Card className="p-8 flex flex-col items-center justify-center border-dashed border-2 border-border/60 bg-surface/50">
+      <Card className="p-8 flex flex-col items-center justify-center border-dashed border-2 border-ink-tertiary/10/60 bg-elevated/50">
         {!uploadResult ? (
           <>
-            <div className="h-16 w-16 rounded-full bg-amber/10 flex items-center justify-center mb-4">
-              <Upload className="h-8 w-8 text-amber" />
+            <div className="h-16 w-16 rounded-full bg-accent/10 flex items-center justify-center mb-4">
+              <Upload className="h-8 w-8 text-accent" />
             </div>
             
             <div className="text-center mb-6">
-              <p className="text-lg font-medium text-text-primary">
+              <p className="text-lg font-medium text-ink-primary">
                 {file ? file.name : 'Seleciona um ficheiro'}
               </p>
-              <p className="text-sm text-text-muted">
+              <p className="text-sm text-ink-tertiary">
                 {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'PDF, PNG, JPG até 50MB'}
               </p>
             </div>
@@ -98,11 +98,11 @@ export function UploadConteudoPage() {
             <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center mb-4 mx-auto">
               <CheckCircle2 className="h-8 w-8 text-success" />
             </div>
-            <h3 className="text-lg font-bold text-text-primary mb-2">Upload Completo!</h3>
-            <p className="text-sm text-text-muted mb-6">O teu ficheiro foi processado e está pronto a usar.</p>
+            <h3 className="text-lg font-bold text-ink-primary mb-2">Upload Completo!</h3>
+            <p className="text-sm text-ink-tertiary mb-6">O teu ficheiro foi processado e está pronto a usar.</p>
             
-            <div className="bg-surface border border-border rounded-lg p-3 mb-6 text-left overflow-hidden">
-              <p className="text-xs font-mono text-amber break-all">{uploadResult.url}</p>
+            <div className="bg-canvas border border-ink-tertiary/10 rounded-lg p-3 mb-6 text-left overflow-hidden">
+              <p className="text-xs font-mono text-accent break-all">{uploadResult.url}</p>
             </div>
 
             <Button variant="secondary" onClick={() => { setUploadResult(null); }}>
@@ -119,7 +119,7 @@ export function UploadConteudoPage() {
           </div>
           <div>
             <h4 className="font-bold text-sm">Ficheiros Suportados</h4>
-            <p className="text-xs text-text-muted mt-1">PDF, DOCX, PNG, JPG, ZIP e MP4 (até 50MB).</p>
+            <p className="text-xs text-ink-tertiary mt-1">PDF, DOCX, PNG, JPG, ZIP e MP4 (até 50MB).</p>
           </div>
         </Card>
         
@@ -129,7 +129,7 @@ export function UploadConteudoPage() {
           </div>
           <div>
             <h4 className="font-bold text-sm">Vídeos Grandes</h4>
-            <p className="text-xs text-text-muted mt-1">Para vídeos com mais de 50MB, recomendamos usar YouTube ou Vimeo.</p>
+            <p className="text-xs text-ink-tertiary mt-1">Para vídeos com mais de 50MB, recomendamos usar YouTube ou Vimeo.</p>
           </div>
         </Card>
       </div>

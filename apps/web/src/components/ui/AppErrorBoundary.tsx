@@ -5,7 +5,7 @@ import { AlertTriangle } from 'lucide-react';
 function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   const errorMessage = error instanceof Error ? error.message : 'O Oráculo encontrou uma instabilidade inesperada.';
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen items-center justify-center bg-canvas p-4">
       <EmptyState
         icon={AlertTriangle}
         variant="error"

@@ -1,12 +1,9 @@
 import { strapiGet } from '../strapi/strapi.client.js';
 import { ltiTokenService } from './lti.token.service.js';
 import { ltiAgsService } from './lti.ags.js';
-import type { PerfilCompleto } from '@pdc/shared';
+import type { PerfilCompleto, LtiScoreResult } from '@pdc/shared';
 
-export interface LtiScoreResult {
-  status: 'sent' | 'skipped' | 'retryable_error';
-  reason?: string;
-}
+
 
 interface PerfilWithLti extends PerfilCompleto {
   lti_context?: {

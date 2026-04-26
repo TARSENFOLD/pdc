@@ -23,6 +23,9 @@ export const projetosApi = {
   update: (id: string, payload: Partial<CriarProjetoPayload>) =>
     http.put<Projeto>(`/projetos/${id}`, payload),
 
+  gerirACL: (id: string, perfilId: string, acao: 'aprovar' | 'rejeitar' | 'remover') =>
+    http.patch<{ success: boolean }>(`/projetos/${id}/acl`, { perfilId, acao }),
+
   remove: (id: string) => http.delete<{ ok: boolean }>(`/projetos/${id}`),
 
   requestAccess: (id: string, motivo?: string) =>

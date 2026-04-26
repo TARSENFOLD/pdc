@@ -49,6 +49,8 @@ const SimulacaoPlayerPage = React.lazy(() => import('@/features/simulacoes/Simul
 const RelatorioVocacional = React.lazy(() => import('@/features/simulacoes/RelatorioVocacional').then(m => ({ default: m.RelatorioVocacional })));
 
 const FeedPage = React.lazy(() => import('@/features/feed/FeedPage').then(m => ({ default: m.FeedPage })));
+const PostComposer = React.lazy(() => import('@/features/feed/PostComposer').then(m => ({ default: m.PostComposer })));
+const ConquistaManualComposer = React.lazy(() => import('@/features/conquistas/ConquistaManualComposer').then(m => ({ default: m.ConquistaManualComposer })));
 
 const DenunciaListPage = React.lazy(() => import('@/features/moderacao/DenunciaListPage').then(m => ({ default: m.DenunciaListPage })));
 const DenunciaDetailPage = React.lazy(() => import('@/features/moderacao/DenunciaDetailPage').then(m => ({ default: m.DenunciaDetailPage })));
@@ -95,6 +97,7 @@ const MentoradosPage = React.lazy(() => import('@/features/mentor/MentoradosPage
 const MentorAnalyticsPage = React.lazy(() => import('@/features/mentor/MentorAnalyticsPage').then(m => ({ default: m.MentorAnalyticsPage })));
 
 const SovereignCourseBuilder = React.lazy(() => import('@/features/instituicao/SovereignCourseBuilder').then(m => ({ default: m.SovereignCourseBuilder })));
+const HomePage = React.lazy(() => import('@/features/home/HomePage').then(m => ({ default: m.HomePage })));
 
 // --- Lazy-loaded public non-critical pages ---
 const ExplorarPage = React.lazy(() => import('@/features/catalogo/ExplorarPage').then(m => ({ default: m.ExplorarPage })));
@@ -110,21 +113,12 @@ const PerfilPublicoPage = React.lazy(() => import('@/features/catalogo/PerfilPub
 const ProgramasCatalogoPage = React.lazy(() => import('@/features/catalogo/ProgramasCatalogoPage').then(m => ({ default: m.ProgramasCatalogoPage })));
 const ProgramaDetailPage = React.lazy(() => import('@/features/catalogo/ProgramaDetailPage').then(m => ({ default: m.ProgramaDetailPage })));
 
-const ROLE_DASHBOARD: Record<Role, string> = {
-  estudante: '/app/dashboard/estudante',
-  mentor: '/app/dashboard/mentor',
-  instituicao: '/app/dashboard/instituicao',
-  moderador: '/app/dashboard/moderador',
-  comite_cientifico: '/app/comite',
-  super_admin: '/app/dashboard/admin',
-};
-
 function DashboardRedirect() {
   const { user, isLoading } = useAuth();
   
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-canvas">
         <Spinner size="lg" />
       </div>
     );
@@ -132,8 +126,7 @@ function DashboardRedirect() {
 
   if (!user) return <Navigate to="/login" replace />;
   
-  const target = ROLE_DASHBOARD[user.role] ?? '/app/dashboard/estudante';
-  return <Navigate to={target} replace />;
+  return <Navigate to="/app/home" replace />;
 }
 
 function RoleGuard({ allowed, children }: { allowed: Role[]; children: React.ReactNode }) {
@@ -159,6 +152,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <DashboardRedirect /> },
+      { path: 'home', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><HomePage /></Suspense> },
       { path: 'dashboard/estudante', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><EstudanteDashboard /></Suspense> },
       { path: 'dashboard/mentor', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><MentorDashboard /></Suspense> },
       { path: 'dashboard/instituicao', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><InstituicaoDashboard /></Suspense> },
@@ -166,9 +160,16 @@ export const router = createBrowserRouter([
       { path: 'dashboard/admin', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><AdminDashboard /></Suspense> },
       
       { path: 'feed', element: <FeedPage /> },
+      { path: 'feed/criar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><PostComposer /></Suspense> },
       { path: 'cursos', element: <CursoListPage /> },
       { path: 'cursos/:id', element: <CursoDetailPage /> },
       { path: 'cursos/:cursoId/itens/:itemId', element: <ItemPlayer /> },
+      
+      { path: 'experiencias', element: <ExperienciaListPage /> },
+      { path: 'experiencias/:id', element: <ExperienciaDetailPage /> },
+      { path: 'programas', element: <ProgramasCatalogoPage /> },
+      { path: 'programas/:id', element: <ProgramaDetailPage /> },
+      { path: 'explorar', element: <ExplorarPage /> },
       
       { path: 'simulacoes', element: <SimulacaoListPage /> },
       { path: 'simulacoes/:id', element: <SimulacaoDetailPage /> },
@@ -181,20 +182,21 @@ export const router = createBrowserRouter([
       { path: 'projetos/:id/editar', element: <ProjetoFormPage /> },
       { path: 'mentorias', element: <MentoriaListPage /> },
       { path: 'conquistas', element: <ConquistasPage /> },
+      { path: 'conquistas/criar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ConquistaManualComposer /></Suspense> },
 
       // Estudante
-      { path: 'meus-cursos', element: <RoleGuard allowed={['estudante']}><MeusCursosPage /></RoleGuard> },
-      { path: 'guardados', element: <RoleGuard allowed={['estudante']}><GuardadosPage /></RoleGuard> },
-      { path: 'certificados', element: <RoleGuard allowed={['estudante']}><CertificadosPage /></RoleGuard> },
-      { path: 'ranking', element: <RoleGuard allowed={['estudante']}><RankingPage /></RoleGuard> },
+      { path: 'meus-cursos', element: <RoleGuard allowed={['estudante', 'aluno']}><MeusCursosPage /></RoleGuard> },
+      { path: 'guardados', element: <RoleGuard allowed={['estudante', 'aluno']}><GuardadosPage /></RoleGuard> },
+      { path: 'certificados', element: <RoleGuard allowed={['estudante', 'aluno']}><CertificadosPage /></RoleGuard> },
+      { path: 'ranking', element: <RoleGuard allowed={['estudante', 'aluno', 'mentor', 'instituicao', 'super_admin']}><RankingPage /></RoleGuard> },
 
       // Mentor
       { path: 'mentor/cursos', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentorCursosPage /></RoleGuard> },
       { path: 'mentor/cursos/criar', element: <RoleGuard allowed={['mentor', 'super_admin']}><SovereignCourseBuilder /></RoleGuard> },
       { path: 'mentor/cursos/:id/editar', element: <RoleGuard allowed={['mentor', 'super_admin']}><SovereignCourseBuilder /></RoleGuard> },
-      { path: 'mentor/simulacoes', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentorSimulacoesPage /></RoleGuard> },
-      { path: 'mentor/simulacoes/criar', element: <RoleGuard allowed={['mentor', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
-      { path: 'mentor/simulacoes/:id/editar', element: <RoleGuard allowed={['mentor', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
+      { path: 'mentor/simulacoes', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><MentorSimulacoesPage /></RoleGuard> },
+      { path: 'mentor/simulacoes/criar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
+      { path: 'mentor/simulacoes/editar/:id', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
       { path: 'mentor/upload', element: <RoleGuard allowed={['mentor', 'super_admin']}><UploadConteudoPage /></RoleGuard> },
       { path: 'mentor/estudantes/inscritos', element: <RoleGuard allowed={['mentor', 'super_admin']}><EstudantesInscritosPage /></RoleGuard> },
       { path: 'mentor/mentorados', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentoradosPage /></RoleGuard> },
@@ -218,12 +220,8 @@ export const router = createBrowserRouter([
         element: <RoleGuard allowed={['moderador', 'super_admin']}><ModeradorUtilizadoresPage /></RoleGuard>
       },
 
-      // Vínculos
       { path: 'reputacao', element: <ReputacaoPage /> },
-      {
-        path: 'vinculos',
-        element: <ProtectedRoute><VinculosPage /></ProtectedRoute>
-      },
+      { path: 'vinculos', element: <VinculosPage /> },
       {
         path: 'mensagens',
         element: <ProtectedRoute><MensagensPage /></ProtectedRoute>

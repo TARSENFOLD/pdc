@@ -44,8 +44,8 @@ export function EstudantesInscritosPage() {
       header: 'Nome do Estudante',
       accessor: (row) => (
         <div className="flex flex-col">
-          <span className="font-medium text-text-primary">{row.estudante?.nome || 'N/A'}</span>
-          <span className="text-xs text-text-muted">{row.estudante?.email || ''}</span>
+          <span className="font-medium text-ink-primary">{row.estudante?.nome || 'N/A'}</span>
+          <span className="text-xs text-ink-tertiary">{row.estudante?.email || ''}</span>
         </div>
       ),
     },
@@ -57,9 +57,9 @@ export function EstudantesInscritosPage() {
       header: 'Progresso',
       accessor: (row) => (
         <div className="flex items-center gap-2">
-          <div className="w-24 h-2 bg-surface-raised rounded-full overflow-hidden">
+          <div className="w-24 h-2 bg-elevated rounded-full overflow-hidden">
             <div 
-              className="h-full bg-amber" 
+              className="h-full bg-accent" 
               style={{ width: `${String(row.progressoPercentagem || 0)}%` }}
             />
           </div>

@@ -12,7 +12,7 @@ interface Props {
 
 export function CourseBaseInfo({ register, errors, onCapaUploaded }: Props) {
   return (
-    <Card className="p-8 border-white/5 bg-surface/50 backdrop-blur-xl">
+    <Card className="p-8 border-white/5 bg-elevated/50 backdrop-blur-xl">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 bg-accent/10 rounded-lg text-accent"><Layout size={20} /></div>
         <h2 className="text-xl font-bold">Estrutura Soberana</h2>
@@ -24,7 +24,7 @@ export function CourseBaseInfo({ register, errors, onCapaUploaded }: Props) {
         <div className="space-y-1">
           <label className="text-sm font-medium opacity-70">Manifesto do Curso</label>
           <textarea 
-            className="flex min-h-25 w-full rounded-xl border border-white/10 bg-surface-alt px-4 py-3 text-sm focus:border-accent outline-none transition-all"
+            className="flex min-h-25 w-full rounded-xl border border-white/10 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
             {...register('descricao')}
             placeholder="O que o estudante irá conquistar?"
           />
@@ -34,13 +34,13 @@ export function CourseBaseInfo({ register, errors, onCapaUploaded }: Props) {
         <div className="grid grid-cols-2 gap-4">
            <div className="space-y-1">
               <label className="text-sm font-medium opacity-70">Área Vocacional</label>
-              <select {...register('area')} className="w-full bg-surface-alt border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-accent transition-all">
+              <select {...register('area')} className="w-full bg-recessed border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-accent transition-all">
                 {AreaVocacionalSchema.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
               </select>
            </div>
            <div className="space-y-1">
               <label className="text-sm font-medium opacity-70">Nível de Rigor</label>
-              <select {...register('nivel')} className="w-full bg-surface-alt border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-accent transition-all">
+              <select {...register('nivel')} className="w-full bg-recessed border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-accent transition-all">
                 <option value="basico">Básico (Iniciação)</option>
                 <option value="medio">Médio (Competência)</option>
                 <option value="avancado">Avançado (Mestria)</option>

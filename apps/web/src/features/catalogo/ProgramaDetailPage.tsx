@@ -30,8 +30,8 @@ export function ProgramaDetailPage() {
     }
   });
 
-  if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><Spinner size="lg" /></div>;
-  if (isError || !prog) return <div className="flex min-h-screen items-center justify-center bg-background p-4"><EmptyState icon={Search} title="Programa não encontrado" description="Não foi possível carregar os dados deste programa." /></div>;
+  if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-canvas"><Spinner size="lg" /></div>;
+  if (isError || !prog) return <div className="flex min-h-screen items-center justify-center bg-canvas p-4"><EmptyState icon={Search} title="Programa não encontrado" description="Não foi possível carregar os dados deste programa." /></div>;
 
   const handleInscrever = () => {
     if (!user) {
@@ -42,26 +42,26 @@ export function ProgramaDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
+    <div className="min-h-screen bg-canvas px-4 py-16 sm:px-6">
       <SEOHead 
         title={prog.titulo}
         description={prog.descricao}
         url={`https://usepdc.com/programas/${id ?? ''}`}
       />
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-3xl font-bold text-text-primary mb-4">{prog.titulo}</h1>
+        <h1 className="text-3xl font-bold text-ink-primary mb-4">{prog.titulo}</h1>
         <div className="flex gap-2 mb-6">
           <Badge variant="info">{prog.tipo.toUpperCase()}</Badge>
           <Badge variant="outline">{prog.area}</Badge>
         </div>
         
         <Card className="p-6 mb-8">
-          <h2 className="text-lg font-semibold text-text-primary mb-4">Detalhes</h2>
+          <h2 className="text-lg font-semibold text-ink-primary mb-4">Detalhes</h2>
           <div className="grid grid-cols-2 gap-4 text-sm">
-            <p className="text-text-secondary">Vagas: <span className="text-text-primary">{prog.vagas ?? 'Ilimitadas'}</span></p>
-            <p className="text-text-secondary">Início: <span className="text-text-primary">{prog.dataInicio ? new Date(prog.dataInicio).toLocaleDateString() : 'Não definido'}</span></p>
+            <p className="text-ink-secondary">Vagas: <span className="text-ink-primary">{prog.vagas ?? 'Ilimitadas'}</span></p>
+            <p className="text-ink-secondary">Início: <span className="text-ink-primary">{prog.dataInicio ? new Date(prog.dataInicio).toLocaleDateString() : 'Não definido'}</span></p>
           </div>
-          <p className="mt-4 text-text-secondary leading-relaxed">{prog.descricao}</p>
+          <p className="mt-4 text-ink-secondary leading-relaxed">{prog.descricao}</p>
         </Card>
 
         <Button onClick={handleInscrever} isLoading={inscreverMutation.isPending} className="w-full">

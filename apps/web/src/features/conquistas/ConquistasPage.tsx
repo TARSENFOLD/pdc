@@ -28,7 +28,7 @@ function ConquistaCard({ conquista, index }: { conquista: Conquista; index: numb
       <Card
         className={cn(
           'relative flex flex-col items-center gap-5 p-8 text-center transition-all border-white/5 overflow-hidden group',
-          !conquista.desbloqueada ? 'bg-surface/40 opacity-50 grayscale' : 'bg-surface shadow-xl hover:border-accent/30'
+          !conquista.desbloqueada ? 'bg-canvas/40 opacity-50 grayscale' : 'bg-canvas shadow-xl hover:border-accent/30'
         )}
       >
         {/* Background Decor */}
@@ -40,16 +40,16 @@ function ConquistaCard({ conquista, index }: { conquista: Conquista; index: numb
           "h-16 w-16 rounded-2xl flex items-center justify-center border transition-all duration-500",
           conquista.desbloqueada 
             ? "bg-accent/10 border-accent/20 text-accent group-hover:scale-110 shadow-lg shadow-accent/5" 
-            : "bg-white/5 border-white/10 text-text-muted"
+            : "bg-white/5 border-white/10 text-ink-tertiary"
         )}>
           {conquista.desbloqueada ? <Icon size={32} /> : <Lock size={24} />}
         </div>
 
         <div>
-          <h3 className="font-bold text-text-primary group-hover:text-accent transition-colors tracking-tight">
+          <h3 className="font-bold text-ink-primary group-hover:text-accent transition-colors tracking-tight">
             {conquista.titulo}
           </h3>
-          <p className="mt-2 text-xs text-text-secondary leading-relaxed line-clamp-2">
+          <p className="mt-2 text-xs text-ink-secondary leading-relaxed line-clamp-2">
             {conquista.descricao}
           </p>
         </div>
@@ -60,7 +60,7 @@ function ConquistaCard({ conquista, index }: { conquista: Conquista; index: numb
                Verificada
              </Badge>
              {conquista.dataDesbloqueio && (
-               <p className="text-[10px] text-text-muted font-medium">
+               <p className="text-[10px] text-ink-tertiary font-medium">
                  {new Date(conquista.dataDesbloqueio).toLocaleDateString('pt-PT', {
                    day: '2-digit',
                    month: 'short',
@@ -102,18 +102,18 @@ export function ConquistasPage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-widest">
              <Trophy size={12} /> Quadro de Prestígio
           </div>
-          <h1 className="text-4xl font-black text-text-primary tracking-tighter sm:text-5xl font-display">
+          <h1 className="text-4xl font-black text-ink-primary tracking-tighter sm:text-5xl font-display">
             As tuas <span className="text-accent">Conquistas.</span>
           </h1>
-          <p className="text-text-secondary text-lg">Constrói a tua autoridade através de marcos verificados pelo Oráculo.</p>
+          <p className="text-ink-secondary text-lg">Constrói a tua autoridade através de marcos verificados pelo Oráculo.</p>
         </div>
 
         {!isLoading && conquistas.length > 0 && (
           <div className="glass-surface px-6 py-4 rounded-2xl border-white/5 shadow-xl flex items-center gap-6">
             <div className="flex flex-col">
-              <span className="text-[10px] text-text-muted font-black uppercase tracking-widest">Progresso de Mérito</span>
+              <span className="text-[10px] text-ink-tertiary font-black uppercase tracking-widest">Progresso de Mérito</span>
               <span className="font-mono font-black text-2xl tracking-tighter">
-                {desbloqueadas} <span className="text-text-muted text-sm">/ {conquistas.length}</span>
+                {desbloqueadas} <span className="text-ink-tertiary text-sm">/ {conquistas.length}</span>
               </span>
             </div>
             <div className="h-12 w-12 rounded-full border-4 border-white/5 flex items-center justify-center relative">
@@ -162,8 +162,8 @@ export function ConquistasPage() {
               <ShieldCheck size={40} />
            </div>
            <div className="space-y-2 text-center md:text-left">
-              <h4 className="text-xl font-bold text-text-primary">O teu mérito desbloqueia portas.</h4>
-              <p className="text-text-secondary leading-relaxed">
+              <h4 className="text-xl font-bold text-ink-primary">O teu mérito desbloqueia portas.</h4>
+              <p className="text-ink-secondary leading-relaxed">
                 As tuas conquistas são visíveis para instituições de elite e potenciais patrocinadores. 
                 Continua a acumular evidências para aumentar a tua visibilidade no **Hub de Oportunidades**.
               </p>

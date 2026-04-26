@@ -1,7 +1,7 @@
 import { http } from './http';
 import {
   CursoPublico, SimulacaoPublica,
-  MentorPublico, InstituicaoPublica, PerfilPublicoBasico, PerfilCompleto,
+  MentorPublico, InstituicaoPublica, PerfilCompleto,
   ExplorarResultado, CatalogoMeta,
 } from '@pdc/shared';
 

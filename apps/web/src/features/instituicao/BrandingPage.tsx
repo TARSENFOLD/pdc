@@ -90,7 +90,7 @@ const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
           <div className="space-y-1">
             <label className="text-sm font-medium">Descrição Pública</label>
             <textarea 
-              className="flex min-h-[120px] w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-[120px] w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary ring-offset-background placeholder:text-ink-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               placeholder="Conte aos estudantes sobre a vossa missão..."
               {...register('bio')}
             />

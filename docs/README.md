@@ -28,8 +28,8 @@ Se encontrar informações contraditórias, a ordem de precedência é:
 | `guia-utilizador/estudante.md` | 🟡 Em saneamento | E1 | 2026-04-21 |
 | `guia-tecnico/arquitectura.md` | ✅ Canónico | B2 | 2026-04-22 |
 | `guia-tecnico/contribuir.md` | ✅ Canónico | B1 | 2026-04-22 |
-| `guia-tecnico/mobile-install.md` | 🚧 Planeado | D2 | TBD |
-| `api/og.md` | 🚧 Planeado | F1 | TBD |
+| `guia-tecnico/mobile-install.md` | 🚧 Planeado | D2 | 2026-04-22 |
+| `api/og.md` | 🚧 Planeado | F1 | 2026-04-22 |
 
 ---
 
@@ -47,9 +47,9 @@ Se encontrar informações contraditórias, a ordem de precedência é:
 3. [🗺️ Roadmap Estratégico](../.planning/roadmap.md) — Ondas de execução e marcos.
 
 ### 🧪 Quality Assurance (QA)
-1. [🧪 Testes de Carga](../README.md#4-qualidade-e-testes-playwright--k6) — Catálogo de scripts k6.
+1. [🧪 Testes de Carga](../README.md#4-qualidade-e-testes-k6-scripts-em-testsk6) — Catálogo de scripts k6.
 2. [📱 Manual de Teste Mobile](guia-tecnico/setup-local.md#9-arrancar-o-frontend) — Validação de 44px e performance.
-3. [🤖 E2E Playwright](../README.md#playwright-e2e-section) — Testes de fumo e fluxos críticos.
+3. [🤖 E2E Playwright](../README.md#4-qualidade-e-testes-k6-scripts-em-testsk6) — Testes de fumo e fluxos críticos.
 
 ### ⚙️ Operações & Infra (Ops)
 1. [🌍 Guia de Deploy](guia-tecnico/deploy.md) — Cloudflare, Railway e Neon.

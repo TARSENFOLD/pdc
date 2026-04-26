@@ -1,9 +1,12 @@
 import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
+import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
-import { CriarProgramaPayloadSchema } from '@pdc/shared';
+import { CriarProgramaPayloadSchema, AtualizarProgramaEstadoSchema } from '@pdc/shared';
 
 type Vars = { Variables: AuthVariables };
 export const programaRoutes = new Hono<Vars>();
@@ -12,17 +15,34 @@ programaRoutes.use('*', verifyJwt);
 
 interface StrapiPrograma {
   id: string;
-  perfilId?: string | { id: string };
+  titulo: string;
+  estado: string;
+  perfilId?: string;
+  instituicaoId?: string;
+  responsavel?: { id: string };
+  instituicao?: { id: string };
+  historicoEstados?: Array<{ estado: string; timestamp: string; autorId: string }>;
   metadata?: unknown;
-  titulo?: string;
-  area?: string;
-  tipo?: string;
 }
 
-// GET /programas/meus
+// GET /programas
+programaRoutes.get('/', async (c) => {
+  try {
+    const res = await strapiGet<StrapiPrograma>('/programas', {
+      'filters[estado][$eq]': 'published',
+      populate: 'capa,instituicao,responsavel,cursos,experiencias,simulacoes,projetos',
+      sort: 'createdAt:desc',
+    });
+    return c.json(res);
+  } catch (_err) {
+    return c.json({ error: 'Erro ao carregar programas' }, 502);
+  }
+});
+
+// GET /programas/meus (inscrições do utilizador)
 programaRoutes.get('/meus', async (c) => {
   const { id: userId } = c.get('user');
-
+  
   try {
     const resPerfil = await strapiGet<{ id: string }>('/perfis', {
       'filters[userId][$eq]': userId,
@@ -43,32 +63,10 @@ programaRoutes.get('/meus', async (c) => {
   }
 });
 
-// POST /programas — criar programa com validação canónica
-programaRoutes.post('/', async (c) => {
-  const { id: userId } = c.get('user');
-
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: 'Payload inválido' }, 400);
-  }
-
-  const parsed = CriarProgramaPayloadSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validação falhou', issues: parsed.error.issues }, 422);
-  }
-
-  const {
-    profissionalShadow,
-    areaShadowing,
-    visitaUrl,
-    localizacaoFisica,
-    instituicaoId,
-    cronograma,
-    ...rest
-  } = parsed.data;
-
+// GET /programas/minhas (programas criados pelo utilizador)
+programaRoutes.get('/minhas', checkRole(['mentor', 'instituicao', 'super_admin']), async (c) => {
+  const { id: userId, role } = c.get('user');
+  
   try {
     const resPerfil = await strapiGet<{ id: string }>('/perfis', {
       'filters[userId][$eq]': userId,
@@ -76,119 +74,208 @@ programaRoutes.post('/', async (c) => {
     });
     const perfilId = resPerfil.data[0]?.id;
 
-    if (!perfilId) {
-      return c.json({ error: 'Perfil não encontrado para o utilizador' }, 404);
-    }
+    if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
 
-    const strapiPayload: Record<string, unknown> = {
-      ...rest,
-      cronograma: cronograma ?? null,
-      metadata: {
-        ...(profissionalShadow ? { profissionalShadow } : {}),
-        ...(areaShadowing ? { areaShadowing } : {}),
-        ...(visitaUrl ? { visitaUrl } : {}),
-        ...(localizacaoFisica ? { localizacaoFisica } : {}),
-        criadorPerfilId: perfilId,
-      },
+    const params: Record<string, string> = {
+      populate: 'capa,instituicao,responsavel,cursos,experiencias,simulacoes,projetos',
     };
 
-    if (instituicaoId) strapiPayload['instituicao'] = instituicaoId;
+    // Filtrar por criador baseado na role
+    if (role === 'mentor' || role === 'super_admin') {
+      params['filters[responsavel][id][$eq]'] = String(perfilId);
+    } else if (role === 'instituicao') {
+      params['filters[instituicao][id][$eq]'] = String(perfilId);
+    }
 
-    const res = await strapiPost<StrapiPrograma>('/programas', strapiPayload);
-
-    await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_CRIADO, {
-      programaId: res.data.id,
-      autorId: String(perfilId),
-      titulo: rest.titulo,
-      area: rest.area,
-      criadorTipo: parsed.data.criadorTipo ?? 'instituicao',
-    });
-
-    return c.json(res.data, 201);
+    const res = await strapiGet<StrapiPrograma>('/programas', params);
+    return c.json(res);
   } catch (_err) {
-    return c.json({ error: 'Erro ao criar programa' }, 502);
+    return c.json({ error: 'Erro ao carregar programas criados' }, 502);
   }
 });
 
-// PUT /programas/:id — actualizar programa
-programaRoutes.put('/:id', async (c) => {
-  const programaId = c.req.param('id');
-  const { id: userId } = c.get('user');
+// POST /programas - Criar novo programa
+programaRoutes.post('/', 
+  checkRole(['mentor', 'instituicao', 'super_admin']),
+  zValidator('json', CriarProgramaPayloadSchema),
+  async (c) => {
+    const body = c.req.valid('json');
+    const { id: userId, role } = c.get('user');
 
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: 'Payload inválido' }, 400);
-  }
-
-  const parsed = CriarProgramaPayloadSchema.partial().safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validação falhou', issues: parsed.error.issues }, 422);
-  }
-
-  const {
-    profissionalShadow,
-    areaShadowing,
-    visitaUrl,
-    localizacaoFisica,
-    instituicaoId,
-    cronograma,
-    ...rest
-  } = parsed.data;
-
-  try {
-    // 🔐 G2: Autoridade Soberana — Verificar se o utilizador é o criador
-    const [resExisting, resPerfil] = await Promise.all([
-      strapiGet<StrapiPrograma>(`/programas/${programaId}`),
-      strapiGet<{ id: string }>('/perfis', {
+    try {
+      // Buscar perfil
+      const resPerfil = await strapiGet<{ id: string }>('/perfis', {
         'filters[userId][$eq]': userId,
         'fields[0]': 'id',
-      }),
-    ]);
+      });
+      const perfilId = resPerfil.data[0]?.id;
 
-    const existing = resExisting.data as unknown as StrapiPrograma;
-    if (!existing || !existing.id) return c.json({ error: 'Programa não encontrado' }, 404);
+      // Determinar criadorTipo baseado na role
+      const criadorTipo = role === 'super_admin' ? 'super_admin' : 
+                          role === 'instituicao' ? 'instituicao' : 'mentor';
 
-    const perfil = resPerfil.data[0];
-    if (!perfil) {
-      return c.json({ error: 'Perfil não encontrado para o utilizador' }, 404);
-    }
+      const slug = body.titulo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
 
-    const perfilId = perfil.id;
-    const existingMetadata = (existing.metadata as Record<string, unknown>) ?? {};
-
-    const rawCriadorId = existingMetadata.criadorPerfilId || existing.perfilId;
-    const criadorId = typeof rawCriadorId === 'object' && rawCriadorId !== null ? (rawCriadorId as any).id : rawCriadorId;
-
-    if (String(criadorId) !== String(perfilId)) {
-      return c.json({ error: 'Autoridade insuficiente para editar este programa' }, 403);
-    }
-
-    const strapiPayload: Record<string, unknown> = { ...rest };
-
-    if (cronograma !== undefined) {
-      strapiPayload['cronograma'] = cronograma;
-    }
-
-    if (profissionalShadow || areaShadowing || visitaUrl || localizacaoFisica) {
-      strapiPayload['metadata'] = {
-        ...existingMetadata,
-        ...(profissionalShadow ? { profissionalShadow } : {}),
-        ...(areaShadowing ? { areaShadowing } : {}),
-        ...(visitaUrl ? { visitaUrl } : {}),
-        ...(localizacaoFisica ? { localizacaoFisica } : {}),
+      const programaData = {
+        ...body,
+        estado: 'draft',
+        slug,
+        criadorTipo,
+        responsavel: perfilId,
+        historicoEstados: [{
+          estado: 'draft',
+          timestamp: new Date().toISOString(),
+          autorId: userId,
+        }],
       };
+
+      const res = await strapiPost<StrapiPrograma>('/programas', programaData);
+      const programaId = res.data.id;
+
+      // G15: Impacto no Ecossistema
+      const event = await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_CRIADO, {
+        programaId,
+        autorId: String(perfilId),
+        titulo: body.titulo,
+        area: body.area,
+        criadorTipo,
+      });
+
+      return c.json({
+        ...res.data,
+        eventId: event?.id
+      }, 201);
+    } catch (_err) {
+      return c.json({ error: 'Falha ao criar programa' }, 502);
     }
-
-    if (instituicaoId) strapiPayload['instituicao'] = instituicaoId;
-
-    const res = await strapiPut<StrapiPrograma>(`/programas/${programaId}`, strapiPayload);
-    return c.json(res.data);
-  } catch (_err) {
-    return c.json({ error: 'Erro ao actualizar programa' }, 502);
   }
-});
+);
+
+// PUT /programas/:id - Atualizar programa
+programaRoutes.put('/:id', 
+  checkRole(['mentor', 'instituicao', 'super_admin']),
+  zValidator('json', CriarProgramaPayloadSchema.partial()),
+  async (c) => {
+    const id = c.req.param('id');
+    const body = c.req.valid('json');
+    const { id: userId, role } = c.get('user');
+
+    try {
+      // Buscar perfil do utilizador atual
+      const resPerfil = await strapiGet<{ id: string }>('/perfis', {
+        'filters[userId][$eq]': userId,
+        'fields[0]': 'id',
+      });
+      const perfilId = resPerfil.data[0]?.id;
+
+      // Verificar propriedade
+      const resGet = await strapiGet<StrapiPrograma>(`/programas/${id}`, {
+        populate: 'responsavel,instituicao',
+      });
+      const existing = resGet.data[0];
+
+      if (!existing) return c.json({ error: 'Programa não encontrado' }, 404);
+
+      // Verificar permissões
+      const podeEditar = role === 'super_admin' || 
+                        (role === 'mentor' && String(existing.responsavel?.id) === String(perfilId)) ||
+                        (role === 'instituicao' && String(existing.instituicao?.id) === String(perfilId));
+
+      if (!podeEditar) {
+        return c.json({ error: 'Autoridade insuficiente' }, 403);
+      }
+
+      const resPut = await strapiPut<StrapiPrograma>(`/programas/${id}`, body);
+      return c.json(resPut.data);
+    } catch (_err) {
+      return c.json({ error: 'Falha ao atualizar programa' }, 502);
+    }
+  }
+);
+
+// PATCH /programas/:id/estado - Transição de estado editorial
+programaRoutes.patch('/:id/estado', 
+  checkRole(['mentor', 'instituicao', 'moderador', 'super_admin']),
+  zValidator('json', AtualizarProgramaEstadoSchema),
+  async (c) => {
+    const id = c.req.param('id');
+    const { estado, motivoRejeicao } = c.req.valid('json');
+    const { id: userId, role } = c.get('user');
+
+    try {
+      // Buscar perfil do utilizador atual
+      const resPerfil = await strapiGet<{ id: string }>('/perfis', {
+        'filters[userId][$eq]': userId,
+        'fields[0]': 'id',
+      });
+      const perfilId = resPerfil.data[0]?.id;
+
+      const resGet = await strapiGet<StrapiPrograma>(`/programas/${id}`, {
+        populate: 'responsavel,instituicao',
+      });
+      const programa = resGet.data[0];
+
+      if (!programa) return c.json({ error: 'Programa não encontrado' }, 404);
+
+      const estadoAtual = programa.estado;
+
+      // Validar transições permitidas
+      const transicaoPermitida = (atual: string, novo: string, userRole: string): boolean => {
+        if (userRole === 'super_admin') return true;
+        if (userRole === 'moderador') return novo === 'archived' && atual === 'published';
+        if (userRole === 'mentor' || userRole === 'instituicao') {
+          if (atual === 'draft' && novo === 'review') return true;
+          if (atual === 'approved' && novo === 'published') return true;
+          if (atual === 'draft' && novo === 'archived') return true;
+        }
+        return false;
+      };
+
+      const podeEditar = role === 'super_admin' || 
+                        role === 'moderador' ||
+                        String(programa.responsavel?.id) === String(perfilId) ||
+                        String(programa.instituicao?.id) === String(perfilId);
+
+      if (!podeEditar) {
+        return c.json({ error: 'Sem permissão para editar este programa' }, 403);
+      }
+
+      if (!transicaoPermitida(estadoAtual, estado, role)) {
+        return c.json({
+          error: `Transição inválida de ${estadoAtual} para ${estado}`,
+        }, 400);
+      }
+
+      // Atualizar histórico
+      const historicoAtual = programa.historicoEstados || [];
+      const novoHistorico = [...historicoAtual, {
+        estado,
+        timestamp: new Date().toISOString(),
+        autorId: userId,
+      }];
+
+      await strapiPut<unknown>(`/programas/${id}`, { 
+        estado, 
+        motivoRejeicao: estado === 'archived' && motivoRejeicao ? motivoRejeicao : undefined,
+        historicoEstados: novoHistorico,
+      });
+
+      // G15: Evento se publicado
+      if (estado === 'published') {
+        await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_PUBLICADO, {
+          programaId: id,
+          autorId: String(programa.responsavel?.id),
+          titulo: programa.titulo,
+          instituicaoId: String(programa.instituicao?.id),
+        });
+      }
+
+      return c.json({ success: true });
+    } catch (_err) {
+      return c.json({ error: 'Falha na transição de estado' }, 502);
+    }
+  }
+);
 
 // POST /programas/:id/concluir
 programaRoutes.post('/:id/concluir', async (c) => {
@@ -219,6 +306,7 @@ programaRoutes.post('/:id/concluir', async (c) => {
       }
     });
 
+    // G15: Impacto no Ecossistema
     await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_CONCLUIDO, {
       programaId,
       perfilId: String(perfilId),

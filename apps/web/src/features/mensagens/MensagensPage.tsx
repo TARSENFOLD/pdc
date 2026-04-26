@@ -32,10 +32,10 @@ export function MensagensPage() {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-4">
         <div>
           <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 mb-3 px-3 py-1 uppercase tracking-widest text-[9px] font-black">Communication Hub</Badge>
-          <h1 className="text-4xl font-black text-text-primary tracking-tighter font-display">
+          <h1 className="text-4xl font-black text-ink-primary tracking-tighter font-display">
             As Minhas <span className="text-accent">Conversas</span>
           </h1>
-          <p className="text-text-secondary mt-2 max-w-lg leading-relaxed text-sm">
+          <p className="text-ink-secondary mt-2 max-w-lg leading-relaxed text-sm">
             Consultas técnicas e orientações de mentoria em tempo real.
           </p>
         </div>
@@ -59,7 +59,7 @@ export function MensagensPage() {
               transition={{ delay: idx * 0.05 }}
             >
               <Link to={`/app/mensagens/${c.id}`}>
-                <Card className="p-6 flex items-center gap-6 bg-surface border-white/5 hover:border-accent/30 transition-all group shadow-xl">
+                <Card className="p-6 flex items-center gap-6 bg-elevated border-white/5 hover:border-accent/30 transition-all group shadow-xl">
                   <div className="relative">
                      <Avatar src={c.interlocutorFoto} fallback={c.interlocutorNome[0]} className="h-16 w-16 border-2 border-white/10 group-hover:border-accent/40 transition-all" />
                      {c.naoLidas > 0 && (
@@ -71,18 +71,18 @@ export function MensagensPage() {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
-                      <h3 className="text-lg font-bold text-text-primary group-hover:text-accent transition-colors">{c.interlocutorNome}</h3>
-                      <span className="text-[10px] font-mono text-text-muted uppercase">
+                      <h3 className="text-lg font-bold text-ink-primary group-hover:text-accent transition-colors">{c.interlocutorNome}</h3>
+                      <span className="text-[10px] font-mono text-ink-tertiary uppercase">
                         {new Date(c.updatedAt).toLocaleDateString('pt-PT')}
                       </span>
                     </div>
                     
-                    <p className={`text-sm truncate leading-relaxed ${c.naoLidas > 0 ? 'text-text-primary font-bold' : 'text-text-secondary'}`}>
+                    <p className={`text-sm truncate leading-relaxed ${c.naoLidas > 0 ? 'text-ink-primary font-bold' : 'text-ink-secondary'}`}>
                       {c.ultimaMensagem || 'Inicia a trajectória de mentoria...'}
                     </p>
                   </div>
 
-                  <ChevronRight size={20} className="text-text-muted group-hover:translate-x-1 group-hover:text-accent transition-all" />
+                  <ChevronRight size={20} className="text-ink-tertiary group-hover:translate-x-1 group-hover:text-accent transition-all" />
                 </Card>
               </Link>
             </motion.div>
@@ -91,7 +91,7 @@ export function MensagensPage() {
       </div>
 
       <footer className="pt-10 flex justify-center">
-         <p className="text-[9px] font-bold text-text-muted uppercase tracking-[0.3em] flex items-center gap-2">
+         <p className="text-[9px] font-bold text-ink-tertiary uppercase tracking-[0.3em] flex items-center gap-2">
             <Zap size={14} className="text-accent" />
             Comunicação Realtime assegurada pelo PDC Soberano Engine.
          </p>

@@ -1,297 +1,234 @@
 import { Hono } from 'hono';
-import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
+import { zValidator } from '@hono/zod-validator';
+import { verifyJwt, optionalJwt, checkRole, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiGet, strapiPost, strapiPut, strapiDelete } from '../modules/strapi/strapi.client.js';
-import { type Projeto, CriarProjetoPayloadSchema } from '@pdc/shared';
+import { CriarProjetoPayloadSchema, GerirACLSchema, type Projeto, type ACLEntry } from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 
-type Vars = { Variables: AuthVariables };
+type Vars = { Variables: OptionalAuthVariables };
 export const projetoRoutes = new Hono<Vars>();
 
-projetoRoutes.use('*', verifyJwt);
-
-interface StrapiProjetoWithAutor {
-  id: string | number;
-  autor?: { userId: string; id: string | number };
-  core?: unknown;
-  colaboradores?: Array<{ id: string | number }> | null;
-  pedidosAcesso?: Array<{ perfilSolicitante?: { id: string | number }; status: string }> | null;
+interface StrapiProjeto extends Omit<Projeto, 'autor'> {
+  autor?: { id: string; userId: string };
+  acessoCoreACL?: ACLEntry[];
 }
 
-interface StrapiPedido {
-  id: string | number;
-  projeto?: { id: string | number };
-  status: string;
+function filterCoreField(projeto: StrapiProjeto, perfilId: string | null): Partial<StrapiProjeto> {
+  const isAutor = perfilId && String(projeto.autor?.id) === String(perfilId);
+  const hasApprovedAccess = perfilId && projeto.acessoCoreACL?.some(
+    (entry) => String(entry.perfilId) === String(perfilId) && entry.estado === 'approved'
+  );
+
+  if (isAutor || hasApprovedAccess) {
+    return projeto;
+  }
+
+  const { core, ...publicData } = projeto;
+  void core;
+  return publicData;
 }
 
-function resolvePerfilId(perfilId: string | undefined, projeto: StrapiProjetoWithAutor): boolean {
-  if (!perfilId) return false;
-  if (String(projeto.autor?.id) === perfilId) return true;
-  const colabs = projeto.colaboradores ?? [];
-  if (Array.isArray(colabs) && colabs.some((c) => String(c.id) === perfilId)) return true;
-  const pedidos = projeto.pedidosAcesso ?? [];
-  if (Array.isArray(pedidos) && pedidos.some(
-    (p) => p.status === 'aprovado' && String(p.perfilSolicitante?.id) === perfilId
-  )) return true;
-  return false;
-}
-
-async function getPerfilId(userId: string): Promise<string | undefined> {
+async function resolvePerfilId(userId: string | undefined): Promise<string | null> {
+  if (!userId) return null;
   const resPerfil = await strapiGet<{ id: string }>('/perfis', {
     'filters[userId][$eq]': userId,
     'fields[0]': 'id',
   });
-  return resPerfil.data[0] ? String(resPerfil.data[0].id) : undefined;
+  return resPerfil.data[0]?.id || null;
 }
 
-function stripCore(projeto: StrapiProjetoWithAutor, authorized: boolean): unknown {
-  const result = { ...(projeto as unknown as Record<string, unknown>) };
-  if (!authorized) {
-    delete result['core'];
-  }
-  return result;
-}
-
-// GET /projetos
-projetoRoutes.get('/', async (c) => {
-  const { id: userId } = c.get('user');
+// GET /projetos — público, core filtrado por ACL
+projetoRoutes.get('/', optionalJwt, async (c) => {
   try {
-    const [res, perfilId] = await Promise.all([
-      strapiGet<StrapiProjetoWithAutor>('/projetos', {
-        populate: 'autor,pedidosAcesso.perfilSolicitante',
-        sort: 'createdAt:desc',
-      }),
-      getPerfilId(userId),
-    ]);
+    const userId = c.get('user')?.id;
+    const perfilId = await resolvePerfilId(userId);
 
-    const data = res.data.map((p) => stripCore(p, resolvePerfilId(perfilId, p)));
-    return c.json({ ...res, data });
+    const res = await strapiGet<StrapiProjeto>('/projetos', {
+      populate: 'autor,media',
+      sort: 'createdAt:desc',
+    });
+
+    const filteredData = res.data.map(p => filterCoreField(p, perfilId));
+    return c.json({ ...res, data: filteredData });
   } catch (_err) {
     return c.json({ error: 'Falha ao sincronizar o ecossistema de projetos' }, 502);
   }
 });
 
-// GET /projetos/meus
-projetoRoutes.get('/meus', async (c) => {
-  const { id: userId } = c.get('user');
+// GET /projetos/meus — requer autenticação
+projetoRoutes.get('/meus', verifyJwt, async (c) => {
+  const userId = c.get('user')!.id;
   try {
-    const perfilId = await getPerfilId(userId);
+    const perfilId = await resolvePerfilId(userId);
     if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
 
-    const res = await strapiGet<StrapiProjetoWithAutor>('/projetos', {
+    const res = await strapiGet<StrapiProjeto>('/projetos', {
       'filters[autor][id][$eq]': perfilId,
-      populate: 'media,pedidosAcesso.perfilSolicitante',
+      populate: 'media',
     });
-
-    const data = res.data.map((p) => stripCore(p, true));
-    return c.json({ ...res, data });
+    return c.json(res);
   } catch (_err) {
     return c.json({ error: 'Erro ao recuperar os teus ativos' }, 502);
   }
 });
 
-// GET /projetos/:id
-projetoRoutes.get('/:id', async (c) => {
+// GET /projetos/:id — público, core filtrado por ACL
+projetoRoutes.get('/:id', optionalJwt, async (c) => {
   const id = c.req.param('id');
-  const { id: userId } = c.get('user');
   try {
-    const [res, perfilId] = await Promise.all([
-      strapiGet<StrapiProjetoWithAutor>(`/projetos/${id}`, {
-        populate: 'autor,colaboradores,pedidosAcesso.perfilSolicitante',
-      }),
-      getPerfilId(userId),
-    ]);
+    const userId = c.get('user')?.id;
+    const perfilId = await resolvePerfilId(userId);
 
-    const projeto = Array.isArray(res.data) ? res.data[0] : (res.data as unknown as StrapiProjetoWithAutor);
-    if (!projeto) return c.json({ error: 'Projeto não encontrado' }, 404);
+    const res = await strapiGet<StrapiProjeto>(`/projetos/${id}`, {
+      populate: 'autor,media',
+    });
 
-    const authorized = resolvePerfilId(perfilId, projeto);
-    return c.json(stripCore(projeto, authorized));
+    const project = Array.isArray(res.data) ? res.data[0] : res.data;
+    if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
+
+    return c.json({ data: [filterCoreField(project, perfilId)] });
   } catch (_err) {
-    return c.json({ error: 'Falha ao carregar projeto' }, 502);
+    return c.json({ error: 'Erro ao carregar projeto' }, 502);
   }
 });
 
-// POST /projetos
-projetoRoutes.post('/', async (c) => {
-  const { id: userId } = c.get('user');
+// POST /projetos — estudante, mentor, instituição, super_admin
+projetoRoutes.post('/',
+  verifyJwt,
+  checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
+  zValidator('json', CriarProjetoPayloadSchema),
+  async (c) => {
+    const body = c.req.valid('json');
+    const userId = c.get('user')!.id;
 
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: 'Payload inválido' }, 400);
+    try {
+      const perfilId = await resolvePerfilId(userId);
+      if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
+
+      const slug = `${body.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')}-${Math.random().toString(36).substring(2, 7)}`;
+
+      const res = await strapiPost<StrapiProjeto>('/projetos', {
+        ...body,
+        autor: perfilId,
+        estado: 'published',
+        slug,
+        acessoCoreACL: [],
+        votos: [],
+      });
+
+      const projetoId = res.data.id;
+
+      const event = await eventBus.publishWithOutbox(DomainEventName.PROJETO_PUBLICADO, {
+        projetoId,
+        autorId: perfilId,
+        titulo: body.titulo,
+        area: body.area,
+      });
+
+      return c.json({ ...res.data, eventId: event?.id }, 201);
+    } catch (_err) {
+      return c.json({ error: 'Falha na publicação do projeto' }, 502);
+    }
   }
+);
 
-  const parsed = CriarProjetoPayloadSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validação falhou', issues: parsed.error.issues }, 422);
-  }
+// POST /projetos/:id/solicitar-acesso — requer autenticação
+projetoRoutes.post('/:id/solicitar-acesso', verifyJwt, async (c) => {
+  const id = c.req.param('id');
+  const userId = c.get('user')!.id;
 
   try {
-    const perfilId = await getPerfilId(userId);
+    const perfilId = await resolvePerfilId(userId);
     if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
 
-    const res = await strapiPost<Projeto>('/projetos', {
-      ...parsed.data,
-      autor: perfilId,
-    });
+    const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
+    const project = resGet.data[0];
+    if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
-    const projetoId = res.data.id;
+    const acl = project.acessoCoreACL || [];
+    if (acl.some(entry => String(entry.perfilId) === String(perfilId))) {
+      return c.json({ error: 'Pedido já existe ou acesso já concedido' }, 400);
+    }
 
-    await eventBus.publishWithOutbox(DomainEventName.PROJETO_PUBLICADO, {
-      projetoId,
+    const newEntry: ACLEntry = {
+      perfilId,
+      estado: 'pending',
+      solicitadoEm: new Date().toISOString(),
+    };
+
+    await strapiPut(`/projetos/${id}`, { acessoCoreACL: [...acl, newEntry] });
+
+    await eventBus.publishWithOutbox(DomainEventName.PROJETO_ACESSO_SOLICITADO, {
+      projetoId: id,
       autorId: perfilId,
-      titulo: parsed.data.titulo,
-      area: parsed.data.area,
+      targetId: String(project.autor?.id),
     });
 
-    return c.json(res.data, 201);
+    return c.json({ success: true });
   } catch (_err) {
-    return c.json({ error: 'Falha na publicação do projeto' }, 502);
+    return c.json({ error: 'Erro ao solicitar acesso' }, 502);
   }
 });
-// PUT /projetos/:id
-projetoRoutes.put('/:id', async (c) => {
+
+// PATCH /projetos/:id/acl — apenas o autor pode gerir
+projetoRoutes.patch('/:id/acl',
+  verifyJwt,
+  zValidator('json', GerirACLSchema),
+  async (c) => {
+    const id = c.req.param('id');
+    const { perfilId, acao } = c.req.valid('json');
+    const userId = c.get('user')!.id;
+
+    try {
+      const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
+      const project = resGet.data[0];
+      if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
+
+      if (project.autor?.userId !== userId) {
+        return c.json({ error: 'Apenas o autor pode gerir o acesso ao Core' }, 403);
+      }
+
+      const acl = project.acessoCoreACL || [];
+      const entryIdx = acl.findIndex(e => String(e.perfilId) === String(perfilId));
+      if (entryIdx === -1) return c.json({ error: 'Solicitação não encontrada' }, 404);
+
+      const entry = acl[entryIdx];
+      if (!entry) return c.json({ error: 'Erro interno' }, 500);
+
+      entry.estado = acao === 'aprovar' ? 'approved' : 'rejected';
+      entry.respondidoEm = new Date().toISOString();
+
+      await strapiPut(`/projetos/${id}`, { acessoCoreACL: acl });
+
+      await eventBus.publishWithOutbox(
+        acao === 'aprovar' ? DomainEventName.PROJETO_ACESSO_CONCEDIDO : DomainEventName.PROJETO_ACESSO_RECUSADO,
+        {
+          projetoId: id,
+          autorId: String(project.autor?.id),
+          targetId: perfilId,
+        }
+      );
+
+      return c.json({ success: true });
+    } catch (_err) {
+      return c.json({ error: 'Erro ao gerir ACL' }, 502);
+    }
+  }
+);
+
+// DELETE /projetos/:id — apenas o autor
+projetoRoutes.delete('/:id', verifyJwt, async (c) => {
   const id = c.req.param('id');
-  const { id: userId } = c.get('user');
-
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: 'Payload inválido' }, 400);
-  }
-
-  const parsed = CriarProjetoPayloadSchema.partial().safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: 'Validação falhou', issues: parsed.error.issues }, 422);
-  }
+  const userId = c.get('user')!.id;
 
   try {
-    const [resGet, perfilId] = await Promise.all([
-      strapiGet<StrapiProjetoWithAutor>(`/projetos/${id}`, { populate: 'autor' }),
-      getPerfilId(userId),
-    ]);
-
-    const existing = Array.isArray(resGet.data) ? resGet.data[0] : (resGet.data as unknown as StrapiProjetoWithAutor);
-
-    if (!existing) return c.json({ error: 'Projeto não identificado' }, 404);
-    if (String(existing.autor?.id) !== perfilId) return c.json({ error: 'Autoridade insuficiente' }, 403);
-
-    const res = await strapiPut<Projeto>(`/projetos/${id}`, parsed.data);
-    return c.json(res.data);
-  } catch (_err) {
-    return c.json({ error: 'Falha ao actualizar projeto' }, 502);
-  }
-});
-
-// POST /projetos/:id/pedidos-acesso
-projetoRoutes.post('/:id/pedidos-acesso', async (c) => {
-  const projetoId = c.req.param('id');
-  const { id: userId } = c.get('user');
-
-  let motivo: string | undefined;
-  try {
-    const json = await c.req.json() as Record<string, unknown>;
-    if (typeof json.motivo === 'string') {
-      motivo = json.motivo;
-    }
-  } catch {
-    // motivo é opcional, silenciar parse error
-  }
-
-  try {
-    const perfilId = await getPerfilId(userId);
-    if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
-
-    // Verify projeto exists and requester is not the autor
-    const resGet = await strapiGet<StrapiProjetoWithAutor>(`/projetos/${projetoId}`, { populate: 'autor' });
-    const projeto = Array.isArray(resGet.data) ? resGet.data[0] : (resGet.data as unknown as StrapiProjetoWithAutor);
-    if (!projeto) return c.json({ error: 'Projeto não encontrado' }, 404);
-    if (String(projeto.autor?.id) === perfilId) {
-      return c.json({ error: 'Autor não precisa solicitar acesso' }, 400);
-    }
-
-    const res = await strapiPost('/projeto-acesso-pedidos', {
-      projeto: projetoId,
-      perfilSolicitante: perfilId,
-      motivo: motivo ?? '',
-      status: 'pendente',
-    });
-
-    return c.json(res.data, 201);
-  } catch (_err) {
-    return c.json({ error: 'Falha ao submeter pedido de acesso' }, 502);
-  }
-});
-
-// PUT /projetos/:id/pedidos-acesso/:pedidoId — autor aprova ou rejeita
-projetoRoutes.put('/:id/pedidos-acesso/:pedidoId', async (c) => {
-  const projetoId = c.req.param('id');
-  const pedidoId = c.req.param('pedidoId');
-  const { id: userId } = c.get('user');
-
-  let body: { status: 'aprovado' | 'rejeitado' };
-  try {
-    body = await c.req.json() as typeof body;
-  } catch {
-    return c.json({ error: 'Payload inválido' }, 400);
-  }
-
-  if (!body?.status || !['aprovado', 'rejeitado'].includes(body.status)) {
-    return c.json({ error: 'Status inválido. Use aprovado ou rejeitado' }, 400);
-  }
-
-  try {
-    const [resGet, resPedido, perfilId] = await Promise.all([
-      strapiGet<StrapiProjetoWithAutor>(`/projetos/${projetoId}`, { populate: 'autor' }),
-      strapiGet<StrapiPedido>(`/projeto-acesso-pedidos/${pedidoId}`, { populate: 'projeto' }),
-      getPerfilId(userId),
-    ]);
-
-    const projeto = Array.isArray(resGet.data) ? resGet.data[0] : (resGet.data as unknown as StrapiProjetoWithAutor);
-    if (!projeto) return c.json({ error: 'Projeto não encontrado' }, 404);
-
-    const pedido = Array.isArray(resPedido.data) ? resPedido.data[0] : resPedido.data;
-    if (!pedido || String(pedido.projeto?.id) !== projetoId) {
-      return c.json({ error: 'Pedido não pertence a este projeto' }, 403);
-    }
-
-    if (pedido.status !== 'pendente') {
-      return c.json({ error: 'Este pedido já foi processado' }, 409);
-    }
-
-    if (String(projeto.autor?.id) !== perfilId) {
-      return c.json({ error: 'Apenas o autor pode responder pedidos de acesso' }, 403);
-    }
-
-    const res = await strapiPut(`/projeto-acesso-pedidos/${pedidoId}`, {
-      status: body.status,
-      dataResposta: new Date().toISOString(),
-    });
-
-    return c.json(res.data);
-  } catch (_err) {
-    return c.json({ error: 'Falha ao responder pedido de acesso' }, 502);
-  }
-});
-
-// DELETE /projetos/:id
-projetoRoutes.delete('/:id', async (c) => {
-  const id = c.req.param('id');
-  const { id: userId } = c.get('user');
-
-  try {
-    const [resGet, perfilId] = await Promise.all([
-      strapiGet<StrapiProjetoWithAutor>(`/projetos/${id}`, { populate: 'autor' }),
-      getPerfilId(userId),
-    ]);
-    const existing = Array.isArray(resGet.data) ? resGet.data[0] : (resGet.data as unknown as StrapiProjetoWithAutor);
+    const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
+    const existing = resGet.data[0];
 
     if (!existing) return c.json({ error: 'Projeto não identificado' }, 404);
 
-    if (String(existing.autor?.id) !== perfilId) {
+    if (existing.autor?.userId !== userId) {
       return c.json({ error: 'Autoridade insuficiente' }, 403);
     }
 

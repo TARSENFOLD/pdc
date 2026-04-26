@@ -80,7 +80,7 @@ propostaRoutes.post('/:id/responder', zValidator('json', z.object({ acao: z.enum
     if (acao === 'aceitar') {
       const instId = proposta.instituicaoId;
       // Criar vínculo automático
-      const vinculoRes = await strapiPost('/vinculos', {
+      const vinculoRes = await strapiPost<{ id: string | number }>('/vinculos', {
         solicitante: userId,
         destinatario: instId,
         connectionType: 'student-institution',

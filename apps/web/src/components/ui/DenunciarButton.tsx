@@ -59,11 +59,11 @@ export function DenunciarButton({ conteudoId, conteudoTipo }: Props) {
         
         <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4 py-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text-secondary">Motivo</label>
+            <label className="text-sm font-medium text-ink-secondary">Motivo</label>
             <select
               value={motivo}
               onChange={(e) => { setMotivo(e.target.value); }}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber"
+              className="w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="spam">Spam</option>
               <option value="conteudo_inapropriado">Conteúdo inapropriado</option>
@@ -73,11 +73,11 @@ export function DenunciarButton({ conteudoId, conteudoTipo }: Props) {
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium text-text-secondary">Descrição (opcional)</label>
+            <label className="text-sm font-medium text-ink-secondary">Descrição (opcional)</label>
             <textarea
               value={descricao}
               onChange={(e) => { setDescricao(e.target.value); }}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber min-h-[100px]"
+              className="w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus:outline-none focus:ring-2 focus:ring-accent min-h-[100px]"
               placeholder="Explique o problema em detalhe…"
             />
           </div>

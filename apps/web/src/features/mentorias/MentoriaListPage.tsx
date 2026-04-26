@@ -24,10 +24,10 @@ function MentoriaRow({ mentoria, onAction }: { mentoria: MentoriaExibicao; onAct
   const isEstudante = user?.role === 'estudante';
 
   return (
-    <div className="flex items-center justify-between rounded-lg border border-border bg-surface-raised p-4">
+    <div className="flex items-center justify-between rounded-lg border border-ink-tertiary/10 bg-elevated p-4">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-text-primary">{mentoria.mensagem}</p>
-        <p className="mt-0.5 text-xs text-text-muted">
+        <p className="truncate text-sm font-medium text-ink-primary">{mentoria.mensagem}</p>
+        <p className="mt-0.5 text-xs text-ink-tertiary">
           {isEstudante ? `Mentor: ${mentoria.mentorNome ?? mentoria.mentorId}` : `Estudante: ${mentoria.estudanteNome ?? mentoria.estudanteId}`}
         </p>
       </div>
@@ -83,7 +83,7 @@ export function MentoriaListPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-primary">Mentorias</h1>
+        <h1 className="text-2xl font-bold text-ink-primary">Mentorias</h1>
         {user?.role === 'estudante' && (
           <Button size="sm" onClick={() => { setModalOpen(true); }}>
             Solicitar Mentoria
@@ -96,9 +96,9 @@ export function MentoriaListPage() {
           <Spinner size="lg" />
         </div>
       ) : isError ? (
-        <p className="py-12 text-center text-text-muted">Erro ao carregar mentorias.</p>
+        <p className="py-12 text-center text-ink-tertiary">Erro ao carregar mentorias.</p>
       ) : mentorias.length === 0 ? (
-        <p className="py-12 text-center text-text-muted">Nenhuma mentoria encontrada.</p>
+        <p className="py-12 text-center text-ink-tertiary">Nenhuma mentoria encontrada.</p>
       ) : (
         <div className="space-y-3">
           {mentorias.map((m) => (

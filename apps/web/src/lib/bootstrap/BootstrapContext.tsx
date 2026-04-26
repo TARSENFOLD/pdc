@@ -1,7 +1,8 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { http } from '@/lib/api/http';
 import type { BootstrapResponse } from '@pdc/shared';
+import { BootstrapErrorScreen } from '@/components/layout/BootstrapErrorScreen';
 
 interface BootstrapContextValue {
   data: BootstrapResponse | null;
@@ -15,29 +16,43 @@ async function fetchBootstrap(): Promise<BootstrapResponse> {
   return await http.get<BootstrapResponse>('/bootstrap');
 }
 
+function exponentialBackoff(failureCount: number): number {
+  // Exponential backoff: 1s, 2s, 4s
+  return Math.min(1000 * Math.pow(2, failureCount - 1), 4000);
+}
+
 export function BootstrapProvider({ children }: { children: ReactNode }) {
-  const { data = null, isLoading, error } = useQuery({
+  const queryClient = useQueryClient();
+
+  const { data = null, isLoading, error, isError } = useQuery({
     queryKey: ['bootstrap'],
     queryFn: fetchBootstrap,
     staleTime: 15 * 60 * 1000, // Cache de 15 minutos (Session and capabilities)
     gcTime: 30 * 60 * 1000,
-    retry: 1,
+    retry: 3,
+    retryDelay: exponentialBackoff,
   });
 
   if (isLoading) {
     // Loading minimalista e rápido do Sistema Operativo
     return (
-      <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8F9FA' }}>
-        <div style={{ width: '40px', height: '40px', border: '3px solid #D2691E', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}>
+      <div style={{ height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--surface-canvas)' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid var(--accent-terracotta)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    // Fail-safe gracioso - W1-T3
+  if (isError && error) {
+    // Estado de erro premium - W0.2
     console.error('Falha crítica ao obter camada de Bootstrap', error);
+
+    const handleRetry = () => {
+      queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
+    };
+
+    return <BootstrapErrorScreen onRetry={handleRetry} />;
   }
 
   return (
