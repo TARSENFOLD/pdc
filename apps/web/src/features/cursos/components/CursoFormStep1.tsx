@@ -3,6 +3,7 @@ import { UploadCloud } from 'lucide-react';
 import { Card, Input } from '@/components/ui';
 import { motion } from 'motion/react';
 import type { CriarCursoPayload, AreaVocacional } from '@pdc/shared';
+import { AreaVocacionalSchema } from '@pdc/shared';
 
 interface Props {
   payload: Partial<CriarCursoPayload>;
@@ -10,6 +11,10 @@ interface Props {
   upload: (file: File) => Promise<{ url: string } | null>;
   isUploading: boolean;
   progress: number;
+}
+
+function isAreaVocacional(val: unknown): val is AreaVocacional {
+  return AreaVocacionalSchema.safeParse(val).success;
 }
 
 export const CursoFormStep1 = ({ payload, setPayload, upload, isUploading, progress }: Props) => {

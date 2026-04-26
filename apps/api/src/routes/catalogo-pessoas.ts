@@ -190,7 +190,12 @@ perfilPublicoRoutes.get('/:id', async (c) => {
     });
     const first = res.data[0];
     if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);
-    return c.json({ data: serializePublicProfile(first as unknown as StrapiPerfil) });
+    
+    // Type validation for StrapiPerfil
+    const isStrapiPerfil = (val: any): val is StrapiPerfil => val && typeof val === 'object' && ('nome' in val || 'username' in val);
+    if (!isStrapiPerfil(first)) return c.json({ error: 'Perfil inválido' }, 500);
+
+    return c.json({ data: serializePublicProfile(first) });
   }
 
   const res = await strapiGet<StrapiUserPublic>(`/users/${id}`, { }); // populate: 'avatar,role' removed

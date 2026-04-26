@@ -56,7 +56,7 @@ export function ProgramasCatalogoPage() {
             />
           }
         >
-          {programas.map((p: any) => (
+          {programas.map((p: Programa) => (
             <ContentCard
               key={p.id}
               title={p.titulo}
@@ -64,7 +64,7 @@ export function ProgramasCatalogoPage() {
               image={p.capaUrl || undefined}
               href={`/programas/${p.slug || p.id}`}
               badges={[
-                { label: p.tipo.toUpperCase(), variant: 'info' },
+                { label: p.tipo?.toUpperCase() || 'PROGRAMA', variant: 'info' },
                 { label: p.area, variant: 'outline' }
               ]}
               footerInfo={[
@@ -74,6 +74,11 @@ export function ProgramasCatalogoPage() {
             />
           ))}
         </CatalogoGridShell>
+      </div>
+    </div>
+  );
+}
+idShell>
       </div>
     </div>
   );

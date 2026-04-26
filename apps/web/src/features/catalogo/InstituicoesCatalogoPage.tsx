@@ -85,7 +85,7 @@ export function InstituicoesCatalogoPage() {
             <ContentCard
               key={i.id}
               title={i.nome}
-              subtitle={i.tipo ? i.tipo.charAt(0).toUpperCase() + i.tipo.slice(1).replace('_', ' ') : 'Instituição Parceira'}
+              subtitle={i.tipo ? i.tipo.charAt(0).toUpperCase() + i.tipo.slice(1).replaceAll('_', ' ') : 'Instituição Parceira'}
               image={i.logoUrl || undefined}
               href={`/instituicoes/${i.slug || i.id}`}
               badges={[

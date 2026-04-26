@@ -23,7 +23,7 @@ const AREAS = [
 export const SimulacaoListPage = () => {
   const [search, setSearch] = useState('');
   const [area, setArea] = useState('');
-  const [page] = useState(1);
+  const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
     queryKey: ['simulacoes-list', search, area, page],
@@ -49,7 +49,7 @@ export const SimulacaoListPage = () => {
             Vitrinas <span className="text-accent italic">Vivas.</span>
           </h1>
           <p className="text-ink-secondary mt-6 text-lg font-medium leading-relaxed">
-            Experimenta o futuro antes de decidires. As nossas simulações capturam o teu músculo cognitivo em tempo real.
+            Experimenta o future antes de decidires. As nossas simulações capturam o teu músculo cognitivo em tempo real.
           </p>
         </div>
       </header>
@@ -57,14 +57,14 @@ export const SimulacaoListPage = () => {
       <CatalogoGridShell
         isLoading={isLoading}
         isEmpty={simulacoes.length === 0}
-        onClearFilters={() => { setSearch(''); setArea(''); }}
+        onClearFilters={() => { setSearch(''); setArea(''); setPage(1); }}
         filterBar={
           <CatalogoFilterBar
             searchTerm={search}
-            onSearchChange={setSearch}
+            onSearchChange={(val) => { setSearch(val); setPage(1); }}
             areas={AREAS}
             selectedArea={area}
-            onAreaChange={setArea}
+            onAreaChange={(val) => { setArea(val); setPage(1); }}
             totalResults={data?.pagination?.total}
           />
         }

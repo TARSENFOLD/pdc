@@ -146,7 +146,7 @@ export function ExplorarPage() {
           </p>
         </header>
 
-        <div className="sticky top-20 z-10 bg-canvas/80 backdrop-blur-xl pt-2 pb-6 border-b border-ink-tertiary/10/50">
+        <div className="sticky top-20 z-10 bg-canvas/80 backdrop-blur-xl pt-2 pb-6 border-b border-ink-tertiary/10">
           <div className="flex flex-col gap-4">
             <div className="relative group">
               <input

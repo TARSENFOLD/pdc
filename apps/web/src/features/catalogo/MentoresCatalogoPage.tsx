@@ -32,10 +32,12 @@ export function MentoresCatalogoPage() {
   const search = sp.get('q') ?? '';
   const page = Number(sp.get('page') ?? '1');
 
+  const isValidArea = (val: string): val is AreaVocacional => AREAS.some((a) => a.value === val);
+
   const { data, isLoading } = useQuery({
     queryKey: ['catalogo-mentores', area, search, page],
     queryFn: () => catalogoApi.getMentores({
-      ...(area ? { area: area as AreaVocacional } : {}),
+      ...(area && isValidArea(area) ? { area } : {}),
       ...(search ? { q: search } : {}),
       page,
       pageSize: 12,

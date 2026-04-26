@@ -118,7 +118,7 @@ export function EscolhaTipoContaPage() {
                 </ul>
 
                 <div className="mt-10 flex items-center justify-between font-bold text-ink-primary">
-                  <span className="text-sm">Começar</span>
+                  <span className="text-sm">{t('auth.common.start', 'Começar')}</span>
                   <div className="h-8 w-8 rounded-full bg-elevated border border-ink-tertiary/10 flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-all group-hover:translate-x-1">
                     →
                   </div>
@@ -134,6 +134,19 @@ export function EscolhaTipoContaPage() {
         <motion.p 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mt-12 text-center text-sm text-ink-tertiary"
+        >
+          {t('auth.common.login_link_prefix', 'Já tens uma conta ativa?')}{' '}
+          <Link to="/login" className="font-bold text-accent hover:text-accent-hover underline underline-offset-4 transition-colors">
+            {t('auth.common.login_link_action', 'Entrar agora')}
+          </Link>
+        </motion.p>
+      </div>
+    </div>
+  );
+}
+        animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
           className="mt-12 text-center text-sm text-ink-tertiary"
         >

@@ -63,7 +63,8 @@ estudanteRoutes.get('/dashboard', async (c) => {
           'pagination[pageSize]': '1'
         })
       ]);
-    } catch {
+    } catch (err) {
+      console.warn({ err, userId, perfilId, route: 'estudante', op: 'fetch-vinculos-vocacional' }, 'Falha ao obter vínculos/vocacional - usando fallback');
       // Fallback silencioso: telemetria vazia não bloqueia dashboard
       vinculosRes = { data: [] };
       vocacionalRes = { data: [] };
@@ -77,7 +78,8 @@ estudanteRoutes.get('/dashboard', async (c) => {
     try {
       const recs = await vocacionalService.gerarRecomendacoes(lastPattern || null);
       recomendacoes = recs.map(r => ({ id: r.id }));
-    } catch {
+    } catch (err) {
+      console.warn({ err, perfilId, route: 'estudante', op: 'gerar-recomendacoes' }, 'Falha ao gerar recomendações - usando fallback vazio');
       recomendacoes = [];
     }
 

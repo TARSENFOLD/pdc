@@ -24,7 +24,7 @@ export function SovereignCourseBuilder() {
   const [lastEventId, setLastEventId] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(CriarCursoPayloadSchema) as any,
+    resolver: zodResolver(CriarCursoPayloadSchema),
     defaultValues: {
       titulo: '',
       descricao: '',
@@ -65,12 +65,11 @@ export function SovereignCourseBuilder() {
   };
 
   return (
-    <>
-      <BuilderShell
-        form={form as any}
-        title="Sovereign Course Builder"
-        description="Define o currículo, impõe as regras de mérito e domina o ecossistema."
-        state="draft"      breadcrumbs={[
+  <>
+    <BuilderShell
+      form={form}
+      title="Sovereign Course Builder"
+      description="Define o currículo, impõe as regras de mérito e domina o ecossistema."        state="draft"      breadcrumbs={[
         { label: 'Início', to: '/app' },
         { label: 'Cursos', to: '/app/mentor/cursos' },
         { label: 'Novo Curso' }

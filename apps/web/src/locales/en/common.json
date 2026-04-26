@@ -1,0 +1,43 @@
+{
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "confirm": "Confirm",
+    "search": "Search",
+    "filter": "Filter",
+    "loading": "Loading…",
+    "retry": "Try again"
+  },
+  "nav": {
+    "inicio": "Home",
+    "aprender": "Learn",
+    "explorar": "Explore",
+    "meu_futuro": "My Future",
+    "comunidade": "Community",
+    "estudio_mentor": "Mentor Studio",
+    "gestao_institucional": "Institutional Management",
+    "autoridade": "Authority"
+  },
+  "errors": {
+    "generic": "An error occurred. Please try again.",
+    "not_found": "Page not found.",
+    "unauthorized": "You don't have permission to access this page.",
+    "network": "Network error. Please check your connection."
+  },
+  "auth": {
+    "login": "Sign in",
+    "logout": "Sign out",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "forgot_password": "Forgot your password?"
+  }
+}

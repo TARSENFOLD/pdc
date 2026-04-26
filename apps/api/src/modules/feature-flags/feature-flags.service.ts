@@ -34,8 +34,10 @@ async function getAllFlags(): Promise<FeatureFlag[]> {
     const flags = res.data || [];
     await redis.set(CACHE_KEY, flags, { ex: CACHE_TTL });
     return flags;
-  } catch (error: any) {
-    log.error({ error: error.message, stack: error.stack }, 'FAILED TO FETCH FEATURE FLAGS');
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    log.error({ error: message, stack }, 'FAILED TO FETCH FEATURE FLAGS');
     // Fallback to empty array to avoid 500 in bootstrap
     return [];
   }

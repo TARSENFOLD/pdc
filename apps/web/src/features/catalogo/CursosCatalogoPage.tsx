@@ -6,6 +6,7 @@ import { CatalogoGridShell } from '@/components/catalogo/CatalogoGridShell';
 import { CatalogoFilterBar } from '@/components/catalogo/CatalogoFilterBar';
 import { ContentCard } from '@/components/catalogo/ContentCard';
 import { Users, Clock } from 'lucide-react';
+import type { CursoPublico } from '@pdc/shared';
 
 const AREAS = [
   { value: 'SAUDE', label: 'Saúde' },
@@ -82,7 +83,7 @@ export function CursosCatalogoPage() {
             />
           }
         >
-          {cursos.map((c: any) => (
+          {cursos.map((c: CursoPublico) => (
             <ContentCard
               key={c.id}
               title={c.titulo}

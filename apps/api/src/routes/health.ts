@@ -43,7 +43,8 @@ healthRoutes.get('/feature-registry', async (c) => {
       'fields[1]': 'enabled',
     });
 
-    const strapiKeys = new Set(res.data.map((f) => f.domain));
+    const items = Array.isArray(res?.data) ? res.data : [];
+    const strapiKeys = new Set(items.map((f) => f.domain));
     const registryKeys = Object.keys(Features);
 
     const missing = registryKeys.filter((k) => !strapiKeys.has(k));
@@ -60,7 +61,8 @@ healthRoutes.get('/feature-registry', async (c) => {
       status: 'synced',
       message: 'Feature flags sincronizados',
     });
-  } catch (_err) {
+  } catch (err) {
+    console.error({ err, route: 'health', feature: 'feature-registry' }, 'Erro ao verificar feature registry');
     return c.json({ error: 'Erro ao verificar feature registry' }, 502);
   }
 });
@@ -76,7 +78,7 @@ healthRoutes.get('/schema-drift', async (c) => {
       'fields[0]': 'id',
       'fields[1]': 'descricao',
       'fields[2]': 'proposito',
-      'pagination[limit]': '1000',
+      'pagination[limit]': '5000', // Aumentado para cobrir maior volume sem paginação complexa para healthcheck
     });
 
     const programaDrift = (programasRes.data || []).filter((p) => 
@@ -88,7 +90,7 @@ healthRoutes.get('/schema-drift', async (c) => {
       'fields[0]': 'id',
       'fields[1]': 'descricao',
       'fields[2]': 'abstract',
-      'pagination[limit]': '1000',
+      'pagination[limit]': '5000',
     });
 
     const projetoDrift = (projetosRes.data || []).filter((p) => 
@@ -100,7 +102,7 @@ healthRoutes.get('/schema-drift', async (c) => {
       'fields[0]': 'id',
       'fields[1]': 'materiaisInfo',
       'fields[2]': 'materiaisLab',
-      'pagination[limit]': '1000',
+      'pagination[limit]': '5000',
     });
 
     const simulacaoDrift = (simulacoesRes.data || []).filter((s) => 
@@ -121,7 +123,8 @@ healthRoutes.get('/schema-drift', async (c) => {
         ? `${totalDrift} registos com drift editorial detectados` 
         : 'Esquemas editoriais sincronizados',
     }, totalDrift > 0 ? 503 : 200);
-  } catch (_err) {
+  } catch (err) {
+    console.error({ err, route: 'health', feature: 'schema-drift' }, 'Erro ao verificar schema drift');
     return c.json({ error: 'Erro ao verificar schema drift' }, 502);
   }
 });

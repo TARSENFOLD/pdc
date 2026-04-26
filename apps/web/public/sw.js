@@ -40,24 +40,31 @@ async function enqueueEvents(events) {
   });
 }
 
-async function drainQueue() {
+async function peekQueue() {
+  const db = await openIDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const store = tx.objectStore(IDB_STORE);
+    const all = store.getAll();
+    all.onsuccess = () => { db.close(); resolve(all.result); };
+    all.onerror = () => { db.close(); reject(all.error); };
+  });
+}
+
+async function clearQueue() {
   const db = await openIDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(IDB_STORE, 'readwrite');
     const store = tx.objectStore(IDB_STORE);
-    const all = store.getAll();
-    all.onsuccess = () => {
-      const events = all.result;
-      if (events.length > 0) store.clear();
-      tx.oncomplete = () => { db.close(); resolve(events); };
-    };
-    all.onerror = () => { db.close(); reject(all.error); };
+    const req = store.clear();
+    req.onsuccess = () => { db.close(); resolve(); };
+    req.onerror = () => { db.close(); reject(req.error); };
   });
 }
 
 async function flushTelemetryQueue() {
   try {
-    const events = await drainQueue();
+    const events = await peekQueue();
     if (events.length === 0) return;
 
     const res = await fetch('/api/telemetria/batch', {
@@ -66,11 +73,11 @@ async function flushTelemetryQueue() {
       body: JSON.stringify({ events }),
     });
 
-    if (!res.ok) {
-      await enqueueEvents(events); // re-queue on failure
+    if (res.ok) {
+      await clearQueue();
     }
   } catch {
-    // Silently fail — will retry on next sync
+    // Silently fail — events remain in IDB for next retry
   }
 }
 
@@ -174,10 +181,14 @@ self.addEventListener('message', (event) => {
     enqueueEvents(payload.events)
       .then(() => {
         if ('sync' in self.registration) {
-          return self.registration.sync.register('pdc-telemetry');
+          return self.registration.sync.register('pdc-telemetry').catch((err) => {
+             console.warn('[SW] Failed to register sync', { error: err?.name });
+          });
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+         console.warn('[SW] Failed to queue telemetry', { error: err?.name, eventCount: payload.events.length });
+      });
   }
 });
 

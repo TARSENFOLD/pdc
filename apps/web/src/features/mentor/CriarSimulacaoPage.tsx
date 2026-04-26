@@ -73,7 +73,7 @@ export function CriarSimulacaoPage() {
 
   const mutation = useMutation({
     mutationFn: (data: CriarSimulacaoPayload) => isEditing ? simulacoesApi.editar(id!, data) : simulacoesApi.criar(data),
-    onSuccess: (res: any) => {
+    onSuccess: (res: { data: { id: string; eventId?: string } }) => {
       void queryClient.invalidateQueries({ queryKey: ['simulacoes'] });
       toast({ title: isEditing ? 'Simulação Atualizada' : 'Simulação Materializada!' });
 
@@ -83,7 +83,7 @@ export function CriarSimulacaoPage() {
         navigate('/app/mentor/simulacoes');
       }
     },
-    onError: (err: any) => {
+    onError: (err: { response?: { data?: { error?: string } }; message: string }) => {
       toast({ title: 'Falha na materialização', description: err.response?.data?.error || err.message, variant: 'error' });
     }
   });
@@ -97,14 +97,14 @@ export function CriarSimulacaoPage() {
     }
   });
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const data = form.getValues();
-    mutation.mutate(data);
+    return mutation.mutateAsync(data);
   };
 
   if (isEditing && isLoadingSim) return <div className="flex h-screen items-center justify-center bg-canvas"><Spinner size="lg" /></div>;
 
-  const currentEstado = (simData as any)?.estado || 'draft';
+  const currentEstado: EstadoEditorial = (simData as unknown as SimulacaoDetail)?.estado || 'draft';
 
   return (
     <>
@@ -127,11 +127,12 @@ export function CriarSimulacaoPage() {
           state={currentEstado}
           userRole={user?.role || 'mentor'}
           onSaveDraft={() => handleSave()}
-          onSubmitReview={() => {
-            if (currentEstado === 'draft' && isEditing) stateMutation.mutate('review');
-            else {
-               handleSave();
-               // Wait for save then maybe transition... simplified for now.
+          onSubmitReview={async () => {
+            if (currentEstado === 'draft' && isEditing) {
+               stateMutation.mutate('review');
+            } else {
+               await handleSave();
+               if (isEditing) stateMutation.mutate('review');
             }
           }}
           onPublish={() => {

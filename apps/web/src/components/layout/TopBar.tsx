@@ -76,10 +76,21 @@ export function TopBar({ onOpenMobileMenu }: TopBarProps) {
                 size={16} 
               />
               <div
-                className="h-11 w-full rounded-xl border pl-10 pr-4 text-sm transition-all flex items-center justify-between bg-elevated-recessed border-white/5 text-ink-tertiary hover:border-accent/40"
+                className="h-11 w-full rounded-xl border pl-10 pr-4 text-sm transition-all flex items-center justify-between"
+                style={{ 
+                  backgroundColor: 'var(--surface-recessed)', 
+                  borderColor: 'var(--glass-border-light)',
+                  color: 'var(--ink-tertiary)'
+                }}
               >
                 <span>Procurar carreiras ou rotas...</span>
-                <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-medium">
+                <div 
+                  className="flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium"
+                  style={{ 
+                    borderColor: 'var(--glass-border-light)',
+                    backgroundColor: 'var(--surface-elevated)'
+                  }}
+                >
                   <Command className="h-2.5 w-2.5" /> K
                 </div>
               </div>

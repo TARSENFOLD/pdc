@@ -66,7 +66,7 @@ experienciaRoutes.post('/',
       });
 
       // G15: Impacto no Ecossistema
-      const event = await eventBus.publishWithOutbox(DomainEventName.EXPERIENCIA_PUBLICADA, {
+      const event = await eventBus.publishWithOutbox(DomainEventName.EXPERIENCIA_CRIADA, {
         experienciaId: res.data.id,
         autorId: id,
         titulo: body.titulo,

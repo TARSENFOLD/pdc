@@ -113,7 +113,7 @@ export function CursoDetailPage() {
                         </div>
                         <ul className="space-y-2 pl-12">
                            {mod.itens?.map((item: ItemModulo) => (
-                             <li key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-elevated/30 border border-ink-tertiary/10/50 text-sm">
+                             <li key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-elevated/30 border border-ink-tertiary/10 text-sm">
                                 <div className="flex items-center gap-3">
                                    <Zap size={14} className="text-accent" />
                                    <span className="font-medium text-ink-secondary">{item.titulo}</span>

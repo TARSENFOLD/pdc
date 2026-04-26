@@ -1,0 +1,52 @@
+{
+  "kind": "collectionType",
+  "collectionName": "feed-posts",
+  "info": {
+    "singularName": "feed-post",
+    "pluralName": "feed-posts",
+    "displayName": "Feed Post"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "autor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "inversedBy": "feedPosts",
+      "required": true
+    },
+    "corpo": {
+      "type": "richtext",
+      "required": true
+    },
+    "mediaUrls": {
+      "type": "json",
+      "description": "Array de URLs de mídia (imagens, vídeos)"
+    },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["pendente_moderacao", "aprovada", "rejeitada", "hidden"],
+      "default": "pendente_moderacao",
+      "required": true
+    },
+    "motivoModeracao": {
+      "type": "text",
+      "description": "Motivo da rejeição ou ocultação do post"
+    },
+    "eventId": {
+      "type": "string",
+      "unique": true,
+      "description": "ID único do evento para anti-duplicação"
+    },
+    "likesCount": {
+      "type": "integer",
+      "default": 0
+    },
+    "comentariosCount": {
+      "type": "integer",
+      "default": 0
+    }
+  }
+}

@@ -61,28 +61,28 @@ export function ProjetoFormPage() {
   }, [projeto, reset]);
 
   const mutation = useMutation({
-    mutationFn: (data: CriarProjetoPayload) => 
+    mutationFn: (data: CriarProjetoPayload) =>
       isEdit ? projetosApi.update(id, data) : projetosApi.create(data),
-    onSuccess: (saved: any) => {
+    onSuccess: (saved: { id?: string; data?: { id?: string; eventId?: string }; eventId?: string }) => {
       void qc.invalidateQueries({ queryKey: ['projetos'] });
       toast({ title: isEdit ? 'Projeto atualizado' : 'Projeto materializado!' });
-      
+
       const newId = saved.data?.id || saved.id;
       if (newId) setSavedId(newId);
 
-      if (saved?.eventId || saved.data?.eventId) {
-        setLastEventId(saved?.eventId || saved.data?.eventId);
+      const eventId = saved?.eventId || saved.data?.eventId;
+      if (eventId) {
+        setLastEventId(eventId);
       } else {
         navigate(`/projetos/${newId || id}`);
       }
     },
-    onError: (err: any) => toast({ 
-      title: 'Erro na publicação', 
+    onError: (err: { response?: { data?: { error?: string } } }) => toast({
+      title: 'Erro na publicação',
       description: err.response?.data?.error || 'Falha na persistência',
-      variant: 'error' 
+      variant: 'error'
     })
   });
-
   const aclMutation = useMutation({
     mutationFn: ({ perfilId, acao }: { perfilId: string, acao: 'aprovar' | 'rejeitar' }) => 
       projetosApi.gerirACL(id!, perfilId, acao),

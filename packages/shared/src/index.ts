@@ -13,7 +13,6 @@ export * from './core.js';
 export * from './heuristics.js';
 export * from './reputation.js';
 export * from './sanity/index.js';
-export * from './user.js';
 export * from './infra.js';
 export * from './domain-events.js';
 export * from './ecosystem-hook.js';

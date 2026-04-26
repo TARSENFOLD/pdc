@@ -54,7 +54,7 @@ ratingRoutes.post('/', zValidator('json', z.object({
     });
     const perfilId = resPerfil.data[0]?.id;
 
-    if (resPost.data) {
+    if (resPost.data && perfilId) {
       await eventBus.publishWithOutbox(DomainEventName.RATING_CRIADO, {
         ratingId: String(resPost.data.id),
         perfilId: String(perfilId),

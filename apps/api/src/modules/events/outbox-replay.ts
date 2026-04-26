@@ -44,8 +44,8 @@ export async function replayUnprocessedEvents() {
         // AWAIT IMPORTANTE: Aguarda a conclusão dos handlers (RedLock, external calls, etc)
         await eventBus.publish({
           id: evt.correlationId, // Reutiliza identidade canónica para garantir idempotência
-          name: evt.name as any,
-          payload: evt.payload as any,
+          name: evt.name as any, // Mapeamento na proxima fase ou tipado corretamente no shared
+          payload: evt.payload as Record<string, unknown>,
           timestamp: evt.createdAt,
           correlationId: evt.correlationId
         }, evt.documentId);

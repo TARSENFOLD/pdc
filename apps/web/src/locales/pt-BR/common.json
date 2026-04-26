@@ -1,0 +1,43 @@
+{
+  "actions": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "submit": "Enviar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "close": "Fechar",
+    "confirm": "Confirmar",
+    "search": "Pesquisar",
+    "filter": "Filtrar",
+    "loading": "Carregando…",
+    "retry": "Tentar novamente"
+  },
+  "nav": {
+    "inicio": "Início",
+    "aprender": "Aprender",
+    "explorar": "Explorar",
+    "meu_futuro": "Meu Futuro",
+    "comunidade": "Comunidade",
+    "estudio_mentor": "Estúdio Mentor",
+    "gestao_institucional": "Gestão Institucional",
+    "autoridade": "Autoridade"
+  },
+  "errors": {
+    "generic": "Ocorreu um erro. Por favor tente novamente.",
+    "not_found": "Página não encontrada.",
+    "unauthorized": "Você não tem permissão para acessar esta página.",
+    "network": "Erro de rede. Verifique sua conexão."
+  },
+  "auth": {
+    "login": "Entrar",
+    "logout": "Sair",
+    "register": "Cadastrar",
+    "email": "Email",
+    "password": "Senha",
+    "forgot_password": "Esqueceu a senha?"
+  }
+}

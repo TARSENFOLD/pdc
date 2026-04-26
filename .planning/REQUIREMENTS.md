@@ -149,7 +149,7 @@
 | BUG-05 | OTP Twilio mockado (Impede onboarding real) — `REQ-1-010` | E4 | `[ ]` |
 | BUG-06 | Telemetria `payload` vs `dados` (D20 mismatch) | Auditoria | `[x]` |
 | BUG-07 | Missing `Tentativa.metadata` no CMS (D21) | Auditoria | `[ ]` |
-| BUG-08 | Drift nomenclature datas (D22: StartAt vs Início) | Auditoria | [ ] |
+| BUG-08 | Drift nomenclature datas (D22: StartAt vs Início) | Auditoria | `[ ]` |
 | BUG-09 | Outbox Replay manual-only | Auditoria | `[x]` |
 | BUG-10 | Cloudflare R2 Keys expostas em plain text | Auditoria | `[ ]` |
 

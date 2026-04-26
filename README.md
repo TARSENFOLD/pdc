@@ -107,7 +107,7 @@ npm run replay-outbox -w apps/api
 ```bash
 npm run typecheck       # Verificação de tipos global
 npm run lint            # Linting de autoridade
-npm run test:e2e:smoke  # Testes de fumo Playwright (Bravura)
+npm run test:e2e:smoke  # Testes de fumo Playwright (Suite "Bravura", o path feliz principal)
 npm run test:load:auth  # k6: Fluxo de Auth (tests/k6/auth-flow.js)
 npm run test:load:edge  # k6: Ingestão de Telemetria (tests/k6/edge-load.js)
 # Ver tests/k6/README.md para catálogo completo de testes de stress/spike.

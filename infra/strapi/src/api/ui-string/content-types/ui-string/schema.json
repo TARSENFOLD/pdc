@@ -1,0 +1,53 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ui_strings",
+  "info": {
+    "singularName": "ui-string",
+    "pluralName": "ui-strings",
+    "displayName": "Soberania de Conteúdo (Copy)",
+    "description": "Fonte da Verdade para UX Writing, Microcopy e Tom de Voz."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {
+    "i18n": {
+      "localized": true
+    }
+  },
+  "attributes": {
+    "key": {
+      "type": "string",
+      "unique": true,
+      "required": true,
+      "description": "Chave canónica (ex: landing.hero.title). Não alterar após publicação."
+    },
+    "value": {
+      "type": "text",
+      "required": true,
+      "localized": true,
+      "description": "O conteúdo textual visível para o utilizador."
+    },
+    "contexto": {
+      "type": "enumeration",
+      "enum": [
+        "landing",
+        "auth",
+        "dashboard",
+        "cursos",
+        "simulacoes",
+        "global"
+      ],
+      "required": true,
+      "description": "Agrupamento lógico para build-time fetching."
+    },
+    "tom_de_voz": {
+      "type": "text",
+      "description": "Instruções para a Tina (L3) sobre o 'feeling' deste copy (ex: 'Altamente aspiracional, usar tu')."
+    },
+    "comentario_dev": {
+      "type": "string",
+      "description": "Notas técnicas sobre variáveis dinâmicas (ex: 'Recebe {user.nome}')."
+    }
+  }
+}

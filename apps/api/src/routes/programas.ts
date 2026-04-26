@@ -262,11 +262,14 @@ programaRoutes.patch('/:id/estado',
 
       // G15: Evento se publicado
       if (estado === 'published') {
+        const responsavelId = programa.responsavel?.id;
+        const instituicaoId = programa.instituicao?.id;
+
         await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_PUBLICADO, {
           programaId: id,
-          autorId: String(programa.responsavel?.id),
+          autorId: responsavelId ? String(responsavelId) : 'unknown',
           titulo: programa.titulo,
-          instituicaoId: String(programa.instituicao?.id),
+          instituicaoId: instituicaoId ? String(instituicaoId) : null,
         });
       }
 

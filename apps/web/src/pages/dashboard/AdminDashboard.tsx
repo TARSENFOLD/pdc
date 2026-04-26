@@ -16,12 +16,12 @@ import {
 import { motion } from 'motion/react';
 
 const ADMIN_CTAS = [
-  { label: 'Utilizadores', to: '/app/admin/utilizadores', icon: Users, variant: 'primary' as const },
-  { label: 'Feature Flags', to: '/app/admin/feature-flags', icon: Flag, variant: 'primary' as const },
-  { label: 'Estatísticas', to: '/app/admin/stats', icon: BarChart2 },
-  { label: 'Telemetria', to: '/app/admin/telemetria', icon: Radio },
-  { label: 'Relatórios', to: '/app/admin/relatorios', icon: FileText },
-  { label: 'Audit Trail', to: '/app/admin/audit', icon: Settings },
+  { label: 'Utilizadores', to: '/admin/utilizadores', icon: Users, variant: 'primary' as const },
+  { label: 'Feature Flags', to: '/admin/feature-flags', icon: Flag, variant: 'primary' as const },
+  { label: 'Estatísticas', to: '/admin/stats', icon: BarChart2 },
+  { label: 'Telemetria', to: '/admin/telemetria', icon: Radio },
+  { label: 'Relatórios', to: '/admin/relatorios', icon: FileText },
+  { label: 'Audit Trail', to: '/admin/audit', icon: Settings },
 ];
 
 export function AdminDashboard() {

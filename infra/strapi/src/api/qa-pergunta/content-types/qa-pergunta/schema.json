@@ -1,0 +1,28 @@
+{
+  "kind": "collectionType",
+  "collectionName": "qa_perguntas",
+  "info": {
+    "singularName": "qa-pergunta",
+    "pluralName": "qa-perguntas",
+    "displayName": "QA Pergunta"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "texto": { "type": "text", "required": true },
+    "autorId": { "type": "string", "required": true },
+    "autorNome": { "type": "string" },
+    "likes": { "type": "integer", "default": 0 },
+    "experiencia": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::experiencia.experiencia"
+    },
+    "resposta": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::qa-resposta.qa-resposta"
+    }
+  }
+}

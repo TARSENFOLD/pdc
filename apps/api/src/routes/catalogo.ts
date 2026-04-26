@@ -56,7 +56,7 @@ function addPg(p: Record<string, string>, page: number, limit: number): void {
 function mapCurso(d: StrapiCurso): CursoPublico {
   return {
     id: sid(d.id), slug: d.slug, titulo: d.titulo, descricao: d.descricao,
-    capaUrl: d.capaUrl, area: d.area as AreaVocacional, nivel: d.nivel, idioma: d.idioma,
+    capaUrl: d.capaUrl, area: d.area as AreaVocacional, nivel: d.nivel as 'basico' | 'medio' | 'avancado' | undefined, idioma: d.idioma,
     gratuito: d.gratuito, totalHoras: d.totalHoras ?? 0, autorNome: d.autorNome,
   };
 }
@@ -69,8 +69,9 @@ function mapSim(d: StrapiSimulacao): SimulacaoPublica {
 function mapExp(d: StrapiExperiencia): ExperienciaPublica {
   return {
     id: sid(d.id), slug: d.slug, titulo: d.titulo, descricao: d.descricao,
-    capaUrl: d.capaUrl, area: d.area as AreaVocacional, nivel: d.nivel,
-    instituicaoNome: d.instituicaoNome, dataInicio: d.dataInicio,
+    capaUrl: d.capaUrl, area: d.area as AreaVocacional, nivel: d.nivel as 'basico' | 'medio' | 'avancado' | undefined,
+    instituicao: d.instituicaoNome ? { id: '', nome: d.instituicaoNome } : undefined, dataInicio: d.dataInicio,
+    gratuito: true,
   };
 }
 

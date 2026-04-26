@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Layers, Coins } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 
-export function CriarProgramaPage() {
+export default function CriarProgramaPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -40,7 +40,7 @@ export function CriarProgramaPage() {
 
   const mutation = useMutation({
     mutationFn: (data: CriarProgramaPayload) => programasApi.create(data),
-    onSuccess: (res: any) => {
+    onSuccess: (res: { data: { id: string; eventId?: string } }) => {
       void queryClient.invalidateQueries({ queryKey: ['programas', 'meus'] });
       toast({ title: 'Programa Materializado!', description: 'O ecossistema foi atualizado com a nova oferta.' });
       
@@ -50,7 +50,7 @@ export function CriarProgramaPage() {
         navigate('/app/dashboard/instituicao');
       }
     },
-    onError: (err: any) => toast({ 
+    onError: (err: { response?: { data?: { error?: string } } }) => toast({ 
       title: 'Erro na criação', 
       description: err.response?.data?.error || 'Erro desconhecido',
       variant: 'error' 
@@ -65,7 +65,7 @@ export function CriarProgramaPage() {
   return (
     <>
       <BuilderShell
-        form={form as any}
+        form={form}
         title="Arquitetura de Programa de Acesso"
         description="Agrupa ativos educativos, define o propósito e governa o acesso ao talento."
         state="draft"      breadcrumbs={[

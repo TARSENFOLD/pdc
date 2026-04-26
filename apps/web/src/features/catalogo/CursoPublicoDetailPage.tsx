@@ -61,7 +61,11 @@ export function CursoPublicoDetailPage() {
         </div>
 
         <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-          <Link to="/login" className="rounded-xl bg-accent px-6 py-3 text-center text-sm font-semibold text-black transition-colors hover:bg-accent-terracotta-soft">
+          <Link 
+            to="/login" 
+            className="rounded-xl bg-accent px-6 py-3 text-center text-sm font-semibold transition-colors hover:bg-accent-terracotta-soft"
+            style={{ color: 'var(--ink-on-accent)' }}
+          >
             Inscrever-me neste curso
           </Link>
           <Link to="/cursos" className="rounded-xl border border-ink-tertiary/10 px-6 py-3 text-center text-sm text-ink-secondary transition-colors hover:bg-elevated">

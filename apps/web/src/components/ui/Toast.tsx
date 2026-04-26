@@ -36,7 +36,7 @@ const Toast = React.forwardRef<
     default: 'bg-canvas border-ink-tertiary/10 text-ink-primary',
     success: 'bg-canvas border-success/50 text-success',
     error: 'bg-canvas border-error/50 text-error',
-    destructive: 'bg-error text-white border-error',
+    destructive: 'bg-error text-ink-inverse border-error',
     info: 'bg-canvas border-blue-500/50 text-blue-500',
     warning: 'bg-canvas border-accent/50 text-accent',
   };

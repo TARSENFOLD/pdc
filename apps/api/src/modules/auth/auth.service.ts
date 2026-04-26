@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from 'jose';
 import { redis } from '../../lib/redis.js';
 import { env } from '../../lib/env.js';
 import { createHash, randomUUID } from 'node:crypto';
-import type { User, Role } from '@pdc/shared';
+import type { User, Role, Conquista } from '@pdc/shared';
 import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
 
@@ -29,7 +29,7 @@ interface StrapiPerfilData {
   reputacao?: number;
   foto?: { url?: string } | null;
   areasInteresse?: string[];
-  conquistas?: any[];
+  conquistas?: Conquista[];
 }
 
 const VALID_ROLES: Set<string> = new Set([

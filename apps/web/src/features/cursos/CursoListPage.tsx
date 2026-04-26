@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 import { cursosApi } from '@/lib/api/cursos';
 import { CatalogoGridShell } from '@/components/catalogo/CatalogoGridShell';
 import { CatalogoFilterBar } from '@/components/catalogo/CatalogoFilterBar';
@@ -20,6 +21,16 @@ interface CursoItem extends CursoPublico {
   inscritosCount?: number;
 }
 
+const CursoItemSchema = z.object({
+  id: z.string(),
+  titulo: z.string(),
+  capaUrl: z.string().nullish(),
+  totalHoras: z.number().nullish(),
+  instituicaoNome: z.string().optional(),
+  instituicao: z.object({ nome: z.string() }).optional(),
+  inscritosCount: z.number().optional(),
+}).passthrough();
+
 export function CursoListPage() {
   const [search, setSearch] = useState('');
   const [area, setArea] = useState('');
@@ -35,7 +46,12 @@ export function CursoListPage() {
     }),
   });
 
-  const cursos = (data?.data ?? []) as CursoItem[];
+  const rawData = data?.data ?? [];
+  const parsed = z.array(CursoItemSchema).safeParse(rawData);
+  if (!parsed.success) {
+    console.error('API validation error:', parsed.error);
+  }
+  const cursos = (parsed.success ? parsed.data : []) as CursoItem[];
 
   return (
     <div className="mx-auto max-w-7xl space-y-12 pb-20 px-4 sm:px-6 lg:px-8">
@@ -65,7 +81,7 @@ export function CursoListPage() {
             areas={AREAS}
             selectedArea={area}
             onAreaChange={setArea}
-            totalResults={data?.pagination.total}
+            totalResults={data?.pagination?.total}
           />
         }
       >

@@ -143,7 +143,7 @@ projetoRoutes.post('/:id/solicitar-acesso', verifyJwt, async (c) => {
     if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
 
     const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-    const project = resGet.data[0];
+    const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
     if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
     const acl = project.acessoCoreACL || [];
@@ -224,7 +224,7 @@ projetoRoutes.delete('/:id', verifyJwt, async (c) => {
 
   try {
     const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-    const existing = resGet.data[0];
+    const existing = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
 
     if (!existing) return c.json({ error: 'Projeto não identificado' }, 404);
 

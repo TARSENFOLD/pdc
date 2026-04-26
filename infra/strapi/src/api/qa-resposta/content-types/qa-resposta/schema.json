@@ -1,0 +1,23 @@
+{
+  "kind": "collectionType",
+  "collectionName": "qa_respostas",
+  "info": {
+    "singularName": "qa-resposta",
+    "pluralName": "qa-respostas",
+    "displayName": "QA Resposta"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "texto": { "type": "text", "required": true },
+    "autorId": { "type": "string", "required": true },
+    "autorNome": { "type": "string" },
+    "pergunta": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::qa-pergunta.qa-pergunta",
+      "mappedBy": "resposta"
+    }
+  }
+}

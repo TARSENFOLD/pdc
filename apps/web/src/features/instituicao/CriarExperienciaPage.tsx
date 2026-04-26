@@ -60,7 +60,7 @@ export function CriarExperienciaPage() {
 
   const mutation = useMutation({
     mutationFn: (data: CriarExperienciaPayload) => experienciasApi.create(data),
-    onSuccess: (res: any) => {
+    onSuccess: (res: { data: { id: string; eventId?: string } }) => {
       void queryClient.invalidateQueries({ queryKey: ['experiencias', 'minhas'] });
       localStorage.removeItem(STORAGE_KEY);
       toast({ title: 'Experiência Materializada!' });
@@ -71,9 +71,9 @@ export function CriarExperienciaPage() {
         navigate('/app/dashboard/instituicao');
       }
     },
-    onError: (err: any) => toast({ 
+    onError: (err: { response?: { data?: { error?: string } }; message?: string }) => toast({ 
       title: 'Falha na publicação', 
-      description: err.response?.data?.error || 'Erro desconhecido',
+      description: err.response?.data?.error || err.message || 'Erro desconhecido',
       variant: 'error' 
     })
   });

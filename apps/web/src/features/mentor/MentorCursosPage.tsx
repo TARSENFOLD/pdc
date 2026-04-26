@@ -46,7 +46,7 @@ export function MentorCursosPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {cursos.map((curso) => (
-            <Card key={curso.id} className="overflow-hidden flex flex-col h-full border-ink-tertiary/10/40 hover:border-accent/40 transition-colors">
+            <Card key={curso.id} className="overflow-hidden flex flex-col h-full border-ink-tertiary/10 hover:border-accent/40 transition-colors">
               {curso.capaUrl ? (
                 <img src={curso.capaUrl} alt={curso.titulo} className="h-40 w-full object-cover" />
               ) : (

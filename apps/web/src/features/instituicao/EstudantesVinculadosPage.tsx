@@ -105,7 +105,12 @@ export function EstudantesVinculadosPage() {
             <select 
               className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary ring-offset-background focus:ring-accent"
               value={tipo}
-              onChange={(e) => { setTipo(e.target.value as PropostaTipo); }}
+              onChange={(e) => { 
+                const val = e.target.value;
+                if (['estagio', 'emprego', 'bolsa', 'parceria'].includes(val)) {
+                  setTipo(val as PropostaTipo); 
+                }
+              }}
             >
               <option value="estagio">Estágio</option>
               <option value="emprego">Emprego</option>

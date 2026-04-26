@@ -73,10 +73,10 @@ export function ModeradorDashboard() {
             title="Operações de Integridade"
             gridCols={2}
             ctas={[
-              { label: 'Fila de Aprovações', to: '/app/moderacao/aprovacoes', icon: UserCheck, variant: 'primary' },
-              { label: 'Todas as Denúncias', to: '/app/moderacao/denuncias', icon: ShieldAlert },
-              { label: 'Gestão de Utilizadores', to: '/app/moderacao/utilizadores', icon: Users },
-              { label: 'Audit Trail', to: '/app/admin/audit', icon: ClipboardList },
+              { label: 'Fila de Aprovações', to: '/moderacao/aprovacoes', icon: UserCheck, variant: 'primary' },
+              { label: 'Todas as Denúncias', to: '/moderacao/denuncias', icon: ShieldAlert },
+              { label: 'Gestão de Utilizadores', to: '/moderacao/utilizadores', icon: Users },
+              { label: 'Audit Trail', to: '/admin/audit', icon: ClipboardList },
             ]}
           />
         </BentoTile>
@@ -88,7 +88,7 @@ export function ModeradorDashboard() {
           <h2 className="font-black text-ink-primary flex items-center gap-2 uppercase text-[12px] tracking-[0.2em]">
             <Clock size={16} className="text-accent" /> Denúncias Críticas
           </h2>
-          <Link to="/app/moderacao/denuncias" className="text-[10px] font-black text-accent hover:underline uppercase tracking-widest">
+          <Link to="/moderacao/denuncias" className="text-[10px] font-black text-accent hover:underline uppercase tracking-widest">
             Ver todas →
           </Link>
         </div>
@@ -102,7 +102,7 @@ export function ModeradorDashboard() {
             {denuncias.map((d) => (
               <Link
                 key={d.id}
-                to={`/app/moderacao/denuncias/${d.id}`}
+                to={`/moderacao/denuncias/${d.id}`}
                 className="group"
               >
                 <GlassCard className="flex items-start justify-between gap-4 p-4 hover:border-accent/20 transition-all">

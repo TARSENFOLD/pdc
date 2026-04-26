@@ -48,6 +48,12 @@ conquistaRoutes.post('/verificar', zValidator('json', verificarSchema), async (c
   }
 });
 
+interface StrapiConquistaRes {
+  id: string;
+  titulo: string;
+  aprovada: boolean;
+}
+
 // POST /conquistas/manual — criar conquista manual (RBAC)
 conquistaRoutes.post('/manual',
   checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
@@ -71,7 +77,7 @@ conquistaRoutes.post('/manual',
       const diasDesdeCriacao = Math.max(0, (Date.now() - createdAt) / (1000 * 60 * 60 * 24));
       const aprovada = diasDesdeCriacao >= 7;
 
-      const res = await strapiPost<any>('/conquistas', {
+      const res = await strapiPost<StrapiConquistaRes>('/conquistas', {
         ...body,
         origem: 'manual',
         tipo: 'manual',

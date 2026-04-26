@@ -49,9 +49,9 @@ export const CriarCursoPage = () => {
         visibilidade: payload.visibilidade || 'publico',
         thumbnailUrl: payload.thumbnailUrl || '',
         regrasAcesso: {
-          minFluidez: payload.regrasAcesso?.minFluidez || 4,
-          minResiliencia: payload.regrasAcesso?.minResiliencia || 5,
-          minFoco: payload.regrasAcesso?.minFoco || 0
+          minFluidez: payload.regrasAcesso?.minFluidez ?? 0,
+          minResiliencia: payload.regrasAcesso?.minResiliencia ?? 0,
+          minFoco: payload.regrasAcesso?.minFoco ?? 0
         },
         modulos: modulos.map((m, idx) => ({
           titulo: m.titulo,

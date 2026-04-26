@@ -89,48 +89,27 @@ export function PerfilShowcase() {
               <Brain className="text-accent" size={24} />
               DNA Vocacional
             </h3>
-            <Badge className="bg-accent/10 text-accent border-accent/20 px-3 py-1">Precisão 92%</Badge>
+            <Badge className="bg-accent/10 text-accent border-accent/20 px-3 py-1">Em Processamento</Badge>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-            {[
-              { label: 'Fluidez', val: '8.4', color: 'text-accent' },
-              { label: 'Resiliência', val: '9.2', color: 'text-success' },
-              { label: 'Foco', val: '7.8', color: 'text-blue-400' },
-              { label: 'Técnico', val: '8.1', color: 'text-violet-400' },
-            ].map(stat => (
-              <div key={stat.label} className="text-center space-y-1">
-                <p className="text-[10px] text-ink-tertiary uppercase font-black tracking-widest">{stat.label}</p>
-                <p className={`text-2xl font-mono font-black ${stat.color}`}>{stat.val}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 opacity-50">
+            {['Fluidez', 'Resiliência', 'Foco', 'Técnico'].map(label => (
+              <div key={label} className="text-center space-y-2 animate-pulse">
+                <div className="h-2 w-12 bg-ink-tertiary/20 rounded mx-auto" />
+                <div className="h-6 w-8 bg-ink-tertiary/20 rounded mx-auto" />
               </div>
             ))}
           </div>
 
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/5 italic text-ink-secondary text-sm leading-relaxed">
-            "Este perfil demonstra uma capacidade instintiva de resolução de problemas em ambientes de tecnologia, 
-            com um tempo de reação 15% superior à média dos candidatos para Engenharia de Software."
+          <div className="p-6 rounded-2xl bg-white/5 border border-white/5 italic text-ink-secondary text-sm leading-relaxed opacity-50">
+            <div className="h-3 w-full bg-ink-tertiary/20 rounded mb-2 animate-pulse" />
+            <div className="h-3 w-4/5 bg-ink-tertiary/20 rounded animate-pulse" />
           </div>
           
           {/* Endorsements Area */}
           <div className="pt-6 border-t border-white/5">
             <p className="text-[10px] text-ink-tertiary uppercase font-black tracking-widest mb-4">Validações de Mentores</p>
-            <div className="flex flex-wrap gap-4">
-              {[
-                { name: 'Eng. Amadeu Silva', role: 'Mentor Tech', skill: 'Lógica' },
-                { name: 'Dr. Firmino Gouveia', role: 'Estrategista', skill: 'Resiliência' },
-              ].map((m, i) => (
-                <div key={i} className="flex items-center gap-3 bg-white/5 rounded-full pl-1 pr-4 py-1 border border-white/5">
-                  <div className="h-6 w-6 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center text-[10px] font-bold text-accent">
-                    {m.name.charAt(5)}
-                  </div>
-                  <div className="text-[10px]">
-                    <span className="font-bold text-ink-primary">{m.name}</span>
-                    <span className="text-ink-tertiary mx-1">•</span>
-                    <span className="text-success font-bold">Validou {m.skill}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <div className="text-sm text-ink-tertiary opacity-70">Sem validações disponíveis.</div>
           </div>
         </Card>
 
@@ -141,9 +120,37 @@ export function PerfilShowcase() {
             Prestígio
           </h3>
           <div className="grid grid-cols-3 gap-3">
-            {[1,2,3,4,5].map(i => (
-              <div key={i} className="aspect-square rounded-2xl bg-gradient-to-br from-accent/20 to-transparent border border-accent/10 flex items-center justify-center p-2 group cursor-pointer hover:border-accent/40 transition-all">
-                <div className="w-full h-full rounded-xl bg-elevated shadow-inner flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+            {perfil.conquistas && perfil.conquistas.length > 0 ? (
+              perfil.conquistas.map((c, i) => (
+                <div key={i} className="aspect-square rounded-2xl bg-gradient-to-br from-accent/20 to-transparent border border-accent/10 flex items-center justify-center p-2 group cursor-pointer hover:border-accent/40 transition-all" title={c.nome}>
+                  <div className="w-full h-full rounded-xl bg-elevated shadow-inner flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+                    <Trophy size={20} />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-3 text-sm text-ink-tertiary">Nenhuma conquista ainda.</div>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      {/* ── Projetos Showcase ── */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between px-2">
+          <h3 className="text-xl font-bold font-display tracking-tight text-ink-primary text-2xl">Portfólio de Evidências</h3>
+          <Link to="/projetos" className="text-xs font-bold text-accent hover:underline uppercase tracking-widest">Explorar Projetos →</Link>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="col-span-full text-center py-10 border border-dashed border-white/10 rounded-[28px] text-ink-tertiary text-sm">
+            Nenhum projeto público validado no momento.
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+nter text-accent group-hover:scale-110 transition-transform">
                   <Trophy size={20} />
                 </div>
               </div>
@@ -162,7 +169,7 @@ export function PerfilShowcase() {
       <section className="space-y-6">
         <div className="flex items-center justify-between px-2">
           <h3 className="text-xl font-bold font-display tracking-tight text-ink-primary text-2xl">Portfólio de Evidências</h3>
-          <Link to="/app/projetos" className="text-xs font-bold text-accent hover:underline uppercase tracking-widest">Explorar Projetos →</Link>
+          <Link to="/projetos" className="text-xs font-bold text-accent hover:underline uppercase tracking-widest">Explorar Projetos →</Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1,2].map(i => (

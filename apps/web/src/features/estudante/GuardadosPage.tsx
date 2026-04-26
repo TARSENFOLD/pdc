@@ -63,8 +63,11 @@ export function GuardadosPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {bookmarks.map((bookmark, idx) => {
-            const config = TIPO_CONFIG[bookmark.targetType] ?? TIPO_CONFIG.curso;
-            if (!config) return null;
+            const config = TIPO_CONFIG[bookmark.targetType];
+            if (!config) {
+              console.warn({ targetType: bookmark.targetType, bookmarkId: bookmark.id }, 'Unknown bookmark targetType');
+              return null;
+            }
             const Icon = config.icon;
             return (
               <motion.div

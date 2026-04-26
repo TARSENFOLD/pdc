@@ -1,0 +1,14 @@
+{
+  "baseline": {
+    "date": "2026-04-26",
+    "ticket": "T1",
+    "hardcoded_strings": 319,
+    "pdc_lint_warnings": {
+      "no-font-black-in-tsx": "warn",
+      "no-wide-tracking-in-tsx": "warn",
+      "no-hardcoded-hex-in-tsx": "warn",
+      "no-inline-css-var": "warn"
+    },
+    "notes": "Baseline captured at T1. Use to compare bundle growth at T19 before promoting PDC rules to error."
+  }
+}

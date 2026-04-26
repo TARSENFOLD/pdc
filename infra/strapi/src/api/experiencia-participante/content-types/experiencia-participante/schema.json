@@ -1,0 +1,20 @@
+{
+  "kind": "collectionType",
+  "collectionName": "experiencia_participantes",
+  "info": {
+    "singularName": "experiencia-participante",
+    "pluralName": "experiencia-participantes",
+    "displayName": "Experiência Participante"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "estudanteId": { "type": "string", "required": true },
+    "experiencia": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::experiencia.experiencia"
+    }
+  }
+}
