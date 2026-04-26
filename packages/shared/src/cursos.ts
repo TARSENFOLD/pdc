@@ -141,6 +141,14 @@ export const CursoPublicoSchema = z.object({
 });
 export type CursoPublico = z.infer<typeof CursoPublicoSchema>;
 
+export const CursoItemSchema = CursoPublicoSchema.extend({
+  instituicaoNome: z.string().optional(),
+  instituicao: z.object({ nome: z.string() }).optional(),
+  inscritosCount: z.number().optional(),
+}).passthrough();
+
+export type CursoItem = z.infer<typeof CursoItemSchema>;
+
 export interface CursoFilters {
   search?: string;
   area?: string;

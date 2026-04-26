@@ -96,7 +96,12 @@ export const CursoFormStep1 = ({ payload, setPayload, upload, isUploading, progr
               <select 
                 className="w-full bg-elevated/50 border border-ink-tertiary/10 rounded-xl p-4 text-ink-primary"
                 value={payload.area}
-                onChange={e => { setPayload({...payload, area: e.target.value as AreaVocacional}); }}
+                onChange={e => { 
+                  const val = e.target.value;
+                  if (isAreaVocacional(val)) {
+                    setPayload({...payload, area: val}); 
+                  }
+                }}
               >
                 <option value="TECNOLOGIA">Tecnologia</option>
                 <option value="ENGENHARIA">Engenharia</option>

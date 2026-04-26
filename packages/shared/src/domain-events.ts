@@ -101,6 +101,14 @@ export enum DomainEventName {
   MEDIA_FAILED = 'media.failed',
 }
 
+export const LtiEventPayloadSchema = z.object({
+  tentativaId: z.string().min(1),
+  score: z.number(),
+  perfilId: z.string().min(1),
+});
+
+export type LtiEventPayload = z.infer<typeof LtiEventPayloadSchema>;
+
 export const DomainEventSchema = z.object({
   id: z.string().uuid(),
   name: z.nativeEnum(DomainEventName),

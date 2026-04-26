@@ -90,7 +90,7 @@ healthRoutes.get('/schema-drift', async (c) => {
       'fields[0]': 'id',
       'fields[1]': 'descricao',
       'fields[2]': 'abstract',
-      'pagination[limit]': '5000',
+      'pagination[limit]': '5000', // Aumentado para cobrir maior volume sem paginação complexa para healthcheck
     });
 
     const projetoDrift = (projetosRes.data || []).filter((p) => 

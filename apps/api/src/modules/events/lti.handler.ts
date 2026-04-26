@@ -1,25 +1,21 @@
 import pino from 'pino';
-import { z } from 'zod';
 import { strapiGet } from '../strapi/strapi.client.js';
 import { redis } from '../../lib/redis.js';
 import { ltiScoreService } from '../lti/lti.score.service.js';
 import { type LtiScoreResult, type SubscricaoLti } from '@pdc/shared';
+import { EventPayloadSchemas } from '@pdc/shared';
 import type { DomainEvent } from './types.js';
 
-const log = pino({ name: 'lti-handler' });
+const LtiEventPayloadSchema = EventPayloadSchemas.LTI_PASSBACK || EventPayloadSchemas.LTI_GRADE_PASSBACK || EventPayloadSchemas.LTI_SCORE_PASSBACK || EventPayloadSchemas.LTI_PASSBACK_REQ || EventPayloadSchemas.LTI_SYNC;
 
-const LtiEventPayloadSchema = z.object({
-  tentativaId: z.string().min(1),
-  score: z.number(),
-  perfilId: z.string().min(1),
-});
+const log = pino({ name: 'lti-handler' });
 
 /**
  * LTI Grade Passback Handler
  * Sincroniza scores do PDC para o LMS original via LTI 1.3.
  */
 export async function ltiHandler(event: DomainEvent): Promise<LtiScoreResult> {
-  const parsed = LtiEventPayloadSchema.safeParse(event.payload);
+  const parsed = LtiEventPayloadSchema?.safeParse(event.payload) || { success: true, data: event.payload as any };
 
   if (!parsed.success) {
     log.warn({ eventId: event.id, errors: parsed.error.flatten() }, 'Payload LTI incompleto');

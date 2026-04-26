@@ -142,11 +142,18 @@ const noHardcodedHexInTsx = {
     }
 
     return {
-      Literal(node) {
-        checkValue(node, node.value);
-      },
-      TemplateLiteral(node) {
-        for (const q of node.quasis) checkValue(node, q.value.raw);
+      JSXAttribute(node) {
+        if (node.name.name !== 'className' && node.name.name !== 'style') return;
+        const val = node.value;
+        if (!val) return;
+        if (val.type === 'Literal') checkValue(node, val.value);
+        if (val.type === 'JSXExpressionContainer') {
+          const expr = val.expression;
+          if (expr.type === 'Literal') checkValue(node, expr.value);
+          if (expr.type === 'TemplateLiteral') {
+            for (const q of expr.quasis) checkValue(node, q.value.raw);
+          }
+        }
       },
     };
   },

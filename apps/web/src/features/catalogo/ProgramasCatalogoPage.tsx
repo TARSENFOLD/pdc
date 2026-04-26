@@ -78,8 +78,3 @@ export function ProgramasCatalogoPage() {
     </div>
   );
 }
-idShell>
-      </div>
-    </div>
-  );
-}

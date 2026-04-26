@@ -6,7 +6,7 @@ import { CatalogoGridShell } from '@/components/catalogo/CatalogoGridShell';
 import { CatalogoFilterBar } from '@/components/catalogo/CatalogoFilterBar';
 import { ContentCard } from '@/components/catalogo/ContentCard';
 import { Clock, GraduationCap, Users } from 'lucide-react';
-import type { CursoPublico } from '@pdc/shared';
+import { CursoItemSchema, type CursoItem } from '@pdc/shared';
 
 const AREAS = [
   { value: 'TECNOLOGIA', label: 'Tecnologia' },
@@ -14,22 +14,6 @@ const AREAS = [
   { value: 'DIREITO', label: 'Direito' },
   { value: 'GESTAO', label: 'Gestão' },
 ];
-
-interface CursoItem extends CursoPublico {
-  instituicaoNome?: string;
-  instituicao?: { nome: string };
-  inscritosCount?: number;
-}
-
-const CursoItemSchema = z.object({
-  id: z.string(),
-  titulo: z.string(),
-  capaUrl: z.string().nullish(),
-  totalHoras: z.number().nullish(),
-  instituicaoNome: z.string().optional(),
-  instituicao: z.object({ nome: z.string() }).optional(),
-  inscritosCount: z.number().optional(),
-}).passthrough();
 
 export function CursoListPage() {
   const [search, setSearch] = useState('');
@@ -51,7 +35,7 @@ export function CursoListPage() {
   if (!parsed.success) {
     console.error('API validation error:', parsed.error);
   }
-  const cursos = (parsed.success ? parsed.data : []) as CursoItem[];
+  const cursos = parsed.success ? parsed.data : [];
 
   return (
     <div className="mx-auto max-w-7xl space-y-12 pb-20 px-4 sm:px-6 lg:px-8">
@@ -91,6 +75,19 @@ export function CursoListPage() {
             title={c.titulo}
             subtitle={c.instituicaoNome || c.instituicao?.nome || 'PDC Partner'}
             image={c.capaUrl || undefined}
+            href={`/app/cursos/${c.id}`}
+            badges={[{ label: 'Certificação PDC', variant: 'accent' }]}
+            footerInfo={[
+              { icon: Clock, label: `${String(c.totalHoras || 0)}h` },
+              { icon: Users, label: `${String(c.inscritosCount || 0)} alunos` }
+            ]}
+          />
+        ))}
+      </CatalogoGridShell>
+    </div>
+  );
+}
+image={c.capaUrl || undefined}
             href={`/app/cursos/${c.id}`}
             badges={[{ label: 'Certificação PDC', variant: 'accent' }]}
             footerInfo={[

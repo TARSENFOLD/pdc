@@ -146,16 +146,3 @@ export function EscolhaTipoContaPage() {
     </div>
   );
 }
-        animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-12 text-center text-sm text-ink-tertiary"
-        >
-          {t('auth.common.login_link_prefix', 'Já tens uma conta ativa?')}{' '}
-          <Link to="/login" className="font-bold text-accent hover:text-accent-hover underline underline-offset-4 transition-colors">
-            {t('auth.common.login_link_action', 'Entrar agora')}
-          </Link>
-        </motion.p>
-      </div>
-    </div>
-  );
-}

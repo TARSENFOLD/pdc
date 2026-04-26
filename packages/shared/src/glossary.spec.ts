@@ -79,7 +79,7 @@ describe('Glossary SSOT — contract', () => {
   describe('Key symmetry across locales', () => {
     it('Roles: same slugs across all locale maps', () => {
       const ptPTKeys = Object.keys(Roles);
-      expect(ptPTKeys).toEqual(ROLE_SLUGS as unknown as string[]);
+      expect(ptPTKeys).toEqual([...ROLE_SLUGS]);
     });
 
     it('ContentTypes: same slugs across all locale maps', () => {

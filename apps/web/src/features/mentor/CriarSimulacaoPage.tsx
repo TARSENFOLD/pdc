@@ -19,6 +19,10 @@ interface SimulacaoDetail extends CriarSimulacaoPayload {
   estado: EstadoEditorial;
 }
 
+function isSimulacaoDetail(data: unknown): data is SimulacaoDetail {
+  return typeof data === 'object' && data !== null && 'estado' in data && 'id' in data;
+}
+
 export function CriarSimulacaoPage() {
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;

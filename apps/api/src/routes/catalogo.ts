@@ -30,8 +30,10 @@ interface StrapiSimulacao {
 interface StrapiExperiencia {
   id: string | number; slug: string; titulo: string; descricao: string;
   capaUrl?: string; area?: string; nivel?: string;
-  instituicaoNome?: string; dataInicio?: string;
+  instituicaoNome?: string; dataInicio?: string; gratuito?: boolean;
 }
+
+const NivelSchema = z.enum(['basico', 'medio', 'avancado']);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -69,9 +71,11 @@ function mapSim(d: StrapiSimulacao): SimulacaoPublica {
 function mapExp(d: StrapiExperiencia): ExperienciaPublica {
   return {
     id: sid(d.id), slug: d.slug, titulo: d.titulo, descricao: d.descricao,
-    capaUrl: d.capaUrl, area: d.area as AreaVocacional, nivel: d.nivel as 'basico' | 'medio' | 'avancado' | undefined,
+    capaUrl: d.capaUrl, 
+    area: AreaVocacionalSchema.optional().safeParse(d.area).data, 
+    nivel: NivelSchema.optional().safeParse(d.nivel).data,
     instituicao: d.instituicaoNome ? { id: '', nome: d.instituicaoNome } : undefined, dataInicio: d.dataInicio,
-    gratuito: true,
+    gratuito: (d.gratuito ?? true) as true,
   };
 }
 
@@ -160,4 +164,5 @@ catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
 catalogoRoutes.route('/mentores', mentoresRoutes);
 catalogoRoutes.route('/instituicoes', instituicoesRoutes);
 catalogoRoutes.route('/perfil', perfilPublicoRoutes);
+catalogoRoutes.route('/explorar', catalogoExplorarRoutes);
 catalogoRoutes.route('/explorar', catalogoExplorarRoutes);
