@@ -87,16 +87,3 @@ export function CursoListPage() {
     </div>
   );
 }
-image={c.capaUrl || undefined}
-            href={`/app/cursos/${c.id}`}
-            badges={[{ label: 'Certificação PDC', variant: 'accent' }]}
-            footerInfo={[
-              { icon: Clock, label: `${String(c.totalHoras || 0)}h` },
-              { icon: Users, label: `${String(c.inscritosCount || 0)} alunos` }
-            ]}
-          />
-        ))}
-      </CatalogoGridShell>
-    </div>
-  );
-}

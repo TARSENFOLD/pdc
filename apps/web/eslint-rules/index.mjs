@@ -153,6 +153,16 @@ const noHardcodedHexInTsx = {
           if (expr.type === 'TemplateLiteral') {
             for (const q of expr.quasis) checkValue(node, q.value.raw);
           }
+          if (expr.type === 'ObjectExpression') {
+            for (const prop of expr.properties) {
+              if (prop.type !== 'Property') continue;
+              const v = prop.value;
+              if (v.type === 'Literal') checkValue(node, v.value);
+              if (v.type === 'TemplateLiteral') {
+                for (const q of v.quasis) checkValue(node, q.value.raw);
+              }
+            }
+          }
         }
       },
     };
