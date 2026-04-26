@@ -172,7 +172,7 @@ export const RelatorioVocacional = () => {
             <div className="h-8 w-8 rounded-full border border-white/5 flex items-center justify-center group-hover:border-accent/30 transition-colors">
               <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> 
             </div>
-            Terminal de Comando
+            Painel de Decisão
           </Link>
           <div className="flex items-center gap-4">
             <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono font-bold text-text-secondary uppercase tracking-widest">
@@ -335,11 +335,13 @@ export const RelatorioVocacional = () => {
                  ))}
                </div>
 
-               <div className="mt-10 space-y-4 pt-8 border-t border-white/5">
+               <div className="mt-10 space-y-4 pt-8 border-t border-border">
                  <h4 className="text-[10px] font-black uppercase tracking-widest text-text-muted">Sugestões de Rota</h4>
                  <div className="space-y-3">
-                   {data?.recomendacoes.map(rec => (
-                     <div key={rec.cursoId} className="group p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-accent/30 transition-all flex items-center justify-between">
+                   {data?.recomendacoes.length === 0 ? (
+                      <p className="text-xs text-text-muted italic">A Tina está a processar cursos compatíveis com a tua biomecânica...</p>
+                   ) : data?.recomendacoes.map(rec => (
+                     <div key={rec.cursoId} className="group p-4 rounded-2xl bg-surface-alt border border-border hover:border-accent/30 transition-all flex items-center justify-between">
                         <div className="min-w-0">
                           <h4 className="font-bold text-sm text-text-primary truncate">{rec.titulo}</h4>
                           <p className="text-[9px] text-text-muted font-bold uppercase tracking-tight mt-0.5">{rec.matchPercentagem}% Match</p>
@@ -355,7 +357,7 @@ export const RelatorioVocacional = () => {
 
         {/* Call to Action Soberana */}
         <footer className="pt-20 text-center flex flex-col items-center gap-8">
-           <div className="h-px w-32 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+           <div className="h-px w-32 bg-gradient-to-r from-transparent via-border to-transparent" />
            <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.4em]">
              Validado pelo Comitê Científico PDC | Angola 2026
            </p>

@@ -92,7 +92,7 @@ export function ProfilePhotoUpload({ currentUrl, onSuccess }: Props) {
         
         <button
           type="button"
-          onClick={() => { void fileInputRef.current?.click(); }}
+          onClick={() => { fileInputRef.current?.click(); }}
           disabled={isUploading}
           className="absolute bottom-0 right-0 h-10 w-10 rounded-full bg-accent text-white flex items-center justify-center border-4 border-surface shadow-lg hover:scale-110 transition-transform active:scale-95 disabled:opacity-50"
           title="Mudar Foto"
@@ -104,7 +104,7 @@ export function ProfilePhotoUpload({ currentUrl, onSuccess }: Props) {
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={() => { void fileInputRef.current?.click(); }}
+          onClick={() => { fileInputRef.current?.click(); }}
           disabled={isUploading}
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
         >

@@ -13,13 +13,13 @@ interface UnprocessedEvent {
 }
 
 export async function replayUnprocessedEvents() {
-  log.info('Iniciando script de Replay do Outbox Pattern...');
+  log.info('Iniciando script de Replay do Outbox Pattern (Sovereign Replay)...');
 
   try {
-    // Fix: Generic type represents the item, client wraps in StrapiListResponse<T>
-    const res = await strapiGet<UnprocessedEvent>('/domain-events', {
+    const res = await strapiGet<UnprocessedEvent & { attempts: number }>('/domain-events', {
       'filters[processed][$eq]': 'false',
-      'pagination[limit]': '100',
+      'pagination[limit]': '50', // Batch menor para evitar timeouts
+      'sort': 'createdAt:asc',
     });
     
     const events = res.data;
@@ -28,36 +28,46 @@ export async function replayUnprocessedEvents() {
       return;
     }
 
-    log.info(`Encontrados ${events.length} eventos pendentes para replay.`);
-
     for (const evt of events) {
-      log.info({ eventId: evt.correlationId, name: evt.name }, 'A reprocessar evento...');
+      const attempts = evt.attempts || 0;
+      
+      // Exponential Backoff: Ignorar se falhou recentemente (2^attempts * 1min)
+      const lastModified = new Date(evt.createdAt).getTime(); // Simplificação: usar createdAt ou updatedAt
+      const waitTime = Math.pow(2, attempts) * 60 * 1000;
+      if (Date.now() < lastModified + waitTime && attempts > 0) {
+        continue;
+      }
+
+      log.info({ eventId: evt.correlationId, name: evt.name, attempts }, 'A processar evento...');
       
       try {
-        // Reemite o evento para o Event Bus (transiente, pois já está no Strapi)
-        eventBus.publish({
-          id: evt.correlationId,
-          name: evt.name,
-          payload: evt.payload,
+        // AWAIT IMPORTANTE: Aguarda a conclusão dos handlers (RedLock, external calls, etc)
+        await eventBus.publish({
+          id: crypto.randomUUID(), // Gerar ID de execução única para o replay
+          name: evt.name as any,
+          payload: evt.payload as any,
           timestamp: evt.createdAt,
+          correlationId: evt.correlationId
         });
 
-        // Marca como processado após a emissão
-        // Fix: strapiPut already wraps body in { data: ... }
+        // Sucesso Total
         await strapiPut(`/domain-events/${evt.documentId}`, {
           processed: true,
           processedAt: new Date().toISOString(),
+          attempts: attempts + 1,
         });
         
         log.info({ eventId: evt.correlationId }, 'Replay com sucesso.');
-      } catch (err) {
-        log.error({ err, eventId: evt.correlationId }, 'Falha contínua no replay deste evento.');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        log.error({ err: msg, eventId: evt.correlationId }, 'Falha no replay. Incrementando tentativas.');
+        await strapiPut(`/domain-events/${evt.documentId}`, {
+          attempts: attempts + 1,
+        });
       }
     }
-
-    log.info('Script de Replay concluído.');
   } catch (err) {
-    log.error({ err }, 'Erro fatal ao executar script de replay do Outbox.');
+    log.error({ err }, 'Erro fatal no script de replay do Outbox.');
   }
 }
 

@@ -13,6 +13,9 @@ export * from './core.js';
 export * from './heuristics.js';
 export * from './reputation.js';
 export * from './sanity/index.js';
+export * from './strapi.js';
+export * from './domain-events.js';
+export * from './ecosystem-hook.js';
 
 // Schemas Modulares
 export * from './schemas/enums.js';
@@ -23,6 +26,7 @@ export * from './schemas/notificacoes.js';
 export * from './schemas/mensagens.js';
 export * from './schemas/admin.js';
 export * from './schemas/dashboard.js';
+export * from './schemas/landing.js';
 export * from './schemas/vinculos.js';
 export * from './schemas/mentorias.js';
 export * from './schemas/interacoes.js';

@@ -17,7 +17,7 @@ registerRoutes.use('/*', rateLimitRegisto);
 registerRoutes.post('/estudante', zValidator('json', RegistoEstudantePayloadSchema), async (c) => {
   const { email, password, nome, areaInteresse, nivelEnsino } = c.req.valid('json');
   try {
-    const user = await authService.registerWithRole(email, password, nome, 'aluno', { 
+    const user = await authService.registerWithRole(email, password, nome, 'estudante', { 
       areasInteresse: [areaInteresse], 
       nivelEnsino 
     });

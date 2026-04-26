@@ -31,7 +31,7 @@ export function AdminTelemetriaPage() {
 
   const columns = [
     { header: 'Tipo', accessor: (e: EventoTelemetria) => <Badge variant="outline">{e.tipo}</Badge> },
-    { header: 'Utilizador', accessor: (e: EventoTelemetria) => <span className="text-xs font-mono text-text-secondary">{e.user ?? '—'}</span> },
+    { header: 'Utilizador', accessor: (e: EventoTelemetria) => <span className="text-xs font-mono text-text-secondary">{e.user ?? '-'}</span> },
     { header: 'Data/Hora', accessor: (e: EventoTelemetria) => <span className="text-xs text-text-secondary">{new Date(e.timestamp).toLocaleString()}</span> },
   ];
 

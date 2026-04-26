@@ -39,7 +39,7 @@ interface NavGroup {
 type SidebarItem = NavLeaf | NavGroup;
 
 const ALL_ROLES: Role[] = [
-  'aluno', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin',
+  'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin',
 ];
 
 /**
@@ -51,34 +51,34 @@ const SIDEBAR_CONFIG: SidebarItem[] = [
   
   // HUB: APRENDER (Músculo Técnico)
   {
-    type: 'group', label: 'Aprender', icon: BookOpenText, roles: ['aluno'],
+    type: 'group', label: 'Aprender', icon: BookOpenText, roles: ['estudante'],
     domain: 'HUB_LEARN',
     children: [
-      { type: 'leaf', label: 'Simulações', to: '/app/simulacoes', icon: FlaskConical, roles: ['aluno'] },
-      { type: 'leaf', label: 'Cursos', to: '/app/cursos', icon: BookOpen, roles: ['aluno'] },
-      { type: 'leaf', label: 'Meus Cursos', to: '/app/meus-cursos', icon: CheckCircle, roles: ['aluno'] },
+      { type: 'leaf', label: 'Simulações', to: '/app/simulacoes', icon: FlaskConical, roles: ['estudante'] },
+      { type: 'leaf', label: 'Cursos', to: '/app/cursos', icon: BookOpen, roles: ['estudante'] },
+      { type: 'leaf', label: 'Meus Cursos', to: '/app/meus-cursos', icon: CheckCircle, roles: ['estudante'] },
     ],
   },
 
   // HUB: EXPLORAR (Músculo Institucional)
   {
-    type: 'group', label: 'Explorar', icon: Building2, roles: ['aluno'],
+    type: 'group', label: 'Explorar', icon: Building2, roles: ['estudante'],
     domain: 'HUB_EXPLORE',
     children: [
-      { type: 'leaf', label: 'Experiências', to: '/app/instituicao/experiencias', icon: MapPin, roles: ['aluno'] },
-      { type: 'leaf', label: 'Programas', to: '/app/instituicao/programas', icon: GraduationCap, roles: ['aluno'] },
-      { type: 'leaf', label: 'Catálogo', to: '/app/explorar', icon: ScrollText, roles: ['aluno'] },
+      { type: 'leaf', label: 'Experiências', to: '/app/instituicao/experiencias', icon: MapPin, roles: ['estudante'] },
+      { type: 'leaf', label: 'Programas', to: '/app/instituicao/programas', icon: GraduationCap, roles: ['estudante'] },
+      { type: 'leaf', label: 'Catálogo', to: '/app/explorar', icon: ScrollText, roles: ['estudante'] },
     ],
   },
 
   // HUB: MEU FUTURO (A Joia da Coroa)
   {
-    type: 'group', label: 'Meu Futuro', icon: Star, roles: ['aluno'],
+    type: 'group', label: 'Meu Futuro', icon: Star, roles: ['estudante'],
     domain: 'HUB_FUTURE',
     children: [
-      { type: 'leaf', label: 'Relatório Vocacional', to: '/app/perfil-vocacional', icon: Brain, roles: ['aluno'] },
-      { type: 'leaf', label: 'Reputação', to: '/app/reputacao', icon: Star, roles: ['aluno'] },
-      { type: 'leaf', label: 'Certificados', to: '/app/certificados', icon: Award, roles: ['aluno'] },
+      { type: 'leaf', label: 'Relatório Vocacional', to: '/app/perfil-vocacional', icon: Brain, roles: ['estudante'] },
+      { type: 'leaf', label: 'Reputação', to: '/app/reputacao', icon: Star, roles: ['estudante'] },
+      { type: 'leaf', label: 'Certificados', to: '/app/certificados', icon: Award, roles: ['estudante'] },
     ],
   },
 
@@ -210,7 +210,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
   return (
     <div className="flex h-full flex-col bg-surface border-r border-white/5">
-      <div className="flex items-center gap-4 px-8 py-10 border-b border-white/5 bg-white/[0.01]">
+      <div className="flex items-center gap-4 px-8 py-10 border-b border-white/5 bg-white/1">
         <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-accent shadow-xl shadow-accent/20">
           <span className="font-display font-black text-white text-xl">P</span>
         </div>
@@ -228,7 +228,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         </ul>
       </nav>
 
-      <div className="p-6 border-t border-white/5 bg-white/[0.01] space-y-4">
+      <div className="p-6 border-t border-white/5 bg-white/1 space-y-4">
         {/* User Quick Profile (R2.T6 Integrity) */}
         <Link 
           to="/app/perfil"
@@ -249,7 +249,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
           <ChevronRight size={14} className="text-text-muted group-hover:text-accent transition-colors" />
         </Link>
 
-        <div className="rounded-[24px] bg-surface-raised p-5 border border-accent/10 relative overflow-hidden group">
+        <div className="rounded-3xl bg-surface-raised p-5 border border-accent/10 relative overflow-hidden group">
           <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
              <Brain size={80} />
           </div>
@@ -276,8 +276,8 @@ function loadGroupState(role: Role): Record<string, boolean> {
     const raw = localStorage.getItem(getStorageKey(role));
     if (raw) return JSON.parse(raw) as Record<string, boolean>;
   } catch { /* ignore */ }
-  // Por defeito, os hubs principais de aluno estão abertos
-  return { 'Aprender:aluno': true, 'Meu Futuro:aluno': true };
+  // Por defeito, os hubs principais de estudante estão abertos
+  return { 'Aprender:estudante': true, 'Meu Futuro:estudante': true };
 }
 
 function saveGroupState(role: Role, state: Record<string, boolean>): void {

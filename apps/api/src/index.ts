@@ -47,13 +47,14 @@ import { notificacaoRoutes } from './routes/notificacoes.js';
 import { perfilRoutes } from './routes/perfis.js';
 import { denunciaRoutes } from './routes/denuncias.js';
 import { featureFlagsRoutes } from './routes/feature-flags.js';
-import { reputationRoutes } from './routes/reputation.js';
+import { matchRoutes } from './routes/match.js';
 import { bootstrapRoutes } from './routes/bootstrap.js';
 import { landingRoutes } from './routes/landing.js';
 import { healthRoutes } from './routes/health.js';
 
 import { socketService } from './modules/realtime/socket.service.js';
 import { tinaService } from './modules/tina/tina.service.js';
+import { getPublicJwks } from './modules/lti/lti.jwks.js';
 
 const app = new Hono();
 
@@ -94,8 +95,6 @@ app.route('/admin', adminRoutes);
 app.route('/comite', comiteRoutes);
 app.route('/vinculos', vinculoRoutes);
 app.route('/mensagens', mensagensRoutes);
-app.route('/reputacao', reputationRoutes); // Rota Canónica (R2.T6)
-app.route('/reputation', reputationRoutes); // Alias legacy
 app.route('/seo', seoRoutes);
 app.route('/conquistas', conquistaRoutes);
 app.route('/mentorias', mentoriaRoutes);
@@ -106,6 +105,12 @@ app.route('/notificacoes', notificacaoRoutes);
 app.route('/perfis', perfilRoutes);
 app.route('/denuncias', denunciaRoutes);
 app.route('/feature-flags', featureFlagsRoutes);
+app.route('/match', matchRoutes);
+
+// ─── WELL-KNOWN ───
+app.get('/.well-known/jwks.json', async (c) => {
+  return c.json(await getPublicJwks());
+});
 
 const server = serve({
   fetch: app.fetch,
@@ -114,19 +119,36 @@ const server = serve({
   log.info({ port: info.port }, 'BFF Soberano Online');
 });
 
-// ─── INICIALIZAÇÕES ───
+// ─── ECOSSISTEMA G15 ───
+import './modules/outbox/outbox-worker.js';
 import { eventBus } from './modules/events/event-bus.js';
-import { ltiHandler } from './modules/events/lti.handler.js';
-import { conquistasHandler } from './modules/events/conquistas.handler.js';
-import { DomainEventName } from './modules/events/types.js';
+import { rankingHook } from './modules/hooks/ranking.hook.js';
+import { feedHook } from './modules/hooks/feed.hook.js';
+import { achievementHook } from './modules/hooks/achievement.hook.js';
+import { notifyHook } from './modules/hooks/notify.hook.js';
+import { matchHook } from './modules/hooks/match.hook.js';
+import { behaviorHook } from './modules/hooks/behavior.hook.js';
 
-// Registo explícito de handlers no Registry (D1)
-eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA, ltiHandler);
-eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA, conquistasHandler);
+// Registo de G15 Hooks (Músculo do Oráculo)
+eventBus.registerHook(rankingHook);
+eventBus.registerHook(feedHook);
+eventBus.registerHook(matchHook);
+eventBus.registerHook(behaviorHook);
+eventBus.registerHook(achievementHook);
+eventBus.registerHook(notifyHook);
 
 socketService.init(server as Server);
 tinaService.indexarKnowledge().catch((err: unknown) => { 
   log.error({ err }, 'Falha ao indexar Tina'); 
 });
+
+// ─── GRACEFUL SHUTDOWN ───
+const shutdown = (signal: string) => {
+  log.info({ signal }, 'Sinal recebido — a encerrar servidor BFF');
+  process.exit(0);
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 export type AppType = typeof app;

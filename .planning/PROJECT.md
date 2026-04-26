@@ -1,40 +1,53 @@
-# Por Dentro do Curso (PDC v2) — Project Manifesto
+# Por Dentro do Curso (PDC v2) — Visão do Produto (Canónica)
 
-## What This Is
-O PDC é uma infraestrutura de decisão educacional angolana que transforma a incerteza vocacional em escolhas de carreira precisas. Permite que estudantes experimentem profissões e cursos através de simulações práticas, experiências imersivas e orientação por mentores — antes de se comprometerem com a matrícula. Serve estudantes (base, secundário e superior), mentores, instituições, patrocinadores e moderadores (Não é dependente de IA, se a IA falhar ele continua).
+> **Frase de autoridade:** O PDC não é uma plataforma de ensino. É uma infraestrutura de decisão educacional — transforma a incerteza vocacional em escolhas de carreira precisas, antes que as decisões erradas custem dinheiro.
 
-## Core Value
+## 1. O Problema que o PDC Resolve
+Em Angola e em mercados emergentes, a escolha de curso universitário é uma **aposta**, não uma decisão informada. 
+- **Evasão:** Até 60% de evasão no primeiro ano universitário em Angola.
+- **Custo:** Famílias perdem dinheiro; instituições perdem reputação.
+- **Solução:** O PDC permite que o estudante experimente profissões antes de se comprometer com a matrícula.
+
+## 2. Core Value (A Promessa)
 **O estudante faz uma escolha de carreira baseada em evidência real do seu próprio comportamento — não em suposições.**
-O sistema utiliza o motor de heurísticas para calcular a **Fluidez Cognitiva ($\phi$)** e a **Resiliência ao Erro ($R$)**, transformando telemetria bruta em autoridade de decisão.
+Se tudo o resto falhar, o fluxo `Simulação → Score → Perfil Vocacional → Recomendação` tem de funcionar.
 
-## Tech Stack (Canónica)
+## 3. Arquitetura em 4 Camadas (Soberana)
+O sistema opera numa pipeline de alta fidelidade:
+1. **L1 — Factos (Edge):** Telemetria bruta capturada no Cloudflare Workers para escala e baixo custo (100k req/dia grátis).
+2. **L2 — Cérebro Matemático (Shared/BFF):** Cálculo determinístico de Fluidez Cognitiva ($\phi$) e Resiliência ($R$) — independente de IA.
+3. **L3 — Verniz Inteligente (BFF):** Tina (Oráculo Interpretativo) via DeepSeek + RAG para insights laterais.
+4. **L4 — Core de Negócio (BFF/Strapi):** Auth soberano, RBAC, Realtime e Persistência.
+
+## 4. Tech Stack (Ratificada)
 
 | Camada | Tecnologia | Papel |
 | --- | --- | --- |
-| Frontend | React 18, Vite 5, TailwindCSS v4, Motion | UI Imersiva (PWA-First) |
-| BFF | Hono v4, Node.js 24 LTS, Jose v5 | Orquestração de Negócio e Segurança |
-| CMS | Strapi v5, PostgreSQL 16 | Gestão de Conteúdo e Persistência |
-| Cache/Rate-limit | Upstash Redis | Performance e Resiliência |
-| Storage | Cloudflare R2 | Ativos e Projetos |
-| IA | DeepSeek + RAG (LangChain.js) | Oráculo Tina (Interpretação de Dados) |
+| **Frontend** | React 18 · Vite 5 · TailwindCSS v4 | UI Imersiva PWA-First |
+| **BFF** | Hono v4 · Node.js 24 LTS · Jose v5 | Orquestração + RPC type-safe |
+| **Edge** | Cloudflare Workers (`apps/edge`) | Ingestor de Telemetria L1 |
+| **CMS** | Strapi v5 · PostgreSQL 16 | Persistência e Gestão de Conteúdo |
+| **Cache/Queue** | Upstash Redis | Fila de telemetria + Rate limit |
+| **Infra** | Vercel (Web) + Railway (API/Strapi) | Hospedagem Soberana |
+| **IA** | DeepSeek + LangChain.js | Tina — Assistente de Decisão |
 
-## Context & Constraints
-- **Mercado:** Angola (conectividade variável, mobile-first).
-- **Problema:** Altos níveis de evasão no 1º ano universitário por má escolha vocacional.
-- **Segurança:** JWT em httpOnly cookies (ADR-003). Nunca localStorage.
-- **Integridade:** Zero `any`. Tipagem estrita nasce no `@pdc/shared`.
-- **Limites:** Ficheiros até 300 linhas (ADR-005 emenda).
+## 5. Constraints & Regras de Ouro
+- **I. Identidade Total:** O anonimato é proibido. Todos os dados são identificados para fins pedagógicos e de responsabilidade.
+- **II. Zero Any:** Tipagem estrita obrigatória em todos os workspaces. `any` é um bug de governação.
+- **III. Rule of 300:** Nenhum ficheiro fonte > 300 linhas (Exceção: `shared/index.ts`).
+- **IV. Stateless Security:** JWT exclusivamente em httpOnly cookies (ADR-003).
+- **V. Doc is Law:** Se o código contradiz o Markdown, o código é defeituoso.
 
-## Out of Scope (MVP)
-- Gateway de pagamento em produção (fase comercial posterior).
-- Turborepo/Nx (over-engineering para o estágio atual).
-- Upload de vídeos > 50MB (usar embed YouTube/Vimeo).
-- Antifraude avançado (biometria, etc.).
+## 6. Out of Scope (MVP)
+- **Gateway de pagamento:** Fase comercial posterior (usar CTAs).
+- **Turborepo / Nx:** Overhead desnecessário para o estágio atual.
+- **Mocks:** Proibido o uso de dados falsos em qualquer ambiente.
+- **Antifraude biométrico:** Fase de segurança avançada posterior.
 
-## Fonte de Verdade Documental
-1. **ADRs:** `docs/decisoes/` — Decisões arquiteturais ratificadas.
-2. **Specs:** `.planning/` — 13 especificações detalhadas (UUIDs).
-3. **Estado:** `.planning/STATE.md` — A verdade nua sobre o progresso real.
+## 7. Contexto & Moat
+- **Repositório de referência:** `/home/cj/1-PDC/` (extração de lógica legada).
+- **Specs Detalhadas:** Epic `332ffcdb` no Traycer (13 specs UUIDs).
+- **Barreira Competitiva:** Os dados comportamentais acumulados são um ativo único que nenhum concorrente pode replicar rapidamente.
 
 ---
-*Regra de Ouro: O código é o músculo, a documentação é a alma. Se não está documentado, não existe.*
+*Última validação: 21 de Abril de 2026 · Fonte de verdade: Alma Original + Epic 01.*

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TelemetryTokenPayloadSchema } from './telemetry-token';
+import { TelemetryTokenPayloadSchema } from './telemetry-token.js';
 
 describe('TelemetryTokenPayloadSchema', () => {
   it('deve validar um payload correcto', () => {

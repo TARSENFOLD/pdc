@@ -6,7 +6,7 @@ import { Settings, PenBox, Save, X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { perfisApi } from '@/lib/api/perfis';
 import { toast } from '@/hooks/useToast';
-import type { UpdatePerfilPayload } from '@pdc/shared';
+import { UpdatePerfilPayloadSchema, type UpdatePerfilPayload } from '@pdc/shared';
 
 export function PerfilPage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -56,7 +56,13 @@ export function PerfilPage() {
           onSubmit={(e) => {
             e.preventDefault();
             const formData = new FormData(e.currentTarget);
-            updateMutation.mutate(Object.fromEntries(formData) as any);
+            const data = Object.fromEntries(formData);
+            const result = UpdatePerfilPayloadSchema.safeParse(data);
+            if (result.success) {
+              updateMutation.mutate(result.data);
+            } else {
+              toast({ title: 'Erro de validação', description: 'Verifica os campos do formulário.', variant: 'destructive' });
+            }
           }}
         >
           <Input name="nome" label="Nome Completo" defaultValue={perfil?.nome} />

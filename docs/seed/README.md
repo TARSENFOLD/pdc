@@ -30,11 +30,11 @@ O Seed gera 130 contas com a mesma password de conveniência de acesso.
   - Emails: `mentor1@pdc.ao` até `mentor30@pdc.ao`
   - Os mentores 1 a 6 são classificados como Elite Globais (Reputação 98%).
 
-- **Alunos (100):**
-  - Emails: `aluno1@pdc.ao` até `aluno100@pdc.ao`
+- **Estudantes (100):**
+  - Emails: `estudante1@pdc.ao` até `estudante100@pdc.ao`
   - Eles representam padrões arquitectónicos pré-definidos herdados das fixtures de telemetria (`O Cirurgião`, `O Hacker Hesitante`, `O Gestor Impulsivo`, etc.).
 
 ## Base de Dados Injectada
-- **4 Áreas Base** (Engenharia, Saúde, Gestão, Artes/Tecnologia)
+- **15 Áreas Canónicas** (conforme spec:IMPORTANTE/04)
 - **10 Instituições** (Incluindo UAN, ISPTEC e UCAN)
 - **100 Padrões Comportamentais (Behavior Patterns)** calculados matematicamente para corresponderem ao perfil mental do seu arquétipo.

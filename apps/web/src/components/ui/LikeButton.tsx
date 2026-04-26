@@ -37,7 +37,7 @@ export function LikeButton({ targetType, targetId, initialCount = 0, initialLike
     <Button
       variant="ghost"
       size="sm"
-      className={`gap-2 ${liked ? 'text-error border-error bg-error/10' : 'text-text-muted hover:text-error'}`}
+      className={`gap-2 ${liked ? 'text-red-500 border-red-500 bg-red-500/10' : 'text-ink-tertiary hover:text-red-500'}`}
       onClick={() => { toggleMutation.mutate(); }}
     >
       <svg

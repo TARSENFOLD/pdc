@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BootstrapResponseSchema } from './bootstrap';
-import { Features } from './registry/features';
+import { BootstrapResponseSchema } from './bootstrap.js';
+import { Features } from './registry/features.js';
 
 describe('BootstrapResponseSchema', () => {
   it('deve validar um payload autêntico e íntegro com 4 camadas', () => {
@@ -9,8 +9,8 @@ describe('BootstrapResponseSchema', () => {
         isAuthenticated: true,
         user: {
           id: 'usr_xyz123',
-          email: 'aluno@teste.ao',
-          role: 'aluno',
+          email: 'estudante@teste.ao',
+          role: 'estudante',
           perfilId: 'prf_abc456',
         },
       },
@@ -19,7 +19,7 @@ describe('BootstrapResponseSchema', () => {
           'DISCUSSIONS_ENABLED': true,
           'REPUTATION_VISIBLE': false,
         },
-        roles: ['aluno', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin'],
+        roles: ['estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin'],
       },
       security: {
         telemetryToken: 'ey...', // Mock token

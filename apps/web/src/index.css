@@ -1,119 +1,78 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
 
 @theme {
-  /* ─── Paleta PDC v2 (Wave C: Tech-Terracota) ─── */
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-surface-raised: var(--surface-raised);
-  --color-surface-alt: var(--surface-alt);
-  --color-background-secondary: var(--surface-alt);
-  --color-border: var(--border);
+  /* ─── Mapeamento de Cores para Tailwind ─── */
+  --color-canvas: var(--surface-canvas);
+  --color-elevated: var(--surface-elevated);
+  --color-recessed: var(--surface-recessed);
 
-  /* ─── Texto ─── */
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-muted: var(--text-muted);
+  --color-ink-primary: var(--ink-primary);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-tertiary: var(--ink-tertiary);
 
-  /* ─── Acentos e Estados (Terracota Premium) ─── */
-  --color-accent: var(--accent);
-  --color-accent-trust: var(--accent-trust);
-  --color-amber: var(--accent); 
-  --color-amber-hover: var(--accent-hover);
-  
-  --color-error: #ef4444;
-  --color-success: #22c55e;
-  --color-info: var(--accent-trust);
-
-  /* ─── Cores de Role ─── */
-  --color-role-admin: #a855f7;
-  --color-role-mentor: #06b6d4;
-  --color-role-aluno: #10b981;
-  --color-role-instituicao: #ec4899;
-  --color-role-moderador: #f97316;
+  --color-accent: var(--accent-terracotta);
+  --color-accent-soft: var(--accent-terracotta-soft);
+  --color-cobalt: var(--institutional-cobalt);
 
   /* ─── Tipografia ─── */
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Instrument Serif", serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-authority);
+  --font-mono: var(--font-mono);
 
-  /* ─── Border Radius ─── */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  /* ─── Radii ─── */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
 }
 
 @layer base {
-  :root {
-    /* ─── TEMA CLARO (DNA PDC: O Calor e o Rigor) ─── */
-    --background: #F0EFE7; /* Off-white terroso */
-    --surface: #FCFBFA;
-    --surface-raised: #EAE9E2;
-    --surface-alt: #DFDED7;
-    --border: rgba(0, 0, 0, 0.06);
-
-    --text-primary: #333333; /* Chumbo profundo */
-    --text-secondary: #595959;
-    --text-muted: #8F8F8F;
-
-    --accent: #C1440E; /* Terracota Africana */
-    --accent-hover: #DAB243; /* Mostarda Dourada */
-    --accent-trust: #004AAD;
-
-    color-scheme: light;
-  }
-
-  .dark {
-    /* ─── TEMA ESCURO (A Noite Contemporânea) ─── */
-    --background: #0D0D0D; 
-    --surface: #141414;
-    --surface-raised: #1A1A1A;
-    --surface-alt: #1F1F1F;
-    --border: rgba(255, 255, 255, 0.06);
-
-    --text-primary: #F0EFE7; /* Reflexo do Off-white */
-    --text-secondary: #A3A3A3;
-    --text-muted: #666666;
-
-    --accent: #C1440E; /* Terracota Mantida: Coerência Global */
-    --accent-hover: #DAB243;
-    --accent-trust: #3b82f6;
-
-    color-scheme: dark;
-  }
-
   body {
-    @apply bg-background text-text-primary font-sans antialiased transition-colors duration-150;
-    
-    /* PWA iOS Feel: Bloqueia o "rubber banding" elástico e remove marcações visuais de toque */
+    @apply bg-canvas text-ink-primary font-sans antialiased transition-colors duration-150;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* ─── Sovereign UI Classes ─── */
-  .glass-surface {
-    @apply backdrop-blur-[20px] bg-white/5 border border-white/10;
-  }
-
-  .bento-grid {
-    @apply grid gap-4 auto-rows-[160px];
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    body {
-      @apply transition-none;
-    }
+  /* 8.º Grade Rule: Garantir legibilidade base */
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
   }
 }
 
-/* ─── Animations ─── */
-@keyframes marquee-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+/* ─── Primitivos Utilitários (Soul & Elite) ─── */
+.glass-panel {
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  background: var(--surface-overlay);
+  border: 1px solid var(--glass-border-light);
 }
 
+.dark .glass-panel {
+  background: var(--surface-overlay);
+  border: 1px solid var(--glass-border-dark);
+}
+
+.asymmetric-a {
+  border-radius: var(--radius-asym-a);
+}
+
+.asymmetric-b {
+  border-radius: var(--radius-asym-b);
+}
+
+/* ─── A11y ─── */
 @media (prefers-reduced-motion: reduce) {
-  .marquee-track {
-    animation: none !important;
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+}
+
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
 }

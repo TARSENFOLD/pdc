@@ -5,7 +5,8 @@ import {
   analyzeFluidity, 
   analyzeResilience, 
   analyzeFocus, 
-  type BehaviorPattern 
+  type BehaviorPattern,
+  type TelemetriaEvento
 } from '@pdc/shared';
 import { tinaService } from '../tina/tina.service.js';
 
@@ -14,13 +15,15 @@ const log = pino({ name: 'telemetria-processor' });
 interface TelemetriaRaw {
   id: number;
   tipo: string;
+  payload: Record<string, unknown>;
+  timestamp: string;
   clientTimestamp: string;
   visibilityState: string;
 }
 
 /**
  * Motor de Performance e Verdade (O Músculo)
- * Processa dados psicométricos para gerar a assinatura comportamental do aluno.
+ * Processa dados psicométricos para gerar a assinatura comportamental do estudante.
  */
 export const telemetriaProcessor = {
   async processUserDomain(perfilId: string, domainId: string): Promise<void> {
@@ -30,6 +33,15 @@ export const telemetriaProcessor = {
       // 1. Buscar histórico denso de telemetria
       const eventsRes = await strapiGet<TelemetriaRaw>('/telemetrias', {
         'filters[perfil][id][$eq]': perfilId,
+        'filters[tipo][$in]': [
+          'simulacao.iniciada', 
+          'simulacao.concluida', 
+          'simulacao.biomechanics',
+          'focus_lost',
+          'focus_gained',
+          'visibility.lost',
+          'visibility.gained'
+        ],
         'sort': 'clientTimestamp:asc',
         'pagination[limit]': '1000',
       });
@@ -54,7 +66,9 @@ export const telemetriaProcessor = {
           
           // Filtrar ruído (50ms a 2min)
           if (diff > 50 && diff < 120000) {
-            times.push(diff);
+            if (current.tipo.startsWith('simulacao.') && current.tipo !== 'simulacao.biomechanics') {
+              times.push(diff);
+            }
             
             // R: Reação ao erro
             if (previous.tipo.includes('erro') || previous.tipo.includes('falha')) {
@@ -62,9 +76,12 @@ export const telemetriaProcessor = {
             }
           }
 
-          // Foco: Detetar interrupções (visibility lost)
-          if (previous.visibilityState !== 'visible') {
-            totalInterruptionTime += diff;
+          // Foco: Detetar interrupções
+          if (current.tipo === 'focus_lost' || current.tipo === 'visibility.lost') {
+            // A interrupção começou aqui
+          }
+          if (previous.tipo === 'focus_lost' || previous.visibilityState !== 'visible') {
+             totalInterruptionTime += diff;
           }
         }
       }
@@ -73,6 +90,7 @@ export const telemetriaProcessor = {
       const meanTime = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 2000;
       const fluidity = heuristicsEngine.calculateFluidity(times);
       const resilience = heuristicsEngine.calculateResilience(timesPosError, meanTime);
+      const hesitation = heuristicsEngine.calculateHesitation(events as unknown as TelemetriaEvento[]);
       
       const lastEvent = events[events.length - 1];
       const firstEvent = events[0];
@@ -92,14 +110,16 @@ export const telemetriaProcessor = {
         'filters[domainId][$eq]': domainId,
       });
 
-      const behaviorPayload: Partial<BehaviorPattern> = {
+      const behaviorPayload = {
         perfil: perfilId,
         domainId,
         cognitiveFluidity: fluidity,
         resilienceIndex: resilience,
         focusStability: focus,
-        successRate: 0.85, // TODO: Calcular a partir das tentativas reais
-        technicalScore: (fluidity + focus + resilience) / 3,
+        hesitationIndex: hesitation,
+        decisionSpeedAvg: meanTime,
+        successRate: 0.85, 
+        technicalScore: (fluidity + focus + resilience + (10 - hesitation)) / 4,
         tinaSummary: {
           fluidity: hFluidity.insight,
           resilience: hResilience.insight,
@@ -107,7 +127,7 @@ export const telemetriaProcessor = {
           lastHeuristicUpdate: new Date().toISOString()
         },
         lastUpdatedAt: new Date().toISOString(),
-      };
+      } as BehaviorPattern;
 
       const existingId = existing.data?.[0]?.id;
       if (existingId) {
@@ -127,7 +147,7 @@ export const telemetriaProcessor = {
     }
   },
 
-  async requestTinaInterpretation(perfilId: string, domainId: string, behavior: any): Promise<void> {
+  async requestTinaInterpretation(perfilId: string, domainId: string, behavior: BehaviorPattern): Promise<void> {
     try {
       const dynamicVerdict = await tinaService.gerarVereditoPsicometrico({
         phi: behavior.cognitiveFluidity,
@@ -136,7 +156,7 @@ export const telemetriaProcessor = {
         domainId
       });
 
-      const existing = await strapiGet<{ id: number; tinaSummary: any }>('/behavior-patterns', {
+      const existing = await strapiGet<{ id: number; tinaSummary: unknown }>('/behavior-patterns', {
         'filters[perfil][id][$eq]': perfilId,
         'filters[domainId][$eq]': domainId,
       });

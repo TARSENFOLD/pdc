@@ -20,7 +20,7 @@ export interface StrapiEntity {
   autorNome?: string;
   autorId?: string;
   instituicaoNome?: string;
-  aluno?: { nome: string };
+  estudante?: { nome: string };
   estado?: string;
   visibilidade?: string;
   publishedAt?: string;
@@ -55,7 +55,7 @@ export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<Item
 
   try {
     const [likes, ratings] = await Promise.all([
-      strapiGet<any>('/likes', {
+      strapiGet<unknown>('/likes', {
         'filters[targetType][$eq]': tipo,
         'filters[targetId][$eq]': id,
         'pagination[limit]': '1',
@@ -140,7 +140,7 @@ export function toFeedItem(c: StrapiEntity & { tipo: FeedItemTipo }, stats: Item
     slug: c.slug,
     capaUrl: c.capaUrl,
     area: (c.area as AreaVocacional) || undefined,
-    autorNome: c.autorNome ?? c.instituicaoNome ?? c.aluno?.nome,
+    autorNome: c.autorNome ?? c.instituicaoNome ?? c.estudante?.nome,
     score,
     recencyScore,
     stats: { likes: stats.likes, ratingMedia: stats.ratingMedia, ratingTotal: stats.ratingTotal }

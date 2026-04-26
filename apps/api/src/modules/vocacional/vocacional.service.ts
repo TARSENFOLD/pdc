@@ -1,75 +1,92 @@
-import { strapiGet } from '../strapi/strapi.client.js';
-import type { 
-  Tentativa, 
-  PerfilVocacional, 
-  Curso
+import { 
+  type PerfilVocacional, 
+  type Curso, 
+  type BehaviorPattern, 
+  type PerfilCompleto 
 } from '@pdc/shared';
+import { type Recomendacao } from './vocacional.types.js';
+import { strapiGet } from '../strapi/strapi.client.js';
 
-export const vocacionalService = {
-  calcularPerfil: async (alunoId: string): Promise<PerfilVocacional> => {
-    // Busca tentativas concluídas do aluno
-    const res = await strapiGet<Tentativa>('/tentativas', {
-      'filters[alunoId][$eq]': alunoId,
-      'filters[dataFim][$notNull]': 'true',
-    });
+async function calcularPerfil(userId: string): Promise<PerfilVocacional> {
+  // 1. Buscar Perfil e Padrões Behaviorais reais
+  const [resPerfil, resPatterns] = await Promise.all([
+    strapiGet<PerfilCompleto>('/perfis', {
+      'filters[userId][$eq]': userId,
+      'fields[0]': 'id',
+      'fields[1]': 'xp',
+      'fields[2]': 'areaInteresse'
+    }),
+    strapiGet<BehaviorPattern>('/behavior-patterns', {
+      'filters[perfil][userId][$eq]': userId,
+      'sort': 'lastUpdatedAt:desc'
+    })
+  ]);
 
-    const tentativas = res.data;
+  const perfil = resPerfil.data[0];
+  const patterns = resPatterns.data;
 
-    if (tentativas.length === 0) {
-      return {
-        alunoId,
-        aptidao: 0,
-        consistencia: 0,
-        dedicacao: 0,
-        diversidade: 0,
-        scoreGlobal: 0,
-        updatedAt: new Date().toISOString(),
-      };
-    }
+  if (!perfil) {
+    throw new Error('Perfil não encontrado para cálculo vocacional');
+  }
 
-    // 1. Aptidão (40%): Média dos scores (assumindo 0-10)
-    const avgScore = tentativas.reduce((acc, t) => acc + (t.score || 0), 0) / tentativas.length;
-    const aptidao = Math.min(10, avgScore);
+  // 2. Agregação de Dimensões (Cálculo Soberano)
+  const defaultDim = { fluidez: 5, resiliencia: 5, foco: 5, hesitacao: 2 };
+  
+  const dimensoes = patterns.length > 0 ? {
+    fluidez: patterns.reduce((acc, p) => acc + p.cognitiveFluidity, 0) / patterns.length,
+    resiliencia: patterns.reduce((acc, p) => acc + p.resilienceIndex, 0) / patterns.length,
+    foco: patterns.reduce((acc, p) => acc + p.focusStability, 0) / patterns.length,
+    hesitacao: patterns.reduce((acc, p) => acc + p.hesitationIndex, 0) / patterns.length,
+  } : defaultDim;
 
-    // 2. Consistência (20%): Baseada na variância (menor variância = maior consistência)
-    const variance = tentativas.length > 1 
-      ? tentativas.reduce((acc, t) => acc + Math.pow((t.score || 0) - avgScore, 2), 0) / tentativas.length
-      : 0;
-    const consistencia = Math.max(0, 10 - (variance * 2));
+  // 3. Score Global (XP + Média Behavior)
+  const behaviorAvg = (dimensoes.fluidez + dimensoes.resiliencia + dimensoes.foco + (10 - dimensoes.hesitacao)) / 4;
+  const xpFactor = Math.min(10, (perfil.xp || 0) / 1000);
+  const scoreGlobal = Math.round((behaviorAvg * 0.7 + xpFactor * 3) * 10);
+  
+  // 4. Identificação de Área por afinidade real
+  const areaMatch = patterns[0]?.domainId || perfil.areaInteresse || 'TECNOLOGIA';
 
-    // 3. Dedicação (20%): Volume de tentativas concluídas (meta: 5)
-    const dedicacao = Math.min(10, (tentativas.length / 5) * 10);
+  return {
+    estudanteId: userId,
+    scoreGlobal: Math.min(100, scoreGlobal),
+    areaMatch,
+    certeza: patterns.length > 3 ? 0.9 : 0.6,
+    aptidao: behaviorAvg / 10,
+    dedicacao: Math.min(1, (perfil.xp || 0) / 10000),
+    consistencia: 1 - (dimensoes.hesitacao / 10),
+    diversidade: new Set(patterns.map(p => p.domainId)).size / 5,
+    updatedAt: new Date().toISOString(),
+    dimensoes
+  };
+}
 
-    // 4. Diversidade (20%): Variedade de simulações diferentes realizadas
-    const idsSimulacoes = new Set(tentativas.map(t => t.simulacaoId)).size;
-    const diversidade = Math.min(10, (idsSimulacoes / 3) * 10);
+async function gerarRecomendacoes(perfil: PerfilVocacional | null): Promise<Recomendacao[]> {
+  if (!perfil) return [];
 
-    const scoreGlobal = (aptidao * 0.4) + (consistencia * 0.2) + (dedicacao * 0.2) + (diversidade * 0.2);
+  // Busca cursos na área de afinidade do estudante
+  const res = await strapiGet<Curso>('/cursos', {
+    'filters[area][$eq]': perfil.areaMatch,
+    'pagination[limit]': '3',
+    'sort': 'rating:desc'
+  });
+  
+  return res.data.map((curso) => {
+    // Cálculo de match determinístico baseado no score do estudante vs nível do curso
+    const diff = Math.abs(perfil.scoreGlobal - (curso.rating || 0) * 20);
+    const matchPercentagem = Math.max(70, 100 - diff);
 
     return {
-      alunoId,
-      aptidao: Number(aptidao.toFixed(1)),
-      consistencia: Number(consistencia.toFixed(1)),
-      dedicacao: Number(dedicacao.toFixed(1)),
-      diversidade: Number(diversidade.toFixed(1)),
-      scoreGlobal: Number(scoreGlobal.toFixed(1)),
-      updatedAt: new Date().toISOString(),
-    };
-  },
-
-  gerarRecomendacoes: async (perfil: PerfilVocacional) => {
-    // Busca cursos para recomendar (lógica simplificada para MVP)
-    const res = await strapiGet<Curso>('/cursos', {
-      'pagination[pageSize]': '3',
-    });
-
-    const cursos = res.data;
-
-    return cursos.map(curso => ({
-      cursoId: String(curso.id),
+      id: String(curso.id),
       titulo: curso.titulo,
-      matchPercentagem: Math.min(99, Math.round(70 + (perfil.scoreGlobal * 3))),
-      motivo: `Com base no seu excelente desempenho em simulações e score global de ${String(perfil.scoreGlobal)}.`,
-    }));
-  }
+      tipo: 'curso',
+      matchPercentagem: Math.round(matchPercentagem),
+      motivo: `A tua assinatura biométrica em ${perfil.areaMatch} demonstra prontidão para este desafio.`
+    };
+  });
+}
+
+export const vocacionalService = {
+  calcularPerfil,
+  gerarRecomendacoes,
 };

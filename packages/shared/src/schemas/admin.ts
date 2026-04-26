@@ -57,3 +57,19 @@ export const AdminUtilizadoresParamsSchema = PaginationParamsSchema.extend({
 });
 
 export type AdminUtilizadoresParams = z.infer<typeof AdminUtilizadoresParamsSchema>;
+
+export const HooksHealthResponseSchema = z.object({
+  outbox: z.object({
+    pendentes: z.number(),
+    falhados: z.number(),
+    processados24h: z.number(),
+  }),
+  hooks: z.array(z.object({
+    name: z.string(),
+    status: z.enum(['healthy', 'degraded', 'failing']),
+    latency: z.string(),
+    successRate: z.number(),
+  })),
+});
+
+export type HooksHealthResponse = z.infer<typeof HooksHealthResponseSchema>;

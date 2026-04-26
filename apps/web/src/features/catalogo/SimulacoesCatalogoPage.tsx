@@ -33,7 +33,7 @@ const NIVEIS = ['Básico', 'Intermédio', 'Avançado'];
 function SimCard({ sim }: { sim: SimulacaoPublica }) {
   const tipoLabel = TIPOS[String(sim.tipo)] ?? 'Simulação';
   return (
-    <Link to={`/simulacoes/${sim.slug ?? sim.id}`} className="group">
+    <Link to={`/simulacoes/${String(sim.slug ?? sim.id)}`} className="group">
       <Card interactive className="p-5 border-border bg-surface hover:border-amber/30 transition-all">
         {sim.capaUrl ? (
           <img src={sim.capaUrl} alt={sim.titulo} className="mb-4 h-40 w-full rounded-xl object-cover shadow-sm" />
@@ -44,7 +44,7 @@ function SimCard({ sim }: { sim: SimulacaoPublica }) {
         )}
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <Badge variant="warning" className="text-[10px] uppercase font-bold tracking-tighter">{tipoLabel}</Badge>
-          {sim.area ? <Badge variant="info" className="text-[10px] uppercase font-bold">{sim.area}</Badge> : null}
+          <Badge variant="info" className="text-[10px] uppercase font-bold">{sim.area}</Badge>
           {sim.nivel ? <Badge variant="outline" className="text-[10px] uppercase font-bold">{sim.nivel}</Badge> : null}
         </div>
         <h3 className="font-bold text-text-primary group-hover:text-amber transition-colors line-clamp-1 text-lg">{sim.titulo}</h3>
@@ -65,7 +65,7 @@ export function SimulacoesCatalogoPage() {
   const nivel = sp.get('nivel') ?? '';
   const page = Number(sp.get('page') ?? '1');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<{ data: SimulacaoPublica[]; meta: { pageCount: number } }>({
     queryKey: ['catalogo-simulacoes', area, tipo, nivel, page],
     queryFn: () => catalogoApi.getSimulacoes({
       ...(area ? { area } : {}),
@@ -77,7 +77,7 @@ export function SimulacoesCatalogoPage() {
   });
 
   const sims = data?.data ?? [];
-  const pageCount = data?.meta?.pageCount ?? 1;
+  const pageCount = data?.meta.pageCount ?? 1;
 
   const set = (k: string, v: string) => {
     const next = new URLSearchParams(sp);
@@ -151,7 +151,7 @@ export function SimulacoesCatalogoPage() {
           <div className="py-24 text-center rounded-3xl border border-dashed border-border bg-surface-alt">
             <h3 className="text-lg font-bold text-text-primary">Nenhuma simulação ativa</h3>
             <p className="mt-2 text-sm text-text-secondary">Tenta ajustar os filtros de área ou método.</p>
-            <button onClick={() => setSp(new URLSearchParams())} className="mt-6 text-xs font-bold uppercase tracking-widest text-amber hover:underline">Limpar Filtros</button>
+            <button onClick={() => { setSp(new URLSearchParams()); }} className="mt-6 text-xs font-bold uppercase tracking-widest text-amber hover:underline">Limpar Filtros</button>
           </div>
         ) : (
           <>

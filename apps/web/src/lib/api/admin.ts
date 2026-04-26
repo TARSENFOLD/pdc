@@ -27,8 +27,8 @@ interface TelemetriaResponse {
 }
 
 interface RelatorioRetencao {
-  totalAlunos: number;
-  alunosAtivos: number;
+  totalEstudantes: number;
+  estudantesAtivos: number;
   taxaRetencao: number;
   semDados: boolean;
   totalEventos: number;

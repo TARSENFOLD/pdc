@@ -41,9 +41,9 @@ export interface PublicProfileResult {
   reputacaoTier: ReputacaoTier | null | undefined;
   headline: string | null | undefined;
   website: string | null | undefined;
-  socialLinks: any;
-  areasInteresse: any;
-  competencias: any;
+  socialLinks: unknown;
+  areasInteresse: unknown;
+  competencias: unknown;
 }
 
 /**
@@ -60,7 +60,7 @@ export function serializePublicProfile(
   const result: PublicProfileResult = {
     id: sid(perfil.id),
     nome: perfil.nome ?? '',
-    role: perfil.tipo ?? 'aluno',
+    role: perfil.tipo ?? 'estudante',
     reputacaoTier: perfil.reputacaoTier,
     avatarUrl: perfil.foto?.url ?? perfil.avatarUrl,
     headline: perfil.headline,
@@ -88,7 +88,7 @@ export function serializePrivateProfile(perfil: StrapiPerfil) {
     website: perfil.website,
     socialLinks: perfil.socialLinks,
     avatarUrl: perfil.foto?.url ?? perfil.avatarUrl,
-    role: perfil.tipo ?? 'aluno',
+    role: perfil.tipo ?? 'estudante',
     reputacao: perfil.reputacao ?? 0,
     reputacaoTier: perfil.reputacaoTier,
     areasInteresse: perfil.areasInteresse,

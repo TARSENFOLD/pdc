@@ -1,0 +1,26 @@
+# CodeRabbit Instructions — Frontend (apps/web)
+
+Foco total em Estética "Soul & Elite", Acessibilidade e Performance.
+
+## 🎨 Estética e Design System
+- **Soul & Elite**: Proibido usar `#000000` puro ou `#FFFFFF` puro (smear-free).
+- **Cores de Acento**: Terracota Africana `#D2691E` limitado a ≤ 5% da UI.
+- **Tipografia**:
+    - `Inter` para UI/Corpo.
+    - `Instrument Serif` para Títulos/Heros.
+    - `JetBrains Mono` para Dados/Scores.
+- **Glassmorphism**: Utilize efeitos de desfoque e transparência onde apropriado para profundidade.
+
+## 📱 Experiência Mobile-First (PWA)
+- **Acessibilidade**: Mínimo **44px** para qualquer elemento clicável.
+- **Instalabilidade**: Garantir presença de meta tags para Apple/Android.
+- **Performance**: Lighthouse score target ≥ 90.
+
+## 🏃 Animações e Física
+- ** GSAP/Motion**: Use springs com `stiffness: 220, damping: 28` (Física Apple).
+- **Choreography**: Animações devem ser fluidas e narrativas, não bruscas.
+
+## 🛠️ Práticas de Código
+- **React Components**: Utilize `export function ComponentName()`.
+- **Hooks**: Documentação JSDoc obrigatória para novos hooks.
+- **Zod**: Toda entrada de formulário deve ser validada com schemas de `@pdc/shared`.

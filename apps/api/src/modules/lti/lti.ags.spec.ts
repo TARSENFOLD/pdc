@@ -20,10 +20,9 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
   });
 
   it('deve enviar o score com sucesso (Happy Path 200 OK)', async () => {
-    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
-      ok: true,
-      json: async () => ({ status: 'success' }),
-    } as Response);
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ status: 'success' }), { status: 200 })
+    );
 
     const result = await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
 
@@ -41,10 +40,9 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
   });
 
   it('deve formatar a URL corretamente como ${lineitemUrl}/scores', async () => {
-    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    } as Response);
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({}), { status: 200 })
+    );
 
     await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
 
@@ -55,10 +53,9 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
   });
 
   it('deve validar o envelope JSON enviado no corpo da requisição', async () => {
-    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    } as Response);
+    const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({}), { status: 200 })
+    );
 
     await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
 
@@ -77,22 +74,18 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
   });
 
   it('deve lançar erro com status e body quando o LMS rejeita o score (4xx)', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue({
-      ok: false,
-      status: 400,
-      text: async () => 'Invalid payload format',
-    } as Response);
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response('Invalid payload format', { status: 400, statusText: 'Bad Request' })
+    );
 
     await expect(ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken))
       .rejects.toThrow('Falha ao enviar score LTI AGS: 400 - Invalid payload format');
   });
 
   it('deve lançar erro quando o LMS está indisponível (5xx)', async () => {
-    vi.spyOn(global, 'fetch').mockResolvedValue({
-      ok: false,
-      status: 503,
-      text: async () => 'Service Unavailable',
-    } as Response);
+    vi.spyOn(global, 'fetch').mockResolvedValue(
+      new Response('Service Unavailable', { status: 503, statusText: 'Service Unavailable' })
+    );
 
     await expect(ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken))
       .rejects.toThrow('Falha ao enviar score LTI AGS: 503 - Service Unavailable');

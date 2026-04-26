@@ -4,8 +4,8 @@ import { adminApi } from '@/lib/api/admin';
 import { Spinner, Card } from '@/components/ui';
 
 interface RelatorioRetencao {
-  totalAlunos: number;
-  alunosAtivos: number;
+  totalEstudantes: number;
+  estudantesAtivos: number;
   taxaRetencao: number;
   semDados: boolean;
   totalEventos: number;
@@ -30,12 +30,12 @@ export function AdminRelatoriosPage() {
       ) : null}
       <div className="grid gap-6 sm:grid-cols-3">
         <Card className="p-6">
-          <p className="text-sm font-medium text-text-secondary">Total Alunos</p>
-          <p className="mt-2 text-3xl font-bold text-amber">{data?.totalAlunos ?? 0}</p>
+          <p className="text-sm font-medium text-text-secondary">Total Estudantes</p>
+          <p className="mt-2 text-3xl font-bold text-amber">{data?.totalEstudantes ?? 0}</p>
         </Card>
         <Card className="p-6">
-          <p className="text-sm font-medium text-text-secondary">Alunos Ativos</p>
-          <p className="mt-2 text-3xl font-bold text-amber">{data?.alunosAtivos ?? 0}</p>
+          <p className="text-sm font-medium text-text-secondary">Estudantes Ativos</p>
+          <p className="mt-2 text-3xl font-bold text-amber">{data?.estudantesAtivos ?? 0}</p>
         </Card>
         <Card className="p-6">
           <p className="text-sm font-medium text-text-secondary">Taxa de Retenção</p>

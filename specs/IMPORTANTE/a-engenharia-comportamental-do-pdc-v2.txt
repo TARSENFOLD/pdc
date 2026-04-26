@@ -1,0 +1,93 @@
+Caetano José (00:00.014)
+Imagine the following scenario. A student finishes a online He clicked on all the correct solved the problem within the time limit and feels that he had absolutely perfect The expectation is to a maximum of course. Exactly. But the system returns a median Why? Because during the simulation...
+
+The hesitated a thousand more before confirming certain choices. Like the course's was wrong and it wasn't straight to the goal? Not more. And the platform, completely silent, deduced that he wasn't sure what he was doing. In words, the physical behavior dictated the final It's a telemetry that transforms completely the way we evaluate proficiency. We're looking at the final but at the biomechanics of the trip.
+
+It's fascinating. And is precisely this invisible that we are going to in our analysis today. We a monumental of documentation on the project PDCV2 the one inside the course. Yes, we are talking about a massive of architecture decision the famous ADRs, dozens of Tracer markdown user it's a gold Our mission today
+
+is to deconstruct how a team managed to create an educational of a global class. A platform that crosses that utilitarian like Silicon Valley, with the cultural roots of Angola. And all this while ensuring an infrastructure for proof of fraud and a documentation that dictates the law of the project. Right, let's unpack this. To understand the magnitude of PDCV2, I think have to start from the beginning. By the skin of the system, let's say.
+
+the visual interface. No doubt. Before diving into the and data, we have to understand how the system dialogues with people. And the documents, the ADR 006 and the 015, show that this drawing was real minefield. A minefield? How? I was afraid to make in the They had to navigate a very thin They needed a visual identity. But if they into the obvious of ...
+
+Caetano José (02:17.426)
+injecting intense of the Angolan or elements too folkloric, the project would soon categorized as a niche A purely governmental And for corporate and B2B this destroys the perception of sophistication, No one wants a scientific simulation to look like pamphlet. Exactly. has inspire almost surgical So their solution was to adopt a concept they called invisible
+
+Invisible I like the term. How does into practice? Basically, they a pattern that mirrors the native progressive web apps of Apple, they used libraries such React Motion to ensure that the inertia of scrolls and the physics of animations are absolutely identical to what you on iPhone. So, a global and hyper-polished But where does that ingolent in in the middle of this whole Apple It in what they call the Ubuntu of design.
+
+Under all this mathematical they the very subliminal Your fantastic But how is this programmed? Because the CSS does not understand cultural philosophies. The CSS understands exact decimal, cranes and margins How do you the butt in the code? Through very chromatic
+
+The first rule they was the annihilation of pure and black. Really? The normal cardinal and 6F? Yes, well-known. The standard application is not that hospital white that we are used to. It is a very specific off-white, derived from sand and mud It therefore a different And the Imagine that a black on that background does work very well? Exactly. The uses grayish-brown to reduce the excessive
+
+that causes visual But the dark is the big detail here. They completely pure Oh, of course. Because the absolute in the OLED turns off even the pixels, which causes that horrible of smear, when we scroll. Not even more, besides the halo in the text, of So they opted for a very deep And for the highlight color, the accent, they away from the typical electric of technology. Where go?
+
+Caetano José (04:34.478)
+they a cure that they African terracotta. They create a completely different It's not Facebook's blue, you It much more static This is to a brilliant detail that I from the on the buttons' They took the sacred of UI, which asymmetry, and subverted it completely. There are asymmetric
+
+It's one of the most intelligent of the Tailwind CSS that I recently It's quite impressive. Instead of simply putting a rounded MD in the code to have uniform they mixed A higher right rounded, but the opposite too. And the others didn't. This emulates the geometric of traditional African like the Zadinkra Kente This where the thing gets really interesting. Because...
+
+The regular won't look at it and think, hmm, nice tribute to the hot But subconsciously, that button breaks the corporate visual monotony. It's what you about invisible It's perfect between the global and the local. It reminds me of high-end gastronomy. Like when a chef with Michelin used a classic French reduction but deep down there are local Angolan The customer feels the familiarity in the palate
+
+but technical remains there, immaculate. This analogy is excellent and notice that this philosophy of accessibility goes far beyond the visual aspect, transcends the language of the system itself. ADR017 discusses the copy, the platform Because it's no use having beautiful if the texts seem to a flight of a space I in the notes that there was a central that had been temporarily as
+
+Cognitive Command Center. A terrible name for a user. Just like what Tom Cruise would in an action It's a terrible Completely alienating for a student. And that's why they up what they call the 8th grade The so-called Cognitive Command Center became just a decision panel. Their dogma is clear. If a student in 8th year doesn't understand the intuitively, the design failed. Regardless of how brilliant the code behind it
+
+Caetano José (06:53.838)
+They off English necessary. But this leads us to a critical Having a and accessible is not of use if it is fed by corrupted No doubt. Going from design to metrics is the true test of the system. Because we are talking about a platform that certifies skills. If the system measures behaviors, how do you those who try to poison simulations to get better grades? This is the nervous of the PDCV2.
+
+The anti-fraud engineering and system reveal a brutal called double layer of sanity. Sanity dual layer. How does work in practice? By the client, first defense does not even run on their main right? True. It runs on the network's periphery, on Edge, using Cloudflare's The second layer runs later on the backend for frontend, BBFF. So they validate the clicks right on the server
+
+closer to the user's before the information even touches the infrastructure. It's kind of latency Imagine that the system tries process a check with the morning It's logically impossible. The worker on Edge looks at the click timestamp and if it's a click that comes from the future, they it right outside. And if it's a bot, clicks very fast. Exactly. If a script is sending clicks at 50 Hz...
+
+Or if the time of stay in the module is negative, typical of scammers, the event is pulverized on the border. The main doesn't even see that ghost And user gets a screen saying it was blocked? No, not all. The visual for those are trying to is still perfectly normal, but telemetry has already silently them for forensic A shadow band purely network-level. Wow. That explains that absolutely surreal I found in the documentation, the such bug of the score 8.5.
+
+This case of R2T4 is classic engineering one. The front-end of the simulation, running in the student's was in a loop. It was constantly sending a score of 8.5 Everyone had 8.5. If they absolute geniuses, they could everything. What made me that trusting the client in the browser to declare their own score is a fatal in architecture. The browser is an inherently hostile, manipulable So their was...
+
+Caetano José (09:16.046)
+When you the front-end the client can say, look, I a 10. It's just a passive that sends coordinates X and Y and scroll Which means that BFF, the back-end, reconstructs every second of the simulation on the server and derives the score entirely through behavioral But wait, the computational of that must be absurd. Recalculating...
+
+of mouse movement for thousands of students. What they do with all math? They developed an auristic that extracts four dimensions of the mechanical of the mouse. Fluidity, resilience, focus stability and hesitation. The hesitation from beginning of our conversation? Exactly. The focus stability does see only if you the separator in the It measures micro interruptions in attention. Fluidity calculates if you decisions at a constant or if you chaotic activity
+
+And what does It a BentoGrad, a very dynamic If a mentor looks at the student's he metrics of class. If the student looks, he sees his days followed by study, the streaks and the talent bounties, are corporate partner OK, but you're forced to be a devil's By measuring hesitation through the mouse, the system does take a huge risk of punishing a guy who is just thinking deeply. Imagine, you have a complex
+
+The mouse is stopped while you The system will think it's ignorant and reward the type that clicks instinctively. What's fascinating here is precisely how they solved this. They managed to isolate the mechanical of the real cognitive How? The engine knows what the context is. A mouse stopped for long time before a click on a complex does suffer penalty. The algorithm understands the cognitive of that graph. So what does confusion
+
+The cursor to make trajectories in the of 8, travel repeatedly erratically between two competing or try to click buttons deactivated successively, modelled the entropy of the movement and not just the time. In words, they mechanical Makes sense. But processing this mountain of behavioral in real time forces us to look at the technical skeleton that holds all this. In order not to under its own weight, the infrastructure has to be made iron.
+
+Caetano José (11:38.352)
+It And this where the most dictatorial polarizing of this team The dogma of the Doc is Law. The document is the law. I confess that I was when I read their of refactoring phase 1, 2 and 3. They operate on an documentary Without taking anything for No line logic, not a single if or else can be sent to production without being described in a Markdown The document is the supreme
+
+What if there is a discrepancy? Imagine that the code does one thing and the document says another. If the code contradicts the markdown, the code is considered defective. The document to justify the code. Never. The code is paid or rewritten to comply with the document law. We saw the dramatic of this in that incident of the achievements in the system. The achievements.
+
+Later, it the classic the code was looking for events that simply did exist in official system conclusion, students were doing simulations and dozens of conquests never stopped. The instinctive of any normal would to go to the code and put a fix to solve it. But no, under the law of the Docslaw. The resolution of this problem required that the taxonomy of events first in the central
+
+and then could alter the code. If we link this to overview of If we look at the general of modern development...
+
+We that it a master's in the long run. What do It can cause lot of of but when you your domain mapped exhaustively and without textual artificial intelligence becomes exponentially more effective, you see? IA can read DocuSlaw's markdowns. Exactly. IA reads the law and can generate texts or re-borrow the code.
+
+Caetano José (13:58.32)
+perfectly aligned with the business rules. Trying put an AI to deduce what the company wants from a poorly documented is an absolute disaster. Therefore, by forcing this bureaucracy now, they preparing to scale with autonomous in the future. Brilliant! And that also justifies the version of them to the heavy technologies that they in the decision-making Yes, they have an obsession for simplicity. In the DDR001 and 002,
+
+They immediately TurboRipo in favor of a simple NPM Their was hilarious. As the platform's was already below 30 seconds, there was no reason to bring the complexity of TurboRipo's But the BFF was the that left me perplexed. They left aside the big corporations like NSJS, right? Exactly. Everyone uses NSJS nowadays for these things and they went to disenchant a much lighter framework, the UN.
+
+The NestJS is super powerful, but it brings a heavy injection of dependencies that inflates memory. And the solved a very specific for the strict from end end with TypeScript. Through that RPC the Remote Procedure Call, Right. As the UN shares the definition of the routes directly with the client, if an engineer changes the name of a variable in the UserID to ID Utilizador, in Portuguese,
+
+the frontend refuses to compile instantly. impossible for the client to wait for an apple and the server sends a pear. The system simply doesn't start. And to make life for programmers, they even added the ADR 016 No code in production can have more 300 lines. This forces an incredible For those who work with legacy where a file has 5,000 lines and does everything, this seems magic. You have to model up to the totem
+
+If the FSHARE tries to process the data and send the email to be runs out of lines and has to be split. It forces the rigorous of responsibilities. And speaking of separating responsibilities, we can't forget how they take the critical information out of Because the final grades, the so-called heuristics, have to academic of universities via LTI And we know that external are always failing. If the is low, they use the Outbox Pattern.
+
+Caetano José (16:26.96)
+Think of this as a mail in a mail, where the is your own local database. So, when the student finishes the simulation, their doesn't even try to to the university? It even try. The first that note, that load of in a safe on your own server. The event is guaranteed Only after an independent that runs in background reads that table and then tries to deliver it externally. And what the university rejects the connection?
+
+The is going in the outbox. That service will repeatedly try, with ever-increasing to accept university and only then mark the message with a delivery. It's impressive No note evaporates in the ether just because a load in Boston had a network The architecture is armored. But of nothing prevents human I saw the incident that really them. Ah, leak of Cloudflare R2 Well...
+
+Real were in pure in a simple planning The detector team looked for the keys in minutes, but the panic was real. It was a serious but very pedagogical It triggered a draconian of zero secrets in files. was all done through variables of environments managed outside the repository. The system evolved at expense of the human So what all this mean? It means that by deconstructing all this documentation of the V2
+
+we find just another e-learning We a manifesto. A system that adopts an invisible, super elegant accessible to a young man in 8th year, refusing any barrier of jargon. And that the time, unquestionably, frauds on the of the network, forcing a telemetry that not evaluates the declared but the pure biometric and cognitive of those who use them.
+
+All supported by an infrastructure that prefers the strict of an OV4 to the gigantic market, that hates long and that veners the documentary so that the future we scale with artificial And that, in end, us to rethink our relationship with digital You this raises an important As these platforms with biometric telemetry become norm, how are we humans going to react? When students realize that each acceleration of the mouse counts for us.
+
+Caetano José (18:49.1)
+Exactly. Will they start training their biomechanics Imagine practicing the choreography of clicks on the screen to pretend to mental fluidity that they actually don't have, just to fool the algorithm? Humans trying to behave like absolute precision just to the test of an artificial intelligence created to read natural The supreme of technology.
+
+It is the future of interfaces that creates a new generation of unintentional And with this fantastic we close another deep of the invisible of technology. We hope this dive makes you least think twice before visiting with the mouse the next time you click a button. The decisions we are today are building the fabric of our future. Keep exploring and until next analysis.
+

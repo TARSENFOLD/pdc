@@ -38,6 +38,9 @@
     "duracaoSegundos": { "type": "integer" },
     "startedAt": { "type": "datetime" },
     "finishedAt": { "type": "datetime" },
+    "dataInicio": { "type": "datetime" },
+    "dataFim": { "type": "datetime" },
+    "metadata": { "type": "json" },
     "logsExecucao": { "type": "json" },
     "outputExecucao": { "type": "json" }
   }

@@ -36,7 +36,7 @@ const COPY: Record<AuthRole, { headline: string; bullets: string[] }> = {
   },
 };
 
-/* Enhanced pencil SVG — more detailed and premium */
+/* Enhanced pencil SVG - more detailed and premium */
 function PencilIllustration() {
   return (
     <svg
@@ -91,7 +91,7 @@ export function AuthSplitLayout({ role, children }: AuthSplitLayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Left branding panel — hidden on mobile */}
+      {/* Left branding panel - hidden on mobile */}
       <div className="hidden w-1/2 flex-col items-center justify-center bg-surface px-12 text-center lg:flex">
         <Link to="/" className="mb-10 text-2xl font-bold tracking-tight text-amber">
           PDC
@@ -117,7 +117,7 @@ export function AuthSplitLayout({ role, children }: AuthSplitLayoutProps) {
 
       {/* Right form panel */}
       <div className="flex w-full flex-col lg:w-1/2">
-        {/* Back link — visible on both mobile (top) and desktop (top-left of form area) */}
+        {/* Back link - visible on both mobile (top) and desktop (top-left of form area) */}
         <div className="p-4 lg:p-8">
           <Link to="/criar-conta" className="inline-flex items-center gap-2 text-sm font-medium text-amber hover:text-amber-hover transition-colors">
             <ArrowLeft size={18} aria-hidden={true} />

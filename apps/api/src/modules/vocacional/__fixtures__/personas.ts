@@ -1,7 +1,7 @@
 import type { Tentativa } from '@pdc/shared';
 
 export interface PersonaFixture {
-  alunoId: string;
+  estudanteId: string;
   nome: string;
   arquétipo: string;
   area: string;
@@ -10,7 +10,7 @@ export interface PersonaFixture {
 
 export const personas: PersonaFixture[] = [
   {
-    alunoId: 'aluno-cirurgiao',
+    estudanteId: 'estudante-cirurgiao',
     nome: 'O Cirurgião',
     arquétipo: 'O Cirurgião',
     area: 'Saúde',
@@ -23,7 +23,7 @@ export const personas: PersonaFixture[] = [
     ],
   },
   {
-    alunoId: 'aluno-hacker',
+    estudanteId: 'estudante-hacker',
     nome: 'O Hacker Hesitante',
     arquétipo: 'O Hacker Hesitante',
     area: 'Tecnologia',
@@ -37,7 +37,7 @@ export const personas: PersonaFixture[] = [
     ],
   },
   {
-    alunoId: 'aluno-gestor-impulsivo',
+    estudanteId: 'estudante-gestor-impulsivo',
     nome: 'O Gestor Impulsivo',
     arquétipo: 'O Gestor Impulsivo',
     area: 'Gestão',
@@ -53,7 +53,7 @@ export const personas: PersonaFixture[] = [
     ],
   },
   {
-    alunoId: 'aluno-engenheiro-focado',
+    estudanteId: 'estudante-engenheiro-focado',
     nome: 'Engenheiro Focado',
     arquétipo: 'Estável',
     area: 'Engenharia',
@@ -65,7 +65,7 @@ export const personas: PersonaFixture[] = [
     ],
   },
   {
-    alunoId: 'aluno-artista-explorador',
+    estudanteId: 'estudante-artista-explorador',
     nome: 'O Artista Explorador',
     arquétipo: 'Explorador',
     area: 'Artes',
@@ -79,7 +79,7 @@ export const personas: PersonaFixture[] = [
     ],
   },
   {
-    alunoId: 'aluno-cientista-social',
+    estudanteId: 'estudante-cientista-social',
     nome: 'O Cientista Social',
     arquétipo: 'Persistente',
     area: 'Ciências Sociais',
@@ -92,7 +92,7 @@ export const personas: PersonaFixture[] = [
     ],
   },
   {
-    alunoId: 'aluno-transicao',
+    estudanteId: 'estudante-transicao',
     nome: 'Estudante em Transição',
     arquétipo: 'Pivô Vocacional',
     area: 'Saúde -> Tecnologia',
@@ -105,7 +105,7 @@ export const personas: PersonaFixture[] = [
     ],
   },
   {
-    alunoId: 'aluno-procrastinador',
+    estudanteId: 'estudante-procrastinador',
     nome: 'O Procrastinador',
     arquétipo: 'Baixo Volume',
     area: 'Tecnologia',
@@ -115,7 +115,7 @@ export const personas: PersonaFixture[] = [
     ],
   },
   {
-    alunoId: 'aluno-mestre-gestao',
+    estudanteId: 'estudante-mestre-gestao',
     nome: 'O Mestre da Gestão',
     arquétipo: 'Elite',
     area: 'Gestão',
@@ -133,8 +133,8 @@ export const personas: PersonaFixture[] = [
     ],
   },
   {
-    alunoId: 'aluno-erratico',
-    nome: 'O Aluno Errático',
+    estudanteId: 'estudante-erratico',
+    nome: 'O Estudante Errático',
     arquétipo: 'Dados Incompletos',
     area: 'Desconhecida',
     tentativas: [

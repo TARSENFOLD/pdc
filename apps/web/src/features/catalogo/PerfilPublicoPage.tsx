@@ -5,6 +5,7 @@ import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Avatar, Badge, Card, Button } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { PerfilCompleto } from '@pdc/shared';
 
 export function PerfilPublicoPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,13 +16,13 @@ export function PerfilPublicoPage() {
     enabled: !!id,
   });
 
-  const perfil = res?.data;
+  const perfil = res?.data as PerfilCompleto;
 
   if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><Spinner size="lg" /></div>;
-  if (isError || !perfil) return <div className="flex min-h-screen items-center justify-center bg-background p-4"><EmptyState icon={User} title="Perfil não encontrado" description="O perfil que procuras não existe ou não está disponível publicamente." /></div>;
+  if (isError) return <div className="flex min-h-screen items-center justify-center bg-background p-4"><EmptyState icon={User} title="Perfil não encontrado" description="O perfil que procuras não existe ou não está disponível publicamente." /></div>;
 
   const roleLabel: Record<string, string> = {
-    aluno: 'Estudante',
+    estudante: 'Estudante',
     mentor: 'Mentor Especialista',
     instituicao: 'Instituição',
     moderador: 'Moderador',
@@ -30,11 +31,13 @@ export function PerfilPublicoPage() {
   };
 
   const roleColor: Record<string, string> = {
-    aluno: 'text-amber bg-amber/10 border-amber/20',
+    estudante: 'text-amber bg-amber/10 border-amber/20',
     mentor: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
     instituicao: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     moderador: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
   };
+
+  const linkedinLink = perfil.socialLinks.find(link => link.platform === 'linkedin');
 
   return (
     <div className="min-h-screen bg-background px-4 py-20 sm:px-8">
@@ -63,7 +66,6 @@ export function PerfilPublicoPage() {
                 {roleLabel[perfil.role] || perfil.role}
               </div>
               <h1 className="text-3xl font-black tracking-tight text-text-primary sm:text-4xl">{perfil.nome}</h1>
-              {perfil.headline && <p className="mt-2 text-lg font-medium text-text-secondary leading-relaxed">{perfil.headline}</p>}
               
               <div className="mt-6 flex flex-wrap justify-center sm:justify-start gap-4">
                 <Button className="rounded-xl px-8 font-bold">Conectar</Button>
@@ -106,22 +108,22 @@ export function PerfilPublicoPage() {
                     <MapPin size={16} className="text-amber" /> {perfil.regiao}
                   </div>
                 )}
-                {perfil.areaEspecialidade && (
+                {perfil.areaInteresse && (
                   <div className="flex items-center gap-3 text-sm text-text-secondary">
-                    <Briefcase size={16} className="text-amber" /> {perfil.areaEspecialidade}
+                    <Briefcase size={16} className="text-amber" /> {perfil.areaInteresse}
                   </div>
                 )}
               </div>
 
-              {(perfil.website || perfil.socialLinks) && (
+              {(perfil.website || perfil.socialLinks.length > 0) && (
                 <div className="mt-8 pt-6 border-t border-border flex gap-3">
                   {perfil.website && (
                     <a href={perfil.website} target="_blank" rel="noopener noreferrer" className="h-10 w-10 flex items-center justify-center rounded-xl bg-surface-raised border border-border text-text-muted hover:text-amber hover:border-amber/30 transition-all">
                       <Globe size={18} />
                     </a>
                   )}
-                  {perfil.socialLinks?.linkedin && (
-                    <a href={perfil.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="h-10 w-10 flex items-center justify-center rounded-xl bg-surface-raised border border-border text-text-muted hover:text-amber hover:border-amber/30 transition-all">
+                  {linkedinLink && (
+                    <a href={linkedinLink.url} target="_blank" rel="noopener noreferrer" className="h-10 w-10 flex items-center justify-center rounded-xl bg-surface-raised border border-border text-text-muted hover:text-amber hover:border-amber/30 transition-all">
                       <svg fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.761 0 5-2.239 5-5v-14c0-2.761-2.239-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
                     </a>
                   )}
@@ -131,9 +133,9 @@ export function PerfilPublicoPage() {
 
             <Card className="p-6 border-border bg-surface shadow-sm rounded-2xl">
               <h3 className="text-sm font-black uppercase tracking-widest text-text-muted mb-4">Competências</h3>
-              {perfil.competencias && perfil.competencias.length > 0 ? (
+              {perfil.areasInteresse.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {perfil.competencias.map((comp: string) => (
+                  {perfil.areasInteresse.map((comp) => (
                     <Badge key={comp} variant="outline" className="text-[10px] font-bold border-border bg-white/5">{comp}</Badge>
                   ))}
                 </div>

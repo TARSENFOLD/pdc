@@ -46,6 +46,7 @@
     "preco": { "type": "decimal" },
     "moeda": { "type": "string", "default": "USD" },
     "thumbnailUrl": { "type": "string" },
+    "regrasAcesso": { "type": "json" },
     "objetivos": { "type": "text" },
     "requisitos": { "type": "text" },
     "syllabus": { "type": "text" },

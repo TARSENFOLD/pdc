@@ -21,7 +21,7 @@ const REGIOES = [
 
 function InstCard({ inst }: { inst: InstituicaoPublica }) {
   return (
-    <Link to={`/instituicoes/${inst.slug ?? inst.id}`} className="group">
+    <Link to={`/instituicoes/${String(inst.slug ?? inst.id)}`} className="group">
       <Card interactive className="p-6 border-border bg-surface hover:border-amber/30 transition-all h-full flex flex-col">
         <div className="flex items-center gap-4">
           <div className="h-16 w-16 shrink-0 flex items-center justify-center rounded-2xl bg-surface-raised border border-border group-hover:border-amber/20 transition-all overflow-hidden">
@@ -65,7 +65,7 @@ export function InstituicoesCatalogoPage() {
   });
 
   const insts = data?.data ?? [];
-  const pageCount = data?.meta?.pageCount ?? 1;
+  const pageCount = data?.meta.pageCount ?? 1;
 
   const set = (k: string, v: string) => {
     const next = new URLSearchParams(sp);
@@ -132,7 +132,7 @@ export function InstituicoesCatalogoPage() {
           <div className="py-24 text-center rounded-3xl border border-dashed border-border bg-surface-alt">
             <h3 className="text-lg font-bold text-text-primary">Nenhuma instituição encontrada nestas condições</h3>
             <p className="mt-2 text-sm text-text-secondary">Tenta expandir a tua pesquisa para outras regiões ou tipos.</p>
-            <button onClick={() => setSp(new URLSearchParams())} className="mt-6 text-xs font-bold uppercase tracking-widest text-amber hover:underline">Remover Filtros</button>
+            <button onClick={() => { setSp(new URLSearchParams()); }} className="mt-6 text-xs font-bold uppercase tracking-widest text-amber hover:underline">Remover Filtros</button>
           </div>
         ) : (
           <>

@@ -21,6 +21,29 @@ export interface BatchResult {
   results: Array<{ eventId: string; ok: boolean; duplicado?: boolean }>;
 }
 
+const CIRCUIT_BREAKER_KEY = 'pdc:telemetry:circuit';
+const FAILURE_THRESHOLD = 3;
+const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos
+
+interface CircuitState {
+  consecutiveFailures: number;
+  openUntil: number;
+}
+
+const getCircuitState = (): CircuitState => {
+  try {
+    const raw = localStorage.getItem(CIRCUIT_BREAKER_KEY);
+    return raw ? JSON.parse(raw) : { consecutiveFailures: 0, openUntil: 0 };
+  } catch {
+    return { consecutiveFailures: 0, openUntil: 0 };
+  }
+};
+
+const updateCircuitState = (state: Partial<CircuitState>) => {
+  const current = getCircuitState();
+  localStorage.setItem(CIRCUIT_BREAKER_KEY, JSON.stringify({ ...current, ...state }));
+};
+
 export const telemetriaService = {
   registarEvento: async (tipo: TelemetriaTipo, payload: Record<string, unknown>, token?: string) => {
     const eventId = crypto.randomUUID();
@@ -42,11 +65,14 @@ export const telemetriaService = {
   registarBatch: async (events: TelemetriaEvento[], token?: string): Promise<BatchResult | undefined> => {
     if (events.length === 0) return;
 
-    // 1. Tentar Rota Soberana do Edge (Cloudflare)
-    if (token) {
+    const circuit = getCircuitState();
+    const isCircuitOpen = circuit.openUntil > Date.now();
+
+    // 1. Tentar Rota Soberana do Edge (Cloudflare) - Se circuito fechado e houver token
+    if (token && !isCircuitOpen) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+        const timeoutId = setTimeout(() => { controller.abort(); }, 1500); // 1.5s timeout (Transcript mandated)
 
         const response = await fetch(`${EDGE_URL}/telemetria/batch`, {
           method: 'POST',
@@ -61,11 +87,27 @@ export const telemetriaService = {
         clearTimeout(timeoutId);
 
         if (response.ok) {
+          // Sucesso: resetar falhas
+          updateCircuitState({ consecutiveFailures: 0, openUntil: 0 });
           return { ok: true, results: events.map(e => ({ eventId: e.eventId, ok: true })) };
+        } else if (response.status >= 500) {
+          // Erro de servidor: conta para o circuit breaker
+          throw new Error(`Edge error: ${response.status}`);
         }
-      } catch (err) {
+      } catch (err: any) {
         // Fallback natural caso o Edge esteja indisponível (timeout, rede, erro 500)
-        console.warn('Edge Worker falhou, fallback ativo para BFF', err);
+        console.warn('Edge Worker falhou ou timeout, incrementando circuit breaker', err);
+        
+        const nextFailures = circuit.consecutiveFailures + 1;
+        if (nextFailures >= FAILURE_THRESHOLD) {
+          console.error('Circuit Breaker ABERTO para Telemetria Edge (5 min de cooldown)');
+          updateCircuitState({ 
+            consecutiveFailures: nextFailures, 
+            openUntil: Date.now() + COOLDOWN_MS 
+          });
+        } else {
+          updateCircuitState({ consecutiveFailures: nextFailures });
+        }
       }
     }
 

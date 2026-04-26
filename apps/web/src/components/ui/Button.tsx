@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Slot } from '@radix-ui/react-slot';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
   size?: 'sm' | 'md' | 'lg' | 'icon';
   isLoading?: boolean;
   asChild?: boolean;
@@ -14,17 +14,18 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const Component = asChild ? Slot : 'button';
 
     const variants = {
-      primary: 'bg-accent text-white hover:bg-accent-hover border-transparent shadow-lg shadow-accent/10',
-      secondary: 'bg-surface-raised text-text-primary hover:bg-white/5 border-white/5',
-      ghost: 'bg-transparent text-text-secondary hover:bg-white/5 border-transparent',
-      danger: 'bg-error/10 text-error hover:bg-error/20 border-error/20',
+      primary: 'bg-accent text-ink-on-accent hover:bg-accent-soft border-transparent shadow-lg shadow-accent/10 asymmetric-a',
+      secondary: 'bg-recessed text-ink-primary hover:bg-canvas/50 border-ink-tertiary/10',
+      ghost: 'bg-transparent text-ink-secondary hover:bg-recessed border-transparent',
+      danger: 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20',
+      outline: 'bg-transparent text-ink-primary hover:bg-recessed border-ink-tertiary/10 hover:border-ink-tertiary/30',
     };
 
     const sizes = {
-      sm: 'h-8 px-3 text-xs',
-      md: 'h-10 px-4 text-sm',
-      lg: 'h-12 px-6 text-base',
-      icon: 'h-10 w-10 p-0',
+      sm: 'h-11 px-4 text-xs', // Min 44px
+      md: 'h-11 px-5 text-sm',
+      lg: 'h-14 px-8 text-base',
+      icon: 'h-11 w-11 p-0',
     };
 
     return (
@@ -32,7 +33,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || isLoading}
         className={cn(
-          'inline-flex items-center justify-center rounded-xl font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:cursor-not-allowed border active:scale-[0.98]',
+          'inline-flex items-center justify-center rounded-md font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:cursor-not-allowed border active:scale-[0.98] touch-target',
           variants[variant],
           sizes[size],
           className

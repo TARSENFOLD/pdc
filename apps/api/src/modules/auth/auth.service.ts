@@ -31,7 +31,7 @@ interface StrapiPerfilData {
 }
 
 const VALID_ROLES: Set<string> = new Set([
-  'aluno', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin',
+  'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin', 'patrocinador',
 ]);
 
 function resolveRole(strapiRoleName: string | undefined, perfilTipo: string | undefined): Role {
@@ -39,10 +39,14 @@ function resolveRole(strapiRoleName: string | undefined, perfilTipo: string | un
     return perfilTipo as Role;
   }
   const normalized = strapiRoleName?.toLowerCase();
+  
+  // Mapeamento de legado/apelidos para canónico
+  if (normalized === 'estudante') return 'estudante';
+
   if (normalized && VALID_ROLES.has(normalized)) {
     return normalized as Role;
   }
-  return 'aluno';
+  return 'estudante';
 }
 
 function hashToken(token: string): string {
@@ -96,7 +100,7 @@ export const authService = {
   },
 
   async register(email: string, password: string, nome: string): Promise<User> {
-    return this.registerWithRole(email, password, nome, 'aluno', {});
+    return this.registerWithRole(email, password, nome, 'estudante', {});
   },
 
   async registerWithRole(
@@ -157,7 +161,7 @@ export const authService = {
     await strapiPost('/perfis', {
       userId,
       nome,
-      tipo: 'aluno',
+      tipo: 'estudante',
       email,
       ativo: true,
     });
@@ -171,6 +175,7 @@ export const authService = {
       email: u.email,
       nome: perfil?.nome ?? u.nome ?? u.username,
       role: resolveRole(u.role?.name, perfil?.tipo),
+      perfilId: perfil?.id ? String(perfil.id) : undefined,
       avatarUrl: perfil?.foto?.url ?? u.avatar?.url,
       reputacaoTier: getTier(reputationScore),
       createdAt: u.createdAt ?? new Date().toISOString(),

@@ -29,7 +29,7 @@ export function RegistoInstituicaoPage() {
     email: '', 
     password: '', 
     regiao: '', 
-    tipo: 'universidade' as any, 
+    tipo: 'universidade' as RegistoInstituicaoPayload['tipo'], 
     nif: '',
   });
   const [docFile, setDocFile] = useState<File | null>(null);
@@ -44,8 +44,8 @@ export function RegistoInstituicaoPage() {
     onError: (err: unknown) => {
       let message = 'Erro ao criar conta.';
       if (err instanceof ApiError) {
-        const body = err.body as Record<string, unknown> | undefined;
-        if (typeof body?.error === 'string') message = body.error;
+        const body = err.body as { error?: string } | null;
+        if (body?.error) message = body.error;
       } else if (err instanceof Error) {
         message = err.message;
       }
@@ -53,7 +53,7 @@ export function RegistoInstituicaoPage() {
     },
   });
 
-  function handleChange<K extends keyof typeof form>(key: K, value: any) {
+  function handleChange<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -116,7 +116,7 @@ export function RegistoInstituicaoPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-text-secondary">Tipo</label>
-              <select required value={form.tipo} onChange={(e) => { handleChange('tipo', e.target.value); }}
+              <select required value={form.tipo} onChange={(e) => { handleChange('tipo', e.target.value as RegistoInstituicaoPayload['tipo']); }}
                 className="flex h-10 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
                 {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>

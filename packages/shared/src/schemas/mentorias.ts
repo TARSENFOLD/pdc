@@ -11,7 +11,7 @@ export type MentoriaEstado = z.infer<typeof MentoriaEstadoSchema>;
 
 export const MentoriaSchema = z.object({
   id: z.string(),
-  alunoId: z.string(),
+  estudanteId: z.string(),
   mentorId: z.string(),
   mensagem: z.string(),
   estado: MentoriaEstadoSchema,

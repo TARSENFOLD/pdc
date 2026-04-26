@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiGet, strapiPut } from '../modules/strapi/strapi.client.js';
+import { eventBus } from '../modules/events/event-bus.js';
+import { DomainEventName } from '../modules/events/types.js';
 
 type Vars = { Variables: AuthVariables };
 export const programaRoutes = new Hono<Vars>();
@@ -10,7 +12,7 @@ programaRoutes.use('*', verifyJwt);
 interface StrapiPrograma {
   id: string;
   perfilId?: string;
-  metadata?: any;
+  metadata?: unknown;
 }
 
 // GET /programas/meus
@@ -32,7 +34,7 @@ programaRoutes.get('/meus', async (c) => {
     });
 
     return c.json(res);
-  } catch (err) {
+  } catch (_err) {
     return c.json({ error: 'Erro ao carregar teus programas' }, 502);
   }
 });
@@ -66,8 +68,14 @@ programaRoutes.post('/:id/concluir', async (c) => {
       }
     });
 
+    // G15: Impacto no Ecossistema
+    await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_CONCLUIDO, {
+      programaId,
+      perfilId: String(perfilId),
+    });
+
     return c.json({ success: true });
-  } catch (err) {
+  } catch (_err) {
     return c.json({ error: 'Erro ao concluir programa' }, 502);
   }
 });

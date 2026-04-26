@@ -2,7 +2,7 @@ const CACHE_NAME = 'pdc-v2';
 const ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.webmanifest'
 ];
 
 self.addEventListener('install', (event) => {

@@ -23,15 +23,15 @@ function Table<T extends { id?: string | number }>({
   onRowClick,
 }: TableProps<T>) {
   return (
-    <div className={cn('w-full overflow-auto rounded-xl border border-border bg-surface', className)}>
+    <div className={cn('w-full overflow-auto rounded-lg border border-ink-tertiary/10 bg-elevated', className)}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border bg-surface-raised/50">
+          <tr className="border-b border-ink-tertiary/10 bg-recessed/50">
             {columns.map((column, index) => (
               <th
                 key={index}
                 className={cn(
-                  'px-4 py-3 text-left font-semibold text-text-secondary first:pl-6 last:pr-6',
+                  'px-4 py-3 text-left font-semibold text-ink-secondary first:pl-6 last:pr-6',
                   column.className
                 )}
               >
@@ -40,14 +40,14 @@ function Table<T extends { id?: string | number }>({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-border/50">
+        <tbody className="divide-y divide-ink-tertiary/5">
           {data.length > 0 ? (
             data.map((item, rowIndex) => (
               <tr
                 key={item.id ?? rowIndex}
                 onClick={() => onRowClick?.(item)}
                 className={cn(
-                  'transition-colors hover:bg-surface-raised',
+                  'transition-colors hover:bg-recessed',
                   onRowClick && 'cursor-pointer'
                 )}
               >
@@ -55,7 +55,7 @@ function Table<T extends { id?: string | number }>({
                   <td
                     key={colIndex}
                     className={cn(
-                      'px-4 py-3 text-text-primary first:pl-6 last:pr-6',
+                      'px-4 py-3 text-ink-primary first:pl-6 last:pr-6',
                       column.className
                     )}
                   >
@@ -70,7 +70,7 @@ function Table<T extends { id?: string | number }>({
             <tr>
               <td
                 colSpan={columns.length}
-                className="px-4 py-10 text-center text-text-muted"
+                className="px-4 py-10 text-center text-ink-tertiary"
               >
                 {emptyMessage}
               </td>

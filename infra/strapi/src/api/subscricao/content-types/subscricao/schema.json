@@ -33,6 +33,8 @@
     "inicioEm": { "type": "datetime" },
     "fimEm": { "type": "datetime" },
     "valorPago": { "type": "decimal" },
-    "moeda": { "type": "string" }
+    "moeda": { "type": "string" },
+    "features": { "type": "json" },
+    "quotas": { "type": "json" }
   }
 }

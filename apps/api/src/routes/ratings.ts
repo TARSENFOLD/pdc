@@ -3,6 +3,8 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { eventBus } from '../modules/events/event-bus.js';
+import { DomainEventName } from '../modules/events/types.js';
 
 type Vars = { Variables: AuthVariables };
 export const ratingRoutes = new Hono<Vars>();
@@ -37,7 +39,7 @@ ratingRoutes.post('/', zValidator('json', z.object({
       return c.json({ success: true, action: 'updated' });
     }
 
-    await strapiPost('/ratings', {
+    const resPost = await strapiPost<unknown>('/ratings', {
       userId,
       targetType,
       targetId,
@@ -45,8 +47,23 @@ ratingRoutes.post('/', zValidator('json', z.object({
       createdAt: new Date().toISOString(),
     });
 
+    // G15: Impacto no Ecossistema
+    const resPerfil = await strapiGet<{ id: string }>('/perfis', {
+      'filters[userId][$eq]': userId,
+      'fields[0]': 'id',
+    });
+    const perfilId = resPerfil.data[0]?.id;
+
+    await eventBus.publishWithOutbox(DomainEventName.RATING_CRIADO, {
+      ratingId: resPost.data.id,
+      perfilId: String(perfilId),
+      targetType,
+      targetId,
+      valor
+    });
+
     return c.json({ success: true, action: 'created' }, 201);
-  } catch (err) {
+  } catch (_err) {
     return c.json({ error: 'Erro ao processar avaliação' }, 502);
   }
 });
@@ -82,7 +99,7 @@ ratingRoutes.get('/stats', zValidator('query', z.object({
       total: ratings.length,
       userRating: userRating || null,
     });
-  } catch (err) {
+  } catch (_err) {
     return c.json({ error: 'Erro ao carregar estatísticas de avaliação' }, 502);
   }
 });

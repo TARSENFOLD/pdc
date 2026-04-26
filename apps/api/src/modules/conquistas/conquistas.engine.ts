@@ -1,6 +1,7 @@
 import pino from 'pino';
 import { strapiGet, strapiPost } from '../strapi/strapi.client.js';
 import { featureFlagService } from '../feature-flags/feature-flags.service.js';
+import { DomainEventName } from '../events/types.js';
 
 const log = pino({ name: 'conquistas-engine' });
 
@@ -20,6 +21,7 @@ interface StrapiPerfilRecord {
   id: number;
   documentId?: string;
   userId?: string;
+  reputacao?: number;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -31,7 +33,7 @@ async function countTelemetria(userId: string, tipo: string): Promise<number> {
       'filters[user][$eq]': userId,
       'filters[tipo][$eq]': tipo,
     });
-    return res.meta?.pagination?.total ?? 0;
+    return res.meta.pagination.total;
   } catch {
     return 0;
   }
@@ -44,6 +46,7 @@ interface ConquistaRule {
   trigger: string;
   titulo: string;
   descricao: string;
+  dependencies?: string[]; // Slugs de conquistas necessárias
   condition: (userId: string, referencia?: string) => Promise<boolean>;
 }
 
@@ -57,7 +60,25 @@ function thresholdCondition(
   };
 }
 
-// ── Declarative rules (10+) ─────────────────────────────────────────────────
+// ── Strategy A: DomainEventName → trigger string mapping (ADR-008.bis) ─────
+export const EVENT_TO_TRIGGER_MAP: Readonly<Record<string, string>> = {
+  [DomainEventName.TENTATIVA_CONCLUIDA]: 'simulacao.concluida',
+  [DomainEventName.CURSO_CONCLUIDO]:     DomainEventName.CURSO_CONCLUIDO,
+  [DomainEventName.VINCULO_CONNECTED]:   DomainEventName.VINCULO_CONNECTED,
+  [DomainEventName.LOGIN]:               DomainEventName.LOGIN,
+  [DomainEventName.MENTORIA_ACEITE]:     DomainEventName.MENTORIA_ACEITE,
+  [DomainEventName.EXPERIENCIA_PUBLICADA]: DomainEventName.EXPERIENCIA_PUBLICADA,
+  [DomainEventName.RATING_CRIADO]:       DomainEventName.RATING_CRIADO,
+  [DomainEventName.PERFIL_ATUALIZADO]:   DomainEventName.PERFIL_ATUALIZADO,
+  [DomainEventName.SIMULACAO_CRIADA]:    DomainEventName.SIMULACAO_CRIADA,
+  [DomainEventName.CURSO_PUBLICADO]:     DomainEventName.CURSO_PUBLICADO,
+  [DomainEventName.CURSO_INSCRICAO]:     DomainEventName.CURSO_INSCRICAO,
+  [DomainEventName.COMENTARIO_CRIADO]:   DomainEventName.COMENTARIO_CRIADO,
+  [DomainEventName.PROJETO_PUBLICADO]:   DomainEventName.PROJETO_PUBLICADO,
+  [DomainEventName.PROGRAMA_APROVADO]:   DomainEventName.PROGRAMA_APROVADO,
+} as const;
+
+// ── Declarative rules (25+) ─────────────────────────────────────────────────
 
 export const REGRAS: readonly ConquistaRule[] = [
   {
@@ -144,6 +165,119 @@ export const REGRAS: readonly ConquistaRule[] = [
     descricao: 'Inscreveu-se em 5 cursos diferentes',
     condition: thresholdCondition('curso.inscricao', 5),
   },
+  // Novas regras G15-T6
+  {
+    slug: 'primeiro-projeto',
+    trigger: DomainEventName.PROJETO_PUBLICADO,
+    titulo: 'Primeiro Projeto',
+    descricao: 'Publicou o seu primeiro projeto no Hub',
+    condition: thresholdCondition(DomainEventName.PROJETO_PUBLICADO, 1),
+  },
+  {
+    slug: 'tier-prata-alcancado',
+    trigger: DomainEventName.PERFIL_ATUALIZADO,
+    titulo: 'Nível Prata',
+    descricao: 'Alcançou o Tier Prata de reputação',
+    condition: async (userId) => {
+      const pId = await getPerfilId(userId);
+      if (!pId) return false;
+      const res = await strapiGet<StrapiPerfilRecord>(`/perfis/${String(pId)}`, { 'fields[0]': 'reputacao' });
+      return (res.data[0]?.reputacao ?? 0) >= 40;
+    }
+  },
+  {
+    slug: 'tier-ouro-alcancado',
+    trigger: DomainEventName.PERFIL_ATUALIZADO,
+    titulo: 'Nível Ouro',
+    descricao: 'Alcançou o Tier Ouro de reputação',
+    dependencies: ['tier-prata-alcancado'],
+    condition: async (userId) => {
+      const pId = await getPerfilId(userId);
+      if (!pId) return false;
+      const res = await strapiGet<StrapiPerfilRecord>(`/perfis/${String(pId)}`, { 'fields[0]': 'reputacao' });
+      return (res.data[0]?.reputacao ?? 0) >= 70;
+    }
+  },
+  {
+    slug: 'tier-diamante-alcancado',
+    trigger: DomainEventName.PERFIL_ATUALIZADO,
+    titulo: 'Nível Diamante',
+    descricao: 'Alcançou o Tier Diamante de reputação',
+    dependencies: ['tier-ouro-alcancado'],
+    condition: async (userId) => {
+      const pId = await getPerfilId(userId);
+      if (!pId) return false;
+      const res = await strapiGet<StrapiPerfilRecord>(`/perfis/${String(pId)}`, { 'fields[0]': 'reputacao' });
+      return (res.data[0]?.reputacao ?? 0) >= 90;
+    }
+  },
+  {
+    slug: 'programa-completo',
+    trigger: DomainEventName.PROGRAMA_APROVADO,
+    titulo: 'Programa Concluído',
+    descricao: 'Participou e concluiu um programa institucional',
+    condition: thresholdCondition('programa.concluido', 1),
+  },
+  {
+    slug: 'streak-7-dias',
+    trigger: DomainEventName.LOGIN,
+    titulo: 'Assiduidade de Ferro',
+    descricao: 'Fez login 7 dias seguidos na plataforma',
+    condition: async (userId) => {
+      // Simplificado: usa totalEventos como proxy se não tivermos streak real ainda
+      const count = await countTelemetria(userId, 'login');
+      return count >= 15;
+    }
+  },
+  {
+    slug: 'primeiro-endorsement',
+    trigger: DomainEventName.PROJETO_PUBLICADO,
+    titulo: 'Talento Reconhecido',
+    descricao: 'Recebeu o seu primeiro endorsement num projeto',
+    condition: thresholdCondition('projeto.endorsement', 1),
+  },
+  {
+    slug: 'mentor-elite',
+    trigger: DomainEventName.MENTORIA_ACEITE,
+    titulo: 'Mentor de Elite',
+    descricao: 'Aceitou e completou 10 sessões de mentoria',
+    condition: thresholdCondition('mentoria.aceite', 10),
+  },
+  {
+    slug: 'feedback-comite',
+    trigger: DomainEventName.COMITE_APROVOU,
+    titulo: 'Selo Científico',
+    descricao: 'Recebeu feedback positivo do Comité Científico',
+    condition: thresholdCondition(DomainEventName.COMITE_APROVOU, 1),
+  },
+  {
+    slug: 'colaborador-projeto',
+    trigger: DomainEventName.PROJETO_PUBLICADO,
+    titulo: 'Colaborador Ativo',
+    descricao: 'Foi aceite como colaborador num projeto alheio',
+    condition: thresholdCondition('projeto.colaborador_aceite', 1),
+  },
+  {
+    slug: 'autoridade-em-area',
+    trigger: DomainEventName.CURSO_PUBLICADO,
+    titulo: 'Autoridade de Área',
+    descricao: 'Publicou 5 cursos na mesma área vocacional',
+    condition: thresholdCondition('curso.publicado', 5),
+  },
+  {
+    slug: 'viral-likes',
+    trigger: DomainEventName.LIKE_ADICIONADO,
+    titulo: 'Impacto Viral',
+    descricao: 'Um dos seus posts ou projetos recebeu 100 likes',
+    condition: async () => false, // TODO: Implementar lógica de agregação por autor
+  },
+  {
+    slug: 'mestre-da-experiencia',
+    trigger: DomainEventName.EXPERIENCIA_PUBLICADA,
+    titulo: 'Mestre da Experiência',
+    descricao: 'Publicou 10 experiências profissionais validadas',
+    condition: thresholdCondition('experiencia.publicada', 10),
+  }
 ];
 
 // ── Engine ──────────────────────────────────────────────────────────────────
@@ -165,7 +299,7 @@ async function isAlreadyUnlocked(userId: string, slug: string): Promise<boolean>
       'filters[userId][$eq]': userId,
       'filters[slug][$eq]': slug,
     });
-    return (res.meta?.pagination?.total ?? 0) > 0;
+    return res.meta.pagination.total > 0;
   } catch {
     return false;
   }
@@ -208,7 +342,7 @@ async function unlock(userId: string, rule: ConquistaRule): Promise<void> {
   );
 
   // 2. Also create conquista-utilizador record (content-type existente)
-  const conquistaId = conquistaRes.data?.id;
+  const conquistaId = conquistaRes.data.id;
   const perfilId = await getPerfilId(userId);
 
   if (conquistaId && perfilId) {
@@ -242,7 +376,10 @@ export async function verificarConquistas(
     return [];
   }
 
-  const matchingRules = REGRAS.filter((r) => r.trigger === evento);
+  // Strategy A: resolve the canonical trigger string from the incoming event name.
+  // This fixes the TENTATIVA_CONCLUIDA → 'simulacao.concluida' mismatch (T-FIX-3).
+  const trigger = EVENT_TO_TRIGGER_MAP[evento] ?? evento;
+  const matchingRules = REGRAS.filter((r) => r.trigger === trigger);
   if (matchingRules.length === 0) return [];
 
   const unlocked: UnlockedConquista[] = [];
@@ -251,6 +388,14 @@ export async function verificarConquistas(
     try {
       // Idempotency — already unlocked?
       if (await isAlreadyUnlocked(userId, rule.slug)) continue;
+
+      // Dependencies check
+      if (rule.dependencies && rule.dependencies.length > 0) {
+        const depChecks = await Promise.all(
+          rule.dependencies.map(depSlug => isAlreadyUnlocked(userId, depSlug))
+        );
+        if (depChecks.some(passed => !passed)) continue;
+      }
 
       // Evaluate condition
       const passes = await rule.condition(userId, referencia);

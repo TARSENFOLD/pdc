@@ -8,6 +8,7 @@ import { router } from './router';
 import { AuthProvider } from './lib/auth/AuthContext';
 import { BootstrapProvider } from './lib/bootstrap/BootstrapContext';
 import { ThemeProvider } from './lib/theme/ThemeContext';
+import { Toaster } from './components/ui';
 import './index.css';
 
 if (import.meta.env.VITE_SENTRY_DSN) {
@@ -49,6 +50,7 @@ ReactDOM.createRoot(rootElement).render(
         <BootstrapProvider>
           <AuthProvider>
             <RouterProvider router={router} />
+            <Toaster />
             <ReactQueryDevtools initialIsOpen={false} />
           </AuthProvider>
         </BootstrapProvider>

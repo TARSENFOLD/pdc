@@ -50,6 +50,9 @@
       "target": "api::instituicao.instituicao"
     },
     "validadoAcademicamente": { "type": "boolean", "default": false },
+    "painelRealidade": { "type": "json" },
+    "muralVozes": { "type": "json" },
+    "guiaInstitucional": { "type": "json" },
     "tags": { "type": "json" },
     "gradeDestaque": { "type": "json" },
     "telemetriaConfig": { "type": "json" },

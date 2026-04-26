@@ -1,0 +1,45 @@
+{
+  "kind": "collectionType",
+  "collectionName": "feed_entries",
+  "info": {
+    "singularName": "feed-entry",
+    "pluralName": "feed-entries",
+    "displayName": "Feed Entry",
+    "description": "Entradas agregadas para o feed multi-source"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "entityType": {
+      "type": "enumeration",
+      "enum": ["curso", "simulacao", "experiencia", "programa", "projeto", "post"]
+    },
+    "entityId": {
+      "type": "string",
+      "required": true
+    },
+    "autorId": {
+      "type": "string"
+    },
+    "area": {
+      "type": "string"
+    },
+    "source": {
+      "type": "enumeration",
+      "enum": ["geral", "vocacional", "institucional", "trending"]
+    },
+    "score": {
+      "type": "float",
+      "default": 0
+    },
+    "eventId": {
+      "type": "string",
+      "unique": true,
+      "required": true
+    },
+    "publicadoEm": {
+      "type": "datetime"
+    }
+  }
+}

@@ -60,7 +60,7 @@ export function MentoresCatalogoPage() {
   });
 
   const mentores = data?.data ?? [];
-  const pageCount = data?.meta?.pageCount ?? 1;
+  const pageCount = data?.meta.pageCount ?? 1;
 
   const set = (k: string, v: string) => {
     const next = new URLSearchParams(sp);
@@ -112,7 +112,7 @@ export function MentoresCatalogoPage() {
           <div className="py-24 text-center rounded-3xl border border-dashed border-border bg-surface-alt">
             <h3 className="text-lg font-bold text-text-primary">Nenhum mentor disponível nesta área</h3>
             <p className="mt-2 text-sm text-text-secondary">Explora outras especialidades ou limpa os filtros.</p>
-            <button onClick={() => setSp(new URLSearchParams())} className="mt-6 text-xs font-bold uppercase tracking-widest text-amber hover:underline">Ver Todos</button>
+            <button onClick={() => { setSp(new URLSearchParams()); }} className="mt-6 text-xs font-bold uppercase tracking-widest text-amber hover:underline">Ver Todos</button>
           </div>
         ) : (
           <>

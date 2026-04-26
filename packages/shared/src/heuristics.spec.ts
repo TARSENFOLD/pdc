@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeFluidity, analyzeResilience, analyzeFocus, analyzeHesitation } from './heuristics';
+import { analyzeFluidity, analyzeHesitation } from './heuristics.js';
 
 describe('Heuristics Characterization Tests', () => {
   describe('analyzeFluidity', () => {

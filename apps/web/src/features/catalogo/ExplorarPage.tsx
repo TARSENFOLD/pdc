@@ -100,7 +100,7 @@ export function ExplorarPage() {
   const area = sp.get('area') ?? '';
   const page = Number(sp.get('page') ?? '1');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<{ data: ExplorarResultado[]; meta: { pageCount: number } }>({
     queryKey: ['explorar', tab, search, area, page],
     queryFn: () => catalogoApi.explorar({
       ...(tab !== 'tudo' ? { tipo: tab } : {}),
@@ -111,13 +111,13 @@ export function ExplorarPage() {
     }),
   });
 
-  const { data: mentoresData } = useQuery({
+  const { data: mentoresData } = useQuery<{ data: MentorPublico[] }>({
     queryKey: ['explorar-pessoas'],
     queryFn: () => catalogoApi.getMentores({ pageSize: 8 }),
   });
 
   const items = data?.data ?? [];
-  const pageCount = data?.meta?.pageCount ?? 1;
+  const pageCount = data?.meta.pageCount ?? 1;
 
   const set = (k: string, v: string) => {
     const next = new URLSearchParams(sp);
@@ -197,7 +197,7 @@ export function ExplorarPage() {
                 </div>
                 <h3 className="text-lg font-bold text-text-primary">Nenhum resultado encontrado</h3>
                 <p className="mt-2 text-sm text-text-secondary">Tenta ajustar os teus filtros ou pesquisa.</p>
-                <Link to="/explorar" onClick={() => setSp(new URLSearchParams())} className="mt-6 inline-block text-xs font-bold uppercase tracking-widest text-amber hover:underline">Limpar tudo</Link>
+                <Link to="/explorar" onClick={() => { setSp(new URLSearchParams()); }} className="mt-6 inline-block text-xs font-bold uppercase tracking-widest text-amber hover:underline">Limpar tudo</Link>
               </div>
             ) : (
               <>

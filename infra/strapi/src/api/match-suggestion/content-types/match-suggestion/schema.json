@@ -1,0 +1,50 @@
+{
+  "kind": "collectionType",
+  "collectionName": "match_suggestions",
+  "info": {
+    "singularName": "match-suggestion",
+    "pluralName": "match-suggestions",
+    "displayName": "Match Suggestion",
+    "description": "Sugestões do Match Terminal baseadas em afinidade"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "estudante": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "entityType": {
+      "type": "enumeration",
+      "enum": ["curso", "simulacao", "experiencia", "programa", "projeto"]
+    },
+    "entityId": {
+      "type": "string",
+      "required": true
+    },
+    "score": {
+      "type": "float"
+    },
+    "tierMinimo": {
+      "type": "enumeration",
+      "enum": ["Bronze", "Prata", "Ouro", "Diamante"]
+    },
+    "expiraEm": {
+      "type": "datetime"
+    },
+    "vista": {
+      "type": "boolean",
+      "default": false
+    },
+    "aceitada": {
+      "type": "boolean",
+      "default": false
+    },
+    "eventId": {
+      "type": "string",
+      "required": true
+    }
+  }
+}

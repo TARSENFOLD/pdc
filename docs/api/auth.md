@@ -1,172 +1,99 @@
 # API — Autenticação (`/auth`)
 
-Todos os endpoints de autenticação usam cookies `httpOnly` para transportar tokens JWT. O cliente **nunca** acede directamente aos tokens.
+Todos os endpoints de autenticação usam cookies `httpOnly` para transportar tokens JWT de sessão. O sistema isola factos de telemetria usando um token secundário assinado por RS256.
 
 ## Base URL
-
 ```
 /auth
 ```
 
 ---
 
+## 🏛️ Os 7 Perfis Canónicos (RBAC)
+O PDC v2 utiliza um modelo de autoridade baseado em roles soberanas:
+
+| Role | Slug | Descrição |
+|------|------|-----------|
+| **Estudante** | `estudante` | Utilizador principal (antigo `aluno`). Procura orientação vocacional. |
+| **Mentor** | `mentor` | Profissional ou académico que guia os estudantes. |
+| **Instituição** | `instituicao` | Entidade de ensino que publica cursos e experiências. |
+| **Comité Científico** | `comite_cientifico` | Responsável pela validação metodológica das simulações. |
+| **Moderador** | `moderador` | Gere conflitos e denúncias na camada social. |
+| **Super Admin** | `super_admin` | Acesso total à infraestrutura e governação. |
+| **Patrocinador** | `patrocinador` | Entidade B2B que financia bolsas ou áreas específicas. |
+
+---
+
+## 🔐 Gestão de Tokens (Dual-Layer)
+
+O sistema utiliza dois tipos de tokens para garantir a integridade dos dados:
+
+### 1. User Session (HS256)
+- **Onde:** Cookie `access_token` e `refresh_token` (`httpOnly`, `Secure`, `SameSite: Strict`).
+- **Uso:** Autenticação em endpoints REST/BFF.
+- **Expiração:** 15 min (Access) / 7 dias (Refresh).
+
+### 2. Telemetry Token (RS256 - Soberano)
+- **Onde:** Header `Authorization: Bearer <token>` em pedidos para a Edge.
+- **Uso:** Apenas para escrita de factos de telemetria na L1.
+- **Autoridade:** Assinado pelo BFF com chave privada; validado pela Edge via JWKS público.
+- **Obtenção:** Disponível via endpoint `/bootstrap` após login.
+
+---
+
 ## POST /auth/register
-
-Regista um novo utilizador. Por omissão, o role é `aluno`.
-
-### Rate Limiting
-
-Máximo 5 pedidos por minuto por IP.
-
-### Request Body
+Regista um novo utilizador.
 
 ```json
 {
-  "email": "aluno@exemplo.ao",
+  "email": "estudante@exemplo.ao",
   "password": "senha_segura_123",
-  "nome": "Maria Silva"
-}
-```
-
-| Campo | Tipo | Obrigatório | Regras |
-|-------|------|------------|--------|
-| `email` | string | ✅ | formato email válido |
-| `password` | string | ✅ | mínimo 8 caracteres |
-| `nome` | string | ✅ | 2–100 caracteres |
-
-### Resposta 200
-
-```json
-{
-  "id": "usr_abc123",
-  "email": "aluno@exemplo.ao",
   "nome": "Maria Silva",
-  "role": "aluno"
+  "role": "estudante"
 }
 ```
-
-Cookies definidos:
-- `access_token` — JWT, httpOnly, Strict, 15 min
-- `refresh_token` — JWT, httpOnly, Strict, 7 dias
-
-### Erros
-
-| Status | Condição |
-|--------|---------|
-| `400 Bad Request` | Email já registado ou dados inválidos |
-| `429 Too Many Requests` | Rate limit excedido |
 
 ---
 
 ## POST /auth/login
+Autentica um utilizador. Emite cookies de sessão.
 
-Autentica um utilizador existente.
+---
 
-### Rate Limiting
+## GET /bootstrap (4 Camadas)
+Endpoint vital para a inicialização da PWA. Retorna o estado completo da aplicação num único pedido.
 
-Máximo 5 pedidos por minuto por IP.
-
-### Request Body
-
+### Resposta 200
 ```json
 {
-  "email": "aluno@exemplo.ao",
-  "password": "senha_segura_123"
+  "session": {
+    "isAuthenticated": true,
+    "user": {
+      "id": "usr_abc123",
+      "email": "estudante@exemplo.ao",
+      "role": "estudante",
+      "perfilId": "perf_xyz"
+    }
+  },
+  "capabilities": {
+    "features": { "MICRO_DESAFIO": true, "DASHBOARD_BENTO": true },
+    "roles": ["estudante", "mentor", "instituicao", "moderador", "comite_cientifico", "super_admin", "patrocinador"]
+  },
+  "security": {
+    "telemetryToken": "eyJhbGciOiJSUzI1NiIs..."
+  },
+  "ux": {
+    "theme": "claro"
+  }
 }
 ```
 
-### Resposta 200
-
-Idêntica ao `/register`. Cookies actualizados.
-
-### Erros
-
-| Status | Condição |
-|--------|---------|
-| `401 Unauthorized` | Credenciais inválidas |
-| `429 Too Many Requests` | Rate limit excedido |
-
 ---
 
-## POST /auth/logout
-
-Termina a sessão: revoga o refresh token e apaga os cookies.
-
-### Autenticação
-
-Requer cookie `access_token` válido.
-
-### Resposta 200
-
-```json
-{ "success": true }
-```
-
-### Erros
-
-| Status | Condição |
-|--------|---------|
-| `401 Unauthorized` | Cookie ausente ou token expirado |
+## Novos Fluxos de Autoridade
+- **OAuth Google/LinkedIn:** `/auth/oauth/google`
+- **OTP Gateway:** `/auth/otp/request` (Twilio mockado em Dev)
+- **2FA Hardening:** `/auth/2fa/verify`
 
 ---
-
-## POST /auth/refresh
-
-Renova o par de tokens usando o `refresh_token` em cookie. Implementa **rotação de tokens** — o refresh token antigo é imediatamente revogado.
-
-### Rate Limiting
-
-Máximo 5 pedidos por minuto por IP.
-
-### Resposta 200
-
-```json
-{ "success": true }
-```
-
-Novos cookies `access_token` e `refresh_token` são definidos.
-
-### Erros
-
-| Status | Condição |
-|--------|---------|
-| `401 Unauthorized` | Refresh token ausente, expirado ou já revogado |
-
----
-
-## GET /auth/me
-
-Retorna o perfil do utilizador autenticado.
-
-### Autenticação
-
-Requer cookie `access_token` válido.
-
-### Resposta 200
-
-```json
-{
-  "id": "usr_abc123",
-  "email": "aluno@exemplo.ao",
-  "nome": "Maria Silva",
-  "role": "aluno"
-}
-```
-
-### Erros
-
-| Status | Condição |
-|--------|---------|
-| `401 Unauthorized` | Token ausente ou expirado |
-| `404 Not Found` | Utilizador não encontrado (token válido mas conta eliminada) |
-
----
-
-## Notas de Segurança
-
-- Tokens JWT usam algoritmo **HS256** com secret mínimo de 32 caracteres
-- `access_token` expira em **15 minutos**
-- `refresh_token` expira em **7 dias** com rotação automática
-- Cookies têm `SameSite: Strict` — protegem contra CSRF
-- Em produção, `Secure: true` — apenas enviados via HTTPS
-- O payload do JWT inclui: `{ sub: userId, role, iat, exp }`
+*Doc is Law — Sincronizado com spec:IMPORTANTE/03 e ADR-018.*

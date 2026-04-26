@@ -1,19 +1,13 @@
-import { type AreaVocacional } from '@pdc/shared';
+import { type AreaVocacional, type LandingPergunta, type LandingVeredito, type LandingOpcao } from '@pdc/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type Area = AreaVocacional;
 
-export interface Opcao { emoji: string; texto: string }
-export interface PerguntaData { texto: string; opcoes: Opcao[] }
+export type Opcao = LandingOpcao;
+export type PerguntaData = LandingPergunta;
 
-export interface Veredito {
-  area: string;
-  score: number;
-  arquetipo: string;
-  proximoPasso: string;
-  simulacoes: string[];
-}
+export type Veredito = LandingVeredito;
 
 export type Fase = 'intro' | 'texto_livre' | 'pergunta' | 'carregando' | 'veredito' | 'erro' | 'limite';
 
@@ -72,7 +66,7 @@ const KW: Record<Exclude<Area, 'OUTRA'>, string[]> = {
   TECNOLOGIA: ['tecnologia', 'programação', 'software', 'computador', 'informática', 'dados', 'código', 'desenvolvimento', 'app', 'algoritmo'],
   DIREITO: ['direito', 'lei', 'justiça', 'advogado', 'tribunal', 'jurídico', 'constitucional', 'defesa', 'acusação', 'normas'],
   GESTAO: ['gestão', 'negócio', 'empresa', 'administração', 'finanças', 'marketing', 'economia', 'liderança', 'estratégia', 'crise'],
-  EDUCACAO: ['educação', 'ensino', 'professor', 'escola', 'pedagogia', 'aprender', 'formação', 'didática', 'aula', 'aluno'],
+  EDUCACAO: ['educação', 'ensino', 'professor', 'escola', 'pedagogia', 'aprender', 'formação', 'didática', 'aula', 'estudante'],
   ARTES: ['arte', 'música', 'teatro', 'design', 'cinema', 'pintura', 'fotografia', 'criativo', 'exposição', 'cultura'],
   CIENCIAS_AGRARIAS: ['agronomia', 'agricultura', 'campo', 'rural', 'colheita', 'pecuária', 'veterinária', 'plantio', 'terra', 'agronegócio'],
   CIENCIAS_SOCIAIS: ['psicologia', 'sociologia', 'comunidade', 'social', 'humano', 'comportamento', 'sociedade', 'política', 'história', 'antropologia'],

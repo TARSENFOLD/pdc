@@ -1,93 +1,130 @@
-# Por Dentro do Curso (PDC v2)
+# Por Dentro do Curso (PDC v2) — Front Door Canónico
 
-Infraestrutura de decisão educacional angolana que transforma a incerteza vocacional em escolhas de carreira precisas.
+> **"Doc is Law"** — Esta é a única fonte de verdade para a visão e estado do projeto.
 
-## Stack
+**Plataforma visual, Mobile-First (PWA + Apps nativas via Capacitor/TWA). Toque mínimo 44px. Performance Lighthouse ≥90 mobile.**
+
+---
+
+## 🏛️ Hierarquia de Autoridade (Governação)
+
+Se encontrar informações contraditórias, a ordem de precedência é:
+1. **Epics Canónicas ([spec:IMPORTANTE/01–05](specs/IMPORTANTE/))** — A Constituição Soberana.
+2. **[Manual de Prosperidade](.planning/PROSPERITY.md)** — Governação de integridade técnica e documental.
+3. **Diretoria `.planning/`** — Estado real, requisitos e roadmap atualizado.
+4. **Diretoria `docs/decisoes/`** — Registos de Arquitetura (ADRs).
+4. **Diretoria `docs/`** — Guias e manuais secundários.
+
+---
+
+## 📱 Princípios Canónicos (UX/UI)
+
+- **Mobile-First / PWA-First**: O utilizador principal está no telemóvel (spec:IMPORTANTE/05 §2).
+- **Toque Mínimo 44px**: Todos os elementos interactivos respeitam o padrão Apple/Android.
+- **Performance Crítica**: Lighthouse Score ≥ 90 em Mobile.
+- **Hierarquia Visual**: 4 camadas (L1-L4) com processamento na Edge (L1) para latência zero (spec:IMPORTANTE/01 §5).
+
+---
+
+## 🛠️ Stack Tecnológica
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Frontend | React 18, Vite 5+, TailwindCSS v4, Radix UI, Motion v11+, React Query v5 |
-| BFF | Hono v4+, Node.js 24 LTS, Jose v5+, Socket.IO v4, Zod v3+ |
-| CMS | Strapi v5, PostgreSQL 16 |
-| Tipagem | TypeScript v5+ estrito (sem `any`) |
+| **Frontend** | React 18, Vite 5, TailwindCSS v4, **Motion v11+**, Radix UI, Lucide |
+| **Edge (L1)** | **Cloudflare Workers**, Wrangler, Hono |
+| **BFF (L2/L3)** | Node.js 24 LTS, Hono, **Jose**, Socket.IO (Realtime) |
+| **Persistência** | PostgreSQL 16, **Upstash Redis**, **Cloudflare R2** (S3) |
+| **CMS** | Strapi v5 (Headless) |
+| **IA & Outros** | **DeepSeek** (RAG), **Sentry**, **Resend** (Email), Zod |
+| **Testes** | Playwright (E2E), Vitest (Unit), k6 (Performance) |
 
-## Estrutura
+---
 
-```
+## 📂 Estrutura do Monorepo
+
+```bash
 pdc-v2/
 ├── apps/
-│   ├── web/        # Frontend React + Vite
-│   └── api/        # BFF Hono
+│   ├── web/        # Frontend React (PWA / Mobile-First)
+│   ├── api/        # BFF (Business Logic & Orchestration)
+│   └── edge/       # Ingestão de Telemetria (Wrangler/Cloudflare Workers)
 ├── packages/
-│   └── shared/     # Tipos e utilitários partilhados
+│   └── shared/     # Motores de Heurísticas, Esquemas e Tipos SSOT
 ├── infra/
-│   └── strapi/     # CMS Strapi v5
-└── .planning/      # GSD (PROJECT.md, REQUIREMENTS.md, STATE.md)
+│   └── strapi/     # CMS de Autoridade e Gestão de Conteúdos
+├── .planning/      # Roadmap, Estado Operacional e Requisitos (A Lei)
+├── specs/          # Especificações Técnicas e Epics
+└── tests/          # Suítes de testes cross-app (E2E & Load k6)
 ```
 
-## Setup em 5 minutos
+---
 
-### Pré-requisitos
+## 🌊 Roadmap: Waves de Evolução
 
-- Node.js 24 LTS (`nvm use`)
-- Docker
+O projeto é executado em **Waves** (spec:IMPORTANTE/02 §10), não em fases lineares.
 
-### Instalar
+| Wave | Foco | Estado |
+|------|------|--------|
+| **W0** | Fundação & Estabilidade | ✅ Concluído |
+| **W1** | Autenticação & Pipeline Soberano | ✅ Concluído |
+| **W2** | Motor Vocacional & LTI | ✅ Concluído |
+| **W3** | Design System de Autoridade | 🚧 Em Progresso (Primitivos + Tokens ✅) |
+| **W4** | Dashboards Bento Grid | 🚧 Em Progresso (UI ~70% ✅) |
+| **W5** | Gamificação & Produção | ⏳ Planeado |
+| **W6** | Mobile Nativo (Capacitor/TWA) | ⏳ Planeado |
 
+> Ver [`.planning/STATE.md`](.planning/STATE.md) para o estado operacional detalhado minuto-a-minuto.
+
+---
+
+## 🚀 Guia de Início Rápido
+
+### 1. Preparação
 ```bash
-nvm use                    # Usa Node 24.13.0 (.nvmrc)
-npm install                # Instala dependências de todos os workspaces
+nvm use          # Garante Node.js 24.13.0
+npm install      # Instala dependências de todo o monorepo
 ```
 
-### Desenvolvimento local
-
+### 2. Desenvolvimento Local
 ```bash
-# Iniciar serviços de infra (Strapi + PostgreSQL + Redis)
+# Terminal 1: Infraestrutura (DB, Redis, CMS)
 docker compose up -d
 
-# Frontend (porta 5173)
-npm run dev -w apps/web
+# Terminal 2: Edge (Wrangler dev)
+npm run dev -w apps/edge
 
-# BFF (porta 3001)
+# Terminal 3: BFF (Hono)
 npm run dev -w apps/api
+
+# Terminal 4: Frontend (Vite)
+npm run dev -w apps/web
 ```
 
-### Build
-
+### 3. Processamento de Fundo
 ```bash
-npm run build              # Build de todos os workspaces
-npm run build -w apps/web  # Build só do frontend
-npm run build -w apps/api  # Build só do BFF
+# Iniciar consumidor de telemetria
+npm run start:consumer -w apps/api
+
+# Reprocessar eventos pendentes (Outbox Pattern)
+npm run replay-outbox -w apps/api
 ```
 
-### Linting e verificação de tipos
-
+### 4. Qualidade e Testes (k6 scripts em tests/k6/*)
 ```bash
-npm run lint               # ESLint em todos os workspaces
-npm run typecheck          # tsc --noEmit em todos os workspaces
+npm run typecheck       # Verificação de tipos global
+npm run lint            # Linting de autoridade
+npm run test:e2e:smoke  # Testes de fumo Playwright
+npm run test:load:auth  # k6: tests/k6/auth-flow.js
 ```
 
-## Variáveis de ambiente
+---
 
-Copiar `.env.example` para `.env` e preencher os valores:
+## 📜 Licença e Contribuição
 
-```bash
-cp .env.example .env
-```
+Este é um projeto **World-Class**. Antes de submeter qualquer PR:
+1. Verifique se o `typecheck` está verde.
+2. Garanta que o impacto em Mobile foi testado (44px min).
+3. Leia o [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-Ver comentários em `.env.example` para descrição de cada variável.
-
-## Fases de desenvolvimento
-
-| Fase | Conteúdo | Estado |
-|------|----------|--------|
-| 0 | Fundação — monorepo, tooling, CI/CD | 🔄 Em progresso |
-| 1 | Autenticação segura (JWT httpOnly, 2FA, Google OAuth) | ⏳ |
-| 2 | Design system e frontend base | ⏳ |
-| 3 | API layer modular (módulos por domínio) | ⏳ |
-| 4 | Core do produto (simulações, perfil vocacional) | ⏳ |
-| 5 | LTI 1.3 Provider | ⏳ |
-| 6 | Moderação, admin e segurança | ⏳ |
-| 7 | IA e realtime (DeepSeek, RAG, WebSocket) | ⏳ |
-
-Ver `.planning/STATE.md` para estado actual e próximos passos.
+---
+*PDC v2 — Transformando o futuro da educação em Angola.*

@@ -78,7 +78,7 @@ function Intro({ pulso, onComecar, f }: { pulso: { count: number; area?: string 
       </p>
       {pulso.count > 0 && (
         <p className="font-mono text-[10px] uppercase tracking-widest text-text-muted opacity-80">
-          <Circle size={6} aria-hidden={true} className="inline-block mr-2 fill-accent text-accent animate-pulse" /> 
+          <Circle size={6} aria-hidden={true} className="inline-block mr-2 fill-accent text-accent animate-pulse" />
           {pulso.count} talentos em {pulso.area ?? 'exploração'} agora
         </p>
       )}

@@ -3,7 +3,7 @@
  * Cada role tem um conjunto de permissões definido no BFF.
  */
 export const ROLES = [
-  'aluno',
+  'estudante',
   'mentor',
   'instituicao',
   'moderador',
@@ -18,7 +18,7 @@ export type Role = (typeof ROLES)[number];
  * Usado para verificações de autorização no frontend.
  */
 export const ROLE_HIERARCHY: Record<Role, number> = {
-  aluno: 1,
+  estudante: 1,
   mentor: 2,
   instituicao: 3,
   moderador: 4,

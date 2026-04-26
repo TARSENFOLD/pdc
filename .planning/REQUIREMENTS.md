@@ -1,77 +1,49 @@
-# PDC v2 — Requirements
+# PDC v2 — Mapa de Requisitos (Sincronizado)
 
-> Fonte de verdade para requisitos com rastreabilidade por fase. Cada requisito tem ID único, fase, prioridade e critério de verificação. Actualizar após cada fase concluída.
+> **Status:** Restaurado a partir da Alma Original em 21 de Abril de 2026.
+> **Regra de Ouro:** Nenhum requisito é considerado "Done" sem passar pelo crivo do ESLint e do CodeRabbit.
 
-## Como usar este ficheiro
-
-- **ID:** `REQ-[FASE]-[NNN]` — ex: `REQ-0-001`
-- **Prioridade:** 🔴 Crítico | 🟠 Alto | 🟡 Médio | 🟢 Baixo
+## Legenda
 - **Estado:** `[ ]` Todo | `[x]` Done | `[~]` In Progress | `[-]` Descartado
 
-## Fase 0 — Fundação
+## 1. Fundação e Tooling (Fase 0)
+| ID | Requisito | Prioridade | Estado |
+| --- | --- | --- | --- |
+| REQ-0-001 | Monorepo npm workspaces | 🔴 | `[x]` |
+| REQ-0-002 | TypeScript estrito em todas as camadas | 🔴 | `[~]` |
+| REQ-0-005 | ESLint + Prettier (Zero Errors Target) | 🟠 | `[~]` |
+| REQ-0-008 | Docker Compose (Strapi + PG + Redis) | 🟠 | `[x]` |
 
-**Objetivo:** Repositório limpo, tooling configurado, CI/CD básico, ambiente de desenvolvimento funcional.
+## 2. Autenticação e Segurança (Fase 1)
+| ID | Requisito | Prioridade | Estado |
+| --- | --- | --- | --- |
+| REQ-1-002 | JWT em httpOnly cookies (SameSite=Strict) | 🔴 | `[x]` |
+| REQ-1-006 | RBAC com 6 roles no servidor | 🔴 | `[x]` |
+| REQ-1-009 | 2FA via Email (SendGrid) | 🟠 | `[x]` |
+| REQ-1-010 | 2FA via SMS (Twilio - Angola) | 🟡 | `[-]` |
 
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-0-001 | Estrutura de monorepo npm workspaces | 🔴 | `[x]` | `npm install` instala tudo |
-| REQ-0-002 | Workspace `apps/web` React 18 | 🔴 | `[x]` | Build limpo |
-| REQ-0-003 | Workspace `apps/api` Hono | 🔴 | `[x]` | Build limpo |
-| REQ-0-004 | Workspace `infra/strapi` Strapi v5 | 🔴 | `[~]` | Saneamento de tipos em progresso |
-| REQ-0-005 | ESLint + Prettier global | 🟠 | `[x]` | Lint passa na raiz |
-| REQ-0-006 | Husky pre-commit | 🟠 | `[x]` | Hook reactivado (W0-T9) |
-| REQ-0-007 | GitHub Actions CI | 🟠 | `[x]` | Build + Lint + A11y (warning) |
-| REQ-0-008 | Docker Compose (PG + Redis) | 🟠 | `[x]` | Infra sobe localmente |
-| REQ-0-012 | Dockerfile BFF multi-stage | 🔴 | `[x]` | Container funcional |
+## 3. Core de Decisão Vocacional (Fase 2-4)
+| ID | Requisito | Prioridade | Estado |
+| --- | --- | --- | --- |
+| REQ-4-001 | Simulações Tipo 1, 2 e 3 | 🔴 | `[x]` |
+| REQ-4-004 | Telemetria com idempotência Redis | 🔴 | `[x]` |
+| REQ-4-005 | Motor de Heurísticas ($\phi, R$) | 🔴 | `[x]` |
+| REQ-4-006 | Relatório Vocacional Premium | 🔴 | `[x]` |
+| REQ-4-014 | Feed com Algoritmo de Ranking | 🟠 | `[x]` |
 
-## Fase 1 — Autenticação Segura e Edge
+## 4. Novas Diretrizes (Wave 3+)
+| ID | Requisito | Prioridade | Estado |
+| --- | --- | --- | --- |
+| REQ-W3-001 | Identidade Total: Telemetria identificada | 🔴 | `[~]` |
+| REQ-W3-002 | Hierarquia Institucional: Acesso ao rasto do aluno | 🔴 | `[ ]` |
+| REQ-W3-003 | Design Tokens Soul & Elite (Tailwind v4) | 🔴 | `[~]` |
 
-**Objetivo:** Auth robusto com JWT httpOnly, 2FA e pipeline de Telemetria Edge.
+## 5. Requisitos Não-Funcionais
+| ID | Requisito | Prioridade | Estado |
+| --- | --- | --- | --- |
+| REQ-NF-001 | Zero `any` em todo o código | 🔴 | `[~]` |
+| REQ-NF-002 | Rule of 300: Máximo 300 linhas por ficheiro | 🟠 | `[~]` |
+| REQ-NF-003 | Lighthouse Performance ≥ 90 | 🟠 | `[ ]` |
 
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-1-001 | Endpoint `POST /auth/register` | 🔴 | `[~]` | Refactor para Role SSOT pendente |
-| REQ-1-002 | JWT em httpOnly cookie | 🔴 | `[ ]` | Implementação parcial; rotação em falta |
-| REQ-1-007 | Rate limiting via Upstash | 🔴 | `[x]` | Middleware integrado |
-| REQ-1-010 | OTP por SMS (Twilio) | 🟡 | `[ ]` | Serviço mockado; integração real pendente |
-| REQ-1-011 | Telemetria Edge (ADR-005) | 🔴 | `[x]` | Worker funcional com JWS verify e BFF consumer integrado (W1-T4) |
-
-## Fase 2 — Design System e Frontend Base
-
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-2-001 | TailwindCSS v4 soberano | 🔴 | `[~]` | Purga de cores hardcoded em progresso |
-| REQ-2-002 | Component Registry | 🔴 | `[ ]` | Registry ausente/desalinhado do approach |
-| REQ-2-005 | React Query v5 SSOT | 🔴 | `[x]` | Único estado servidor |
-| REQ-2-010 | Design responsivo | 🟠 | `[x]` | Refatoração PWA / "Herança Invisível" concluída |
-| REQ-2-011 | SSOT/Shared Types | 🔴 | `[x]` | `bootstrap.ts`, `heuristics.ts`, `registry/features.ts` integrados |
-
-## Fase 4 — Core do Produto
-
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-4-002 | Simulação Tipo 2 | 🔴 | `[x]` | Score real derivado no BFF via Heuristics (R2.T4) |
-| REQ-4-003 | Simulação Tipo 3 | 🔴 | `[x]` | `Tipo3Player.tsx` funcional com telemetria L3 (R2.T5) |
-| REQ-4-004 | Telemetria Idempotente | 🔴 | `[x]` | UUID eventId + outbox pattern (R2.T3b) |
-| REQ-4-005 | Perfil Vocacional Auto | 🔴 | `[x]` | Integrado com motor de heurísticas e Tina (IA) |
-| REQ-4-009 | Programas: gestão | 🟠 | `[~]` | UI de gestão em progresso |
-| REQ-4-013 | Conquistas automáticas | 🟠 | `[x]` | Ativadas via Registry de EventBus (R2.T3b) |
-| REQ-4-014 | Feed: ranking soberano | 🟠 | `[x]` | Algoritmo implementado e cache Redis ativo |
-| REQ-4-015 | Reputação Contract | 🔴 | `[x]` | Rota canónica `/reputacao/me` sincronizada com Shared Schema (R2.T6b) |
-
-## Fase 7 — IA e Realtime
-
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-7-001 | AI tutor streaming | 🔴 | `[~]` | Modo streaming instável |
-| REQ-7-005 | Mensagens Realtime | 🟠 | `[ ]` | Rota inbox/lista comentada; UI ausente |
-
-## Requisitos Não Funcionais
-
-| ID | Requisito | Prioridade | Estado | Nota de Honesty Pass |
-| --- | --- | --- | --- | --- |
-| REQ-NF-003 | Zero `any` em TS | 🔴 | `[~]` | Lint reports indicam ~23 ocorrências residuais (honest pass) |
-| REQ-NF-005 | Acessibilidade Total | 🔴 | `[x]` | PWA + Contraste Tema Claro resolvidos, botões > 44px e iOS autocomplete fix. |
-| REQ-NF-007 | Rule of 300 (linhas) | 🟡 | `[~]` | Shared index ainda excede limite |
-
-*Last updated: Abril 2026 — R0-2 Sync Pass 1*
+---
+*Última auditoria: 21 de Abril de 2026.*

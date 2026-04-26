@@ -12,7 +12,7 @@ function useFeatureFlags(opts?: FeatureFlagsOptions) {
   return useQuery({
     queryKey: ['feature-flags', 'effective', user?.role, opts?.instituicaoId],
     queryFn: () => {
-      const params = new URLSearchParams({ perfilTipo: user?.role ?? 'aluno' });
+      const params = new URLSearchParams({ perfilTipo: user?.role ?? 'estudante' });
       if (opts?.instituicaoId != null) {
         params.set('instituicaoId', String(opts.instituicaoId));
       }

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { Role } from './user.js';
 import { AreaVocacionalSchema } from './schemas/enums.js';
 
 // ─── AI & Chat ───────────────────────────────────────────────────────────────
@@ -45,7 +44,7 @@ export const LtiScoreSchema = z.object({
 });
 export type LtiScore = z.infer<typeof LtiScoreSchema>;
 
-export interface LtiLaunchClaims extends Record<string, any> {}
+export type LtiLaunchClaims = Record<string, unknown>;
 
 export const LtiPlataformaSchema = z.object({
   id: z.string(),
@@ -67,24 +66,28 @@ export type CreateLtiPlataformaPayload = z.infer<typeof CreateLtiPlataformaPaylo
 
 // ─── Catalogo & Meta ──────────────────────────────────────────────────────────
 
-export interface CatalogoMeta {
-  total: number;
-  page: number;
-  pageSize: number;
-  pageCount: number;
-}
+export const CatalogoMetaSchema = z.object({
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+  pageCount: z.number(),
+});
+export type CatalogoMeta = z.infer<typeof CatalogoMetaSchema>;
 
 export interface CatalogoResponse<T> {
   data: T[];
   pagination: CatalogoMeta;
 }
 
-export interface ExplorarResultado extends Record<string, any> {
+export interface ExplorarResultado {
   id: string;
   tipo: 'curso' | 'simulacao' | 'experiencia' | 'mentor' | 'instituicao';
   titulo: string;
-  subtitulo?: string;
-  imagemUrl?: string;
+  slug?: string | undefined;
+  descricao?: string | undefined;
+  area?: string | undefined;
+  capaUrl?: string | null | undefined;
+  imagemUrl?: string | undefined; // Mantido para retrocompatibilidade
 }
 
 // ─── Feed ────────────────────────────────────────────────────────────────────
@@ -142,38 +145,60 @@ export type RegistoInstituicaoPayload = z.infer<typeof RegistoInstituicaoPayload
 
 // ─── Outros ──────────────────────────────────────────────────────────────────
 
-export interface PerfilVocacional extends Record<string, any> {
-  alunoId: string;
+export interface PerfilVocacional extends Record<string, unknown> {
+  estudanteId: string;
   scoreGlobal: number;
+  areaMatch: string;
+  certeza: number; // 0-1 (autoridade)
+  aptidao: number; // 0-1
+  dedicacao: number; // 0-1
+  consistencia: number; // 0-1
+  diversidade: number; // 0-1
+  updatedAt: string;
+  dimensoes: {
+    fluidez: number;
+    resiliencia: number;
+    foco: number;
+    hesitacao: number;
+  };
 }
 
-export interface MentorPublico extends Record<string, any> {
-  id: string;
-  nome: string;
-  especialidade: string;
-  areaEspecialidade?: string | undefined;
-  avatarUrl?: string | undefined;
-  disponivel?: boolean | undefined;
+export interface DashboardEstudante {
+  stats: {
+    xp: number;
+    reputacao: number;
+    conquistasCount: number;
+    vinkulosCount: number;
+    pulseVariacao: number; // ex: +12
+  };
+  match: {
+    area: string;
+    score: number; // ex: 87
+    insight: string;
+    directive: string;
+  };
+  behavior: {
+    domainId: string;
+    fluidez: number;
+    resiliencia: number;
+    foco: number;
+  } | null;
+  progressoCursos: Array<{
+    id: string;
+    titulo: string;
+    progresso: number;
+  }>;
+  proximaAcao: {
+    label: string;
+    to: string;
+  };
+  insightsTina: string[];
 }
 
-export interface InstituicaoPublica extends Record<string, any> {
-  id: string;
-  nome: string;
-  logoUrl?: string | undefined;
-  tipo?: string | undefined;
-  regiao?: string | undefined;
-}
-
-export interface PerfilPublicoBasico extends Record<string, any> {
-  id: string;
-  nome: string;
-  role: Role;
-  avatarUrl?: string | undefined;
-}
-
-export interface CursoPublico extends Record<string, any> { id: string; titulo: string; }
-export interface SimulacaoPublica extends Record<string, any> { id: string; titulo: string; }
-export interface ExperienciaPublica extends Record<string, any> { id: string; titulo: string; }
+export { MentorPublico, InstituicaoPublica, PerfilPublico, PerfilPublicoBasico } from './user.js';
+export { CursoPublico } from './cursos.js';
+export { SimulacaoPublica } from './simulacoes.js';
+export { ExperienciaPublica } from './experiencias.js';
 
 export const CreateCommentPayloadSchema = z.object({
   targetId: z.string(),
@@ -183,10 +208,9 @@ export const CreateCommentPayloadSchema = z.object({
 });
 export type CreateCommentPayload = z.infer<typeof CreateCommentPayloadSchema>;
 
-export interface Comment extends Record<string, any> {
+export interface Comment extends Record<string, unknown> {
   id: string;
   userId: string;
   conteudo: string;
   createdAt: string;
 }
-

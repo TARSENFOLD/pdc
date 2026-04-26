@@ -3,7 +3,8 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
-import { socketService } from '../modules/realtime/socket.service.js';
+import { eventBus } from '../modules/events/event-bus.js';
+import { DomainEventName } from '../modules/events/types.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -234,15 +235,15 @@ mensagensRoutes.post(
         updatedAt: new Date().toISOString(),
       });
 
-      try {
-        socketService.emitirMensagem(destinatarioId, {
-          id: resMsg.data.id,
-          conversaId,
-          remetenteId: userId,
-          conteudo,
-          createdAt: new Date().toISOString(),
-        });
-      } catch { /* ignore socket fail */ }
+      // G15: Impacto e Resiliência via Outbox
+      await eventBus.publishWithOutbox(DomainEventName.MENSAGEM_ENVIADA as any, {
+        mensagemId: resMsg.data.id,
+        conversaId,
+        remetenteId: userId,
+        destinatarioId,
+        conteudo,
+        createdAt: new Date().toISOString()
+      });
 
       return c.json(resMsg.data, 201);
     } catch (err) {

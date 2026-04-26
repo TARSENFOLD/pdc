@@ -1,0 +1,15 @@
+# CodeRabbit Instructions — Shared (packages/shared)
+
+Foco em SSOT (Single Source of Truth) e pureza de domínio.
+
+## 🔗 SSOT (Sovereignty)
+- Todo schema Zod, interface e contrato de rede nasce aqui.
+- Se uma aplicação define um schema privado que cruza rede, ela está violando a soberania do `@pdc/shared`.
+
+## 📦 Estrutura e Tipagem
+- **Pureza**: Este pacote não deve conter efeitos colaterais ou dependências de infraestrutura complexas (BFF, DB, Edge).
+- **Zod exaustivo**: Garanta que todos os campos obrigatórios do Strapi estão reflectidos nos schemas.
+- **Exportação**: Tudo o que for útil para mais de uma app deve ser exportado no `index.ts`.
+
+## 🔄 G15 Contract
+- O contrato `EcosystemHook<T>` e o enum `DomainEventName` são sagrados. Alterações aqui afectam todo o ecossistema.

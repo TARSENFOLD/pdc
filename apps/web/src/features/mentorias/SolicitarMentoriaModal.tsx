@@ -38,7 +38,7 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
 
   const { data: meusProjetosData } = useQuery({
     queryKey: ['projetos', 'meus'],
-    queryFn: () => http.get<{ data: Array<{ id: string; titulo: string }> }>('/projetos?alunoId=me'),
+    queryFn: () => http.get<{ data: Array<{ id: string; titulo: string }> }>('/projetos?estudanteId=me'),
     enabled: open && tipo === 'revisao_projeto',
   });
 
@@ -142,7 +142,7 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
 
         <div>
           <label className="mb-1 block text-xs font-medium text-text-secondary">
-            Preço proposto (USD) — 0 = gratuita
+            Preço proposto (USD) - 0 = gratuita
           </label>
           <input
             type="number"
@@ -154,7 +154,7 @@ export function SolicitarMentoriaModal({ open, onClose }: Props) {
           />
           {Number(preco) > 0 && (
             <p className="mt-1 text-xs text-text-muted">
-              Comissão PDC (20%): ${(Number(preco) * 0.20).toFixed(2)} — Recebes: ${(Number(preco) * 0.80).toFixed(2)}
+              Comissão PDC (20%): ${(Number(preco) * 0.20).toFixed(2)} - Recebes: ${(Number(preco) * 0.80).toFixed(2)}
             </p>
           )}
         </div>

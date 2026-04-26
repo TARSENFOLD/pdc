@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client';
 
 const SOCKET_URL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3001';
 
-export function useSocket(onMessage?: (msg: any) => void) {
+export function useSocket<T = unknown>(onMessage?: (msg: T) => void) {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export function useSocket(onMessage?: (msg: any) => void) {
     });
 
     if (onMessage) {
-      socketRef.current.on('nova_mensagem', onMessage);
+      socketRef.current.on('nova_mensagem', onMessage as (args: any) => void);
     }
 
     return () => {

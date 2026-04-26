@@ -15,6 +15,11 @@ const redis = env.UPSTASH_REDIS_REST_URL
 
 const AI_PROVIDER = env.AI_PROVIDER;
 
+interface AiChatResponse {
+  choices?: { message: { content: string } }[];
+  message?: { content: string };
+}
+
 export const tinaService = {
   buildSystemPrompt(userContext: string, chunks: string): string {
     return `És a Tina, a assistente virtual inteligente do PDC (Por Dentro do Curso).
@@ -77,7 +82,7 @@ Regras:
     }
   },
 
-  async gerarPerguntasDesafio(area: string, regiao: string = 'global'): Promise<any> {
+  async gerarPerguntasDesafio(area: string, regiao: string = 'global'): Promise<unknown> {
     const prompt = `Gera 5 perguntas imersivas para um micro-desafio vocacional na área de ${area}.
 Contexto de Mercado: ${regiao}.
 As perguntas devem ser curtas, desafiantes e refletir dilemas reais da profissão.
@@ -97,7 +102,7 @@ Retorna APENAS um JSON no formato:
 }`;
 
     const res = await aiService.chat([{ role: 'user', content: prompt }], 'Geração de Desafio Vocacional', false);
-    const data = await res.json() as any;
+    const data = await res.json() as AiChatResponse;
     
     let content = '';
     if (data.choices) {
@@ -125,12 +130,12 @@ Retorna APENAS um JSON no formato:
 - Resiliência ao Erro ($R$): ${metrics.resilience.toFixed(2)}/10
 - Estabilidade de Foco: ${metrics.focus.toFixed(2)}/10
 
-Gera um veredito curto (máx 2 parágrafos) impiedosamente honesto e técnico sobre o potencial deste aluno.
+Gera um veredito curto (máx 2 parágrafos) impiedosamente honesto e técnico sobre o potencial deste estudante.
 Usa uma linguagem que misture rigor científico com visão de mercado.
 Retorna APENAS o texto do veredito.`;
 
     const res = await aiService.chat([{ role: 'user', content: prompt }], 'Análise Psicométrica de Elite', false);
-    const data = await res.json() as any;
+    const data = await res.json() as AiChatResponse;
     
     if (data.choices) {
       return data.choices[0]?.message.content || '';

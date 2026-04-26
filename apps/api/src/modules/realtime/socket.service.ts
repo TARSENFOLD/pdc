@@ -1,12 +1,9 @@
 import { Server } from 'socket.io';
 import { jwtVerify } from 'jose';
-import pino from 'pino';
 import type { Server as HttpServer } from 'node:http';
-import { strapiPost } from '../strapi/strapi.client.js';
 import type { NotificacaoRealtime } from '@pdc/shared';
 import { env } from '../../lib/env.js';
 
-const log = pino({ name: 'socket-service' });
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 
 let io: Server | undefined;
@@ -46,28 +43,8 @@ export const socketService = {
       const userId = (socket.data as Record<string, unknown>).userId as string | undefined;
       if (userId) void socket.join(`user:${userId}`);
 
-      socket.on('mensagem:enviar', async (payload: { destinatarioId: string; conteudo: string }) => {
-        if (!userId) return;
-        try {
-          // Fix: Generic type already represents the item.
-          const res = await strapiPost<{ id: number }>('/mensagens', {
-            remetenteId: userId,
-            destinatarioId: payload.destinatarioId,
-            conteudo: payload.conteudo,
-            lida: false,
-            createdAt: new Date().toISOString(),
-          });
-
-          socketService.emitirMensagem(payload.destinatarioId, {
-            id: res.data.id.toString(),
-            remetenteId: userId,
-            conteudo: payload.conteudo,
-            createdAt: new Date().toISOString(),
-          });
-        } catch (err) {
-          log.error({ err }, 'Erro ao guardar mensagem no Strapi');
-        }
-      });
+      // Mutações de estado devem fluir via API HTTP (Outbox G15).
+      // O Socket.IO é reservado estritamente como canal de Emissão (One-Way Data Flow).
     });
   },
 

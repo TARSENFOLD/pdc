@@ -1,4 +1,4 @@
-import { analyzeResilience, analyzeFocus } from '@pdc/shared';
+import { analyzeResilience, analyzeFocus, type TelemetriaEvento } from '@pdc/shared';
 
 /**
  * Heuristics Engine — PDC v2
@@ -45,5 +45,40 @@ export const heuristicsEngine = {
     const stability = (totalTimeMs - interruptionTimeMs) / totalTimeMs;
     const analysis = analyzeFocus(stability);
     return analysis.score;
+  },
+
+  /**
+   * Calcula a Hesitação Mecânica (Entropia)
+   * Baseado na trajetória do rato vs deslocamento directo.
+   */
+  calculateHesitation(events: TelemetriaEvento[]): number {
+    const bioEvents = events.filter(e => e.tipo === 'simulacao.biomechanics');
+    if (bioEvents.length < 2) return 0;
+
+    let erraticMovements = 0;
+    for (let i = 1; i < bioEvents.length; i++) {
+      const pEvt = bioEvents[i - 1];
+      const cEvt = bioEvents[i];
+      if (!pEvt || !cEvt) continue;
+
+      const prev = pEvt.payload as { x: number; y: number };
+      const curr = cEvt.payload as { x: number; y: number };
+      
+      const prevTime = new Date(pEvt.timestamp).getTime();
+      const currTime = new Date(cEvt.timestamp).getTime();
+      const dt = currTime - prevTime;
+      
+      const dx = (curr.x || 0) - (prev.x || 0);
+      const dy = (curr.y || 0) - (prev.y || 0);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Entropia: movimento pequeno em tempo longo (hesitação mecânica/vibrante)
+      if (dist < 5 && dt > 500) {
+        erraticMovements++;
+      }
+    }
+
+    // Normaliza: 5 movimentos erráticos = score 10 de hesitação
+    return Math.min(10, erraticMovements * 2);
   }
 };

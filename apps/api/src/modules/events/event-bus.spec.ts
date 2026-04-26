@@ -1,61 +1,56 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { eventBus } from './event-bus.js';
-import { DomainEventName } from './types.js';
+import type { DomainEvent } from './types.js';
+import { DomainEventName } from '@pdc/shared';
 
-describe('EventBus (Registry & EventEmitter)', () => {
+describe('EventBus', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     eventBus.removeAllListeners();
   });
 
-  it('deve possuir método register() para registry explícito (D1)', () => {
-    expect(typeof eventBus.register).toBe('function');
+  it('deve registrar e chamar um handler para um evento', async () => {
+    const handler = vi.fn();
+    eventBus.register(DomainEventName.LOGIN, handler);
+
+    const event: DomainEvent = {
+      id: '123',
+      name: DomainEventName.LOGIN,
+      payload: { userId: 'test' },
+      timestamp: new Date().toISOString(),
+    };
+
+    await eventBus.publish(event);
+
+    expect(handler).toHaveBeenCalledWith(event);
   });
 
-  it('deve disparar todos os handlers registados para um evento', async () => {
-    const handler1 = vi.fn().mockResolvedValue(undefined);
-    const handler2 = vi.fn().mockResolvedValue(undefined);
-    const otherHandler = vi.fn().mockResolvedValue(undefined);
-
-    eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA, handler1);
-    eventBus.register(DomainEventName.TENTATIVA_CONCLUIDA, handler2);
-    eventBus.register(DomainEventName.CURSO_CONCLUIDO, otherHandler);
-
-    await eventBus.publish({
-      id: '1',
-      name: DomainEventName.TENTATIVA_CONCLUIDA,
+  it('deve lidar com eventos sem handlers registrados', async () => {
+    const event: DomainEvent = {
+      id: '456',
+      name: DomainEventName.LOGOUT,
       payload: {},
-      timestamp: new Date().toISOString()
-    });
+      timestamp: new Date().toISOString(),
+    };
 
+    await expect(eventBus.publish(event)).resolves.toBeUndefined();
+  });
+
+  it('deve executar múltiplos handlers em paralelo via allSettled', async () => {
+    const handler1 = vi.fn().mockResolvedValue({ status: 'sent' });
+    const handler2 = vi.fn().mockRejectedValue(new Error('Falha simulada'));
+
+    eventBus.register(DomainEventName.PERFIL_ATUALIZADO, handler1);
+    eventBus.register(DomainEventName.PERFIL_ATUALIZADO, handler2);
+
+    const event: DomainEvent = {
+      id: '789',
+      name: DomainEventName.PERFIL_ATUALIZADO,
+      payload: { perfilId: 'abc' },
+      timestamp: new Date().toISOString(),
+    };
+
+    await expect(eventBus.publish(event)).rejects.toThrow();
     expect(handler1).toHaveBeenCalled();
     expect(handler2).toHaveBeenCalled();
-    expect(otherHandler).not.toHaveBeenCalled();
-  });
-
-  it('deve suportar múltiplos handlers resolvendo em paralelo via publish', async () => {
-    let callOrder: string[] = [];
-    const handlerSlow = vi.fn().mockImplementation(async () => {
-      await new Promise(r => setTimeout(r, 50));
-      callOrder.push('slow');
-    });
-    const handlerFast = vi.fn().mockImplementation(async () => {
-      callOrder.push('fast');
-    });
-
-    eventBus.register('test.parallel', handlerSlow);
-    eventBus.register('test.parallel', handlerFast);
-
-    await eventBus.publish({
-      id: '2',
-      name: 'test.parallel',
-      payload: {},
-      timestamp: new Date().toISOString()
-    });
-
-    expect(callOrder).toContain('slow');
-    expect(callOrder).toContain('fast');
-    expect(handlerSlow).toHaveBeenCalled();
-    expect(handlerFast).toHaveBeenCalled();
   });
 });

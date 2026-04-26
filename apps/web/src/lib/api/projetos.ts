@@ -6,7 +6,7 @@ export const projetosApi = {
     const params = new URLSearchParams();
     if (filters?.page) params.set('page', String(filters.page));
     if (filters?.pageSize) params.set('pageSize', String(filters.pageSize));
-    if (filters?.alunoId) params.set('alunoId', filters.alunoId);
+    if (filters?.estudanteId) params.set('estudanteId', filters.estudanteId);
     if (filters?.cursoId) params.set('cursoId', filters.cursoId);
     if (filters?.tags) params.set('tags', filters.tags);
 

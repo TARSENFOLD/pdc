@@ -32,7 +32,7 @@ export function BookmarkButton({ targetType, targetId, initialBookmarked = false
     <Button
       variant="ghost"
       size="sm"
-      className={bookmarked ? 'text-primary border-primary bg-primary/10' : 'text-text-muted hover:text-primary'}
+      className={bookmarked ? 'text-accent border-accent bg-accent/10' : 'text-ink-tertiary hover:text-accent'}
       onClick={() => { toggleMutation.mutate(); }}
       aria-label="Guardar items"
     >

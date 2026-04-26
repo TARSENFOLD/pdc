@@ -13,14 +13,16 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { APPLE_SPRING } from '@/lib/animations';
 import { useTelemetry } from '@/hooks/useTelemetry';
+import type { Experiencia } from '@pdc/shared';
 
 // ─── Sub-component: Curriculum Section ──────────────────────────────────────────
 
 function CurriculumSection({ discipline, index, onDwell }: { 
-  discipline: any; index: number; onDwell: (id: string, ms: number) => void 
+  discipline: { disciplina: string; descricao: string; relevanciaMercado: string }; index: number; onDwell: (id: string, ms: number) => void 
 }) {
-  const startRef = useRef<number>(Date.now());
+  const startRef = useRef(Date.now());
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
@@ -33,10 +35,10 @@ function CurriculumSection({ discipline, index, onDwell }: {
   }, [isExpanded, discipline.disciplina, onDwell]);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ ...APPLE_SPRING, delay: index * 0.05 }}>
       <Card 
         className={`p-5 cursor-pointer border-white/5 ${isExpanded ? 'bg-accent/[0.03] border-accent/20' : 'bg-surface-alt'}`}
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => { setIsExpanded(!isExpanded); }}
       >
         <div className="flex items-center justify-between">
            <div className="flex items-center gap-4">
@@ -64,7 +66,7 @@ export function ExperienciaDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { track } = useTelemetry();
   
-  const { data: exp, isLoading, isError } = useQuery({
+  const { data: exp, isLoading, isError } = useQuery<Experiencia>({
     queryKey: ['experiencias', id ?? ''],
     queryFn: () => experienciasApi.getById(id ?? ''),
     enabled: !!id,
@@ -125,7 +127,7 @@ export function ExperienciaDetailPage() {
               <BookOpen className="text-accent" /> Grade Curricular
             </h3>
             <div className="grid grid-cols-1 gap-3">
-               {(exp as any).gradeDestaque?.map((disc: any, i: number) => (
+               {exp.gradeDestaque?.map((disc, i: number) => (
                  <CurriculumSection key={i} index={i} discipline={disc} onDwell={handleDisciplineDwell} />
                ))}
             </div>
@@ -135,10 +137,10 @@ export function ExperienciaDetailPage() {
          <aside className="space-y-6">
             <Card className="p-8 bg-surface-alt border-accent/20 space-y-6 shadow-2xl">
                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                     <Building2 size={20} className="text-accent" />
-                     <p className="text-sm font-bold">{(exp as any).instituicao?.nome || 'Instituição Parceira'}</p>
-                  </div>
+                   <div className="flex items-center gap-3">
+                      <Building2 size={20} className="text-accent" />
+                      <p className="text-sm font-bold">{exp.instituicao?.nome || 'Instituição Parceira'}</p>
+                   </div>
                   <div className="flex items-center gap-3">
                      <Calendar size={20} className="text-accent" />
                      <p className="text-sm font-bold">{new Date(exp.dataInicio).toLocaleDateString('pt-AO')}</p>

@@ -15,13 +15,13 @@ export function LandingHero() {
     reduced
       ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.3 } }
       : {
-          initial: { opacity: 0, y: 32 },
-          animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.5, delay: i * 0.12, ease: 'easeOut' },
-        };
+        initial: { opacity: 0, y: 32 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.5, delay: i * 0.12, ease: 'easeOut' },
+      };
 
   return (
-    <section 
+    <section
       className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 pt-24 pb-16 text-center sm:px-6"
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
@@ -71,15 +71,15 @@ export function LandingHero() {
       <motion.div {...stagger(3)} className="relative z-10 mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
         <Link
           to="/criar-conta"
-          onMouseEnter={() => setChoreography('swarm')}
-          onMouseLeave={() => setChoreography('idle')}
+          onMouseEnter={() => { setChoreography('swarm'); }}
+          onMouseLeave={() => { setChoreography('idle'); }}
           onClick={(e) => {
             if (reduced) return;
             e.preventDefault();
             if (isWarping) return;
             setIsWarping(true);
             setChoreography('warp');
-            setTimeout(() => navigate('/criar-conta'), 600);
+            setTimeout(() => { navigate('/criar-conta'); }, 600);
           }}
           className="relative w-full rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-amber px-8 py-4 text-sm font-bold text-background transition-colors sm:w-auto overflow-hidden shadow-md active:scale-[0.98] hover:bg-amber-hover"
         >
@@ -87,18 +87,18 @@ export function LandingHero() {
         </Link>
         <a
           href="#como-funciona"
-          onMouseEnter={() => setChoreography('swarm')}
-          onMouseLeave={() => setChoreography('idle')}
+          onMouseEnter={() => { setChoreography('swarm'); }}
+          onMouseLeave={() => { setChoreography('idle'); }}
           className="w-full rounded-tr-sm rounded-bl-sm rounded-tl-2xl rounded-br-2xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 backdrop-blur-lg px-8 py-4 text-sm font-bold text-text-primary transition-all hover:bg-black/10 dark:hover:bg-white/10 hover:text-text-primary dark:hover:text-white sm:w-auto active:scale-[0.98]"
         >
           Entenda como funciona
         </a>
       </motion.div>
 
-      <div 
+      <div
         className="relative z-10"
-        onMouseEnter={() => setChoreography('swarm')}
-        onMouseLeave={() => setChoreography('idle')}
+        onMouseEnter={() => { setChoreography('swarm'); }}
+        onMouseLeave={() => { setChoreography('idle'); }}
       >
         <MicroDesafio />
       </div>
@@ -106,12 +106,12 @@ export function LandingHero() {
       <motion.div {...stagger(4)} className="relative z-10 mt-16 max-w-lg w-full">
         {/* Subtle geometric divider inspired by traditional woven patterns */}
         <div className="flex justify-center items-center gap-4 opacity-40">
-           <div className="h-px bg-text-primary/20 flex-1"></div>
-           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-amber">
-              <path d="M12 2L2 12L12 22L22 12L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="miter"/>
-              <path d="M12 8L8 12L12 16L16 12L12 8Z" fill="currentColor"/>
-           </svg>
-           <div className="h-px bg-text-primary/20 flex-1"></div>
+          <div className="h-px bg-text-primary/20 flex-1"></div>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-amber">
+            <path d="M12 2L2 12L12 22L22 12L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="miter" />
+            <path d="M12 8L8 12L12 16L16 12L12 8Z" fill="currentColor" />
+          </svg>
+          <div className="h-px bg-text-primary/20 flex-1"></div>
         </div>
       </motion.div>
 

@@ -1,72 +1,77 @@
-# Deploy em Produção (Railway)
+# Estratégia de Deploy e Infraestrutura — Guia Soberano (B3)
 
-O PDC v2 é implantado integramente na infraestrutura **Railway**, utilizando networking interno para máxima performance e segurança.
-
-| Serviço | Root Directory | Estratégia | URL |
-|---------|----------------|------------|-----|
-| Frontend (`apps/web`) | `apps/web` | Railway SPA (Static) | `usepdc.com` |
-| BFF (`apps/api`) | (Raiz) | Dockerfile | `api.usepdc.com` |
-| CMS (`infra/strapi`) | `infra/strapi` | Node.js | `interno` |
+O PDC v2 utiliza uma arquitectura distribuída multi-provider para garantir latência zero na Edge, escalabilidade elástica no Core e presença nativa em dispositivos móveis.
 
 ---
 
-## 1. Frontend — apps/web
+## 🏛️ Matriz de Infraestrutura (Distributed Stack)
 
-### Configuração Railway
-1. Adicione um novo serviço a partir do GitHub.
-2. Root Directory: `apps/web`.
-3. Railway detetará o `package.json`. Use `npm run build`.
-4. **Static Site Hosting:** Active a opção de "Static Site" se disponível ou configure o start command como:
-   `npx serve -s dist -p ${PORT:-5173}`
-
-### Variáveis (Frontend)
-| Variável | Valor |
-|----------|-------|
-| `VITE_API_URL` | `https://api.usepdc.com` |
-
----
-
-## 2. BFF — apps/api (Core)
-
-### Configuração Railway
-1. Adicione um novo serviço. **MUITO IMPORTANTE:** Root Directory deve ser a **RAIZ do repositório**.
-2. O Railway usará automaticamente o `apps/api/Dockerfile`.
-3. Configure o domínio personalizado para `api.usepdc.com`.
-
-### Variáveis (BFF)
-Refira-se ao ficheiro `apps/api/.env.production` para a lista completa. Segredos críticos:
-- `STRAPI_URL`: Use o endereço interno do Railway (ex: `http://pdc-strapi.railway.internal`).
-- `STRAPI_API_TOKEN`: Token Full Access gerado no painel Admin do Strapi.
-- `JWT_SECRET`: 64 chars (openssl rand -base64 64).
+| Componente | Provider | Estratégia | Domínio Prod |
+|------------|----------|------------|--------------|
+| **Frontend (PWA)** | **Cloudflare Pages** | Build Automático (Vite 6) | `usepdc.com` |
+| **Edge (Factos)** | **Cloudflare Workers** | Wrangler / Global Edge | `edge.usepdc.com` |
+| **BFF (Cérebro)** | **Railway** | Dockerfile (Root Context) | `api.usepdc.com` |
+| **CMS (Strapi v5)** | **Railway** | Node.js (Infra Context) | `cms.usepdc.com` |
+| **Base de Dados** | **Neon** | Serverless PostgreSQL 16 | `neon.tech` (Proxy) |
+| **Cache & Queue** | **Upstash** | Serverless Redis (HTTP/TCP) | `upstash.io` |
+| **Storage (Media)** | **Cloudflare R2** | S3-Compatible Storage | `r2.dev` / CDN |
+| **E-mail** | **Resend** | Transactional API | `resend.com` |
+| **AI (Tina)** | **DeepSeek** | Inference API (RAG) | `deepseek.com` |
+| **Observabilidade** | **Sentry** | Full-stack Tracing | `sentry.io` |
 
 ---
 
-## 3. Strapi & Postgres
+## 📱 Pipeline de Release Mobile
 
-### PostgreSQL
-1. Adicione o plugin PostgreSQL ao projecto Railway.
-2. O Railway injetará automaticamente as variáveis `DATABASE_URL` ou os campos individuais.
+O PDC v2 é distribuído como PWA, mas possui "invólucros" nativos para presença nas lojas.
 
-### Strapi Config
-1. Root Directory: `infra/strapi`.
-2. O Strapi v5 no Railway requer as seguintes variáveis:
-   - `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_NAME`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`.
-   - `APP_KEYS`, `API_TOKEN_SALT`, `ADMIN_JWT_SECRET`, `TRANSFER_TOKEN_SALT`.
-
----
-
-## 4. Checklist de Lançamento (Serviços Externos)
-
-1. **Upstash (Redis):** Necessário para Rate Limiting e Refresh Tokens.
-2. **Cloudflare R2:** Bucket para uploads de media (Simulações/Perfis).
-3. **Resend:** API Key para envio de OTP e notificações de sistema.
-4. **DeepSeek:** API Key para o Oráculo (Tina v2.0).
-5. **Google/LinkedIn Cloud:** IDs e Secrets para Login Social.
-6. **Sentry:** DSN para observabilidade em produção.
+1.  **iOS (Capacitor)**:
+    - `npm run build -w apps/web`
+    - `npx cap sync ios`
+    - Abertura no Xcode → Arquivo → Assinatura Team → Upload para App Store Connect.
+    - Distribuição via **TestFlight (Internal)** para QA.
+2.  **Android (TWA / PWABuilder)**:
+    - Geração de Android App Bundle via PWABuilder (Trusted Web Activity).
+    - Assinatura com Keystore de produção.
+    - Upload para Google Play Console → **Internal Track**.
 
 ---
 
-## Verificação Pós-Deploy
+## 🔐 Gestão de Variáveis de Ambiente (Secrets)
 
-1. `curl -I https://api.usepdc.com/health` -> deve retornar `200`.
-2. Aceda a `https://usepdc.com/login` e valide o fluxo de autenticação real.
+> [!CAUTION]
+> **NUNCA COMMITE FICHEIROS `.env`**. 
+> O ficheiro `.env.example` é uma fixture de desenvolvimento, não um template para produção.
+
+### Configuração por Provider
+- **Cloudflare (Pages/Workers)**: Configurar via Dashboard em `Settings > Variables` ou `wrangler secret put NAME`.
+- **Railway**: Utilizar o `Secret Store` do serviço. Marcar chaves sensíveis como `Sensitive`.
+- **Upstash/Neon/Resend**: Os segredos devem ser injectados no BFF via Railway enviroment variables.
+
+---
+
+## 🌊 Ambientes: Staging vs Produção
+
+| Recurso | Staging / Preview | Produção |
+|---------|-------------------|----------|
+| **Branch** | `develop` / PR Branches | `main` |
+| **Web** | `staging.usepdc.com` | `usepdc.com` |
+| **API (BFF)** | `api-staging.usepdc.com` | `api.usepdc.com` |
+| **Edge** | `edge-staging.usepdc.com` | `edge.usepdc.com` |
+| **Base de Dados** | Neon Branch `staging` | Neon Branch `main` |
+
+---
+
+## 🏥 Health Checks Pós-Deploy
+
+Após cada deploy, o responsável de Operações (Ops) deve validar:
+
+1.  **Core Connectivity**: `curl -I https://api.usepdc.com/health` (deve retornar `200 OK`).
+2.  **Auth Authority**: Validar endpoint JWKS em `https://api.usepdc.com/.well-known/jwks.json`.
+3.  **Telemetry Ingestion**: Executar um teste de ingestão na Edge via `scripts/test-edge-prod.sh`.
+4.  **PWA Manifest**: Validar `https://usepdc.com/manifest.webmanifest`.
+5.  **Performance Gate**: Lighthouse Score em Mobile ≥ 90.
+6.  **Accessibility Gate**: Axe-core com zero violações críticas em `https://usepdc.com/login`.
+
+---
+*Doc is Law — Última auditoria: 21 de Abril de 2026.*

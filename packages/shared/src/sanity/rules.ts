@@ -12,7 +12,7 @@ export const ruleNoFutureTimestamp: SanityRule = (event) => {
 
 // 2. dwellTime negativo (viagem no tempo detectada)
 export const ruleNoNegativeDwellTime: SanityRule = (event) => {
-  if (event.payload && typeof event.payload.dwellTime === 'number' && event.payload.dwellTime < 0) {
+  if (typeof event.payload.dwellTime === 'number' && event.payload.dwellTime < 0) {
     return { valid: false, reason: 'dwellTime negativo - impossibilidade temporal', ruleName: 'ruleNoNegativeDwellTime' };
   }
   return { valid: true };
@@ -28,7 +28,7 @@ export const ruleMaxEventsPerSecond: SanityRule = (_event, context) => {
 
 // 4. Score ou precisão fora de range matemático impossível (se enviados directos)
 export const ruleValidScoreRange: SanityRule = (event) => {
-  if (event.payload && typeof event.payload.score === 'number') {
+  if (typeof event.payload.score === 'number') {
     if (event.payload.score < -1000 || event.payload.score > 1000) {
       return { valid: false, reason: 'Score com valor irreal', ruleName: 'ruleValidScoreRange' };
     }
@@ -38,7 +38,7 @@ export const ruleValidScoreRange: SanityRule = (event) => {
 
 // 5. Backtracking em simulações sequenciais lineares restritas
 export const ruleValidSequence: SanityRule = (event, context) => {
-  if (event.payload && typeof event.payload.step === 'number' && context?.lastStep !== undefined) {
+  if (typeof event.payload.step === 'number' && context?.lastStep !== undefined) {
     if (event.payload.step < context.lastStep && !context.allowBacktrack) {
       return { valid: false, reason: 'Backtracking não permitido nesta sequência', ruleName: 'ruleValidSequence' };
     }

@@ -155,7 +155,7 @@ export function AdminUtilizadoresPage() {
             }}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber"
           >
-            <option value="aluno">Aluno</option>
+            <option value="estudante">Estudante</option>
             <option value="mentor">Mentor</option>
             <option value="instituicao">Instituição</option>
             <option value="moderador">Moderador</option>

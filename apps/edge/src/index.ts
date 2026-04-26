@@ -1,6 +1,11 @@
 import { Hono } from 'hono';
 import { jwsVerifyMiddleware } from './middleware/jws-verify';
-import { applySanityRules, EDGE_SANITY_RULES } from '@pdc/shared';
+import { 
+  applySanityRules, 
+  EDGE_SANITY_RULES, 
+  TelemetriaBatchSchema, 
+  type TelemetriaEvento 
+} from '@pdc/shared';
 
 type Bindings = {
   UPSTASH_REDIS_REST_URL: string;
@@ -24,46 +29,54 @@ app.use('/telemetria/batch/*', jwsVerifyMiddleware);
 
 /**
  * POST /telemetria/batch
- * Ingestor de alta performance no Edge.
+ * Ingestor de alta performance no Edge com Tipagem Soberana.
  */
 app.post('/telemetria/batch', async (c) => {
-  // Casting para unknown para garantir segurança total nas boundaries de I/O
-  const parsed = (await c.req.json()) as unknown;
+  const body = await c.req.json();
+  const result = TelemetriaBatchSchema.safeParse(body);
   
-  const events: unknown[] = (
-    typeof parsed === 'object' && 
-    parsed !== null && 
-    'events' in parsed && 
-    Array.isArray((parsed as { events: unknown }).events)
-  ) ? (parsed as { events: unknown[] }).events : [];
-
-  if (events.length === 0) return c.json({ success: true });
-
-  const validEvents: unknown[] = [];
-  for (const rawEvent of events) {
-    if (typeof rawEvent === 'object' && rawEvent !== null && 'eventId' in rawEvent && 'timestamp' in rawEvent) {
-      const sanity = applySanityRules(rawEvent as any, EDGE_SANITY_RULES);
-      if (sanity.valid) {
-        validEvents.push(rawEvent);
-      } else {
-        console.warn(`Evento rejeitado no Edge (Sanity ${sanity.ruleName}):`, sanity.reason);
-      }
-    }
+  if (!result.success) {
+    return c.json({ error: 'Payload de telemetria inválido', details: result.error.format() }, 400);
   }
 
-  if (validEvents.length === 0) return c.json({ success: true, count: 0 }, 202);
+  const { events } = result.data;
+  const perfilId = c.get('perfilId');
+
+  const processedEvents = events.map((event: TelemetriaEvento) => {
+    // Garantir Identidade Total: Injetar perfilId do token se ausente
+    const identifiedEvent = {
+      ...event,
+      perfilId: event.perfilId || perfilId
+    };
+
+    // Aplicar sanidade no Edge (Camada 1)
+    const sanity = applySanityRules(identifiedEvent, EDGE_SANITY_RULES);
+
+    if (!sanity.valid) {
+      // REGRA SOBERANA: Não descartar. Etiquetar para auditoria forense no BFF.
+      return {
+        ...identifiedEvent,
+        metadata: {
+          ...(identifiedEvent.payload || {}),
+          edgeInvalidated: true,
+          edgeReason: sanity.reason
+        }
+      };
+    }
+    return identifiedEvent;
+  });
 
   // Push para Upstash Redis (Queue)
   try {
     const response = await fetch(`${c.env.UPSTASH_REDIS_REST_URL}/lpush/telemetry_queue`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${c.env.UPSTASH_REDIS_REST_TOKEN}` },
-      body: JSON.stringify(validEvents.map((e: unknown) => JSON.stringify(e))),
+      body: JSON.stringify(processedEvents.map(e => JSON.stringify(e))),
     });
 
     if (!response.ok) throw new Error('Falha no buffer Redis');
 
-    return c.json({ success: true, count: validEvents.length }, 202);
+    return c.json({ success: true, count: processedEvents.length }, 202);
   } catch {
     return c.json({ error: 'Buffer Indisponível' }, 503);
   }
@@ -71,17 +84,22 @@ app.post('/telemetria/batch', async (c) => {
 
 /**
  * POST /landing/pulse
- * Tracking anónimo para landing page.
+ * Tracking Identificado para landing page (exige rasto/session).
  */
 app.post('/landing/pulse', async (c) => {
-  // Consumimos o stream do body mesmo que não precisemos do conteúdo
-  await c.req.text(); 
+  const { rastoId } = await c.req.json<{ rastoId: string }>();
   
-  // Incremento de contagem global de talentos
-  await fetch(`${c.env.UPSTASH_REDIS_REST_URL}/incr/pulse_count`, {
+  if (!rastoId) {
+    return c.json({ error: 'Identificador de rasto obrigatório (Lei da Identidade Total)' }, 400);
+  }
+  
+  // Incremento de contagem global de talentos identificado pelo rasto
+  await fetch(`${c.env.UPSTASH_REDIS_REST_URL}/sadd/landing_visitors`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${c.env.UPSTASH_REDIS_REST_TOKEN}` },
+    body: JSON.stringify([rastoId])
   });
+
   return c.json({ success: true }, 202);
 });
 

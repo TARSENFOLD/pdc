@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import { EstadoEditorialSchema } from './user.js';
-import { AreaVocacionalSchema } from './schemas/enums.js';
+import { AreaVocacionalSchema, EstadoEditorialSchema } from './schemas/enums.js';
 
 export const ItemModuloSchema = z.object({
   id: z.string(),
@@ -28,10 +27,30 @@ export const CursoSchema = z.object({
   slug: z.string(),
   titulo: z.string(),
   descricao: z.string(),
+  area: AreaVocacionalSchema.optional(),
+  nivel: z.string().optional(),
+  idioma: z.string().optional(),
+  gratuito: z.boolean().optional(),
+  preco: z.number().optional(),
+  moeda: z.string().optional(),
   capaUrl: z.string().url().optional(),
   autorId: z.string(),
-  modulos: z.array(ModuloSchema).optional(),
   totalHoras: z.number(),
+  estado: EstadoEditorialSchema.optional().default('draft'),
+  rating: z.number().min(0).max(5).optional().default(0),
+  // Regras de Match Soberano
+  regrasAcesso: z.object({
+    minFluidez: z.number().min(0).max(10).optional(),
+    minResiliencia: z.number().min(0).max(10).optional(),
+    minFoco: z.number().min(0).max(10).optional(),
+    areasCompativeis: z.array(AreaVocacionalSchema).optional(),
+  }).optional(),
+  modulos: z.array(ModuloSchema).optional(),
+  
+  // Detalhes de Mérito (Diferencial PDC)
+  bloqueado: z.boolean().optional(),
+  motivoBloqueio: z.string().optional(),
+  
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -42,10 +61,30 @@ export const CriarCursoPayloadSchema = z.object({
   titulo: z.string().min(3).max(120),
   descricao: z.string().min(10).max(2000),
   area: AreaVocacionalSchema,
-  nivel: z.string().min(2).max(100),
+  nivel: z.enum(['basico', 'medio', 'avancado']),
+  thumbnailUrl: z.string().url().optional(),
   capaUrl: z.string().url().optional(),
   preco: z.number().min(0).optional(),
-  visibilidade: z.enum(['publico', 'privado']).optional(),
+  visibilidade: z.enum(['publico', 'privado', 'institucional']).optional().default('publico'),
+  
+  // Regras de Match Soberano (Mandatário para E2E)
+  regrasAcesso: z.object({
+    minFluidez: z.number().min(0).max(10).optional().default(0),
+    minResiliencia: z.number().min(0).max(10).optional().default(0),
+    minFoco: z.number().min(0).max(10).optional().default(0),
+  }),
+
+  // Estrutura em Cascata (Mandatário para E2E)
+  modulos: z.array(z.object({
+    titulo: z.string().min(3),
+    ordem: z.number(),
+    itens: z.array(z.object({
+      titulo: z.string().min(3),
+      tipo: z.enum(['video', 'pdf', 'texto', 'quiz', 'tarefa', 'iframe']),
+      conteudo: z.string().optional(),
+      ordem: z.number(),
+    })).min(1),
+  })).min(1),
 });
 
 export type CriarCursoPayload = z.infer<typeof CriarCursoPayloadSchema>;
@@ -72,7 +111,7 @@ export type CursoMeu = z.infer<typeof CursoMeuSchema>;
 export const InscricaoSchema = z.object({
   id: z.string(),
   cursoId: z.string(),
-  alunoId: z.string(),
+  estudanteId: z.string(),
   dataInscricao: z.string().datetime(),
   concluido: z.boolean(),
   dataConclusao: z.string().datetime().optional(),
@@ -86,6 +125,21 @@ export const InscricaoComCursoSchema = InscricaoSchema.extend({
 });
 
 export type InscricaoComCurso = z.infer<typeof InscricaoComCursoSchema>;
+
+export const CursoPublicoSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  titulo: z.string(),
+  descricao: z.string(),
+  capaUrl: z.string().url().optional().nullable(),
+  area: AreaVocacionalSchema.optional().nullable(),
+  nivel: z.string().optional().nullable(),
+  idioma: z.string().optional(),
+  gratuito: z.boolean().optional(),
+  totalHoras: z.number().optional(),
+  autorNome: z.string().optional(),
+});
+export type CursoPublico = z.infer<typeof CursoPublicoSchema>;
 
 export interface CursoFilters {
   search?: string;

@@ -1,92 +1,81 @@
-import { strapiPost, strapiPut } from '../strapi/strapi.client.js';
-import { DomainEventName, type DomainEvent } from './types.js';
 import pino from 'pino';
+import { z } from 'zod';
+import { redis } from '../../lib/redis.js';
+import { strapiPost, strapiPut } from '../strapi/strapi.client.js';
+import { 
+  DomainEventName, 
+  type DomainEvent, 
+  type EcosystemHook, 
+  EcosystemHookName,
+  type EcosystemHookResult,
+  type EcosystemHookContext,
+  EventPayloadSchemas
+} from '@pdc/shared';
 
 const log = pino({ name: 'event-bus' });
 
-/**
- * Interface para resultados de handlers que suportam retry granular (Approach §1.4)
- */
-export interface HandlerResult {
-  status: 'sent' | 'skipped' | 'retryable_error';
-  reason?: string;
-}
-
-type Handler = (event: DomainEvent<any>) => Promise<HandlerResult | void | unknown>;
-
-/**
- * EventBus Sovereign (Refactored R2.T3b)
- * Registry explícito de handlers + Outbox reentrante com Promise.allSettled.
- */
 class EventBus {
-  private handlers = new Map<string, Handler[]>();
+  // Mantemos o armazenamento interno flexível para suportar múltiplos payloads
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private hooks: EcosystemHook<any>[] = [];
 
   /**
-   * Registry explícito de handlers (D1 requirement).
+   * Registar um Hook G15 no ecossistema
    */
-  register(name: DomainEventName | string, handler: Handler): void {
-    const existing = this.handlers.get(name) || [];
-    this.handlers.set(name, [...existing, handler]);
+  registerHook<T>(hook: EcosystemHook<T>) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.hooks.push(hook as EcosystemHook<any>);
+    log.info({ hook: hook.name }, 'G15 Hook Registado');
   }
 
   /**
-   * Publish an event locally and wait for handlers.
-   * Aguarda todos os handlers via Promise.allSettled para isolamento de falhas.
+   * Métodos de Compatibilidade para Testes Legados
    */
-  async publish(event: DomainEvent): Promise<void> {
-    const eventHandlers = this.handlers.get(event.name) || [];
-    if (eventHandlers.length === 0) return;
-
-    // Promise.allSettled para isolamento de falhas (D1)
-    const results = await Promise.allSettled(
-      eventHandlers.map(handler => handler(event))
-    );
-
-    // Mapear falhas (rejeições ou status de erro reprocessável)
-    const failures = results.map((r, i) => {
-      const handlerName = eventHandlers[i]?.name || `handler-${String(i)}`;
-      if (r.status === 'rejected') {
-        return { handler: handlerName, error: r.reason };
+  register(name: DomainEventName, handler: (event: DomainEvent<any>) => Promise<void>) {
+    this.registerHook({
+      name: `legacy-handler:${name}` as any,
+      dependencies: [],
+      idempotencyKey: (e) => `legacy:${e.id}`,
+      execute: async (e) => {
+        await handler(e);
+        return { status: 'sent' };
       }
-      // Se o handler devolveu um objeto com status de erro (Approach §1.4)
-      const val = r.value as HandlerResult | null;
-      if (val && typeof val === 'object' && val.status === 'retryable_error') {
-        return { handler: handlerName, reason: val.reason };
-      }
-      return null;
-    }).filter((f): f is NonNullable<typeof f> => f !== null);
+    });
+  }
 
-    if (failures.length > 0) {
-      // Counter virtual via logs estruturados (Approach §1.5)
-      log.error({ 
-        eventId: event.id, 
-        event: event.name, 
-        failures,
-        metric: 'domain_events_failed_total' 
-      }, `EventBus: ${failures.length} handlers falharam para o evento ${event.name}`);
-      
-      // Propagamos erro para o outbox não marcar como processed (Retry requirement)
-      throw new Error(`Handlers falharam para ${event.name}: ${failures.map(f => f.handler).join(', ')}`);
-    }
+  removeAllListeners() {
+    this.hooks = [];
   }
 
   /**
-   * Domain Outbox Pattern implementation (AC requirement).
-   * Persiste no Strapi primeiro, executa handlers e marca como processado no fim.
+   * Publicar evento com persistência Outbox e execução de Hooks G15
    */
-  async publishWithOutbox(name: DomainEventName | string, payload: unknown): Promise<void> {
-    const event: DomainEvent = {
+  async publishWithOutbox<TName extends DomainEventName>(
+    name: TName, 
+    payload: unknown
+  ): Promise<void> {
+    const event: DomainEvent<unknown> = {
       id: crypto.randomUUID(),
       name,
-      payload,
+      payload: payload as Record<string, unknown>,
       timestamp: new Date().toISOString(),
     };
 
-    let eventRecordId: string | number | undefined;
+    // 1. Validação Soberana de Payload
+    const schema = (EventPayloadSchemas as Record<string, z.ZodTypeAny>)[name];
+    if (schema) {
+      const result = schema.safeParse(payload);
+      if (!result.success) {
+        log.error({ name, errors: result.error.format() }, 'Payload G15 Inválido');
+        throw new Error(`Falha de contrato E2E no evento: ${name}`);
+      }
+      event.payload = result.data;
+    }
 
+    // 2. Persistência no Outbox (Strapi)
+    let eventRecordId: string | number | undefined;
     try {
-      // 1. Persist to DB (Outbox)
-      const res = await strapiPost<any>('/domain-events', {
+      const res = await strapiPost<{ id: string | number }>('/domain-events', {
         name: event.name,
         payload: event.payload,
         correlationId: event.id,
@@ -94,42 +83,80 @@ class EventBus {
       });
       eventRecordId = res.data?.id;
 
-      // 2. Execute handlers
-      await this.publish(event);
+      // 3. Execução Orquestrada de Hooks
+      await this.dispatchHooks(event);
 
-      // 3. Mark as processed if all succeeded
+      // 4. Marcar como Processado
       if (eventRecordId) {
-        await strapiPut(`/domain-events/${eventRecordId}`, {
+        await strapiPut<unknown>(`/domain-events/${eventRecordId}`, {
           processed: true,
           processedAt: new Date().toISOString(),
         });
       }
     } catch (err) {
-      log.error({ err, eventName: name, eventId: event.id }, 'Falha no processamento outbox do EventBus');
-      // Mantém processed=false para retry
+      log.error({ err, eventName: name }, 'Erro no Ciclo E2E G15');
       throw err;
     }
   }
-  
-  /**
-   * Alias de compatibilidade para testes e hooks legados.
-   */
-  on(name: string, handler: any) {
-    this.register(name as any, handler);
-  }
 
   /**
-   * Alias para subscrever eventos (Interface Approach §1.4)
+   * Despachar ganchos para um evento já persistido (Replay)
    */
-  subscribe<T>(name: DomainEventName, handler: (e: DomainEvent<T>) => Promise<void>): void {
-    this.register(name, handler as any);
+  async publish(event: DomainEvent<unknown>): Promise<void> {
+    const schema = (EventPayloadSchemas as Record<string, z.ZodTypeAny>)[event.name];
+    if (schema) {
+      const result = schema.safeParse(event.payload);
+      if (!result.success) {
+        log.error({ name: event.name, errors: result.error.format() }, 'Payload G15 Inválido no Replay');
+        throw new Error(`Falha de contrato E2E no evento: ${event.name}`);
+      }
+      event.payload = result.data;
+    }
+    await this.dispatchHooks(event);
   }
-  
-  /**
-   * Limpa todos os handlers (usado em testes).
-   */
-  removeAllListeners() {
-    this.handlers.clear();
+
+  private async dispatchHooks(event: DomainEvent<unknown>): Promise<void> {
+    const context: EcosystemHookContext = {
+      results: {} as Record<EcosystemHookName, EcosystemHookResult>
+    };
+
+    // FASE 1: Hooks Independentes (Ranking, Feed, Match, Achievement)
+    const independentHooks = this.hooks.filter(h => h.name !== EcosystemHookName.NOTIFY);
+    
+    await Promise.allSettled(independentHooks.map(async (hook) => {
+      const result = await this.executeHook(hook, event, context);
+      context.results[hook.name] = result;
+    }));
+
+    // FASE 2: Notify (Sempre último, agrega side-effects)
+    const notifyHook = this.hooks.find(h => h.name === EcosystemHookName.NOTIFY);
+    if (notifyHook) {
+      const result = await this.executeHook(notifyHook, event, context);
+      context.results[notifyHook.name] = result;
+    }
+  }
+
+  private async executeHook(
+    hook: EcosystemHook, 
+    event: DomainEvent, 
+    context: EcosystemHookContext
+  ): Promise<EcosystemHookResult> {
+    const key = `idempotency:${hook.name}:${hook.idempotencyKey(event)}`;
+    
+    // Check Idempotência (Redis SADD)
+    const isNew = await redis.sadd(key, event.id);
+    if (isNew === 0) {
+      return { status: 'skipped', reason: 'already-processed' };
+    }
+    // Expiração de 7 dias para a chave de idempotência
+    await redis.expire(key, 604800);
+
+    try {
+      return await hook.execute(event, context);
+    } catch (err) {
+      log.error({ err, hook: hook.name, eventId: event.id }, 'Falha no Hook');
+      return { status: 'retryable_error', reason: err instanceof Error ? err.message : 'Unknown' };
+    }
   }
 }
 

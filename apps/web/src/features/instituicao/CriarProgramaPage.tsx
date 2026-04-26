@@ -16,9 +16,9 @@ export function CriarProgramaPage() {
     defaultValues: {
       titulo: '',
       descricao: '',
-      tipo: 'standard' as any,
-      area: 'GESTAO' as any,
-      modalidade: 'PRESENCIAL' as any,
+      tipo: 'standard',
+      area: 'GESTAO',
+      modalidade: 'PRESENCIAL',
       vagas: 1,
     }
   });
@@ -41,7 +41,7 @@ export function CriarProgramaPage() {
         <form 
           onSubmit={(e) => { 
             void handleSubmit((data) => { 
-              mutation.mutate(data as CriarProgramaPayload); 
+              mutation.mutate(data); 
             })(e); 
           }} 
           className="space-y-4"
@@ -54,7 +54,7 @@ export function CriarProgramaPage() {
           <div className="space-y-1">
             <label className="text-sm font-medium">Descrição</label>
             <textarea 
-              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="flex min-h-25 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               {...register('descricao')}
             />
             {errors.descricao && <p className="text-xs text-error">{errors.descricao.message}</p>}

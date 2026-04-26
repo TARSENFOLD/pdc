@@ -9,8 +9,8 @@ vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
 }));
 
 vi.mock('../modules/auth/auth.middleware.js', () => ({
-  verifyJwt: async (c: { set: (k: string, v: any) => void }, next: () => Promise<void>) => {
-    c.set('user', { id: 'user-123', role: 'aluno' });
+  verifyJwt: async (c: { set: (k: string, v: unknown) => void }, next: () => Promise<void>) => {
+    c.set('user', { id: 'user-123', role: 'estudante' });
     await next();
   },
 }));

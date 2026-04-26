@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { Hono } from 'hono';
+import { Hono, type Context, type Next } from 'hono';
 import { simulacaoRoutes } from './simulacoes.js';
 import { strapiGet, strapiPut } from '../modules/strapi/strapi.client.js';
 
@@ -16,14 +16,14 @@ vi.mock('../modules/events/event-bus.js', () => ({
 }));
 
 vi.mock('../modules/auth/auth.middleware.js', () => ({
-  verifyJwt: async (c: any, next: any) => {
-    c.set('user', { id: 'user-123', role: 'aluno' });
+  verifyJwt: async (c: Context, next: Next) => {
+    c.set('user', { id: 'user-123', role: 'estudante' });
     await next();
   },
 }));
 
 vi.mock('../modules/auth/rbac.middleware.js', () => ({
-  checkRole: () => async (_c: any, next: any) => {
+  checkRole: () => async (_c: Context, next: Next) => {
     await next();
   },
 }));

@@ -15,10 +15,10 @@ aiRoutes.use('*', verifyJwt);
 
 // POST /ai/chat
 aiRoutes.post('/chat', zValidator('json', ChatPayloadSchema), async (c) => {
-  const { id: alunoId } = c.get('user');
+  const { id: estudanteId } = c.get('user');
   const { message, stream } = c.req.valid('json');
 
-  const contexto = await aiService.buildContexto(alunoId);
+  const contexto = await aiService.buildContexto(estudanteId);
   const ragContext = await aiRag.buscarContextoRelevante(message);
   
   const res = await aiService.chat([{ role: 'user', content: message }], `${contexto} ${ragContext}`, !!stream);

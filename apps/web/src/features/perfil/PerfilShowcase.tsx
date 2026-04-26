@@ -54,7 +54,7 @@ export function PerfilShowcase() {
                 {perfil.nome}
               </h1>
               <p className="text-accent font-bold uppercase tracking-[0.2em] text-xs">
-                {perfil.role === 'aluno' ? 'Talento Validado' : 'Mentor de Elite'}
+                {perfil.role === 'estudante' ? 'Talento Validado' : 'Mentor de Elite'}
               </p>
             </div>
             

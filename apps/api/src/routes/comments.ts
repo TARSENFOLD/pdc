@@ -9,6 +9,8 @@ import {
   type Comment,
   type InteractionTargetType,
 } from '@pdc/shared';
+import { eventBus } from '../modules/events/event-bus.js';
+import { DomainEventName } from '../modules/events/types.js';
 
 export const commentsRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -37,6 +39,21 @@ commentsRoutes.post('/', verifyJwt, zValidator('json', CreateCommentPayloadSchem
     conteudo,
     estado: 'pendente',
     createdAt: new Date().toISOString(),
+  });
+
+  // G15: Impacto no Ecossistema
+  // Buscamos o perfilId para o evento
+  const resPerfil = await strapiGet<{ id: string }>('/perfis', {
+    'filters[userId][$eq]': user.id,
+    'fields[0]': 'id',
+  });
+  const perfilId = resPerfil.data[0]?.id;
+
+  await eventBus.publishWithOutbox(DomainEventName.COMENTARIO_CRIADO, {
+    comentarioId: res.data.id,
+    perfilId: String(perfilId),
+    targetType,
+    targetId
   });
 
   const bodyResponse: Comment = {
