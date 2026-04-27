@@ -138,9 +138,7 @@ export function calculateBiomechanics(events: TelemetriaEvento[]): BiomechanicsS
   // Resilience (Post-error recovery)
   const timesPosError = events
     .filter(e => e.tipo === 'simulacao.pos_error')
-    .map(e => e.payload)
-    .filter(isPosErrorPayload)
-    .map(p => p.timeMs);
+    .flatMap(e => isPosErrorPayload(e.payload) ? [e.payload.timeMs] : []);
     
   const meanNormal = fluidity * 200; // heuristic baseline
 

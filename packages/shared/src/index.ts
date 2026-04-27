@@ -11,14 +11,15 @@ export * from './telemetry.js';
 export * from './behavior-patterns.js';
 export * from './core.js';
 export * from './heuristics.js';
+export * from './heuristics-calculator.js';
 export * from './reputation.js';
 export * from './sanity/index.js';
-export * from './infra.js';
 export * from './domain-events.js';
 export * from './ecosystem-hook.js';
 export * from './home.js';
 
 // Schemas Modulares
+export * from './schemas/subscricoes.js';
 export * from './schemas/enums.js';
 export * from './schemas/programas.js';
 export * from './schemas/propostas.js';
