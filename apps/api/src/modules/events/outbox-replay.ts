@@ -1,6 +1,8 @@
 import pino from 'pino';
+import { z } from 'zod';
 import { strapiGet, strapiPut } from '../strapi/strapi.client.js';
 import { eventBus } from './event-bus.js';
+import { DomainEventName } from '@pdc/shared';
 
 const log = pino({ name: 'outbox-replay' });
 
@@ -41,10 +43,16 @@ export async function replayUnprocessedEvents() {
       log.info({ eventId: evt.correlationId, name: evt.name, attempts }, 'A processar evento...');
       
       try {
+        const nameResult = z.nativeEnum(DomainEventName).safeParse(evt.name);
+        if (!nameResult.success) {
+          log.warn({ eventId: evt.correlationId, name: evt.name }, 'Nome de evento desconhecido no Outbox. A ignorar.');
+          continue;
+        }
+
         // AWAIT IMPORTANTE: Aguarda a conclusão dos handlers (RedLock, external calls, etc)
         await eventBus.publish({
           id: evt.correlationId, // Reutiliza identidade canónica para garantir idempotência
-          name: evt.name as any, // Mapeamento na proxima fase ou tipado corretamente no shared
+          name: nameResult.data,
           payload: evt.payload as Record<string, unknown>,
           timestamp: evt.createdAt,
           correlationId: evt.correlationId

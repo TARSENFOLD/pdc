@@ -33,7 +33,7 @@ describe('LTI Handler (Passback real)', () => {
   const event = {
     id: 'evt-1',
     name: DomainEventName.TENTATIVA_CONCLUIDA,
-    payload: { tentativaId: 'tent-123', score: 85, perfilId: 'perf-456' },
+    payload: { tentativaId: 'tent-123', score: 0.85, perfilId: 'perf-456' },
     timestamp: new Date().toISOString(),
   };
 
@@ -50,7 +50,7 @@ describe('LTI Handler (Passback real)', () => {
     expect(ltiScoreService.sendScoreFromContext).toHaveBeenCalledWith(
       'perf-456',
       'tent-123',
-      85
+      0.85
     );
   });
 

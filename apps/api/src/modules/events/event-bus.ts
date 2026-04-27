@@ -15,25 +15,22 @@ import {
 const log = pino({ name: 'event-bus' });
 
 class EventBus {
-  // Mantemos o armazenamento interno flexível para suportar múltiplos payloads
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private hooks: EcosystemHook<any>[] = [];
+  private hooks: EcosystemHook<unknown>[] = [];
 
   /**
    * Registar um Hook G15 no ecossistema
    */
   registerHook<T>(hook: EcosystemHook<T>) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.hooks.push(hook as EcosystemHook<any>);
+    this.hooks.push(hook as EcosystemHook<unknown>);
     log.info({ hook: hook.name }, 'G15 Hook Registado');
   }
 
   /**
    * Métodos de Compatibilidade para Testes Legados
    */
-  register(name: DomainEventName, handler: (event: DomainEvent<any>) => Promise<void>) {
+  register(name: DomainEventName, handler: (event: DomainEvent<unknown>) => Promise<void>) {
     this.registerHook({
-      name: `legacy-handler:${name}` as any,
+      name: `legacy-handler:${name}` as EcosystemHookName,
       dependencies: [],
       idempotencyKey: (e) => `legacy:${e.id}`,
       execute: async (e) => {
@@ -128,15 +125,20 @@ class EventBus {
     // Persiste snapshot completo após cada hook. A escrita ocorre DEPOIS de acumular em
     // context.results para que o último hook paralelo a terminar sempre escreva o snapshot
     // mais completo. Last-write-wins é seguro porque context.results é monotônico.
+    let persistLock = Promise.resolve();
+
     const persistSnapshot = async (hookName: EcosystemHookName) => {
       if (!eventRecordId) return;
-      try {
-        await strapiPut(`/domain-events/${eventRecordId}`, {
-          hookResults: { ...context.results }
-        });
-      } catch (err) {
-        log.warn({ err, hook: hookName, eventId: event.id }, 'Falha ao persistir hookResult incremental');
-      }
+      persistLock = persistLock.then(async () => {
+        try {
+          await strapiPut(`/domain-events/${eventRecordId}`, {
+            hookResults: { ...context.results }
+          });
+        } catch (err) {
+          log.warn({ err, hook: hookName, eventId: event.id }, 'Falha ao persistir hookResult incremental');
+        }
+      });
+      return persistLock;
     };
 
     // FASE 1: Hooks Independentes (Ranking, Feed, Match, Achievement)
