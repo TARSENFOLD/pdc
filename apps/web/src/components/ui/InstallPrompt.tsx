@@ -17,7 +17,7 @@ export function InstallPrompt() {
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
     window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => { window.removeEventListener('beforeinstallprompt', handler); };
   }, []);
 
   if (!deferredPrompt || dismissed) return null;
@@ -57,13 +57,6 @@ export function InstallPrompt() {
           onClick={() => { setDismissed(true); }}
           className="text-ink-tertiary hover:text-ink-primary transition-colors p-3 -m-3"
           aria-label="Fechar"
-        >
-          <X size={16} />
-        </button>
-      </div>
-    </div>
-  );
-}
         >
           <X size={16} />
         </button>
