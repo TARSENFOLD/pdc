@@ -29,7 +29,7 @@ export async function ltiHandler(event: DomainEvent): Promise<LtiScoreResult> {
   const { tentativaId, score, perfilId } = parsed.data;
 
   // Idempotência via Redis
-  const lockKey = `lti:sync:${tentativaId}`;
+  const lockKey = `pdc:lti:sync:${tentativaId}`;
   const isNew = await redis.set(lockKey, 'syncing', { ex: 60, nx: true });
   if (!isNew) return { status: 'skipped', reason: 'already-syncing' };
 
@@ -54,14 +54,14 @@ export async function ltiHandler(event: DomainEvent): Promise<LtiScoreResult> {
        throw new Error(`LTI Passback failed: retryable_error (${result.reason || 'unknown'})`);
     }
 
+    // Limpar lock apenas no sucesso — em erro o TTL de 60s serve como backoff natural
     await redis.del(lockKey);
     return result;
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     log.error({ err: msg, eventId: event.id }, 'Erro no LTI Sync');
+    // Não apagar lock aqui — TTL expira em 60s, impedindo retry imediato
     throw err;
-  } finally {
-    await redis.del(lockKey);
   }
 }

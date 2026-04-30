@@ -3,8 +3,15 @@ import { ltiHandler } from './lti.handler.js';
 import { redis } from '../../lib/redis.js';
 import { DomainEventName } from '@pdc/shared';
 import { ltiScoreService } from '../lti/lti.score.service.js';
-import { type LtiScoreResult } from '@pdc/shared';
+import { type LtiScoreResult, type StrapiListResponse } from '@pdc/shared';
 import { strapiGet } from '../strapi/strapi.client.js';
+
+function listResponse<T>(data: Array<T & { id: string | number }>): StrapiListResponse<T> {
+  return {
+    data,
+    meta: { pagination: { page: 1, pageSize: data.length, pageCount: 1, total: data.length } },
+  };
+}
 
 // Mocks
 vi.mock('../strapi/strapi.client.js', () => ({
@@ -30,6 +37,8 @@ describe('LTI Handler (Passback real)', () => {
     vi.clearAllMocks();
   });
 
+  const sendScoreMock = vi.mocked(ltiScoreService.sendScoreFromContext);
+
   const event = {
     id: 'evt-1',
     name: DomainEventName.TENTATIVA_CONCLUIDA,
@@ -41,13 +50,13 @@ describe('LTI Handler (Passback real)', () => {
     vi.mocked(redis.set).mockResolvedValueOnce('OK'); // Novo evento
     
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce({ data: [{ id: 'sub-1' }] } as any);
+      .mockResolvedValueOnce(listResponse([{ id: 'sub-1' }]));
 
-    vi.mocked(ltiScoreService.sendScoreFromContext).mockResolvedValueOnce({ status: 'sent' } as LtiScoreResult);
+    sendScoreMock.mockResolvedValueOnce({ status: 'sent' } as LtiScoreResult);
 
     await ltiHandler(event);
 
-    expect(ltiScoreService.sendScoreFromContext).toHaveBeenCalledWith(
+    expect(sendScoreMock).toHaveBeenCalledWith(
       'perf-456',
       'tent-123',
       0.85
@@ -59,12 +68,12 @@ describe('LTI Handler (Passback real)', () => {
 
     await ltiHandler(event);
 
-    expect(ltiScoreService.sendScoreFromContext).not.toHaveBeenCalled();
+    expect(sendScoreMock).not.toHaveBeenCalled();
   });
 
   it('deve retornar "skipped" se perfil não tiver subscrição LTI activa', async () => {
     vi.mocked(redis.set).mockResolvedValueOnce('OK');
-    vi.mocked(strapiGet).mockResolvedValueOnce({ data: [] } as any); // Sem subscrição
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([])); // Sem subscrição
 
     const result = await ltiHandler(event);
     expect(result).toEqual({ status: 'skipped', reason: 'no-lti-subscription' });
@@ -72,9 +81,9 @@ describe('LTI Handler (Passback real)', () => {
 
   it('deve lançar erro se o status for "retryable_error" (Para manter processed=false)', async () => {
     vi.mocked(redis.set).mockResolvedValueOnce('OK');
-    vi.mocked(strapiGet).mockResolvedValueOnce({ data: [{ id: 'sub-1' }] } as any);
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{ id: 'sub-1' }]));
 
-    vi.mocked(ltiScoreService.sendScoreFromContext).mockResolvedValueOnce({ 
+    sendScoreMock.mockResolvedValueOnce({
       status: 'retryable_error', 
       reason: 'token-failure' 
     } as LtiScoreResult);
@@ -84,10 +93,21 @@ describe('LTI Handler (Passback real)', () => {
 
   it('deve propagar erro se o envio para o LMS falhar (Crash)', async () => {
     vi.mocked(redis.set).mockResolvedValueOnce('OK');
-    vi.mocked(strapiGet).mockResolvedValueOnce({ data: [{ id: 'sub-1' }] } as any);
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{ id: 'sub-1' }]));
       
-    vi.mocked(ltiScoreService.sendScoreFromContext).mockRejectedValueOnce(new Error('LMS Timeout'));
+    sendScoreMock.mockRejectedValueOnce(new Error('LMS Timeout'));
 
     await expect(ltiHandler(event)).rejects.toThrow('LMS Timeout');
+  });
+
+  it('não deve apagar o lock em caso de erro (backoff via TTL)', async () => {
+    vi.mocked(redis.set).mockResolvedValueOnce('OK');
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{ id: 'sub-1' }]));
+    sendScoreMock.mockRejectedValueOnce(new Error('LMS Timeout'));
+
+    await expect(ltiHandler(event)).rejects.toThrow();
+
+    // Lock deve permanecer — TTL de 60s garante backoff implícito
+    expect(vi.mocked(redis.del)).not.toHaveBeenCalled();
   });
 });
