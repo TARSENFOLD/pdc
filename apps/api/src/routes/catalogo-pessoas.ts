@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { AreaVocacionalSchema } from '@pdc/shared';
-import { strapiGet, strapiGetRaw } from '../modules/strapi/strapi.client.js';
+import { strapiGet } from '../modules/strapi/strapi.client.js';
+import { optionalJwt, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
 import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 import { serializePublicProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
 import type {
@@ -19,9 +20,9 @@ import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
 interface StrapiMentor {
   id: string | number;
   nome?: string;
-  username?: string;
-  avatarUrl?: string;
+  foto?: { url?: string } | null;
   bio?: string;
+  areaFormacao?: string;
   areaEspecialidade?: string;
   disponivel?: boolean;
 }
@@ -96,13 +97,12 @@ const mentorFilters = paginationQuery.extend({
 function mapMentor(d: StrapiMentor): MentorPublico {
   return {
     id: sid(d.id), 
-    nome: d.nome ?? d.username ?? '',
-    role: 'mentor',
-    especialidade: d.areaEspecialidade || 'Especialista',
-    avatarUrl: d.avatarUrl, 
+    nome: d.nome ?? '',
+    avatarUrl: d.foto?.url, 
     bio: d.bio,
-    areaEspecialidade: d.areaEspecialidade, 
-    disponivel: d.disponivel,
+    areaEspecialidade: d.areaEspecialidade ?? d.areaFormacao ?? 'Especialista',
+    reputacaoTier: 'BRONZE',
+    disponivel: d.disponivel ?? true,
   };
 }
 
@@ -110,15 +110,16 @@ mentoresRoutes.get('/', zValidator('query', mentorFilters), async (c) => {
   const q = c.req.valid('query');
   const p: Record<string, string> = { }; 
   
-  p['filters[role][name][$eq]'] = 'mentor';
+  p['filters[tipo][$eq]'] = 'mentor';
   p['filters[aprovado][$eq]'] = 'true';
   
-  if (q.area) p['filters[areaEspecialidade][$eq]'] = q.area;
+  if (q.area) p['filters[areaFormacao][$eq]'] = q.area;
   if (q.disponivel !== undefined) p['filters[disponivel][$eq]'] = String(q.disponivel);
+  p['populate'] = 'foto';
 
   buildPagination(p, q.page, q.limit);
   
-  const res = await strapiGet<StrapiMentor>('/users', p);
+  const res = await strapiGet<StrapiMentor>('/perfis', p);
   return c.json({ 
     data: res.data.map(mapMentor), 
     meta: toMeta(res.meta) 
@@ -127,9 +128,16 @@ mentoresRoutes.get('/', zValidator('query', mentorFilters), async (c) => {
 
 mentoresRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
-  const d = await strapiGetRaw<StrapiMentor>(`/users/${id}`, { }); // populate: 'avatar' removed
-  if (!d) return c.json({ error: 'Mentor não encontrado' }, 404);
-  return c.json({ data: mapMentor(d) });
+  if (!id) return c.json({ error: 'Mentor não encontrado' }, 404);
+  const res = await strapiGet<StrapiMentor>('/perfis', {
+    'filters[id][$eq]': id,
+    'filters[tipo][$eq]': 'mentor',
+    'populate': 'foto',
+    'pagination[pageSize]': '1',
+  });
+  const first = res.data[0];
+  if (!first) return c.json({ error: 'Mentor não encontrado' }, 404);
+  return c.json({ data: mapMentor(first) });
 });
 
 // ─── Instituições ─────────────────────────────────────────────────────────────
@@ -144,7 +152,7 @@ const instFilters = paginationQuery.extend({
 function mapInst(d: StrapiInstituicao): InstituicaoPublica {
   return {
     id: sid(d.id), slug: d.slug, nome: d.nome,
-    descricao: d.descricao, logoUrl: d.logoUrl || undefined, tipo: d.tipo, regiao: d.regiao,
+    bio: d.descricao, logoUrl: d.logoUrl || undefined, tipo: d.tipo ?? 'instituicao', regiao: d.regiao,
   };
 }
 
@@ -171,14 +179,16 @@ instituicoesRoutes.get('/:slug', async (c) => {
 
 // ─── Perfil Público ───────────────────────────────────────────────────────────
 
-export const perfilPublicoRoutes = new Hono();
+export const perfilPublicoRoutes = new Hono<{ Variables: OptionalAuthVariables }>();
+perfilPublicoRoutes.use('*', optionalJwt);
 
 perfilPublicoRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
+  const viewerInstituicaoId = c.get('user')?.instituicaoId;
 
   let useV2 = false;
   try {
-    const flags = await featureFlagService.getEffectiveFlags();
+    const flags = await featureFlagService.getEffectiveFlags(viewerInstituicaoId);
     useV2 = flags['PROFILE_V2_PUBLIC'] === true;
   } catch { /* ignore */ }
 
@@ -192,7 +202,7 @@ perfilPublicoRoutes.get('/:id', async (c) => {
     if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);
     
     // Type validation for StrapiPerfil
-    const isStrapiPerfil = (val: any): val is StrapiPerfil => val && typeof val === 'object' && ('nome' in val || 'username' in val);
+    const isStrapiPerfil = (val: unknown): val is StrapiPerfil => val !== null && typeof val === 'object' && 'id' in val;
     if (!isStrapiPerfil(first)) return c.json({ error: 'Perfil inválido' }, 500);
 
     return c.json({ data: serializePublicProfile(first) });
@@ -209,6 +219,7 @@ perfilPublicoRoutes.get('/:id', async (c) => {
     avatarUrl: d.avatarUrl || undefined,
     bio: d.bio,
     role: roleName,
+    reputacaoTier: 'BRONZE',
   };
   return c.json({ data: perfil });
 });

@@ -38,10 +38,10 @@ conquistaRoutes.get('/minhas', async (c) => {
 
 // POST /conquistas/verificar — executa engine local de conquistas
 conquistaRoutes.post('/verificar', zValidator('json', verificarSchema), async (c) => {
-  const { id: userId } = c.get('user');
+  const user = c.get('user');
   const { evento, referencia } = c.req.valid('json');
   try {
-    const unlocked = await verificarConquistas(userId, evento, referencia);
+    const unlocked = await verificarConquistas(user.id, evento, referencia, user.instituicaoId);
     return c.json({ unlocked }, unlocked.length > 0 ? 201 : 200);
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);

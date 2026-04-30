@@ -3,17 +3,55 @@ import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.j
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import {
-  PerfilCompleto, 
-  DashboardEstudante, 
-  PerfilVocacional,
-  Vinculo
+  type PerfilCompleto,
+  type DashboardEstudante,
+  type PerfilVocacional,
+  type Vinculo,
+  type StrapiListResponse,
 } from '@pdc/shared';
 import { vocacionalService } from '../modules/vocacional/vocacional.service.js';
 
 type Vars = { Variables: AuthVariables };
 export const estudanteRoutes = new Hono<Vars>();
 
-estudanteRoutes.use('*', verifyJwt, checkRole(['estudante', 'estudante']));
+estudanteRoutes.use('*', verifyJwt, checkRole(['estudante']));
+
+/**
+ * GET /estudante/certificados
+ * Retorna inscrições concluídas com dados do curso (para a página de certificados).
+ */
+estudanteRoutes.get('/certificados', async (c) => {
+  const { id: userId } = c.get('user');
+
+  try {
+    const resPerfil = await strapiGet<{ id: string | number }>('/perfis', {
+      'filters[userId][$eq]': userId,
+      'fields[0]': 'id',
+    });
+
+    const perfil = resPerfil.data[0];
+    if (!perfil) return c.json({ data: [] });
+
+    const resInscricoes = await strapiGet<{
+      id: string;
+      cursoId?: string;
+      dataInscricao: string;
+      concluido: boolean;
+      dataConclusao?: string;
+      progressoPercentagem: number;
+      curso?: { titulo?: string };
+    }>('/inscricoes', {
+      'filters[estudante][id][$eq]': String(perfil.id),
+      'filters[concluido][$eq]': 'true',
+      'populate': 'curso',
+      'sort': 'dataConclusao:desc',
+    });
+
+    return c.json({ data: resInscricoes.data });
+  } catch {
+    return c.json({ data: [] });
+  }
+});
 
 /**
  * GET /estudante/dashboard
@@ -44,18 +82,18 @@ estudanteRoutes.get('/dashboard', async (c) => {
       return c.json(dashboardData);
     }
 
-    const perfilId = String(perfil.id);
+    const perfilId = perfil.id;
 
     // 2. Buscar vínculos e padrões vocacionais (com fallback para arrays vazios)
-    let vinculosRes: { data: Vinculo[] } = { data: [] };
-    let vocacionalRes: { data: PerfilVocacional[] } = { data: [] };
+    let vinculosRes: Pick<StrapiListResponse<Vinculo>, 'data'> = { data: [] };
+    let vocacionalRes: Pick<StrapiListResponse<PerfilVocacional>, 'data'> = { data: [] };
     
     try {
       [vinculosRes, vocacionalRes] = await Promise.all([
         strapiGet<Vinculo>('/vinculos', {
           'filters[$or][0][solicitante][id][$eq]': perfilId,
           'filters[$or][1][destinatario][id][$eq]': perfilId,
-          'filters[estado][$eq]': 'connected'
+          'filters[status][$eq]': 'aprovado'
         }),
         strapiGet<PerfilVocacional>('/perfil-vocacionals', {
           'filters[perfil][id][$eq]': perfilId,
@@ -72,6 +110,7 @@ estudanteRoutes.get('/dashboard', async (c) => {
 
     const lastPattern = vocacionalRes.data[0];
     const areaPrincipal = perfil.areaInteresse || 'Tecnologia';
+    const inscricoes = perfil.inscricoes ?? [];
     
     // Recomendações com tratamento seguro
     let recomendacoes: { id: string }[] = [];
@@ -83,13 +122,16 @@ estudanteRoutes.get('/dashboard', async (c) => {
       recomendacoes = [];
     }
 
+    // G15: variação real = diferença de scoreGlobal entre o último padrão e zero base
+    const pulseVariacao = lastPattern ? Math.round(lastPattern.scoreGlobal * 10) : 0;
+
     const dashboardData: DashboardEstudante = {
       stats: {
         xp: perfil.xp || 0,
         reputacao: perfil.reputacao || 0,
-        conquistasCount: perfil.conquistas?.length || 0,
+        conquistasCount: perfil.conquistas.length,
         vinkulosCount: vinculosRes.data.length,
-        pulseVariacao: 12,
+        pulseVariacao,
       },
       match: {
         area: areaPrincipal,
@@ -105,11 +147,11 @@ estudanteRoutes.get('/dashboard', async (c) => {
         resiliencia: lastPattern.dimensoes.resiliencia,
         foco: lastPattern.dimensoes.foco,
       } : null,
-      progressoCursos: perfil.inscricoes?.map((i) => ({
-        id: String(i.id),
+      progressoCursos: inscricoes.map((i) => ({
+        id: i.id,
         titulo: i.curso?.titulo || 'Curso',
         progresso: i.progressoPercentagem || 0,
-      })) || [],
+      })),
       proximaAcao: {
         label: recomendacoes.length > 0 ? 'Continuar Simulação' : 'Iniciar Simulação',
         to: recomendacoes[0]?.id ? `/app/simulacao/${recomendacoes[0].id}` : '/app/simulacoes',

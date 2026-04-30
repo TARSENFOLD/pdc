@@ -12,6 +12,7 @@ export interface AuthVariables {
     id: string;
     role: Role;
     perfilId?: string | undefined;
+    instituicaoId?: number | undefined;
   };
 }
 
@@ -20,6 +21,7 @@ export interface OptionalAuthVariables {
     id: string;
     role: Role;
     perfilId?: string | undefined;
+    instituicaoId?: number | undefined;
   };
 }
 
@@ -37,6 +39,7 @@ export async function verifyJwt(c: Context<{ Variables: AuthVariables }>, next: 
       id: payload.sub as string,
       role: payload.role as Role,
       perfilId: payload.perfilId as string | undefined,
+      instituicaoId: payload.instituicaoId ? parseInt(payload.instituicaoId as string, 10) : undefined,
     };
 
     c.set('user', user);
@@ -55,20 +58,11 @@ export async function optionalJwt(c: Context<{ Variables: OptionalAuthVariables 
         id: payload.sub as string,
         role: payload.role as Role,
         perfilId: payload.perfilId as string | undefined,
+        instituicaoId: payload.instituicaoId ? parseInt(payload.instituicaoId as string, 10) : undefined,
       });
     } catch {
       // Invalid token — proceed as anonymous
     }
   }
   await next();
-}
-
-export function checkRole(allowedRoles: Role[]) {
-  return async (c: Context<any>, next: Next) => {
-    const user = c.get('user') as AuthVariables['user'] | undefined;
-    if (!user || !allowedRoles.includes(user.role)) {
-      return c.json({ error: 'Permissão insuficiente' }, 403);
-    }
-    await next();
-  };
 }

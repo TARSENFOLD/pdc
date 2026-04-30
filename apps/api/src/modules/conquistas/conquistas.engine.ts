@@ -276,7 +276,7 @@ export const REGRAS: readonly ConquistaRule[] = [
     trigger: DomainEventName.LIKE_ADICIONADO,
     titulo: 'Impacto Viral',
     descricao: 'Um dos seus posts ou projetos recebeu 100 likes',
-    condition: async () => false, // TODO: Implementar lógica de agregação por autor
+    condition: () => Promise.resolve(false), // TODO: Implementar lógica de agregação por autor
   },
   {
     slug: 'mestre-da-experiencia',
@@ -374,10 +374,11 @@ export async function verificarConquistas(
   userId: string,
   evento: string,
   referencia?: string,
+  instituicaoId?: number,
 ): Promise<UnlockedConquista[]> {
-  // Feature-flag gate
+  // Feature-flag gate — respeita overrides institucionais se disponíveis
   try {
-    const flags = await featureFlagService.getEffectiveFlags();
+    const flags = await featureFlagService.getEffectiveFlags(instituicaoId);
     if (!flags['AUTO_ACHIEVEMENTS']) return [];
   } catch {
     return [];

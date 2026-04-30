@@ -168,11 +168,12 @@ perfilRoutes.get('/estudantes-vinculados', checkRole(['instituicao', 'super_admi
 // GET /perfis/:id — perfil público (respeita PROFILE_V2_PUBLIC + visibilitySettings)
 perfilRoutes.get('/:id', async (c) => {
   const userId = c.req.param('id');
-  const requesterId = c.get('user').id;
+  const requester = c.get('user');
+  const requesterId = requester.id;
 
   let useV2 = false;
   try {
-    const flags = await featureFlagService.getEffectiveFlags();
+    const flags = await featureFlagService.getEffectiveFlags(requester.instituicaoId);
     useV2 = flags['PROFILE_V2_PUBLIC'] === true;
   } catch { /* ignore */ }
 
