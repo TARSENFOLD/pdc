@@ -12,6 +12,22 @@ vi.mock('../lib/env.js', () => ({
 import { bootstrapRoutes } from './bootstrap.js';
 import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
+interface BootstrapPayload {
+  session: {
+    isAuthenticated: boolean;
+    user: unknown;
+  };
+  capabilities: {
+    features: Record<string, boolean | undefined>;
+  };
+}
+
+function assertBootstrapPayload(value: unknown): asserts value is BootstrapPayload {
+  if (typeof value !== 'object' || value === null || !('session' in value) || !('capabilities' in value)) {
+    throw new Error('Bootstrap payload inválido');
+  }
+}
+
 vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
   featureFlagService: {
     getEffectiveFlags: vi.fn(),
@@ -34,7 +50,8 @@ describe('GET /bootstrap', () => {
     const res = await bootstrapRoutes.request(req);
     
     expect(res.status).toBe(200);
-    const json: any = await res.json();
+    const json: unknown = await res.json();
+    assertBootstrapPayload(json);
     
     expect(json.session.isAuthenticated).toBe(false);
     expect(json.session.user).toBeNull();
@@ -54,7 +71,8 @@ describe('GET /bootstrap', () => {
     const res = await bootstrapRoutes.request(req);
     
     expect(res.status).toBe(200);
-    const json: any = await res.json();
+    const json: unknown = await res.json();
+    assertBootstrapPayload(json);
     
     expect(json.capabilities.features['REPUTATION_VISIBLE']).toBe(true); // Strapi ganha
     expect(json.capabilities.features['MENSAGENS_INBOX']).toBeUndefined(); // Registry barra HIDDEN

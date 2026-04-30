@@ -142,6 +142,7 @@ export const ContentTypes: Record<ContentTypeSlug, ContentTypeLabel> = {
 
 export const NAV_ITEM_SLUGS = [
   'inicio',
+  'meu_dashboard',
   'aprender',
   'explorar',
   'meu_futuro',
@@ -180,6 +181,7 @@ export interface NavItemLabel {
 
 export const NavItems: Record<NavItemSlug, NavItemLabel> = {
   inicio: { 'pt-PT': 'Início', 'pt-BR': 'Início', en: 'Home' },
+  meu_dashboard: { 'pt-PT': 'Meu Dashboard', 'pt-BR': 'Meu Dashboard', en: 'My Dashboard' },
   aprender: { 'pt-PT': 'Aprender', 'pt-BR': 'Aprender', en: 'Learn' },
   explorar: { 'pt-PT': 'Explorar', 'pt-BR': 'Explorar', en: 'Explore' },
   meu_futuro: { 'pt-PT': 'Meu Futuro', 'pt-BR': 'Meu Futuro', en: 'My Future' },

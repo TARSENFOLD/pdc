@@ -51,13 +51,21 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <script>
     (function () {
-      const theme = localStorage.getItem('pdc-theme') || 'dark';
-      if (theme === 'light') {
-        document.documentElement.classList.add('light');
-      } else if (theme === 'system') {
-        if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-          document.documentElement.classList.add('light');
-        }
+      const THEME_KEY = 'pdc:theme';
+      const LEGACY_KEY = 'pdc-theme';
+      let theme = localStorage.getItem(THEME_KEY);
+      
+      if (!theme) {
+        theme = localStorage.getItem(LEGACY_KEY) || 'dark';
+      }
+
+      const root = document.documentElement;
+      if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        root.classList.add('dark');
+        root.classList.remove('light');
+      } else {
+        root.classList.add('light');
+        root.classList.remove('dark');
       }
     })();
   </script>

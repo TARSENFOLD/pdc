@@ -14,17 +14,23 @@ import { cn } from '@/lib/utils';
 import { Globe } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 
-interface SimulacaoDetail extends CriarSimulacaoPayload {
-  id: string;
-  estado: EstadoEditorial;
+const CRITERIOS = [
+  { id: 'fluidez', label: 'Fluidez \u03D5', desc: 'Métrica de velocidade e precisão cognitiva.' },
+  { id: 'resiliencia', label: 'Resiliência R', desc: 'Capacidade de recuperação após erro.' },
+  { id: 'foco', label: 'Foco Estável', desc: 'Consistência de atenção durante o processo.' },
+] as const;
+
+function materialPath(index: number, field: 'label') {
+  return ['materiaisLab', index, field].join('.') as `materiaisLab.${number}.${typeof field}`;
 }
 
-function isSimulacaoDetail(data: unknown): data is SimulacaoDetail {
-  return typeof data === 'object' && data !== null && 'estado' in data && 'id' in data;
+function criterioPath(field: (typeof CRITERIOS)[number]['id']) {
+  return ['criteriosAvaliacao', 'pesos', field].join('.') as `criteriosAvaliacao.pesos.${typeof field}`;
 }
 
 export function CriarSimulacaoPage() {
   const { id } = useParams<{ id: string }>();
+  const simulacaoId = id ?? '';
   const isEditing = !!id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -32,8 +38,8 @@ export function CriarSimulacaoPage() {
   const [lastEventId, setLastEventId] = useState<string | null>(null);
 
   const { data: simData, isLoading: isLoadingSim } = useQuery({
-    queryKey: ['simulacoes', id],
-    queryFn: () => simulacoesApi.getById(id as string),
+    queryKey: ['simulacoes', simulacaoId],
+    queryFn: () => simulacoesApi.getById(simulacaoId),
     enabled: isEditing,
   });
 
@@ -58,31 +64,29 @@ export function CriarSimulacaoPage() {
   const materiaisArray = useFieldArray({ control: form.control, name: 'materiaisLab' });
 
   useEffect(() => {
-    const sim = simData as unknown as SimulacaoDetail | undefined;
-    if (sim) {
-      reset({
-        titulo: sim.titulo,
-        descricao: sim.descricao,
-        area: sim.area || 'TECNOLOGIA',
-        tipo: sim.tipo,
-        capaUrl: sim.capaUrl || '',
-        iframeUrl: sim.iframeUrl || '',
-        tipoLab: sim.tipoLab || 'sandbox',
-        tentativasMaximas: sim.tentativasMaximas || 0,
-        criteriosAvaliacao: sim.criteriosAvaliacao || { pesos: { fluidez: 40, resiliencia: 30, foco: 30 } },
-        materiaisLab: sim.materiaisLab || [],
-      });
-    }
+    if (!simData) return;
+    reset({
+      titulo: simData.titulo,
+      descricao: simData.descricao,
+      area: simData.area,
+      tipo: simData.tipo,
+      capaUrl: simData.capaUrl ?? '',
+      iframeUrl: simData.iframeUrl ?? '',
+      tipoLab: 'sandbox',
+      tentativasMaximas: simData.tentativasMaximas ?? 0,
+      criteriosAvaliacao: simData.criteriosAvaliacao,
+      materiaisLab: simData.materiaisLab ?? [],
+    });
   }, [simData, reset]);
 
   const mutation = useMutation({
-    mutationFn: (data: CriarSimulacaoPayload) => isEditing ? simulacoesApi.editar(id!, data) : simulacoesApi.criar(data),
-    onSuccess: (res: { data: { id: string; eventId?: string } }) => {
+    mutationFn: (data: CriarSimulacaoPayload) => isEditing ? simulacoesApi.editar(simulacaoId, data) : simulacoesApi.criar(data),
+    onSuccess: (res) => {
       void queryClient.invalidateQueries({ queryKey: ['simulacoes'] });
       toast({ title: isEditing ? 'Simulação Atualizada' : 'Simulação Materializada!' });
 
-      if (res.data?.eventId) {
-        setLastEventId(res.data.eventId);
+      if (res.eventId) {
+        setLastEventId(res.eventId);
       } else {
         navigate('/app/mentor/simulacoes');
       }
@@ -93,7 +97,7 @@ export function CriarSimulacaoPage() {
   });
 
   const stateMutation = useMutation({
-    mutationFn: (estado: 'review' | 'published' | 'archived') => simulacoesApi.updateEstado(id as string, estado),
+    mutationFn: (estado: 'review' | 'published' | 'archived') => simulacoesApi.updateEstado(simulacaoId, estado),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['simulacoes', id] });
       void queryClient.invalidateQueries({ queryKey: ['simulacoes', 'minhas'] });
@@ -108,12 +112,15 @@ export function CriarSimulacaoPage() {
 
   if (isEditing && isLoadingSim) return <div className="flex h-screen items-center justify-center bg-canvas"><Spinner size="lg" /></div>;
 
-  const currentEstado: EstadoEditorial = (simData as unknown as SimulacaoDetail)?.estado || 'draft';
+  const currentEstado: EstadoEditorial = simData?.estado ?? 'draft';
+  const pesoFluidez = watch('criteriosAvaliacao.pesos.fluidez');
+  const pesoResiliencia = watch('criteriosAvaliacao.pesos.resiliencia');
+  const pesoFoco = watch('criteriosAvaliacao.pesos.foco');
+  const pesoTotal = pesoFluidez + pesoResiliencia + pesoFoco;
 
   return (
     <>
       <BuilderShell
-        form={form as any}
         title={isEditing ? "Editor de Simulação Soberana" : "Novo Laboratório de Simulação"}
         description="Define os parâmetros biomecânicos e o cenário de decisão para auditar talentos."
         state={currentEstado}      breadcrumbs={[
@@ -130,14 +137,16 @@ export function CriarSimulacaoPage() {
         <BuilderActionsBar
           state={currentEstado}
           userRole={user?.role || 'mentor'}
-          onSaveDraft={() => handleSave()}
-          onSubmitReview={async () => {
-            if (currentEstado === 'draft' && isEditing) {
-               stateMutation.mutate('review');
-            } else {
-               await handleSave();
-               if (isEditing) stateMutation.mutate('review');
-            }
+          onSaveDraft={() => { void handleSave(); }}
+          onSubmitReview={() => {
+            void (async () => {
+              if (currentEstado === 'draft' && isEditing) {
+                 stateMutation.mutate('review');
+              } else {
+                 await handleSave();
+                 if (isEditing) stateMutation.mutate('review');
+              }
+            })();
           }}
           onPublish={() => {
             if (currentEstado === 'approved' && isEditing) stateMutation.mutate('published');
@@ -147,7 +156,6 @@ export function CriarSimulacaoPage() {
       }
     >
       <BuilderSection
-        value="identidade"
         title="Identidade do Laboratório"
         description="Título, narrativa e área de atuação vocacional."
       >
@@ -207,13 +215,13 @@ export function CriarSimulacaoPage() {
               <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Materiais e Documentação</p>
               <BuilderUploadZone onUploadComplete={(urls) => {
                 if (urls.length > 0) {
-                  materiaisArray.append({ id: crypto.randomUUID(), label: 'Novo Material', url: urls[0] });
+                  materiaisArray.append({ id: crypto.randomUUID(), label: 'Novo Material', url: urls[0] ?? '' });
                 }
               }} />
               {materiaisArray.fields.map((field, index) => (
                 <div key={field.id} className="flex gap-4 items-end bg-recessed p-4 rounded-xl">
-                   <Input label="Nome do Ficheiro" {...register(`materiaisLab.${index}.label`)} className="flex-1" />
-                   <Button variant="ghost" onClick={() => materiaisArray.remove(index)}>Remover</Button>
+                   <Input label="Nome do Ficheiro" {...register(materialPath(index, 'label'))} className="flex-1" />
+                   <Button variant="ghost" onClick={() => { materiaisArray.remove(index); }}>Remover</Button>
                 </div>
               ))}
            </div>
@@ -226,24 +234,20 @@ export function CriarSimulacaoPage() {
         description="Pesos dimensionais para o cálculo do Score Soberano (Total = 100%)."
       >
         <div className="space-y-8">
-           {[
-             { id: 'fluidez', label: 'Fluidez \u03D5', desc: 'Métrica de velocidade e precisão cognitiva.' },
-             { id: 'resiliencia', label: 'Resiliência R', desc: 'Capacidade de recuperação após erro.' },
-             { id: 'foco', label: 'Foco Estável', desc: 'Consistência de atenção durante o processo.' },
-           ].map((dim) => (
+	           {CRITERIOS.map((dim) => (
              <div key={dim.id} className="space-y-2">
                 <div className="flex justify-between items-end">
                    <div className="space-y-1">
                       <p className="text-sm font-bold text-ink-primary">{dim.label}</p>
                       <p className="text-[10px] text-ink-tertiary">{dim.desc}</p>
                    </div>
-                   <span className="font-mono font-black text-accent text-xl">{watch(`criteriosAvaliacao.pesos.${dim.id}` as any)}%</span>
+	                   <span className="font-mono font-black text-accent text-xl">{watch(criterioPath(dim.id))}%</span>
                 </div>
                 <input 
                   type="range" 
                   min="0" max="100" 
                   className="w-full accent-accent"
-                  {...register(`criteriosAvaliacao.pesos.${dim.id}` as any, { valueAsNumber: true })}
+	                  {...register(criterioPath(dim.id), { valueAsNumber: true })}
                 />
              </div>
            ))}
@@ -252,11 +256,11 @@ export function CriarSimulacaoPage() {
               <span className="text-[10px] font-black uppercase tracking-widest text-ink-tertiary">Soma dos Pesos</span>
               <span className={cn(
                 "font-mono font-black px-3 py-1 rounded-lg",
-                (Number(watch('criteriosAvaliacao.pesos.fluidez')) + Number(watch('criteriosAvaliacao.pesos.resiliencia')) + Number(watch('criteriosAvaliacao.pesos.foco'))) === 100
+	                pesoTotal === 100
                   ? "bg-accent-success/10 text-accent-success"
                   : "bg-accent-danger/10 text-accent-danger"
               )}>
-                {Number(watch('criteriosAvaliacao.pesos.fluidez')) + Number(watch('criteriosAvaliacao.pesos.resiliencia')) + Number(watch('criteriosAvaliacao.pesos.foco'))}%
+	                {pesoTotal}%
               </span>
            </div>
         </div>
@@ -276,7 +280,7 @@ export function CriarSimulacaoPage() {
               eventId={lastEventId} 
               variant="full"
               onComplete={() => {
-                setTimeout(() => navigate('/app/mentor/simulacoes'), 3000);
+                setTimeout(() => { navigate('/app/mentor/simulacoes'); }, 3000);
               }}
             />
           </div>

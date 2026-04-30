@@ -7,6 +7,7 @@ export const seoRoutes = new Hono();
 const BASE_URL = 'https://pdc.ao';
 
 interface StrapiItemAttributes {
+  id: number;
   slug?: string;
   updatedAt?: string;
 }
@@ -36,7 +37,7 @@ seoRoutes.get('/sitemap.xml', async (c) => {
 
     const processItems = (items: StrapiListResponse<StrapiItemAttributes>, path: string) => {
       items.data.forEach(item => {
-        const slug = item.slug ?? String((item as any).id);
+        const slug = item.slug ?? String(item.id);
         const lastmod = item.updatedAt ? item.updatedAt.split('T')[0] : '';
         xml += `  <url><loc>${BASE_URL}/${path}/${slug}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}</url>\n`;
       });
@@ -52,7 +53,7 @@ seoRoutes.get('/sitemap.xml', async (c) => {
       'Cache-Control': 'public, max-age=3600' 
     });
 
-  } catch (_err) {
+  } catch {
     return c.text('Error generating sitemap', 500);
   }
 });

@@ -1,5 +1,7 @@
 # 02 — Mapeamento de Funcionalidades (Canónico)
 
+> **Fonte canónica de slugs e labels:** `packages/shared/src/glossary.ts` — editar lá, não aqui.
+
 # PDC v2 — Mapa Canónico de Funcionalidades
 
 <user_quoted_section>Status: Canónico · Substitui: registos dispersos em , ,  e na spec original ae07e114-7c3a-4ed1-8c59-55eec60b752f (Features Transversais).</user_quoted_section>
@@ -91,7 +93,7 @@ Cada funcionalidade tem **ID estável**, **estado canónico** (lei) e **estado r
 | **F5** | **Pílulas de Conhecimento** — micro-simulações diárias ~1min | ⏳ | `REQ-4-012` |
 | **F6** | Push FOMO / Notificações inteligentes | ✅ | Baseadas em telemetria |
 | **F7** | Endorsements / Kudos públicos | ✅ | (= T10) |
-| **F8** | **Top Bar com Command+K** (search global tipo Linear/Raycast) | ⏳ | `REQ-NF-009` |
+| **F8** | **Top Bar com Command+K** (search global tipo Linear/Raycast) | 🟡 | Skeleton W1.2 Done-Plus (7 rotas estáticas, listener ⌘K D14 correcto, i18n); search dinâmico role-aware = W6.4 **Missing** — `REQ-NF-009` |
 | **F9** | **Sidebar slim** (apenas ícones, retrátil) | ⏳ | `REQ-NF-010` |
 | **F10** | **15 áreas vocacionais globais** (substitui 4 áreas) | ✅ | Mudança estrutural crítica para precisão de match |
 | **F11** | **Rate limit Micro-Desafio Vocacional** (3 tentativas grátis) | ⏳ | `REQ-NF-011` |
@@ -136,13 +138,13 @@ Cada funcionalidade tem **ID estável**, **estado canónico** (lei) e **estado r
 
 | ID | Funcionalidade | Estado | Notas |
 | --- | --- | --- | --- |
-| **NF1** | Zero `any` em TypeScript | ✅ | `REQ-NF-003` |
+| **NF1** | Zero `any` em TypeScript | ✅ | Confirmado: zero `as any` / `: any` em todo o monorepo (grep 2026-04-29). `EditorialStateBadge` usa `state: string` (type looseness, não `any`). |
 | **NF2** | Acessibilidade total (PWA, contraste AA, 44px touch) | ✅ | `REQ-NF-005` |
 | **NF3** | Rule of 300 linhas por ficheiro | 🟡 | Expansão oficial para 300; alguns legacy pendentes |
 | **NF4** | Performance (Sentry, cache, ratelimit, timeout via env) | ✅ | `REQ-NF-014` |
 | **NF5** | i18n PT base + EN como segunda língua | ⏳ | `W3-T3` + `W5-T3` |
 | **NF6** | Workers-Clean (BFF sem APIs Node-exclusivas) | ✅ | Para futura portabilidade total |
-| **NF7** | Lighthouse ≥ 90 mobile | ⏳ | `W5-T4` |
+| **NF7** | Lighthouse ≥ 90 mobile | ❓ | `lighthouserc*` ausente — Cannot-Verify; `W5-T4` / `W6.5` |
 
 ## 10. Roadmap Resumido (Wave-View)
 
@@ -157,12 +159,14 @@ graph TD
 
 | Wave | Estado | Foco | Bloqueios |
 | --- | --- | --- | --- |
-| W0 — Fundação | ✅ | Monorepo, CI, characterization tests | — |
-| W1 — Auth + Edge | 🟡 | JWT, 2FA, telemetria edge, OTP | OTP Twilio real, redirects pós-login |
-| W2 — Motor Vocacional | 🟡 | Heurísticas, LTI, score real | Mensagens UI |
-| W3 — Design System | ⏳ | Purga de cores, Glassmorphism, BentoGrid, a11y | Próxima |
-| W4 — Dashboards & Hubs | ⏳/⏸ | Bento, Match Terminal, Mensagens, Feed | Depende de W3 |
-| W5 — Gamificação & Produção | ⏳ | Streaks, Tier, micro-interações, EN, Lighthouse | Depende de W4 |
+| W-1 — Stabilization | ✅ (4/5 Done) | Outbox idempotência, hookResults, notifyHook, BootstrapContext | Characterization tests redirect (Partial) |
+| W0 — Bootstrap & Foundation | 🟡 | Features SSOT, BootstrapContext retry, EstudanteDashboard fallback | BootstrapErrorScreen STUB; AspirationalEmpty parcial |
+| W1 — TopBar + ⌘K skeleton | ✅ (W1.1 Done · W1.2 Done-Plus) | RoleChipMenu, NotificationsDropdown, CommandPalette skeleton | Focus trap ausente; rotas não role-aware |
+| W2 — Dashboards + token purge | 🟡 | Soul & Elite dashboards 5 roles, token purge | ContentTypeCTAGrid STUB; snapshots Playwright ausentes |
+| W3 — Strapi + BFF Full-Spec | ✅ (6/7 Done) | Schemas Zod, BFF RBAC, field-level filtering | PostComposer BFF Partial |
+| W4 — Builder Primitives + Builders | ✅ (6/8 Done) | BuilderShell, 5 builders completos | PostComposer + ConquistaComposer STUB; EditorialStateBadge não nos builders |
+| W5 — Pipeline Editorial + Impact | 🟡 | EcosystemImpactPanel, domain-events route, EditorialStateBadge catálogos | EcosystemImpactPanel sem polling; RBAC bloqueia criadores |
+| W6 — Catálogos + a11y | 🟡 | 8 catálogos migrados, a11y spec, primitivos | ⌘K real Missing; primitivos STUB; lighthouserc ausente |
 
 ## 11. Dívida Técnica Registada
 
@@ -175,5 +179,11 @@ graph TD
 | D5 | Outbox Replay scheduler co-located com BFF main (risco de saturação) | Análise técnica |
 | D6 | "Midnight Rollover Bug" potencial na chave Redis de telemetria | Análise técnica |
 | D7 | Race condition entre Edge URL e BFF fallback | Análise técnica |
+| D8 | `ContentTypeCTAGrid` STUB — 4 dashboards sem UI premium (GlassCard) | Audit W2.2 |
+| D9 | `PostComposer` + `ConquistaManualComposer` STUB — flows de criação bloqueados | Audit W4.8 |
+| D10 | `EcosystemImpactPanel` ignora `eventId` — sem polling; impacto sempre `"..."` | Audit W5.2 |
+| D11 | `CommandPalette` ⌘K sem search dinâmico nem role-awareness | Audit W6.4 |
+| D12 | `lighthouserc*` ausente — NF7 Lighthouse ≥90 mobile não verificável em CI | Audit W6.5 |
 
-*Última validação: 20 de Abril de 2026 · Para detalhe granular ver *file:.planning/REQUIREMENTS.md* (formato REQ-W-NNN).*
+*Última validação: 29 de Abril de 2026 · Para detalhe granular ver *file:.planning/REQUIREMENTS.md* (formato REQ-W-NNN).*
+*Revisão T-DOC-02 (audit-report-master 2026-04-29): DC-02 aplicado (F8 🟡, Wave-View actualizado, D8-D12 adicionados, NF1/NF7 corrigidos).*

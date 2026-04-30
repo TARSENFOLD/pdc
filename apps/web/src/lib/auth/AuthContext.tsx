@@ -14,20 +14,39 @@ interface AuthContextValue {
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+export const AuthContext = createContext<AuthContextValue | null>(null);
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  if ('status' in error && typeof error.status === 'number') return error.status;
+  if ('response' in error) {
+    const response = error.response;
+    if (typeof response === 'object' && response !== null && 'status' in response && typeof response.status === 'number') {
+      return response.status;
+    }
+  }
+  return undefined;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
   const { data: user = null, isLoading, isFetched } = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => authApi.me().catch((err) => {
-      console.warn('[AUTH] Falha ao recuperar sessão:', err);
+    queryFn: () => authApi.me().catch((err: unknown) => {
+      // Extract status safely from ApiError or axios-like structures
+      const status = getErrorStatus(err);
+      
+      // 401 is expected when not logged in, no need to warn.
+      if (status !== 401) {
+        console.warn('[AUTH] Falha ao recuperar sessão:', err);
+      }
       return null;
     }),
-    retry: (failureCount, error: any) => {
+    retry: (failureCount, error: unknown) => {
       // Não repetir se for 401 ou 403 (Sessão inválida/expirada)
-      if (error?.status === 401 || error?.status === 403) return false;
+      const status = getErrorStatus(error);
+      if (status === 401 || status === 403) return false;
       return failureCount < 1;
     },
     staleTime: 5 * 60 * 1000,

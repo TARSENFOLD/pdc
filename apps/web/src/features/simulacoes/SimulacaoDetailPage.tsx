@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { simulacoesApi } from '../../lib/api/simulacoes';
 import { likeApi, bookmarkApi, ratingsApi } from '../../lib/api/interactions';
 import { Card, Button, Spinner, Badge, LikeButton, BookmarkButton, RatingStars } from '../../components/ui';
+import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 
 export const SimulacaoDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -69,6 +70,7 @@ export const SimulacaoDetailPage = () => {
             <div className="flex items-center gap-3">
               <Badge variant="outline" className="px-3 py-1">Simulação Experimental</Badge>
               <Badge variant="info">Tipo {simulacao.tipo}</Badge>
+              <EditorialStateBadge state={simulacao.estado} />
             </div>
             
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

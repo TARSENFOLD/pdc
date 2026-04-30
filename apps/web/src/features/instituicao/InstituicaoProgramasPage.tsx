@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Spinner } from '@/components/ui';
 import { CatalogoGridShell } from '@/components/catalogo/CatalogoGridShell';
-import { CatalogoFilterBar } from '@/components/catalogo/CatalogoFilterBar';
-import { ContentCard } from '@/components/catalogo/ContentCard';
+import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
+import ContentCard from '@/components/catalogo/ContentCard';
 import { Calendar, Users, Building2 } from 'lucide-react';
 import { http } from '@/lib/api/http';
 import type { Programa } from '@pdc/shared';
@@ -24,7 +24,7 @@ export function InstituicaoProgramasPage() {
       const q = new URLSearchParams();
       if (tipo) q.set('tipo', tipo);
       if (search) q.set('search', search);
-      return http.get(`/programas?${q.toString()}`);
+      return http.get<{ data: Programa[] }>(`/programas?${q.toString()}`);
     },
   });
 
@@ -62,19 +62,19 @@ export function InstituicaoProgramasPage() {
           />
         }
       >
-        {programas.map((prog: any) => (
+        {programas.map((prog) => (
           <ContentCard
             key={prog.id}
             title={prog.titulo}
-            subtitle={prog.instituicao?.nome || 'Instituição Parceira'}
-            image={prog.capa?.url || undefined}
+            subtitle={prog.instituicaoNome || 'Instituição Parceira'}
+            image={prog.capaUrl || undefined}
             href={`/app/programas/${prog.id}`}
             badges={[
-              { label: prog.estado?.toUpperCase(), variant: 'info' },
-              { label: prog.modalidade, variant: 'outline' }
+              { label: prog.estado.toUpperCase(), variant: 'info' },
+              { label: prog.modalidade || 'Presencial', variant: 'outline' }
             ]}
             footerInfo={[
-              { icon: Users, label: `${prog.vagas || 0} vagas` },
+              { icon: Users, label: `${String(prog.vagas || 0)} vagas` },
               { icon: Calendar, label: prog.duracao || 'N/A' }
             ]}
           />

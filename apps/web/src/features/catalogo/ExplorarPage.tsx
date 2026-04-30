@@ -4,7 +4,7 @@ import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Card, Pagination, Avatar } from '@/components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
-import type { ExplorarResultado, MentorPublico, AreaVocacional } from '@pdc/shared';
+import type { ExplorarResultado, ExplorarItem, MentorPublico, AreaVocacional } from '@pdc/shared';
 
 const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'SAUDE', label: 'Saúde' },
@@ -32,8 +32,10 @@ const CTA_LABELS: Record<string, string> = {
   instituicao: 'Ver instituição',
 };
 
-function ResultCard({ item }: { item: ExplorarResultado }) {
-  const slug = item.slug ?? item.id;
+const EXPLORAR_TIPOS = ['curso', 'simulacao', 'experiencia', 'mentor', 'instituicao'] as const satisfies readonly ExplorarItem['tipo'][];
+
+function ResultCard({ item }: { item: ExplorarItem }) {
+  const slug = item.slug;
   const linkMap: Record<string, string> = {
     curso: `/cursos/${slug}`,
     simulacao: `/simulacoes/${slug}`,
@@ -95,18 +97,19 @@ function PessoasSugeridas({ mentores }: { mentores: MentorPublico[] }) {
 }
 
 export function ExplorarPage() {
-  const [sp, setSp] = useSearchParams();
+  const [sp, setSearchParams] = useSearchParams();
   const tab = sp.get('tipo') ?? 'tudo';
   const search = sp.get('search') ?? '';
   const area = sp.get('area') ?? '';
   const page = Number(sp.get('page') ?? '1');
+  const selectedTipo = EXPLORAR_TIPOS.find((tipo) => tipo === tab);
 
-  const { data, isLoading } = useQuery<{ data: ExplorarResultado[]; meta: { pageCount: number } }>({
+  const { data, isLoading } = useQuery<ExplorarResultado>({
     queryKey: ['explorar', tab, search, area, page],
     queryFn: () => catalogoApi.explorar({
-      ...(tab !== 'tudo' ? { tipo: tab } : {}),
+      ...(selectedTipo ? { tipo: selectedTipo } : {}),
       ...(search ? { search } : {}),
-      ...(area ? { area } : {}),
+      ...(area ? { area: area as AreaVocacional } : {}),
       page,
       pageSize: 12,
     }),
@@ -120,11 +123,11 @@ export function ExplorarPage() {
   const items = data?.data ?? [];
   const pageCount = data?.meta.pageCount ?? 1;
 
-  const set = (k: string, v: string) => {
+  const setFilter = (k: string, v: string) => {
     const next = new URLSearchParams(sp);
     if (v) next.set(k, v); else next.delete(k);
     if (k !== 'page') next.delete('page');
-    setSp(next, { replace: true });
+    setSearchParams(next, { replace: true });
   };
 
   return (
@@ -153,7 +156,7 @@ export function ExplorarPage() {
                 type="text" 
                 value={search} 
                 placeholder="Pesquisar carreiras, simulações ou mentores..."
-                onChange={(e) => { set('search', e.target.value); }}
+                onChange={(e) => { setFilter('search', e.target.value); }}
                 className="w-full rounded-2xl border border-ink-tertiary/10 bg-elevated p-4 pl-12 text-sm text-ink-primary placeholder:text-ink-tertiary focus:border-accent/40 focus:ring-4 focus:ring-accent/5 outline-none transition-all"
               />
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-tertiary group-focus-within:text-accent transition-colors">
@@ -166,7 +169,7 @@ export function ExplorarPage() {
               {AREAS.map((a) => (
                 <button 
                   key={a.value} 
-                  onClick={() => { set('area', area === a.value ? '' : a.value); }}
+                  onClick={() => { setFilter('area', area === a.value ? '' : a.value); }}
                   className={`flex-none rounded-full border px-4 py-1.5 text-xs font-bold transition-all ${area === a.value ? 'bg-accent border-accent text-white shadow-lg shadow-accent/20' : 'bg-elevated border-ink-tertiary/10 text-ink-secondary hover:border-accent/30'}`}
                 >
                   {a.label}
@@ -176,9 +179,9 @@ export function ExplorarPage() {
           </div>
         </div>
 
-        <Tabs value={tab} onValueChange={(v) => { set('tipo', v === 'tudo' ? '' : v); }} className="mt-8">
+        <Tabs value={tab} onValueChange={(v) => { setFilter('tipo', v === 'tudo' ? '' : v); }} className="mt-8">
           <TabsList className="bg-elevated p-1 rounded-2xl border border-ink-tertiary/10">
-            {['tudo', 'curso', 'simulacao', 'experiencia', 'mentor', 'instituicao'].map((t) => (
+            {['tudo', ...EXPLORAR_TIPOS].map((t) => (
               <TabsTrigger key={t} value={t} className="rounded-xl px-6 py-2 text-xs font-bold uppercase tracking-widest transition-all data-[state=active]:bg-accent data-[state=active]:text-white">
                 {t === 'tudo' ? 'Tudo' : `${t}s`}
               </TabsTrigger>
@@ -198,7 +201,7 @@ export function ExplorarPage() {
                 </div>
                 <h3 className="text-lg font-bold text-ink-primary">Nenhum resultado encontrado</h3>
                 <p className="mt-2 text-sm text-ink-secondary">Tenta ajustar os teus filtros ou pesquisa.</p>
-                <Link to="/explorar" onClick={() => { setSp(new URLSearchParams()); }} className="mt-6 inline-block text-xs font-bold uppercase tracking-widest text-accent hover:underline">Limpar tudo</Link>
+                <Link to="/explorar" onClick={() => { setSearchParams(new URLSearchParams()); }} className="mt-6 inline-block text-xs font-bold uppercase tracking-widest text-accent hover:underline">Limpar tudo</Link>
               </div>
             ) : (
               <>
@@ -207,7 +210,7 @@ export function ExplorarPage() {
                 </div>
                 {pageCount > 1 && (
                   <div className="mt-16 flex justify-center border-t border-ink-tertiary/10 pt-10">
-                    <Pagination page={page} pageCount={pageCount} onPageChange={(p) => { set('page', String(p)); }} />
+                    <Pagination page={page} pageCount={pageCount} onPageChange={(p) => { setFilter('page', String(p)); }} />
                   </div>
                 )}
               </>

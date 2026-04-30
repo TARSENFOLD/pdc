@@ -1,25 +1,28 @@
 import { Link } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export function LandingNavbar() {
+  const { t } = useTranslation('landing');
+
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-background/60 backdrop-blur-[15px]">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2 group">
           <span className="text-xl font-bold tracking-tighter text-accent transition-transform group-hover:scale-105">PDC</span>
           <div className="h-4 w-[1px] bg-border mx-1 hidden sm:block" />
-          <span className="hidden text-xs font-medium uppercase tracking-[0.2em] text-text-muted sm:block">Por Dentro do Curso</span>
+          <span className="hidden text-xs font-medium uppercase tracking-[0.2em] text-text-muted sm:block">{t('navbar.logo_tagline')}</span>
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">
           <a href="#problema" className="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
-            Problema
+            {t('navbar.links.problema')}
           </a>
           <a href="#como-funciona" className="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
-            Como funciona
+            {t('navbar.links.como_funciona')}
           </a>
           <a href="#features" className="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
-            Funcionalidades
+            {t('navbar.links.funcionalidades')}
           </a>
         </div>
 
@@ -29,13 +32,13 @@ export function LandingNavbar() {
             to="/login"
             className="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
           >
-            Entrar
+            {t('navbar.cta_login')}
           </Link>
           <Link
             to="/criar-conta"
             className="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-accent/20 transition-all hover:bg-accent-hover hover:scale-[1.02] active:scale-[0.98]"
           >
-            Começar grátis
+            {t('navbar.cta_primary')}
           </Link>
         </div>
       </nav>

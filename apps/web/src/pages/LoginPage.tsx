@@ -7,23 +7,49 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { authApi } from '@/lib/api/auth';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { AsymmetricButton } from '@/components/ui';
+import { useTranslation } from '@/hooks/useTranslation';
 
 gsap.registerPlugin(useGSAP);
 
 // Configuração dos Blocos (Formas e Cores Low-Poly) - Epic 05
+const defaultBlock = { shape: 'cube', color: 'var(--accent-terracotta)' } as const;
 const blockTypes = [
-  { shape: 'cube', color: 'var(--accent-terracotta)' },
+  defaultBlock,
   { shape: 'pyramid', color: 'var(--institutional-cobalt)' },
   { shape: 'sphere', color: '#a855f7' }, // Purple elite
   { shape: 'torus', color: 'var(--accent-success)' }
-];
+] as const;
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  if ('status' in error && typeof error.status === 'number') return error.status;
+  if ('response' in error) {
+    const response = error.response;
+    if (typeof response === 'object' && response !== null && 'status' in response && typeof response.status === 'number') {
+      return response.status;
+    }
+  }
+  return undefined;
+}
+
+function getErrorBody(error: unknown): { error?: string } | undefined {
+  if (typeof error !== 'object' || error === null || !('body' in error)) return undefined;
+  const body = error.body;
+  if (typeof body === 'object' && body !== null) {
+    if ('error' in body && typeof body.error === 'string') {
+      return { error: body.error };
+    }
+  }
+  return undefined;
+}
 
 export default function LoginPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const leftPaneRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const blocksRefs = useRef<HTMLDivElement[]>([]);
-  
+  const { t } = useTranslation('common');
+
   const blockCount = 15;
   const [loginStatus, setLoginStatus] = useState<'idle' | 'typing' | 'success' | 'failure'>('idle');
 
@@ -32,7 +58,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const { track } = useTelemetry();
   const navigate = useNavigate();
   const location = useLocation();
@@ -191,8 +217,13 @@ export default function LoginPage() {
         simulateSuccess();
       }
     } catch (err: unknown) {
-      const body = err instanceof Error && 'body' in err ? (err as { body?: Record<string, string> }).body : undefined;
-      setError(body?.error ?? 'Erro ao iniciar sessão. Verifique as suas credenciais.');
+      const status = getErrorStatus(err);
+      if (status === 401) {
+        // Limpar lixo de sessões anteriores em caso de falha
+        void logout();
+      }
+      const body = getErrorBody(err);
+      setError(body?.error ?? t('auth.login_page.error_generic'));
       simulateFailure();
     } finally {
       setIsLoading(false);
@@ -208,7 +239,7 @@ export default function LoginPage() {
         className="relative flex items-center justify-center bg-recessed border-r border-ink-tertiary/10 [perspective:1000px] hidden lg:flex"
       >
         {Array.from({ length: blockCount }).map((_, i) => {
-          const config = blockTypes[i % blockTypes.length]!;
+          const config = blockTypes[i % blockTypes.length] ?? defaultBlock;
           return (
             <div 
               key={i}
@@ -233,8 +264,8 @@ export default function LoginPage() {
       <div className="flex items-center justify-center p-8 lg:p-12">
         <div className="w-full max-w-sm">
           <header className="mb-12">
-            <h1 className="text-5xl font-black text-ink-primary tracking-tight mb-2 font-display">Login.</h1>
-            <p className="text-ink-secondary font-medium">Bem-vindo de volta ao teu futuro.</p>
+            <h1 className="text-5xl font-black text-ink-primary tracking-tight mb-2 font-display">{t('auth.login_page.title')}</h1>
+            <p className="text-ink-secondary font-medium">{t('auth.login_page.subtitle')}</p>
           </header>
 
           {error && (
@@ -245,7 +276,7 @@ export default function LoginPage() {
 
           <form ref={formRef} onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
             <div>
-              <label className="block text-xs font-bold text-ink-tertiary uppercase tracking-widest mb-2">Identificação Académica</label>
+              <label className="block text-xs font-bold text-ink-tertiary uppercase tracking-widest mb-2">{t('auth.login_page.email_label')}</label>
               <input 
                 type="email" 
                 required
@@ -259,7 +290,7 @@ export default function LoginPage() {
             </div>
             
             <div>
-              <label className="block text-xs font-bold text-ink-tertiary uppercase tracking-widest mb-2">Chave de Acesso</label>
+              <label className="block text-xs font-bold text-ink-tertiary uppercase tracking-widest mb-2">{t('auth.login_page.password_label')}</label>
               <input 
                 type="password" 
                 required
@@ -277,7 +308,7 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full h-14 bg-ink-primary text-canvas font-black uppercase tracking-widest text-[11px] hover:bg-accent hover:text-ink-on-accent transition-all shadow-xl"
             >
-              {isLoading ? 'A Processar...' : 'Aceder Plataforma'}
+              {isLoading ? t('auth.login_page.submit_loading') : t('auth.login_page.submit')}
             </AsymmetricButton>
 
             <div className="mt-8">
@@ -286,7 +317,7 @@ export default function LoginPage() {
                   <div className="w-full border-t border-ink-tertiary/10"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="bg-canvas px-4 text-ink-tertiary font-mono tracking-widest text-xs uppercase">ou</span>
+                  <span className="bg-canvas px-4 text-ink-tertiary font-mono tracking-widest text-xs uppercase">{t('auth.login_page.divider')}</span>
                 </div>
               </div>
 
@@ -295,14 +326,14 @@ export default function LoginPage() {
                 onClick={() => { authApi.loginWithGoogle(); }}
                 className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-ink-tertiary/10 bg-recessed p-4 font-bold text-ink-primary transition-colors hover:bg-ink-tertiary/10 active:scale-[0.98] touch-target"
               >
-                Continuar com Google
+                {t('auth.login_page.google_cta')}
               </button>
             </div>
           </form>
 
           <footer className="mt-12 pt-8 border-t border-ink-tertiary/10 flex flex-col gap-4 sm:flex-row sm:justify-between text-sm text-ink-tertiary font-medium">
-            <Link to="/forgot-password" replace className="hover:text-ink-primary transition-colors">Esqueci-me da chave</Link>
-            <Link to="/criar-conta" replace className="hover:text-ink-primary transition-colors">Criar conta académica</Link>
+            <Link to="/forgot-password" replace className="hover:text-ink-primary transition-colors">{t('auth.login_page.forgot_link')}</Link>
+            <Link to="/criar-conta" replace className="hover:text-ink-primary transition-colors">{t('auth.login_page.register_link')}</Link>
           </footer>
         </div>
       </div>

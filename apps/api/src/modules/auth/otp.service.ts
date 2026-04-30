@@ -11,6 +11,19 @@ function maskPhone(phone: string): string {
   return `${phone.slice(0, 4)}***${phone.slice(-3)}`;
 }
 
+function redactTwilioError(error: unknown): Record<string, unknown> {
+  if (typeof error !== 'object' || error === null) {
+    return {};
+  }
+
+  const safeError: Record<string, unknown> = { ...error };
+  delete safeError.to;
+  delete safeError.To;
+  delete safeError.from;
+  delete safeError.From;
+  return safeError;
+}
+
 export const otpService = {
   generateOtp(): string {
     return randomInt(100000, 999999).toString();
@@ -29,7 +42,7 @@ export const otpService = {
     const canSkip =
       env.NODE_ENV !== 'production' &&
       env.DEV_SKIP_OTP === 'true' &&
-      !env.STRAPI_URL?.includes('pdc-strapi.railway.app');
+      !env.STRAPI_URL.includes('pdc-strapi.railway.app');
 
     if (canSkip && otp === '000000') {
       log.warn({ userId }, 'OTP verification bypassed in dev mode with 000000');
@@ -103,7 +116,7 @@ export const otpService = {
     // @upstash/redis devolve [result1, result2]
     // ioredis devolve [[err, result1], [err, result2]]
     const firstResult = results[0];
-    const count = Array.isArray(firstResult) ? (firstResult[1] as number) : (firstResult as number);
+    const count = Array.isArray(firstResult) ? (firstResult[1] as number) : (firstResult);
 
     if (count > 3) {
       throw Object.assign(new Error('Limite de SMS excedido. Tenta novamente em 10 minutos.'), { status: 429 });
@@ -145,9 +158,9 @@ export const otpService = {
     );
 
     if (!res.ok) {
-      const error = await res.json().catch(() => ({}));
+      const error: unknown = await res.json().catch((): Record<string, unknown> => ({}));
       // Sanitização de PII no erro da Twilio
-      const { to, To, from, From, ...safeError } = error as Record<string, unknown>;
+      const safeError = redactTwilioError(error);
       log.error({ err: safeError, phone: maskPhone(phone) }, 'Twilio error');
       throw new Error('Falha ao enviar SMS de OTP via Twilio');
     }

@@ -1,8 +1,8 @@
 # Build stage
 FROM node:20-alpine AS build
 WORKDIR /opt/app
-COPY package.json ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
 RUN npm run build
 
@@ -10,8 +10,8 @@ RUN npm run build
 FROM node:20-alpine
 RUN apk add --no-cache curl
 WORKDIR /opt/app
-COPY package.json ./
-RUN npm install --omit=dev
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 COPY --from=build /opt/app/dist ./dist
 COPY --from=build /opt/app/config ./config
 COPY --from=build /opt/app/database ./database

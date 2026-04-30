@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { experienciasApi } from '@/lib/api/experiencias';
 import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
 import { Spinner, Badge, LikeButton, BookmarkButton, RatingStars, Card, Button, EmptyState } from '@/components/ui';
+import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 import { SEOHead } from '@/components/layout/SEOHead';
 import { 
   Building2, 
@@ -111,7 +112,10 @@ export function ExperienciaDetailPage() {
       <section className="relative h-[300px] rounded-[32px] overflow-hidden border border-white/5">
          <div className="absolute inset-0 bg-gradient-to-br from-accent/20 to-background opacity-40" />
          <div className="relative h-full flex flex-col justify-end p-8 space-y-4">
-            <Badge className="w-fit bg-accent/10 text-accent border-accent/20 uppercase text-[9px] font-black">Experiência Curricular</Badge>
+            <div className="flex items-center gap-2">
+              <Badge className="w-fit bg-accent/10 text-accent border-accent/20 uppercase text-[9px] font-black">Experiência Curricular</Badge>
+              <EditorialStateBadge state={exp.estado} />
+            </div>
             <h1 className="text-4xl font-black text-ink-primary tracking-tighter leading-tight">{exp.titulo}</h1>
             <div className="flex items-center gap-4 pt-4">
                <RatingStars targetType="experiencia" targetId={id} stats={ratingStats} />
@@ -143,7 +147,7 @@ export function ExperienciaDetailPage() {
                    </div>
                   <div className="flex items-center gap-3">
                      <Calendar size={20} className="text-accent" />
-                     <p className="text-sm font-bold">{new Date(exp.dataInicio).toLocaleDateString('pt-AO')}</p>
+                     <p className="text-sm font-bold">{exp.dataInicio ? new Date(exp.dataInicio).toLocaleDateString('pt-AO') : 'Data a anunciar'}</p>
                   </div>
                </div>
                <Button className="w-full h-14 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs">Inscrever Agora</Button>

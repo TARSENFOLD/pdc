@@ -15,6 +15,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 
 export function ProjetoFormPage() {
   const { id } = useParams<{ id: string }>();
+  const projetoId = id ?? '';
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -23,8 +24,8 @@ export function ProjetoFormPage() {
   const [savedId, setSavedId] = useState<string | null>(null);
 
   const { data: projeto, isLoading } = useQuery({
-    queryKey: ['projetos', id ?? ''],
-    queryFn: () => projetosApi.getById(id ?? ''),
+    queryKey: ['projetos', projetoId],
+    queryFn: () => projetosApi.getById(projetoId),
     enabled: isEdit,
   });
 
@@ -48,21 +49,21 @@ export function ProjetoFormPage() {
       reset({
         titulo: projeto.titulo,
         abstract: projeto.abstract,
-        core: projeto.core || '',
-        area: projeto.area || 'TECNOLOGIA',
-        modos: projeto.modos || ['exposicao'],
-        visibilidade: projeto.visibilidade || 'publico',
-        repoUrl: projeto.repoUrl || '',
-        demoUrl: projeto.demoUrl || '',
-        capaUrl: projeto.capaUrl || '',
-        tags: projeto.tags || [],
+        core: projeto.core,
+        area: projeto.area,
+        modos: projeto.modos,
+        visibilidade: projeto.visibilidade,
+        repoUrl: projeto.repoUrl ?? '',
+        demoUrl: projeto.demoUrl ?? '',
+        capaUrl: projeto.capaUrl ?? '',
+        tags: projeto.tags,
       });
     }
   }, [projeto, reset]);
 
   const mutation = useMutation({
     mutationFn: (data: CriarProjetoPayload) =>
-      isEdit ? projetosApi.update(id, data) : projetosApi.create(data),
+      isEdit ? projetosApi.update(projetoId, data) : projetosApi.create(data),
     onSuccess: (saved: { id?: string; data?: { id?: string; eventId?: string }; eventId?: string }) => {
       void qc.invalidateQueries({ queryKey: ['projetos'] });
       toast({ title: isEdit ? 'Projeto atualizado' : 'Projeto materializado!' });
@@ -70,11 +71,11 @@ export function ProjetoFormPage() {
       const newId = saved.data?.id || saved.id;
       if (newId) setSavedId(newId);
 
-      const eventId = saved?.eventId || saved.data?.eventId;
+      const eventId = saved.eventId || saved.data?.eventId;
       if (eventId) {
         setLastEventId(eventId);
       } else {
-        navigate(`/projetos/${newId || id}`);
+        navigate(`/projetos/${newId || projetoId}`);
       }
     },
     onError: (err: { response?: { data?: { error?: string } } }) => toast({
@@ -85,7 +86,7 @@ export function ProjetoFormPage() {
   });
   const aclMutation = useMutation({
     mutationFn: ({ perfilId, acao }: { perfilId: string, acao: 'aprovar' | 'rejeitar' }) => 
-      projetosApi.gerirACL(id!, perfilId, acao),
+      projetosApi.gerirACL(projetoId, perfilId, acao),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['projetos', id] });
       toast({ title: 'Permissão de acesso atualizada.' });
@@ -102,7 +103,7 @@ export function ProjetoFormPage() {
   return (
     <>
       <BuilderShell
-        form={form as any}
+        form={form}
         title={isEdit ? "Editor de Ativo Soberano" : "Novo Projeto de Ecossistema"}
         description="Materializa o teu conhecimento em ativos reais. Separa o pitch público do núcleo técnico."
         state="published"      breadcrumbs={[
@@ -130,7 +131,6 @@ export function ProjetoFormPage() {
       }
     >
       <BuilderSection
-        value="identidade"
         title="Identidade do Ativo"
         description="Título, domínio e visibilidade global."
       >
@@ -152,7 +152,6 @@ export function ProjetoFormPage() {
       </BuilderSection>
 
       <BuilderSection
-        value="pitch"
         title="Pitch Público (Abstract)"
         description="Resumo visível a todos no catálogo. Capta a atenção do ecossistema."
       >
@@ -172,7 +171,6 @@ export function ProjetoFormPage() {
       </BuilderSection>
 
       <BuilderSection
-        value="core"
         title="Núcleo Técnico (Core)"
         description="Documentação profunda, segredos e lógica. Acesso controlado por ACL."
       >
@@ -190,7 +188,6 @@ export function ProjetoFormPage() {
       </BuilderSection>
 
       <BuilderSection
-        value="modos"
         title="Modos de Atuação"
         description="Como o projeto interage com outros talentos e mentores."
       >
@@ -219,7 +216,6 @@ export function ProjetoFormPage() {
 
       {isEdit && (
         <BuilderSection
-          value="acl"
           title="Gestão de Acessos (ACL)"
           description="Pedidos de acesso ao núcleo técnico do teu projeto."
         >
@@ -233,10 +229,10 @@ export function ProjetoFormPage() {
                       <p className="text-sm font-bold text-ink-primary">ID: {entry.perfilId}</p>
                       <p className="text-[9px] text-ink-tertiary uppercase tracking-widest">{entry.estado}</p>
                    </div>
-                   {entry.estado === 'pending' && (
+                   {entry.estado === 'pendente' && (
                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="text-accent-success" onClick={() => aclMutation.mutate({ perfilId: entry.perfilId, acao: 'aprovar' })}>Aprovar</Button>
-                        <Button size="sm" variant="ghost" className="text-accent-danger" onClick={() => aclMutation.mutate({ perfilId: entry.perfilId, acao: 'rejeitar' })}>Rejeitar</Button>
+                        <Button size="sm" variant="outline" className="text-accent-success" onClick={() => { aclMutation.mutate({ perfilId: entry.perfilId, acao: 'aprovar' }); }}>Aprovar</Button>
+                        <Button size="sm" variant="ghost" className="text-accent-danger" onClick={() => { aclMutation.mutate({ perfilId: entry.perfilId, acao: 'rejeitar' }); }}>Rejeitar</Button>
                      </div>
                    )}
                 </div>
@@ -278,7 +274,7 @@ export function ProjetoFormPage() {
               onComplete={() => {
                 const targetId = savedId || id;
                 const path = targetId ? `/projetos/${targetId}` : '/app/catalogo/projetos';
-                setTimeout(() => navigate(path), 3000);
+                setTimeout(() => { navigate(path); }, 3000);
               }}
             />
           </div>
@@ -288,3 +284,5 @@ export function ProjetoFormPage() {
     </>
   );
 }
+
+

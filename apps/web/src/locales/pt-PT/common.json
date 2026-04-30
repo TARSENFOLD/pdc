@@ -33,11 +33,66 @@
     "network": "Erro de rede. Verifica a tua ligação."
   },
   "auth": {
+    "onboarding": {
+      "badge": "PDC — Onboarding",
+      "title": "Como queres usar o PDC?",
+      "subtitle": "Escolhe o teu perfil para personalizar a tua infraestrutura de decisão."
+    },
+    "roles": {
+      "student": {
+        "title": "Estudante",
+        "desc": "Descobre a tua vocação e explora carreiras com IA.",
+        "features": [
+          "Simulações vocacionais",
+          "Perfil vocacional IA",
+          "Mentorias personalizadas",
+          "Cursos e certificados"
+        ]
+      },
+      "mentor": {
+        "title": "Mentor",
+        "desc": "Orienta estudantes e partilha o teu conhecimento.",
+        "features": [
+          "Criar cursos e simulações",
+          "Gerir mentorados",
+          "Analytics de impacto",
+          "Reputação profissional"
+        ]
+      },
+      "institution": {
+        "title": "Instituição",
+        "desc": "Atraí talentos e apresenta os teus cursos.",
+        "features": [
+          "Página institucional",
+          "Publicar experiências",
+          "Propostas a estudantes",
+          "Relatórios de evasão"
+        ]
+      }
+    },
+    "common": {
+      "start": "Começar",
+      "login_link_prefix": "Já tens uma conta ativa?",
+      "login_link_action": "Entrar agora"
+    },
     "login": "Entrar",
     "logout": "Sair",
     "register": "Registar",
     "email": "Email",
     "password": "Palavra-passe",
-    "forgot_password": "Esqueceste a palavra-passe?"
+    "forgot_password": "Esqueceste a palavra-passe?",
+    "login_page": {
+      "title": "Login.",
+      "subtitle": "Bem-vindo de volta ao teu futuro.",
+      "email_label": "Identificação Académica",
+      "password_label": "Chave de Acesso",
+      "submit_loading": "A Processar...",
+      "submit": "Aceder Plataforma",
+      "divider": "ou",
+      "google_cta": "Continuar com Google",
+      "forgot_link": "Esqueci-me da chave",
+      "register_link": "Criar conta académica",
+      "error_generic": "Erro ao iniciar sessão. Verifique as suas credenciais."
+    }
   }
 }

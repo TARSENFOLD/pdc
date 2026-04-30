@@ -51,6 +51,7 @@
       "relation": "manyToOne",
       "target": "api::instituicao.instituicao"
     },
+    "gratuito": { "type": "boolean", "default": true },
     "validadoAcademicamente": { "type": "boolean", "default": false },
     "painelRealidade": { "type": "json" },
     "muralVozes": { "type": "json" },

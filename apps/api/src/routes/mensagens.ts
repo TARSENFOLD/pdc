@@ -236,7 +236,7 @@ mensagensRoutes.post(
       });
 
       // G15: Impacto e Resiliência via Outbox
-      await eventBus.publishWithOutbox(DomainEventName.MENSAGEM_ENVIADA as any, {
+      await eventBus.publishWithOutbox(DomainEventName.MENSAGEM_ENVIADA, {
         mensagemId: resMsg.data.id,
         conversaId,
         remetenteId: userId,

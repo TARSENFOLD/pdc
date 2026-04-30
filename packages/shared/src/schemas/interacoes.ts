@@ -6,6 +6,8 @@ export const InteractionTargetTypeSchema = z.enum([
   'experiencia',
   'projeto',
   'mentor',
+  'post',
+  'conquista',
 ]);
 
 export type InteractionTargetType = z.infer<typeof InteractionTargetTypeSchema>;
@@ -86,3 +88,11 @@ export const CreateRatingPayloadSchema = z.object({
 });
 
 export type CreateRatingPayload = z.infer<typeof CreateRatingPayloadSchema>;
+
+// Shares
+export const SharePayloadSchema = z.object({
+  targetType: InteractionTargetTypeSchema,
+  targetId: z.string(),
+});
+
+export type SharePayload = z.infer<typeof SharePayloadSchema>;

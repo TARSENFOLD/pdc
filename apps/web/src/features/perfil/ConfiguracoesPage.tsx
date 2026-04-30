@@ -5,19 +5,65 @@ import { Spinner, Button } from '@/components/ui';
 import { Palette, Bell, ShieldCheck, Globe, Key } from 'lucide-react';
 import { http } from '@/lib/api/http';
 import { toast } from '@/hooks/useToast';
-import type { VisibilitySettings, NotificationPreferences, PerfilCompleto } from '@pdc/shared';
+import type { VisibilitySettings, PerfilCompleto, UpdatePerfilPayload, FieldVisibility } from '@pdc/shared';
+
+/**
+ * NotificationPreferences - Interface local para manter a inteligência do sistema.
+ * Embora o schema Zod do PerfilCompleto ainda não tenha estas chaves estritas,
+ * a UI deve manter a funcionalidade para futura persistência no backend.
+ */
+interface NotificationPreferences {
+  emailMensagens: boolean;
+  emailConquistas: boolean;
+  emailMentorias: boolean;
+  emailNewsletter: boolean;
+}
+
+type PerfilComNotificacoes = PerfilCompleto & {
+  notificationPreferences?: NotificationPreferences;
+};
+
+type UpdatePerfilComNotificacoesPayload = UpdatePerfilPayload & {
+  notificationPreferences?: NotificationPreferences;
+};
+
+const DEFAULT_NOTIF_PREFS: NotificationPreferences = {
+  emailMensagens: true,
+  emailConquistas: true,
+  emailMentorias: true,
+  emailNewsletter: false,
+};
+
+const TABS = [
+  { id: 'aparencia', label: 'Aparência', icon: Palette },
+  { id: 'privacidade', label: 'Privacidade', icon: ShieldCheck },
+  { id: 'notificacoes', label: 'Notificações', icon: Bell },
+  { id: 'seguranca', label: 'Segurança', icon: Key },
+] as const;
+
+const VISIBILITY_FIELDS: Array<{ key: keyof VisibilitySettings; label: string }> = [
+  { key: 'bio', label: 'Biografia e Perfil' },
+  { key: 'email', label: 'Endereço de Email' },
+  { key: 'telefone', label: 'Telemóvel' },
+  { key: 'areasInteresse', label: 'Áreas de Interesse' },
+  { key: 'competencias', label: 'Competências Técnicas' },
+  { key: 'vinculos', label: 'Lista de Vínculos' },
+  { key: 'miniFeed', label: 'Atividades no Feed' },
+];
+
+type ConfigTab = (typeof TABS)[number]['id'];
 
 export function ConfiguracoesPage() {
-  const [activeTab, setActiveTab] = useState<'aparencia' | 'privacidade' | 'notificacoes' | 'seguranca'>('aparencia');
+  const [activeTab, setActiveTab] = useState<ConfigTab>('aparencia');
   const queryClient = useQueryClient();
 
   const { data: perfil, isLoading } = useQuery({
     queryKey: ['perfil', 'config'],
-    queryFn: () => http.get<PerfilCompleto>('/perfis/me'),
+    queryFn: () => http.get<PerfilComNotificacoes>('/perfis/me'),
   });
 
   const mutation = useMutation({
-    mutationFn: (data: Partial<PerfilCompleto>) => http.put('/perfis/me', data),
+    mutationFn: (data: UpdatePerfilComNotificacoesPayload) => http.put('/perfis/me', data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['perfil', 'config'] });
       toast({ title: 'Configurações guardadas!' });
@@ -27,42 +73,32 @@ export function ConfiguracoesPage() {
     },
   });
 
-  const visSettings: VisibilitySettings = (perfil?.visibilitySettings as VisibilitySettings) ?? {
-    nome: 'publico',
+  // Mapeamento canónico (ADR-003)
+  const visSettings: VisibilitySettings = perfil?.visibility ?? {
     email: 'privado',
-    areaInteresse: 'publico',
-    instituicao: 'publico',
-    reputacao: 'publico',
-    conquistas: 'publico',
-    votos: 'publico',
-    atividades: 'publico'
+    telefone: 'privado',
+    miniFeed: 'publico',
+    vinculos: 'publico',
+    bio: 'publico',
+    socialLinks: 'vinkulated',
+    areasInteresse: 'publico',
+    competencias: 'publico',
   };
 
-  const notifPrefs: NotificationPreferences = (perfil?.notificationPreferences as NotificationPreferences) ?? {
-    emailMensagens: true,
-    emailConquistas: true,
-    emailMentorias: true,
-    emailNewsletter: false
-  };
+  // Fallback seguro para notificações enquanto o schema BFF é finalizado
+  const notifPrefs: NotificationPreferences = perfil?.notificationPreferences ?? DEFAULT_NOTIF_PREFS;
 
-  const handleVisibilityChange = (key: keyof VisibilitySettings, value: string) => {
+  const handleVisibilityChange = (key: keyof VisibilitySettings, value: FieldVisibility) => {
     mutation.mutate({
-      visibilitySettings: { ...visSettings, [key]: value }
+      visibility: { ...visSettings, [key]: value }
     });
   };
 
   const handleNotifToggle = (key: keyof NotificationPreferences) => {
-    mutation.mutate({
-      notificationPreferences: { ...notifPrefs, [key]: !notifPrefs[key] }
-    });
+    const nextPrefs = { ...notifPrefs, [key]: !notifPrefs[key] };
+    // Preservamos a lógica original através de um campo dinâmico no payload
+    mutation.mutate({ notificationPreferences: nextPrefs });
   };
-
-  const tabs = [
-    { id: 'aparencia', label: 'Aparência', icon: Palette },
-    { id: 'privacidade', label: 'Privacidade', icon: ShieldCheck },
-    { id: 'notificacoes', label: 'Notificações', icon: Bell },
-    { id: 'seguranca', label: 'Segurança', icon: Key },
-  ];
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
@@ -74,12 +110,12 @@ export function ConfiguracoesPage() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
         {/* Sidebar */}
         <aside className="space-y-1 lg:col-span-1">
-          {tabs.map((tab) => {
+          {TABS.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
-                onClick={() => { setActiveTab(tab.id as typeof activeTab); }}
+                onClick={() => { setActiveTab(tab.id); }}
                 className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
                   activeTab === tab.id
                     ? 'bg-accent text-white shadow-lg shadow-accent/20'
@@ -109,10 +145,10 @@ export function ConfiguracoesPage() {
                 
                 <div className="border-t border-white/5 pt-8">
                   <h3 className="text-lg font-bold text-ink-primary tracking-tight">Idioma</h3>
-                  <p className="text-sm text-ink-secondary">Atualmente disponível apenas em Português.</p>
+                  <p className="text-sm text-ink-secondary">Selecione o idioma de sua preferência para a plataforma.</p>
                   <div className="mt-4 flex items-center gap-2 text-accent">
                     <Globe size={16} />
-                    <span className="text-sm font-bold">Português (Angola)</span>
+                    <span className="text-sm font-bold">Português (AO/PT)</span>
                   </div>
                 </div>
               </div>
@@ -127,19 +163,12 @@ export function ConfiguracoesPage() {
                   <div className="flex justify-center py-12"><Spinner size="lg" /></div>
                 ) : (
                   <div className="space-y-4">
-                    {[
-                      { key: 'nome', label: 'Nome Completo' },
-                      { key: 'email', label: 'Endereço de Email' },
-                      { key: 'areaInteresse', label: 'Área de Interesse' },
-                      { key: 'instituicao', label: 'Instituição de Ensino' },
-                      { key: 'reputacao', label: 'Pontuação de Reputação' },
-                      { key: 'conquistas', label: 'Badges e Conquistas' },
-                    ].map((field) => (
+                    {VISIBILITY_FIELDS.map((field) => (
                       <div key={field.key} className="flex items-center justify-between rounded-xl bg-recessed p-4 border border-white/5">
                         <span className="text-sm font-medium text-ink-primary">{field.label}</span>
                         <VisibilitySelect 
-                          value={visSettings[field.key as keyof VisibilitySettings] ?? 'privado'} 
-                          onChange={(v) => { handleVisibilityChange(field.key as keyof VisibilitySettings, v); }} 
+                          value={visSettings[field.key]} 
+                          onChange={(v) => { handleVisibilityChange(field.key, v as FieldVisibility); }} 
                         />
                       </div>
                     ))}
@@ -157,10 +186,10 @@ export function ConfiguracoesPage() {
                   <div className="flex justify-center py-12"><Spinner size="lg" /></div>
                 ) : (
                   <div className="space-y-4">
-                    <NotifToggle label="Mensagens" desc="Receber email quando alguém te envia uma mensagem." checked={!!notifPrefs.emailMensagens} onChange={() => { handleNotifToggle('emailMensagens'); }} />
-                    <NotifToggle label="Conquistas" desc="Receber email quando desbloqueas uma conquista." checked={!!notifPrefs.emailConquistas} onChange={() => { handleNotifToggle('emailConquistas'); }} />
-                    <NotifToggle label="Mentorias" desc="Receber email sobre pedidos e sessões de mentoria." checked={!!notifPrefs.emailMentorias} onChange={() => { handleNotifToggle('emailMentorias'); }} />
-                    <NotifToggle label="Newsletter" desc="Receber a newsletter periódica da plataforma." checked={!!notifPrefs.emailNewsletter} onChange={() => { handleNotifToggle('emailNewsletter'); }} />
+                    <NotifToggle label="Mensagens" desc="Receber email quando alguém te envia uma mensagem." checked={notifPrefs.emailMensagens} onChange={() => { handleNotifToggle('emailMensagens'); }} />
+                    <NotifToggle label="Conquistas" desc="Receber email quando desbloqueas uma conquista." checked={notifPrefs.emailConquistas} onChange={() => { handleNotifToggle('emailConquistas'); }} />
+                    <NotifToggle label="Mentorias" desc="Receber email sobre pedidos e sessões de mentoria." checked={notifPrefs.emailMentorias} onChange={() => { handleNotifToggle('emailMentorias'); }} />
+                    <NotifToggle label="Newsletter" desc="Receber a newsletter periódica da plataforma." checked={notifPrefs.emailNewsletter} onChange={() => { handleNotifToggle('emailNewsletter'); }} />
                   </div>
                 )}
               </div>
@@ -199,7 +228,7 @@ function VisibilitySelect({ value, onChange }: { value: string, onChange: (v: st
       className="rounded-lg border border-white/10 bg-canvas p-2 text-xs font-bold text-ink-primary focus:ring-1 focus:ring-accent"
     >
       <option value="publico">Público</option>
-      <option value="vinculos">Apenas Vínculos</option>
+      <option value="conexoes">Apenas Vínculos</option>
       <option value="privado">Privado</option>
     </select>
   );

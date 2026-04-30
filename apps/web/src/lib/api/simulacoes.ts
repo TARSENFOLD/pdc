@@ -7,7 +7,8 @@ import type {
   ConcluirTentativaPayload,
   Pagination,
   CriarSimulacaoPayload,
-  SimulacaoMinha
+  SimulacaoMinha,
+  MutationResult
 } from '@pdc/shared';
 
 export const simulacoesApi = {
@@ -28,10 +29,10 @@ export const simulacoesApi = {
     http.get<{ data: SimulacaoMinha[], pagination: Pagination }>(`/simulacoes/minhas?page=${(page ?? 1).toString()}`),
 
   criar: (payload: CriarSimulacaoPayload) =>
-    http.post<SimulacaoMinha>('/simulacoes', payload),
+    http.post<MutationResult>('/simulacoes', payload),
 
   editar: (id: string, payload: Partial<CriarSimulacaoPayload>) =>
-    http.put<SimulacaoMinha>(`/simulacoes/${id}`, payload),
+    http.put<MutationResult>(`/simulacoes/${id}`, payload),
 
   updateEstado: (id: string, estado: 'review' | 'published' | 'archived') =>
     http.patch<{ success: boolean }>(`/simulacoes/${id}/estado`, { estado }),

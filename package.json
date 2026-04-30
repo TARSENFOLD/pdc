@@ -38,7 +38,9 @@
     "test:e2e:docker": "docker run --rm --network host -v $(pwd):/work -w /work -e CI=true mcr.microsoft.com/playwright:v1.52.0-noble npx playwright test",
     "docker:load": "docker compose -f docker-compose.test.yml run --rm k6 run",
     "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'dist' -type d -prune -exec rm -rf '{}' +",
-    "test:e2e:a11y": "playwright test tests/e2e/a11y.spec.ts"
+    "test:e2e:a11y": "playwright test tests/e2e/a11y.spec.ts",
+    "validate:docs": "npx tsx scripts/validate-docs.ts",
+    "lint:docs": "markdownlint-cli2 'docs/**/*.md' '.planning/**/*.md' 'specs/**/*.md' '*.md'"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
@@ -55,6 +57,8 @@
     "husky": "^9.0.0",
     "lint-staged": "^15.0.0",
     "lodash": "^4.18.1",
+    "markdown-link-check": "^3.14.2",
+    "markdownlint-cli2": "^0.22.1",
     "prettier": "^3.3.0",
     "ts-morph": "^28.0.0",
     "typescript": "^5.5.0"

@@ -21,7 +21,9 @@ export const tinaRoutes = new Hono<{ Variables: AuthVariables }>();
 
 // POST /tina/chat — Auth opcional
 tinaRoutes.post('/chat', zValidator('json', ChatPayloadSchema), async (c) => {
-  const { message, stream } = c.req.valid('json');
+  const { message, messages, stream } = c.req.valid('json');
+  const prompt = message ?? messages?.at(-1)?.content;
+  if (!prompt) return c.json({ error: 'message is required' }, 400);
   const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
   
   // Tentar extrair userId do cookie se existir
@@ -36,7 +38,7 @@ tinaRoutes.post('/chat', zValidator('json', ChatPayloadSchema), async (c) => {
     }
   }
 
-  const res = await tinaService.chat([{ role: 'user', content: message }], userId, ip, !!stream);
+  const res = await tinaService.chat(messages ?? [{ role: 'user', content: prompt }], userId, ip, stream);
 
   if (!res.ok) {
     const errorData = await res.json() as { error: string };

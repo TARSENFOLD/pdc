@@ -3,9 +3,11 @@ import { motion, useReducedMotion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { http } from '@/lib/api/http';
 import type { MentorPublico, CatalogoResponse } from '@pdc/shared';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export function LandingMentores() {
   const reduced = useReducedMotion();
+  const { t } = useTranslation('landing');
   const fadeUp = {
     initial: reduced ? { opacity: 0 } : { opacity: 0, y: 24 },
     whileInView: { opacity: 1, y: 0 },
@@ -27,10 +29,10 @@ export function LandingMentores() {
       <div className="mx-auto max-w-5xl">
         <motion.div {...fadeUp} className="mb-16 text-center">
           <h2 className="text-3xl font-bold text-text-primary sm:text-4xl">
-            Aprende com quem já está lá
+            {t('mentores.title')}
           </h2>
           <p className="mt-4 text-text-secondary">
-            Conecta-te com profissionais da indústria angolana para orientação personalizada.
+            {t('mentores.body')}
           </p>
         </motion.div>
 
@@ -55,8 +57,8 @@ export function LandingMentores() {
           ))}
         </div>
         <div className="mt-12 text-center">
-          <Link to="/app/mentores" className="inline-block rounded-xl bg-amber px-8 py-3 text-sm font-semibold text-black transition-colors hover:bg-amber-hover">
-            Conhecer mentores →
+          <Link to="/mentores" className="inline-block rounded-xl bg-amber px-8 py-3 text-sm font-semibold text-black transition-colors hover:bg-amber-hover">
+            {t('mentores.cta')} →
           </Link>
         </div>
       </div>

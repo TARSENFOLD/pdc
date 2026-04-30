@@ -17,7 +17,7 @@ interface RankingUser {
 export function RankingPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['estudante', 'ranking'],
-    queryFn: () => http.get<{ data: RankingUser[] }>('/estudante/ranking'),
+    queryFn: () => http.get<{ data: RankingUser[] }>('/ranking'),
   });
 
   if (isLoading) return <div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>;

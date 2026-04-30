@@ -84,8 +84,12 @@ notificacaoRoutes.put('/lidas/todas', async (c) => {
 
 // POST /notificacoes/push/register — regista device token (iOS APNs / Android FCM / Web Push)
 notificacaoRoutes.post('/push/register', async (c) => {
-  const { id: perfilId } = c.get('user');
-  const body = await c.req.json().catch(() => null);
+  const user = c.get('user');
+  const perfilId = user.perfilId;
+  if (!perfilId) {
+    return c.json({ error: 'Perfil não associado ao utilizador' }, 400);
+  }
+  const body: unknown = await c.req.json().catch(() => null);
   const parsed = DeviceTokenSchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: 'Payload inválido', details: parsed.error.flatten() }, 400);
@@ -110,8 +114,11 @@ notificacaoRoutes.post('/push/register', async (c) => {
 
 // DELETE /notificacoes/push/unregister — remove device token ao fazer logout
 notificacaoRoutes.delete('/push/unregister', async (c) => {
-  const { id: perfilId } = c.get('user');
-  const body = await c.req.json().catch(() => null);
+  const { perfilId } = c.get('user');
+  if (!perfilId) {
+    return c.json({ error: 'Perfil não associado ao utilizador' }, 400);
+  }
+  const body: unknown = await c.req.json().catch(() => null);
   const parsed = z.object({ token: z.string().min(10) }).safeParse(body);
   if (!parsed.success) {
     return c.json({ error: 'Token em falta' }, 400);
@@ -122,9 +129,9 @@ notificacaoRoutes.delete('/push/unregister', async (c) => {
       'filters[token][$eq]': parsed.data.token,
       'pagination[pageSize]': '1',
     });
-    const record = existing.data?.[0];
+    const record = existing.data[0];
     if (!record) return c.json({ ok: true });
-    await strapiPost<unknown>(`/device-tokens/${record.id}/delete`, {});
+    await strapiPost<unknown>(`/device-tokens/${String(record.id)}/delete`, {});
     return c.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';

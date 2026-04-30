@@ -21,7 +21,7 @@ export default {
 
     if (missing.length > 0) {
       data.publishedAt = null;
-      strapi.log.warn({ missing, projetoId: id }, 'Projeto bloqueado: camadas abstract incompletas');
+      strapi.log.warn('Projeto bloqueado: camadas abstract incompletas', { missing, projetoId: id });
       throw new Error(`Campos obrigatórios em falta para publicar o Projeto: ${missing.join(', ')}`);
     }
   },

@@ -32,7 +32,7 @@ export function MicroDesafio() {
           texto={state.textoLivre}
           area={areaDetectada}
           onChange={setTextoLivre}
-          onSubmeter={submeterTexto}
+          onSubmeter={() => { void submeterTexto(); }}
           f={f}
         />
       )}
@@ -180,7 +180,7 @@ function Limite({ onReiniciar, f }: { onReiniciar: () => void; f: F }) {
       </p>
       <div className="flex flex-col w-full gap-3">
         <a
-          href="/register"
+          href="/criar-conta"
           className="rounded-xl bg-accent px-8 py-3 text-sm font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.03] hover:bg-accent-hover"
         >
           Criar conta gratuita

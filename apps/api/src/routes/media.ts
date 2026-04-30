@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
-import { generatePresignedUrl, getPublicUrl } from '../modules/media/r2.service.js';
+import { generatePresignedUrl, getPublicUrl, uploadToR2 } from '../modules/media/r2.service.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import crypto from 'node:crypto';
@@ -63,6 +63,58 @@ mediaRoutes.post('/presigned', zValidator('json', PresignedRequestSchema), async
   }
 });
 
+// POST /media/upload — Upload direto via FormData (usado pelo frontend ProfilePhotoUpload)
+mediaRoutes.post('/upload', async (c) => {
+  const user = c.get('user');
+
+  try {
+    const body = await c.req.parseBody();
+    const file = body['file'];
+
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: 'Ficheiro não fornecido.' }, 400);
+    }
+
+    if (!ALLOWED_MIME_TYPES.has(file.type)) {
+      return c.json({ error: 'Tipo de ficheiro não permitido pelo ecossistema.' }, 415);
+    }
+
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_SIZE) {
+      return c.json({ error: 'Ficheiro excede o limite de 10MB.' }, 413);
+    }
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const mediaId = crypto.randomUUID();
+    const key = `uploads/${user.id}/${mediaId}-${safeName}`;
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    await uploadToR2(key, buffer, file.type);
+
+    const publicUrl = getPublicUrl(key);
+
+    await eventBus.publishWithOutbox(DomainEventName.MEDIA_UPLOADED, {
+      mediaId,
+      uploaderId: user.id,
+      url: publicUrl,
+    });
+
+    return c.json({
+      id: mediaId,
+      url: publicUrl,
+      key,
+      filename: safeName,
+      mimeType: file.type,
+      size: file.size,
+    }, 201);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro interno';
+    return c.json({ error: message }, 502);
+  }
+});
+
 // POST /media/confirm — Informa o ecossistema G15 que o upload terminou
 mediaRoutes.post('/confirm', zValidator('json', z.object({
   mediaId: z.string(),
@@ -73,7 +125,7 @@ mediaRoutes.post('/confirm', zValidator('json', z.object({
   const user = c.get('user');
 
   // G15: O Ecossistema reconhece a nova mídia (ex: para processamento ML, moderação)
-  void eventBus.publishWithOutbox(DomainEventName.MEDIA_UPLOADED as any, {
+  await eventBus.publishWithOutbox(DomainEventName.MEDIA_UPLOADED, {
     mediaId,
     uploaderId: user.id,
     url: publicUrl,

@@ -1,101 +1,221 @@
 /**
  * Seed test accounts for Playwright E2E suite.
  *
- * Creates one account per role using the BFF /auth/register/* endpoints.
- * Idempotent — duplicate accounts are silently ignored.
+ * Creates real Strapi users and real Perfil records for each supported role.
+ * Idempotent: existing users are reused, and Perfil.tipo is reconciled to the
+ * expected canonical role before login is verified through the BFF.
  *
- * Requires: DEV_SKIP_OTP=true, API_URL pointing to the running BFF.
+ * Requires a running Strapi and BFF. By default this script loads apps/api/.env
+ * for STRAPI_URL and STRAPI_API_TOKEN.
  */
 
+import { config as loadEnv } from 'dotenv';
+
+loadEnv({ path: 'apps/api/.env' });
+
 const API_URL = process.env['API_URL'] ?? 'http://localhost:3001';
+const STRAPI_URL = process.env['STRAPI_URL'] ?? 'http://localhost:1337';
+const STRAPI_API_TOKEN = process.env['STRAPI_API_TOKEN'];
+
+type SeedRole =
+  | 'estudante'
+  | 'mentor'
+  | 'instituicao'
+  | 'moderador'
+  | 'comite_cientifico'
+  | 'super_admin';
 
 interface TestAccount {
   email: string;
   password: string;
   nome: string;
-  role: string;
+  role: SeedRole;
+}
+
+interface BffUser {
+  id: string | number;
+  email: string;
+  role: SeedRole;
+}
+
+interface StrapiUser {
+  id: string | number;
+  email: string;
+  username?: string;
+}
+
+interface StrapiEntity<T> {
+  id: string | number;
+  documentId?: string;
+  attributes?: T;
+}
+
+interface StrapiListResponse<T> {
+  data?: Array<StrapiEntity<T> & T>;
+}
+
+interface PerfilData {
+  userId: string;
+  email: string;
+  nome: string;
+  tipo: SeedRole;
+  ativo: boolean;
 }
 
 const TEST_ACCOUNTS: TestAccount[] = [
-  { email: 'aluno@traycer.test',        password: 'password123', nome: 'Aluno Teste',       role: 'aluno' },
-  { email: 'mentor@traycer.test',       password: 'password123', nome: 'Mentor Teste',      role: 'mentor' },
-  { email: 'instituicao@traycer.test',  password: 'password123', nome: 'Instituicao Teste', role: 'instituicao' },
-  { email: 'moderador@traycer.test',    password: 'password123', nome: 'Moderador Teste',   role: 'moderador' },
-  { email: 'super_admin@traycer.test',  password: 'password123', nome: 'Admin Teste',       role: 'super_admin' },
+  { email: 'aluno@traycer.test', password: 'password123', nome: 'Aluno Teste', role: 'estudante' },
+  { email: 'estudante@traycer.test', password: 'password123', nome: 'Estudante Teste', role: 'estudante' },
+  { email: 'mentor@traycer.test', password: 'password123', nome: 'Mentor Teste', role: 'mentor' },
+  { email: 'instituicao@traycer.test', password: 'password123', nome: 'Instituicao Teste', role: 'instituicao' },
+  { email: 'moderador@traycer.test', password: 'password123', nome: 'Moderador Teste', role: 'moderador' },
+  { email: 'comite_cientifico@traycer.test', password: 'password123', nome: 'Comite Cientifico Teste', role: 'comite_cientifico' },
+  { email: 'super_admin@traycer.test', password: 'password123', nome: 'Admin Teste', role: 'super_admin' },
 ];
 
-function buildRegistrationRequest(account: TestAccount): { url: string; body: Record<string, unknown> } {
-  const base = { email: account.email, password: account.password, nome: account.nome };
-
-  switch (account.role) {
-    case 'mentor':
-      return {
-        url: `${API_URL}/auth/register/mentor`,
-        body: { 
-          ...base, 
-          especialidade: 'Engenharia de Software',
-          areasAtuacao: ['TECNOLOGIA', 'ENGENHARIA'],
-          areaEspecialidade: 'TECNOLOGIA' 
-        },
-      };
-    case 'instituicao':
-      return {
-        url: `${API_URL}/auth/register/instituicao`,
-        body: { 
-          ...base, 
-          nomeInstituicao: account.nome, 
-          regiao: 'Luanda', 
-          tipo: 'universidade',
-          nif: '5000123456'
-        },
-      };
-    // aluno, moderador, super_admin all register as estudante
-    default:
-      return {
-        url: `${API_URL}/auth/register/estudante`,
-        body: { 
-          ...base, 
-          areaInteresse: 'TECNOLOGIA', 
-          nivelEnsino: 'Licenciatura' 
-        },
-      };
+function requireStrapiToken(): string {
+  if (!STRAPI_API_TOKEN) {
+    throw new Error('STRAPI_API_TOKEN is required to seed canonical Perfil records');
   }
+  return STRAPI_API_TOKEN;
 }
 
-async function tryRegister(account: TestAccount): Promise<void> {
-  const { url, body } = buildRegistrationRequest(account);
-
-  // Add small delay to avoid rate limiting
-  await new Promise(r => setTimeout(r, 500));
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-
-  if (res.ok || res.status === 409) {
-    // 201 = created, 409 = already exists — both are fine
-    return;
-  }
-
-  const text = await res.text();
-  throw new Error(`Failed to seed ${account.email} (HTTP ${res.status}): ${text}`);
-}
-
-async function verifyLoginWorks(account: TestAccount): Promise<void> {
-  // Add small delay to avoid rate limiting
-  await new Promise(r => setTimeout(r, 500));
-
+async function bffLogin(account: Pick<TestAccount, 'email' | 'password'>): Promise<BffUser | null> {
   const res = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: account.email, password: account.password }),
   });
 
+  if (res.status === 401 || res.status === 400) return null;
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Login verification failed for ${account.email} (HTTP ${res.status}): ${body}`);
+    throw new Error(`BFF login failed for ${account.email} (HTTP ${res.status}): ${body}`);
+  }
+
+  return (await res.json()) as BffUser;
+}
+
+async function strapiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  headers.set('Content-Type', 'application/json');
+  headers.set('Authorization', `Bearer ${requireStrapiToken()}`);
+
+  const res = await fetch(`${STRAPI_URL}${path}`, { ...init, headers });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Strapi ${init.method ?? 'GET'} ${path} failed (HTTP ${res.status}): ${body}`);
+  }
+
+  return (await res.json()) as T;
+}
+
+async function registerStrapiUser(account: TestAccount): Promise<StrapiUser> {
+  const res = await fetch(`${STRAPI_URL}/api/auth/local/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: account.email,
+      username: account.email,
+      password: account.password,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Strapi register failed for ${account.email} (HTTP ${res.status}): ${body}`);
+  }
+
+  const data = (await res.json()) as { user: StrapiUser };
+  return data.user;
+}
+
+function perfilPayload(account: TestAccount, userId: string): PerfilData & Record<string, unknown> {
+  const base: PerfilData = {
+    userId,
+    email: account.email,
+    nome: account.nome,
+    tipo: account.role,
+    ativo: true,
+  };
+
+  switch (account.role) {
+    case 'mentor':
+      return {
+        ...base,
+        areaFormacao: 'TECNOLOGIA',
+        areasInteresse: ['TECNOLOGIA', 'ENGENHARIA'],
+        aprovado: true,
+      };
+    case 'instituicao':
+      return {
+        ...base,
+        regiao: 'Luanda',
+        tipoInstituicao: 'universidade',
+        aprovado: true,
+      };
+    case 'moderador':
+      return { ...base, funcao: 'Moderacao' };
+    case 'comite_cientifico':
+      return { ...base, funcao: 'Validacao Cientifica' };
+    case 'super_admin':
+      return { ...base, funcao: 'Operacao Interna' };
+    case 'estudante':
+      return {
+        ...base,
+        areasInteresse: ['TECNOLOGIA'],
+        nivelEnsino: 'Licenciatura',
+      };
+  }
+}
+
+async function findPerfil(account: TestAccount, userId: string): Promise<(StrapiEntity<PerfilData> & PerfilData) | null> {
+  const query = new URLSearchParams({
+    'filters[userId][$eq]': userId,
+    'pagination[pageSize]': '1',
+  });
+  const res = await strapiFetch<StrapiListResponse<PerfilData>>(`/api/perfis?${query.toString()}`);
+  return res.data?.[0] ?? null;
+}
+
+async function upsertPerfil(account: TestAccount, userId: string): Promise<void> {
+  const existing = await findPerfil(account, userId);
+  const payload = perfilPayload(account, userId);
+
+  if (!existing) {
+    await strapiFetch('/api/perfis', {
+      method: 'POST',
+      body: JSON.stringify({ data: payload }),
+    });
+    return;
+  }
+
+  const current = existing.attributes ?? existing;
+  if (current.tipo === account.role && current.email === account.email && current.nome === account.nome) {
+    return;
+  }
+
+  await strapiFetch(`/api/perfis/${existing.documentId ?? existing.id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ data: payload }),
+  });
+}
+
+async function ensureAccount(account: TestAccount): Promise<void> {
+  let user = await bffLogin(account);
+
+  if (!user) {
+    const strapiUser = await registerStrapiUser(account);
+    user = { id: strapiUser.id, email: strapiUser.email, role: account.role };
+  }
+
+  await upsertPerfil(account, String(user.id));
+
+  const verified = await bffLogin(account);
+  if (!verified) {
+    throw new Error(`Login verification failed for ${account.email}`);
+  }
+  if (verified.role !== account.role) {
+    throw new Error(`Role mismatch for ${account.email}: expected ${account.role}, got ${verified.role}`);
   }
 }
 
@@ -110,12 +230,11 @@ async function main() {
 
   for (const account of TEST_ACCOUNTS) {
     try {
-      await tryRegister(account);
-      await verifyLoginWorks(account);
-      console.log(`[seed] ✓ ${account.email} (${account.role})`);
+      await ensureAccount(account);
+      console.log(`[seed] OK ${account.email} (${account.role})`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error(`[seed] ✗ ${account.email}: ${message}`);
+      console.error(`[seed] FAIL ${account.email}: ${message}`);
       errors.push(message);
     }
   }

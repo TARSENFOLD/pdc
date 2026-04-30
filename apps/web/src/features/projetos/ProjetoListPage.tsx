@@ -47,7 +47,7 @@ function ProjetoCard({ proj, index }: { proj: Projeto; index: number }) {
               <div className="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[9px] font-black uppercase tracking-widest text-accent">
                 {p.area || 'Inovação'}
               </div>
-              {p.estado && <EditorialStateBadge state={p.estado} />}
+              <EditorialStateBadge state={p.estado} />
             </div>
           </div>
           

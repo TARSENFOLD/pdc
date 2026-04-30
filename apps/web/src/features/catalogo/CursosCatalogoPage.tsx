@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
-import { CatalogoGridShell } from '@/components/catalogo/CatalogoGridShell';
-import { CatalogoFilterBar } from '@/components/catalogo/CatalogoFilterBar';
-import { ContentCard } from '@/components/catalogo/ContentCard';
+import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
+import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
+import ContentCard from '@/components/catalogo/ContentCard';
 import { Users, Clock } from 'lucide-react';
 import type { CursoPublico } from '@pdc/shared';
 
@@ -71,7 +71,7 @@ export function CursosCatalogoPage() {
         <CatalogoGridShell
           isLoading={isLoading}
           isEmpty={cursos.length === 0}
-          onClearFilters={() => setSp(new URLSearchParams())}
+          onClearFilters={() => { setSp(new URLSearchParams()); }}
           filterBar={
             <CatalogoFilterBar
               searchTerm={search}
@@ -79,7 +79,7 @@ export function CursosCatalogoPage() {
               areas={AREAS}
               selectedArea={area}
               onAreaChange={handleAreaChange}
-              totalResults={data?.meta?.total}
+              totalResults={data?.meta.total}
             />
           }
         >
@@ -95,8 +95,8 @@ export function CursosCatalogoPage() {
                 { label: c.nivel || 'Básico', variant: 'outline' }
               ]}
               footerInfo={[
-                { icon: Clock, label: `${c.totalHoras || 0}h` },
-                { icon: Users, label: `${c.inscritosCount || 0} inscritos` }
+                { icon: Clock, label: `${String(c.totalHoras || 0)}h` },
+                { icon: Users, label: `${String(c.inscritosCount || 0)} inscritos` }
               ]}
             />
           ))}

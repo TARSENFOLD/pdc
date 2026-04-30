@@ -126,7 +126,7 @@ export function ProfilePhotoUpload({ currentUrl, onSuccess }: Props) {
       <input
         type="file"
         ref={fileInputRef}
-        onChange={handleUpload}
+        onChange={(event) => { void handleUpload(event); }}
         accept="image/*"
         className="hidden"
       />

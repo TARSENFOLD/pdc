@@ -20,7 +20,7 @@ export function LandingLivePulse(): React.JSX.Element {
   const [entries, setEntries] = useState<PulseEntry[]>(buildInitialEntries);
   const [globalCount, setGlobalCount] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastRealActivityRef = useRef<number>(0);
+  const lastRealActivityRef = useRef(0);
 
   const push = useCallback((text: string): void => {
     setEntries((prev) => upsertPulse(prev, text));
@@ -75,7 +75,7 @@ export function LandingLivePulse(): React.JSX.Element {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              Live Pulse: {globalCount > 0 ? `${globalCount} ativos` : 'Sistema Ativo'}
+              Live Pulse: {globalCount > 0 ? `${String(globalCount)} ativos` : 'Sistema Ativo'}
             </div>
             <h2 className="text-4xl font-black tracking-tight text-text-primary sm:text-5xl">
               O futuro está a ser <span className="text-amber">decidido agora.</span>

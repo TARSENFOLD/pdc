@@ -1,5 +1,5 @@
 import { http } from './http';
-import type { FeedResponse, FeedWeights, UpdateFeedWeightsPayload } from '@pdc/shared';
+import type { CriarPostPayload, FeedPost, FeedResponse, FeedWeights, UpdateFeedWeightsPayload } from '@pdc/shared';
 
 export const feedApi = {
   getTrending: (page = 1, limit = 20) =>
@@ -13,4 +13,7 @@ export const feedApi = {
 
   updateWeights: (tipo: 'geral' | 'trending', payload: UpdateFeedWeightsPayload) =>
     http.put<{ success: boolean }>(`/feed/weights/${tipo}`, payload),
+
+  createPost: (payload: CriarPostPayload) =>
+    http.post<FeedPost>('/feed-posts', payload),
 };

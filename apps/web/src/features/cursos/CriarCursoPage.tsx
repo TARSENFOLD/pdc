@@ -48,6 +48,10 @@ export const CriarCursoPage = () => {
         nivel: payload.nivel || 'basico',
         visibilidade: payload.visibilidade || 'publico',
         thumbnailUrl: payload.thumbnailUrl || '',
+        gratuito: true, // Default per Spec 04
+        preco: 0,
+        comissao: 0,
+        requerValidacaoComite: false,
         regrasAcesso: {
           minFluidez: payload.regrasAcesso?.minFluidez ?? 0,
           minResiliencia: payload.regrasAcesso?.minResiliencia ?? 0,

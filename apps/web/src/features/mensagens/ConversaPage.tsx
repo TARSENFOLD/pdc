@@ -9,6 +9,19 @@ import { ArrowLeft, Send, Brain, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { type Mensagem } from '@pdc/shared';
 
+function isMensagem(value: unknown): value is Mensagem {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    typeof value.id === 'string' &&
+    'conversaId' in value &&
+    typeof value.conversaId === 'string' &&
+    'conteudo' in value &&
+    typeof value.conteudo === 'string'
+  );
+}
+
 export function ConversaPage() {
   const { conversaId } = useParams<{ conversaId: string }>();
   const navigate = useNavigate();
@@ -17,7 +30,8 @@ export function ConversaPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  useSocket<Mensagem>((novaMsg) => {
+  useSocket((novaMsg) => {
+    if (!isMensagem(novaMsg)) return;
     if (novaMsg.conversaId === conversaId) {
       void queryClient.setQueryData<{ data: Mensagem[] }>(['mensagens', 'conversa', conversaId], (old) => ({
         data: [...(old?.data ?? []), novaMsg]

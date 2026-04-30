@@ -51,7 +51,7 @@ export function MentorPublicoPerfilPage() {
             </div>
           </div>
 
-          <Link to={`/login?redirect=/programas/shadow-a-pro?mentorId=${id}`}>
+          <Link to={`/login?redirect=/programas/shadow-a-pro?mentorId=${id ?? ''}`}>
             <Button className="h-14 px-8 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs hover:scale-[1.02] shadow-xl shadow-accent/20">
               <Zap size={16} className="mr-2 fill-current" /> Shadow a Pro
             </Button>

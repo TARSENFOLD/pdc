@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
-import { CatalogoGridShell } from '@/components/catalogo/CatalogoGridShell';
-import { CatalogoFilterBar } from '@/components/catalogo/CatalogoFilterBar';
-import { ContentCard } from '@/components/catalogo/ContentCard';
+import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
+import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
+import ContentCard from '@/components/catalogo/ContentCard';
 import { Target, Activity } from 'lucide-react';
 
 const AREAS = [
@@ -54,7 +54,7 @@ export function SimulacoesCatalogoPage() {
         <CatalogoGridShell
           isLoading={isLoading}
           isEmpty={sims.length === 0}
-          onClearFilters={() => setSp(new URLSearchParams())}
+          onClearFilters={() => { setSp(new URLSearchParams()); }}
           filterBar={
             <CatalogoFilterBar
               searchTerm={search}
@@ -72,7 +72,7 @@ export function SimulacoesCatalogoPage() {
                 next.delete('page');
                 setSp(next, { replace: true });
               }}
-              totalResults={data?.meta?.total}
+              totalResults={data?.meta.total}
             />
           }
         >
@@ -83,7 +83,7 @@ export function SimulacoesCatalogoPage() {
               subtitle={s.area}
               image={s.capaUrl || undefined}
               href={`/simulacoes/${s.slug || s.id}`}
-              badges={[{ label: `Tipo ${s.tipo}`, variant: 'accent' }]}
+              badges={[{ label: `Tipo ${String(s.tipo)}`, variant: 'accent' }]}
               footerInfo={[
                 { icon: Activity, label: 'Telemetria Ativa' },
                 { icon: Target, label: 'Aptidão ϕ' }

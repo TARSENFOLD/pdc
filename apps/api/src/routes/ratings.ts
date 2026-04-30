@@ -54,10 +54,10 @@ ratingRoutes.post('/', zValidator('json', z.object({
     });
     const perfilId = resPerfil.data[0]?.id;
 
-    if (resPost.data && perfilId) {
+    if (perfilId) {
       await eventBus.publishWithOutbox(DomainEventName.RATING_CRIADO, {
-        ratingId: String(resPost.data.id),
-        perfilId: String(perfilId),
+        ratingId: resPost.data.id,
+        perfilId,
         targetType,
         targetId,
         valor
@@ -65,7 +65,7 @@ ratingRoutes.post('/', zValidator('json', z.object({
     }
 
     return c.json({ success: true, action: 'created' }, 201);
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao processar avaliação' }, 502);
   }
 });
@@ -76,7 +76,7 @@ ratingRoutes.get('/stats', zValidator('query', z.object({
   targetId: z.string(),
 })), async (c) => {
   const { targetType, targetId } = c.req.valid('query');
-  const userId = c.get('user')?.id;
+  const userId = c.get('user').id;
 
   try {
     const res = await strapiGet<StrapiRating>('/ratings', {
@@ -101,7 +101,7 @@ ratingRoutes.get('/stats', zValidator('query', z.object({
       total: ratings.length,
       userRating: userRating || null,
     });
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao carregar estatísticas de avaliação' }, 502);
   }
 });

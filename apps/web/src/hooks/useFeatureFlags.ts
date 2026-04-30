@@ -2,7 +2,7 @@ import { useBootstrap } from '../lib/bootstrap/BootstrapContext.js';
 
 export function useFeatureFlags() {
   const { data, isLoading } = useBootstrap();
-  const flags = data?.capabilities?.features || {};
+  const flags = data?.capabilities.features || {};
 
   /**
    * isEnabled (Fail-Safe)

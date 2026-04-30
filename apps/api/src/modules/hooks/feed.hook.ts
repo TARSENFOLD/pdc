@@ -11,6 +11,12 @@ import pino from 'pino';
 
 const log = pino({ name: 'feed-hook' });
 
+function resolveEntityId(payload: FeedEventPayload): string | undefined {
+  const raw = payload.cursoId ?? payload.simulacaoId ?? payload.experienciaId ?? payload.projetoId ?? payload.postId ?? payload.programaId ?? payload.id;
+  if (typeof raw === 'string' || typeof raw === 'number') return String(raw);
+  return undefined;
+}
+
 export const feedHook: EcosystemHook = {
   name: EcosystemHookName.FEED,
   dependencies: [],
@@ -27,7 +33,7 @@ export const feedHook: EcosystemHook = {
       DomainEventName.POST_PUBLICADO
     ];
 
-    if (!publishEvents.includes(event.name as DomainEventName)) {
+    if (!publishEvents.includes(event.name)) {
       return { status: 'skipped', reason: 'event-not-eligible-for-feed' };
     }
 
@@ -38,10 +44,12 @@ export const feedHook: EcosystemHook = {
       // REGRA G15: Decidir fonte (Institucional vs Vocacional)
       // Se tiver instituicaoId no payload (vindo do BFF), vai para Institucional
       const source = payload.instituicaoId ? 'institucional' : 'vocacional';
+      const entityId = resolveEntityId(payload);
+      if (!entityId) return { status: 'fatal_error', reason: 'entityId-missing' };
 
       await strapiPost<unknown>('/feed-entries', {
         entityType: event.name.split('.')[0], // 'curso', 'simulacao', etc
-        entityId: String(payload.cursoId || payload.simulacaoId || payload.id),
+        entityId,
         autorId: String(autorId),
         titulo: payload.titulo,
         corpo: payload.descricao || payload.conteudo,

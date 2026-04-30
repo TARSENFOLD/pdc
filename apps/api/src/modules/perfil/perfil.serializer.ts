@@ -56,7 +56,7 @@ export function serializePublicProfile(
   perfil: StrapiPerfil,
   isConnected = false,
 ): PublicProfileResult {
-  const vis = perfil.visibilitySettings ?? {};
+  const vis: Partial<VisibilitySettings> = perfil.visibilitySettings ?? {};
 
   const result: PublicProfileResult = {
     id: sid(perfil.id),

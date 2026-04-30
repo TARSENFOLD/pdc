@@ -42,7 +42,7 @@ export function SimulacaoPublicoDetailPage() {
         <div className="mt-6 flex flex-wrap gap-2">
           <Badge variant="warning">{TIPOS[String(sim.tipo)] ?? 'Simulação'}</Badge>
           <Badge variant="info">{sim.area}</Badge>
-          {sim.nivel ? <Badge variant="outline">{sim.nivel}</Badge> : null}
+          <Badge variant="outline">{sim.tipoSimulacao.toUpperCase()}</Badge>
         </div>
 
         <h1 className="mt-4 text-3xl font-bold text-ink-primary">{sim.titulo}</h1>

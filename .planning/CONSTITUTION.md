@@ -22,7 +22,7 @@ A tipagem estrita é inegociável. O uso de `any` em novos códigos é proibido.
 Nenhum ficheiro fonte deve ultrapassar **300 linhas**. Ficheiros que excedam este limite devem ser modularizados imediatamente.
 
 ## 4. Telemetria Resiliente (Edge-First)
-A telemetria é o coração do Oráculo. Perda de dados comportamentais é inaceitável. Outbox + idempotência (UUID + Redis) são obrigatórios. O browser é tratado como ambiente hostil; cálculos críticos são feitos no servidor.
+A telemetria é o coração do Oráculo. Perda de dados comportamentais é inaceitável. Outbox + idempotência (UUID + Redis) são obrigatórios. O browser é tratado como ambiente hostil; cálculos críticos são feitos no servidor. Eventos inválidos **não são descartados** — são arquivados em Cloudflare R2 (NDJSON) via cold storage (`apps/api/src/lib/r2.ts`). O consumer de telemetria corre como **worker isolado** (`apps/api/src/workers/telemetry-worker.ts`) separado do BFF.
 
 ## 5. Doc is Law
 Se o código contradiz o markdown (Epics Canónicas), o código é defeituoso. O documento justifica o código, nunca o contrário.
@@ -73,4 +73,15 @@ O ficheiro `.env.example` é uma **fixture intencional**. Contém credenciais de
 O limite de 300 linhas é verificado em CI. Ficheiros que excedam o limite impedem o merge, excepto na whitelist explícita (ex: `packages/shared/src/index.ts`).
 
 ---
-*Última validação: 23 de Abril de 2026 · Fonte de verdade: `specs/IMPORTANTE/01–06`.*
+## 11. Audit Status (2026-04-30)
+
+**Saúde global: 66% Done/Done-Plus · 32% Partial · 3% Missing · 0 Vision-Failure**
+Zero `as any` em todo o monorepo (confirmado por grep 2026-04-29).
+Relatório: `docs/audit/MASTER--audit-report.md` · Epic: T-REM-1..6
+
+**Infra (30 Abril 2026):** Cold storage R2 real (`moveToColdStorage` não é mais stub) · Telemetry worker isolado (`/workers/telemetry-worker.ts`) · Distributed lock com fencing token (`/lib/distributed-lock.ts`) · CI doc validator (`scripts/validate-docs.ts`) · i18n 100% (10 componentes, 3 locales × auth + dashboard.home).
+
+> **Nota:** `bg-amber-*` é permitido em landing pages (identidade visual PDC Angola). Banido em dashboards e componentes app.
+
+---
+*Última validação: 29 de Abril de 2026 · Fonte de verdade: `specs/IMPORTANTE/01–06`.*

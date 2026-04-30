@@ -38,11 +38,9 @@ export function PerfilShowcase() {
                 className="h-full w-full rounded-full object-cover text-4xl border-4" 
               />
             </div>
-            {perfil.reputacaoTier && (
-              <div className="absolute -bottom-2 -left-2 bg-accent text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-xl uppercase tracking-[0.2em] border-4 border-surface-alt animate-in zoom-in duration-700">
-                {perfil.reputacaoTier}
-              </div>
-            )}
+            <div className="absolute -bottom-2 -left-2 bg-accent text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-xl uppercase tracking-[0.2em] border-4 border-surface-alt animate-in zoom-in duration-700">
+              {perfil.reputacaoTier}
+            </div>
             <div className="absolute -bottom-2 -right-2 h-10 w-10 rounded-2xl bg-success border-4 border-surface-alt flex items-center justify-center text-white shadow-lg">
               <ShieldCheck size={20} />
             </div>
@@ -120,9 +118,9 @@ export function PerfilShowcase() {
             Prestígio
           </h3>
           <div className="grid grid-cols-3 gap-3">
-            {perfil.conquistas && perfil.conquistas.length > 0 ? (
+            {perfil.conquistas.length > 0 ? (
               perfil.conquistas.map((c, i) => (
-                <div key={i} className="aspect-square rounded-2xl bg-gradient-to-br from-accent/20 to-transparent border border-accent/10 flex items-center justify-center p-2 group cursor-pointer hover:border-accent/40 transition-all" title={c.nome}>
+                <div key={i} className="aspect-square rounded-2xl bg-gradient-to-br from-accent/20 to-transparent border border-accent/10 flex items-center justify-center p-2 group cursor-pointer hover:border-accent/40 transition-all" title={c.titulo}>
                   <div className="w-full h-full rounded-xl bg-elevated shadow-inner flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
                     <Trophy size={20} />
                   </div>

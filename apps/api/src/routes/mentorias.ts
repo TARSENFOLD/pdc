@@ -37,7 +37,7 @@ mentoriaRoutes.get('/alunado', async (c) => {
     }));
 
     return c.json({ data: mentorados });
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao carregar mentorados' }, 502);
   }
 });
@@ -71,7 +71,7 @@ mentoriaRoutes.get('/validar-projeto/:projetoId', async (c) => {
     }
 
     return c.json({ data: proj });
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao validar projeto' }, 500);
   }
 });

@@ -72,7 +72,7 @@ export function PropostasPage() {
     { 
       header: 'Estado', 
       accessor: (prop: Proposta) => (
-        <Badge variant={prop.status === 'aceita' ? 'success' : prop.status === 'recusada' ? 'error' : 'warning'}>
+        <Badge variant={prop.status === 'aceite' ? 'success' : prop.status === 'recusada' ? 'error' : 'warning'}>
           {(prop.status ?? 'PENDENTE').toUpperCase()}
         </Badge>
       )

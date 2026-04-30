@@ -12,6 +12,10 @@ import { tinaService } from '../tina/tina.service.js';
 
 const log = pino({ name: 'telemetria-processor' });
 
+function asSummaryRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null ? value as Record<string, unknown> : {};
+}
+
 interface TelemetriaRaw {
   id: number;
   tipo: string;
@@ -129,9 +133,9 @@ export const telemetriaProcessor = {
         lastUpdatedAt: new Date().toISOString(),
       } as BehaviorPattern;
 
-      const existingId = existing.data?.[0]?.id;
+      const existingId = existing.data[0]?.id;
       if (existingId) {
-        await strapiPutRaw(`/behavior-patterns/${existingId}`, { data: behaviorPayload });
+        await strapiPutRaw(`/behavior-patterns/${existingId.toString()}`, { data: behaviorPayload });
       } else {
         await strapiPost('/behavior-patterns', behaviorPayload);
       }
@@ -142,7 +146,7 @@ export const telemetriaProcessor = {
       // No patamar mundial, a IA não bloqueia o pipeline de dados.
       void this.requestTinaInterpretation(perfilId, domainId, behaviorPayload);
 
-    } catch (err) {
+    } catch (err: unknown) {
       log.error({ err }, 'Falha crítica no processamento de mérito behavioral');
     }
   },
@@ -161,20 +165,20 @@ export const telemetriaProcessor = {
         'filters[domainId][$eq]': domainId,
       });
 
-      const existingData = existing.data?.[0];
+      const existingData = existing.data[0];
       const existingId = existingData?.id;
       if (existingId) {
         const updatedSummary = {
-          ...(existingData.tinaSummary || {}),
+          ...asSummaryRecord(existingData.tinaSummary),
           verdict: dynamicVerdict,
           tinaUpdatedAt: new Date().toISOString()
         };
-        await strapiPutRaw(`/behavior-patterns/${existingId}`, { 
+        await strapiPutRaw(`/behavior-patterns/${existingId.toString()}`, {
           data: { tinaSummary: updatedSummary } 
         });
         log.info({ perfilId }, 'Interpretação da Tina injetada na assinatura DNA');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       log.warn({ err }, 'Tina indisponível para interpretação. Mantendo heurísticas puras.');
     }
   }

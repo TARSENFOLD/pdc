@@ -3,14 +3,6 @@
  * If Strapi is unreachable or returns invalid data, i18n continues with bundled fallbacks.
  */
 import { i18n } from './index.js';
-import type { SupportedLocale, Namespace } from './index.js';
-
-interface StrapiCopyEntry {
-  key: string;
-  value: string;
-  namespace: Namespace;
-  locale: SupportedLocale;
-}
 
 import { z } from 'zod';
 
@@ -29,7 +21,7 @@ export async function applyStrapiOverrides(apiUrl: string): Promise<void> {
   try {
     const res = await fetch(`${apiUrl}/api/copy-overrides`, { signal: AbortSignal.timeout(3000) });
     if (!res.ok) return;
-    const json = await res.json();
+    const json: unknown = await res.json();
     const parsed = StrapiCopyResponseSchema.safeParse(json);
     if (!parsed.success) return;
     const entries = parsed.data.entries ?? [];

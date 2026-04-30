@@ -21,10 +21,15 @@ export enum DomainEventName {
   CURSO_INSCRICAO = 'curso.inscricao',
   CURSO_MODULO_CONCLUIDO = 'curso.modulo.concluido',
   CURSO_CONCLUIDO = 'curso.concluido',
+  CURSO_SUBMETIDO_COMITE = 'curso.submetido_comite',
+  CURSO_ITEM_VISUALIZADO = 'curso.item.visualizado',
+  CURSO_ITEM_CONCLUIDO = 'curso.item.concluido',
 
   // --- Experiência ---
+  EXPERIENCIA_CRIADA = 'experiencia.criada',
   EXPERIENCIA_PUBLICADA = 'experiencia.publicada',
   EXPERIENCIA_VISUALIZADA = 'experiencia.visualizada',
+  EXPERIENCIA_PARTICIPACAO = 'experiencia.participacao',
   EXPERIENCIA_QA_RESPONDIDA = 'experiencia.qa.respondida',
 
   // --- Programa ---
@@ -53,12 +58,14 @@ export enum DomainEventName {
   COMENTARIO_CRIADO = 'comentario.criado',
   LIKE_ADICIONADO = 'like.adicionado',
   BOOKMARK_ADICIONADO = 'bookmark.adicionado',
+  PARTILHA_CRIADA = 'partilha.criada',
 
   // --- Identidade ---
   PERFIL_CRIADO = 'perfil.criado',
   PERFIL_ATUALIZADO = 'perfil.atualizado',
   PERFIL_ROLE_ALTERADO = 'perfil.role_alterado',
   PERFIL_SUSPENSO = 'perfil.suspenso',
+  PERFIL_PRIVACIDADE_ALTERADA = 'perfil.privacidade_alterada',
   LOGIN = 'login',
   LOGOUT = 'logout',
   MFA_ATIVADO = 'mfa.ativado',
@@ -81,6 +88,11 @@ export enum DomainEventName {
   PROPOSTA_CRIADA = 'proposta.criada',
   PROGRAMA_CONCLUIDO = 'programa.concluido',
 
+  // --- Match Terminal G12 ---
+  MATCH_SUGGESTION_ACEITE = 'match.suggestion_aceite',
+  MATCH_SUGGESTION_REJEITADA = 'match.suggestion_rejeitada',
+  MATCH_SUGGESTION_MARCADA_INTERESSE = 'match.suggestion_marcada_interesse',
+
   // --- Mensagens ---
   MENSAGEM_ENVIADA = 'mensagem.enviada',
   MENSAGEM_LIDA = 'mensagem.lida',
@@ -99,6 +111,10 @@ export enum DomainEventName {
   MEDIA_UPLOADED = 'media.uploaded',
   MEDIA_PROCESSED = 'media.processed',
   MEDIA_FAILED = 'media.failed',
+
+  // --- Onboarding ---
+  PERFIL_APROVADO = 'perfil.aprovado',
+  ONBOARDING_PASSO_CONCLUIDO = 'onboarding.passo_concluido',
 }
 
 export const LtiEventPayloadSchema = z.object({
@@ -188,10 +204,15 @@ export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
   [DomainEventName.CURSO_INSCRICAO]: z.object({ cursoId: z.string(), estudanteId: z.string() }),
   [DomainEventName.CURSO_MODULO_CONCLUIDO]: z.object({ cursoId: z.string(), moduloId: z.string(), estudanteId: z.string() }),
   [DomainEventName.CURSO_CONCLUIDO]: z.object({ cursoId: z.string(), estudanteId: z.string() }),
+  [DomainEventName.CURSO_SUBMETIDO_COMITE]: z.object({ cursoId: z.string(), autorId: z.string() }),
+  [DomainEventName.CURSO_ITEM_VISUALIZADO]: z.object({ cursoId: z.string(), itemId: z.string(), estudanteId: z.string() }),
+  [DomainEventName.CURSO_ITEM_CONCLUIDO]: z.object({ cursoId: z.string(), itemId: z.string(), estudanteId: z.string() }),
 
   // --- Experiência ---
+  [DomainEventName.EXPERIENCIA_CRIADA]: ContentPublishSchema.extend({ experienciaId: z.string() }),
   [DomainEventName.EXPERIENCIA_PUBLICADA]: ContentPublishSchema.extend({ experienciaId: z.string() }),
   [DomainEventName.EXPERIENCIA_VISUALIZADA]: BaseInteractionSchema.extend({ experienciaId: z.string() }),
+  [DomainEventName.EXPERIENCIA_PARTICIPACAO]: z.object({ experienciaId: z.string(), estudanteId: z.string() }),
   [DomainEventName.EXPERIENCIA_QA_RESPONDIDA]: z.object({ experienciaId: z.string(), perguntaId: z.string(), autorId: z.string() }),
 
   // --- Programa ---
@@ -216,26 +237,39 @@ export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
   // --- Post/Conquista ---
   [DomainEventName.POST_PUBLICADO]: ContentPublishSchema.extend({ postId: z.string(), autorId: z.string() }),
   [DomainEventName.POST_SUBMETIDO]: ContentPublishSchema.extend({ postId: z.string(), autorId: z.string(), moderacaoRequerida: z.boolean() }),
-  [DomainEventName.CONQUISTA_DESBLOQUEADA]: z.object({ perfilId: z.string(), conquistaSlug: z.string() }),
+  // Rich canonical payload (ADR-023). perfilId/conquistaSlug are transitional.
+  [DomainEventName.CONQUISTA_DESBLOQUEADA]: z.object({
+    conquistaId: z.string(),
+    userId: z.string(),
+    tipo: z.enum(['automatica', 'manual', 'institucional', 'plataforma']),
+    titulo: z.string(),
+    aprovada: z.boolean(),
+    /** @deprecated transitório, remoção em W6 */
+    perfilId: z.string().optional(),
+    /** @deprecated transitório, remoção em W6 */
+    conquistaSlug: z.string().optional(),
+  }),
   [DomainEventName.COMENTARIO_CRIADO]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string() }),
   [DomainEventName.LIKE_ADICIONADO]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string() }),
   [DomainEventName.BOOKMARK_ADICIONADO]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string() }),
+  [DomainEventName.PARTILHA_CRIADA]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string() }),
 
   // --- Identidade ---
   [DomainEventName.PERFIL_CRIADO]: z.object({ perfilId: z.string(), role: z.string() }),
   [DomainEventName.PERFIL_ATUALIZADO]: z.object({ perfilId: z.string() }).passthrough(),
   [DomainEventName.PERFIL_ROLE_ALTERADO]: z.object({ perfilId: z.string(), oldRole: z.string(), newRole: z.string() }),
   [DomainEventName.PERFIL_SUSPENSO]: z.object({ perfilId: z.string(), reason: z.string().optional() }),
+  [DomainEventName.PERFIL_PRIVACIDADE_ALTERADA]: z.object({ perfilId: z.string(), changedFields: z.array(z.string()) }),
   [DomainEventName.LOGIN]: z.object({ userId: z.string(), ip: z.string().optional() }),
   [DomainEventName.LOGOUT]: z.object({ userId: z.string() }),
   [DomainEventName.MFA_ATIVADO]: z.object({ userId: z.string() }),
   [DomainEventName.OAUTH_VINCULADO]: z.object({ userId: z.string(), provider: z.string() }),
 
   // --- Vínculo ---
-  [DomainEventName.VINCULO_SOLICITADO]: z.object({ solicitanteId: z.string(), destinatarioId: z.string() }),
+  [DomainEventName.VINCULO_SOLICITADO]: z.object({ vinculoId: z.string(), solicitanteId: z.string(), destinatarioId: z.string() }),
   [DomainEventName.VINCULO_APROVADO]: z.object({ vinculoId: z.string(), solicitanteId: z.string(), destinatarioId: z.string() }),
   [DomainEventName.VINCULO_REJEITADO]: z.object({ vinculoId: z.string(), solicitanteId: z.string(), destinatarioId: z.string() }),
-  [DomainEventName.VINCULO_TERMINADO]: z.object({ vinculoId: z.string(), atorId: z.string() }),
+  [DomainEventName.VINCULO_TERMINADO]: z.object({ vinculoId: z.string(), solicitanteId: z.string(), destinatarioId: z.string(), atorId: z.string() }),
   [DomainEventName.VINCULO_CONNECTED]: z.object({ vinculoId: z.string(), solicitanteId: z.string(), destinatarioId: z.string() }),
 
   // --- Mentoria ---
@@ -247,6 +281,11 @@ export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
   [DomainEventName.RATING_CRIADO]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string(), score: z.number() }),
   [DomainEventName.PROPOSTA_CRIADA]: z.object({ propostaId: z.string(), estudanteId: z.string(), instituicaoId: z.string() }),
   [DomainEventName.PROGRAMA_CONCLUIDO]: z.object({ programaId: z.string(), estudanteId: z.string() }),
+
+  // --- Match Terminal G12 ---
+  [DomainEventName.MATCH_SUGGESTION_ACEITE]: z.object({ sugestaoId: z.string(), estudanteId: z.string(), autorId: z.string(), conversaId: z.string().optional() }),
+  [DomainEventName.MATCH_SUGGESTION_REJEITADA]: z.object({ sugestaoId: z.string(), estudanteId: z.string(), autorId: z.string() }),
+  [DomainEventName.MATCH_SUGGESTION_MARCADA_INTERESSE]: z.object({ sugestaoId: z.string(), estudanteId: z.string(), autorId: z.string() }),
 
   // --- Mensagens ---
   [DomainEventName.MENSAGEM_ENVIADA]: z.object({ mensagemId: z.string(), conversaId: z.string(), remetenteId: z.string(), destinatarioId: z.string(), conteudo: z.string(), createdAt: z.string() }),
@@ -266,4 +305,8 @@ export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
   [DomainEventName.MEDIA_UPLOADED]: z.object({ mediaId: z.string(), uploaderId: z.string(), url: z.string() }),
   [DomainEventName.MEDIA_PROCESSED]: z.object({ mediaId: z.string(), url: z.string() }),
   [DomainEventName.MEDIA_FAILED]: z.object({ mediaId: z.string(), reason: z.string() }),
+
+  // --- Onboarding ---
+  [DomainEventName.PERFIL_APROVADO]: z.object({ perfilId: z.string(), aprovadorId: z.string(), role: z.string() }),
+  [DomainEventName.ONBOARDING_PASSO_CONCLUIDO]: z.object({ perfilId: z.string(), passo: z.number(), role: z.string() }),
 };

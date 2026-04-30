@@ -17,6 +17,14 @@ Em Angola e em mercados emergentes, a escolha de curso universitário é uma **a
 
 > O PDC resolve isto dando ao estudante a experiência real do curso antes de se comprometer com a matrícula.
 
+### Contexto de Mercado (Angola e Mercados Emergentes)
+
+- **Conectividade variável** — muitos estudantes acedem via mobile com dados móveis limitados. PWA-first + offline-first é obrigatório.
+- **Ecossistema educativo fragmentado** — instituições não cooperam; mentores independentes não têm plataforma de visibilidade.
+- **Custo real da evasão** — para uma família angolana, um ano de propinas perdido pode representar anos de poupança.
+- **Ausência de orientação vocacional estruturada** — não existem ferramentas de decisão baseadas em evidência comportamental real.
+- **Oportunidade B2B** — o argumento "se reter 2-5 alunos que desistiriam, o investimento já se paga" é directamente mensurável.
+
 ---
 
 ## 2. O que o PDC É (e o que NÃO é)
@@ -54,13 +62,20 @@ Se tudo o resto falhar, o fluxo `Simulação → Score → Perfil Vocacional →
 
 | Camada | Tecnologia | Papel |
 | --- | --- | --- |
-| **Frontend** | React 18 · Vite 5 · TailwindCSS v4 · Motion | UI Imersiva (PWA-First) |
+| **Frontend** | React 18 · Vite 6 · TailwindCSS v4 · Motion · GSAP | UI Imersiva (PWA-First) |
 | **BFF** | Hono v4 · Node.js 24 LTS · Jose v5 | Orquestração + RPC type-safe |
 | **Edge** | Cloudflare Workers (`apps/edge`) | Telemetria L1 + sanity check |
 | **CMS** | Strapi v5 · PostgreSQL 16 | Persistência e gestão de conteúdo |
-| **Cache/Rate-limit** | Upstash Redis | Filas + idempotência + locks |
+| **Cache/Rate-limit** | Upstash Redis | Filas + idempotência + locks + feature flags |
 | **Storage** | Cloudflare R2 | Ativos, projetos, audit cold storage |
 | **IA (opcional)** | DeepSeek + RAG (LangChain.js) | Tina — Oráculo Interpretativo |
+| **Forms** | react-hook-form + Zod | Validação client+server |
+| **UI Components** | Radix UI primitives | Acessibilidade nativa |
+| **Monitoring** | Sentry (browser + node + profiling) | Erros + performance |
+| **Auth** | JWT httpOnly + OAuth (Google, LinkedIn) | Identidade Total |
+| **Email** | Resend + SendGrid | Dual provider |
+| **SMS** | Twilio (opcional) | OTP |
+| **LTI** | LTI 1.3 Grade Passback | Integração LMS |
 
 **Decisões soberanas (rejeitadas alternativas populares):**
 
@@ -240,13 +255,66 @@ O PDC será o lugar de referência para preparar e decidir percursos académicos
 
 ---
 
-## 13. Out of Scope (MVP)
+## 13. O Efeito de Rede (O Moat Operacional)
 
-- Gateway de pagamento em produção (fase comercial posterior).
-- Turborepo / Nx (over-engineering para o estágio atual).
-- Upload de vídeos > 50MB (usar embed YouTube/Vimeo).
-- Antifraude biométrico avançado.
+A infraestrutura de decisão torna-se imbatível quando o flywheel opera:
+
+```
+Mais Conteúdo (Mentores) → Mais Dados (Telemetria)
+→ Melhores Recomendações (Motor φ/R + IA)
+→ Mais Estudantes
+→ Mais Instituições que não querem perder candidatos
+→ Mais Conteúdo...
+```
+
+### 3 Efeitos de Rede Simultâneos
+
+1. **Rede de Dados** — Quanto mais simulações forem feitas numa área, mais preciso é o "padrão de sucesso". Se 10.000 estudantes fizerem simulação de Engenharia, a IA diz ao 10.001º: "O teu padrão é 90% idêntico ao dos que desistem no 1.º ano".
+2. **Rede de Mercado (Duplo lado)** — Estudantes atraem Instituições (marketing + captação). Instituições atraem Mentores (visibilidade + monetização). Mentores produzem Conteúdo.
+3. **Rede Social (Prova Social)** — Conquistas partilháveis → novos estudantes entram para competir → Instituições publicam mais Simulações para captar esses talentos.
 
 ---
 
-*Última validação: 23 de Abril de 2026 · Fonte de verdade: `specs/IMPORTANTE/01 — Visão do Produto (Canónica)`.*
+## 14. Repositórios de Referência
+
+| Repositório | Propósito |
+| --- | --- |
+| `1-PDC` (privado) | Versão v1 — schemas Strapi, lógica LTI, RBAC original. Referência para extracção de lógica validada |
+| `the-algorithm` (Twitter/X) | Inspiração para feed ranking e sistema de pesos |
+| `langchainjs` | RAG para Tina ("Ask the Lesson") |
+| `canvas-lms` / `moodle` | Referência LTI 1.3 Grade Passback |
+
+---
+
+## 15. Out of Scope (MVP)
+
+- Gateway de pagamento em produção (fase comercial posterior).
+- Turborepo / Nx (over-engineering para o estágio atual — ADR-001).
+- Upload de vídeos > 50MB (usar embed YouTube/Vimeo).
+- Antifraude biométrico avançado (MVP usa sanity rules + server-side score).
+- Redux / SWR / Zustand (React Query é suficiente — TanStack Query 5).
+- Watermarks em conteúdo (DRM é pós-MVP).
+- Three.js / 3D obrigatório (pode ser usado pontualmente no Relatório Vocacional sem entrar na Constitution).
+- Neon como substituto do PostgreSQL (Strapi v5 + PostgreSQL via Railway é a realidade actual).
+
+---
+
+## 16. Referências Detalhadas
+
+Para detalhes que este documento resume, consultar:
+
+| Tema | Fonte detalhada |
+|------|----------------|
+| Tokens de design, anti-padrões, componentes | `docs/arquivo-fundacional/09-traycer-specs/design-system-completo.md` |
+| Mapa de 80+ rotas por role, menus laterais | `docs/arquivo-fundacional/09-traycer-specs/mapa-paginas-features-transversais.md` |
+| 10 features transversais (modelos + endpoints) | Idem, Part B |
+| Algoritmo de ranking/feed (4 fases, 4 feeds) | `docs/arquivo-fundacional/09-traycer-specs/algoritmos-dados-seguranca.md` |
+| Pipeline telemetria + perfil vocacional 6D | Idem §2 |
+| Segurança 7 camadas + rate limits detalhados | Idem §3 |
+| Modelo de dados Strapi (ERD + migrações) | Idem §4 |
+| Diagnóstico pré-v2 detalhado | `docs/arquivo-fundacional/09-traycer-specs/produto-visao-arquitectura.md` |
+| Hotspots de risco (12 identificados) | `docs/arquivo-fundacional/06-engenharia/entitlements-core-trio-analysis.md` |
+
+---
+
+*Última validação: 30 de Abril de 2026 · Fonte de verdade: `specs/IMPORTANTE/01 — Visão do Produto (Canónica)`.* 

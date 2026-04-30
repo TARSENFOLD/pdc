@@ -75,7 +75,7 @@ console.warn(`[i18n/extract] Found ${results.length.toString()} potential hardco
 if (results.length > 0) {
   console.warn('[i18n/extract] Top 20:');
   results.slice(0, 20).forEach(({ file, line, match }) => {
-    console.warn(`  ${file}:${line} — "${match}"`);
+    console.warn(`  ${file}:${String(line)} — "${match}"`);
   });
 }
 // Informational only in T1 — exits 0

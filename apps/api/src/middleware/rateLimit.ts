@@ -5,6 +5,10 @@ import pino from 'pino';
 
 const log = pino({ name: 'rate-limit' });
 
+function shouldBypassDevAuthLimits(): boolean {
+  return process.env['NODE_ENV'] !== 'production' && process.env['DEV_SKIP_OTP'] === 'true';
+}
+
 const ratelimit = hasRedis
   ? new Ratelimit({
       redis,
@@ -15,6 +19,11 @@ const ratelimit = hasRedis
   : null;
 
 export async function rateLimit(c: Context, next: Next) {
+  if (shouldBypassDevAuthLimits()) {
+    await next();
+    return;
+  }
+
   if (!ratelimit) {
     log.warn('Redis not configured, rate limiting skipped');
     await next();
@@ -45,6 +54,11 @@ const ratelimitRegisto = hasRedis
   : null;
 
 export async function rateLimitRegisto(c: Context, next: Next) {
+  if (shouldBypassDevAuthLimits()) {
+    await next();
+    return;
+  }
+
   if (!ratelimitRegisto) {
     log.warn('Redis not configured, rate limiting skipped');
     await next();

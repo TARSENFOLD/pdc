@@ -23,7 +23,7 @@ export const NotificacaoRealtimeSchema = z.object({
   id: z.string(),
   titulo: z.string(),
   mensagem: z.string(), // Substitui 'corpo' para manter consistência com o Strapi
-  tipo: z.enum(['info', 'sucesso', 'aviso', 'erro', 'vinculo_pedido', 'vinculo_aprovado', 'conquista', 'sistema']),
+  tipo: z.enum(['info', 'sucesso', 'aviso', 'erro', 'vinculo_pedido', 'vinculo_aprovado', 'vinculo_rejeitado', 'vinculo_terminado', 'conquista', 'sistema']),
   timestamp: z.string().datetime(),
 });
 

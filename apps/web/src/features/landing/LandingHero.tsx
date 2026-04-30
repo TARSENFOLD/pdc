@@ -4,10 +4,12 @@ import { motion } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MicroDesafio } from './MicroDesafio';
 import { NeuralConstellation, ChoreographyState } from './NeuralConstellation';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export function LandingHero() {
   const reduced = useReducedMotion();
   const navigate = useNavigate();
+  const { t } = useTranslation('landing');
   const [choreography, setChoreography] = useState<ChoreographyState>('idle');
   const [isWarping, setIsWarping] = useState(false);
 
@@ -25,23 +27,8 @@ export function LandingHero() {
       className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 pt-24 pb-16 text-center sm:px-6"
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
-      {/* Imagem Hero nítida (camada mais profunda) */}
-      <div className="pointer-events-none absolute inset-0 z-0">
-        <img
-          src="/images/hero/hero-students.jpg"
-          alt=""
-          aria-hidden="true"
-          className="h-full w-full object-cover"
-        />
-        {/* Sobreposição do tema para legibilidade */}
-        <div className="absolute inset-0 bg-background/60 dark:bg-background/70" />
-      </div>
-
-      {/* Neural Constellation (sobre a imagem) */}
+      {/* Neural Constellation — the hero visual centerpiece */}
       <NeuralConstellation choreography={choreography} />
-      {/* Heritage Fractal Base Pattern Overlay (Adinkra inspired geometry) */}
-      <div className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06] mix-blend-multiply dark:mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20Z' fill='%23C1440E'/%3E%3Cpath d='M0 0h10v10H0zM30 30h10v10H30z' fill='%23C1440E'/%3E%3C/svg%3E")`, backgroundSize: '40px 40px' }} />
-
 
       <motion.div {...stagger(0)} className="relative z-10 mb-8">
         <div className="inline-flex items-center gap-3 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 py-1.5 px-4 text-xs font-semibold tracking-wide text-text-secondary dark:text-white/80 backdrop-blur-lg shadow-md dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.6)]">
@@ -49,7 +36,7 @@ export function LandingHero() {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber opacity-75"></span>
             <span className="relative inline-flex h-2 w-2 rounded-full bg-amber"></span>
           </span>
-          A tua comunidade educacional
+          {t('hero.badge')}
         </div>
       </motion.div>
 
@@ -57,15 +44,15 @@ export function LandingHero() {
         {...stagger(1)}
         className="relative z-10 mx-auto max-w-4xl text-5xl font-medium tracking-tight text-text-primary sm:text-6xl lg:text-7xl leading-[1.1]"
       >
-        Experimenta uma profissão antes de{' '}
-        <span className="font-display italic text-amber drop-shadow-md dark:drop-shadow-[0_0_30px_rgba(193,68,14,0.3)]">escolher.</span>
+        {t('hero.headline')}{' '}
+        <span className="font-display italic text-amber drop-shadow-md dark:drop-shadow-[0_0_30px_rgba(193,68,14,0.3)]">{t('hero.headline_emphasis')}</span>
       </motion.h1>
 
       <motion.p
         {...stagger(2)}
         className="relative z-10 mx-auto mt-6 max-w-xl text-lg text-text-secondary dark:text-white/70"
       >
-        Descubra como é o dia a dia de um estudante do curso que você quer fazendo atividades práticas virtuais. Junta-te a nós e decide o teu futuro com segurança.
+        {t('hero.body')}
       </motion.p>
 
       <motion.div {...stagger(3)} className="relative z-10 mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
@@ -83,7 +70,7 @@ export function LandingHero() {
           }}
           className="relative w-full rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-amber px-8 py-4 text-sm font-bold text-background transition-colors sm:w-auto overflow-hidden shadow-md active:scale-[0.98] hover:bg-amber-hover"
         >
-          Vamos descobrir a tua vocação
+          {t('hero.cta_primary')}
         </Link>
         <a
           href="#como-funciona"
@@ -91,7 +78,7 @@ export function LandingHero() {
           onMouseLeave={() => { setChoreography('idle'); }}
           className="w-full rounded-tr-sm rounded-bl-sm rounded-tl-2xl rounded-br-2xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 backdrop-blur-lg px-8 py-4 text-sm font-bold text-text-primary transition-all hover:bg-black/10 dark:hover:bg-white/10 hover:text-text-primary dark:hover:text-white sm:w-auto active:scale-[0.98]"
         >
-          Entenda como funciona
+          {t('hero.cta_secondary')}
         </a>
       </motion.div>
 

@@ -7,9 +7,12 @@ import { SEOHead } from '@/components/layout/SEOHead';
 import type { Experiencia } from '@pdc/shared';
 import { motion } from 'motion/react';
 import { Sparkles, MapPin, Calendar, Building2, ChevronRight, Search } from 'lucide-react';
+import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 
 function ExperienciaCard({ exp, index }: { exp: Experiencia; index: number }) {
-  const inicio = new Date(exp.dataInicio).toLocaleDateString('pt-AO', { month: 'long', year: 'numeric' });
+  const inicio = exp.dataInicio 
+    ? new Date(exp.dataInicio).toLocaleDateString('pt-AO', { month: 'long', year: 'numeric' })
+    : 'Data a definir';
   
   return (
     <motion.div
@@ -32,10 +35,11 @@ function ExperienciaCard({ exp, index }: { exp: Experiencia; index: number }) {
               </div>
             )}
             
-            <div className="absolute top-4 left-4">
+            <div className="absolute top-4 left-4 flex gap-2">
               <div className="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[9px] font-black uppercase tracking-widest text-accent">
                  Instituição Validada
               </div>
+              <EditorialStateBadge state={exp.estado} />
             </div>
           </div>
           

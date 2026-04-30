@@ -1,40 +1,75 @@
-import { useEffect, useState } from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Laptop } from 'lucide-react';
+import { useTheme } from '@/lib/theme/ThemeContext';
 import { Button } from './Button';
 
+/**
+ * ThemeToggle - Componente de UI para alternar entre temas.
+ * Agora é puramente passivo, consumindo o ThemeContext.
+ */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    // 1. Check local storage
-    const saved = localStorage.getItem('pdc:theme');
-    if (saved === 'light' || saved === 'dark') return saved;
+  const { theme, setTheme } = useTheme();
 
-    // 2. Check system preference
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+  return (
+    <div className="flex items-center gap-1 rounded-xl bg-[var(--surface-recessed)] p-1 border border-[var(--glass-border-light)]">
+      <Button
+        variant={theme === 'light' ? 'secondary' : 'ghost'}
+        size="sm"
+        className="h-8 w-8 px-0 rounded-lg hover:bg-[var(--surface-elevated)]"
+        onClick={() => { setTheme('light'); }}
+        aria-label="Tema Claro"
+        title="Tema Claro"
+      >
+        <Sun size={14} className={theme === 'light' ? 'text-[var(--accent-terracotta)]' : 'text-[var(--ink-tertiary)]'} />
+      </Button>
+      
+      <Button
+        variant={theme === 'dark' ? 'secondary' : 'ghost'}
+        size="sm"
+        className="h-8 w-8 px-0 rounded-lg hover:bg-[var(--surface-elevated)]"
+        onClick={() => { setTheme('dark'); }}
+        aria-label="Tema Escuro"
+        title="Tema Escuro"
+      >
+        <Moon size={14} className={theme === 'dark' ? 'text-[var(--accent-terracotta)]' : 'text-[var(--ink-tertiary)]'} />
+      </Button>
 
-    return 'light';
-  });
+      <Button
+        variant={theme === 'system' ? 'secondary' : 'ghost'}
+        size="sm"
+        className="h-8 w-8 px-0 rounded-lg hover:bg-[var(--surface-elevated)]"
+        onClick={() => { setTheme('system'); }}
+        aria-label="Tema do Sistema"
+        title="Tema do Sistema"
+      >
+        <Laptop size={14} className={theme === 'system' ? 'text-[var(--accent-terracotta)]' : 'text-[var(--ink-tertiary)]'} />
+      </Button>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-    localStorage.setItem('pdc:theme', theme);
-  }, [theme]);
+/**
+ * Versão simples (ícone único) para menus compactos.
+ */
+export function ThemeToggleSimple() {
+  const { resolvedTheme, setTheme } = useTheme();
 
-  const toggleTheme = () => {
-    setTheme(t => t === 'light' ? 'dark' : 'light');
+  const toggle = () => {
+    setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
   };
 
   return (
     <Button
       variant="ghost"
       size="sm"
-      className="w-9 h-9 px-0"
-      onClick={() => { toggleTheme(); }}
-      aria-label="Alternar tema"
+      className="h-11 w-11 px-0 rounded-xl"
+      onClick={toggle}
+      aria-label={`Alternar para tema ${resolvedTheme === 'light' ? 'escuro' : 'claro'}`}
     >
-      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      {resolvedTheme === 'light' ? (
+        <Sun size={20} className="text-ink-secondary" />
+      ) : (
+        <Moon size={20} className="text-ink-secondary" />
+      )}
     </Button>
   );
 }

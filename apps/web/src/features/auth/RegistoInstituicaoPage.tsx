@@ -116,7 +116,7 @@ export function RegistoInstituicaoPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-ink-secondary">Tipo</label>
-              <select required value={form.tipo} onChange={(e) => { handleChange('tipo', e.target.value as RegistoInstituicaoPayload['tipo']); }}
+              <select required value={form.tipo} onChange={(e) => { handleChange('tipo', e.target.value); }}
                 className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
                 {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>

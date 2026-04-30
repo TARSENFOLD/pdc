@@ -10,6 +10,17 @@ import { Users, UserPlus, ShieldCheck, ArrowUpRight, Filter, Search } from 'luci
 import { motion, AnimatePresence } from 'motion/react';
 import type { VinculoComPerfil } from '@pdc/shared';
 
+function isVinculoNotification(value: unknown): value is { tipo: string; mensagem: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'tipo' in value &&
+    typeof value.tipo === 'string' &&
+    'mensagem' in value &&
+    typeof value.mensagem === 'string'
+  );
+}
+
 export function VinculosPage() {
   const { user } = useAuth();
   const [tabActiva, setTabActiva] = useState('pedidos');
@@ -17,7 +28,8 @@ export function VinculosPage() {
   const { toast } = useToast();
   const { track } = useTelemetry();
 
-  useSocket<{ tipo: string; mensagem: string }>((notif) => {
+  useSocket((notif) => {
+    if (!isVinculoNotification(notif)) return;
     if (notif.tipo === 'vinculo_pedido') {
       void queryClient.invalidateQueries({ queryKey: ['vinculos', 'pendentes'] });
       toast({ title: 'Novo Pedido de Vínculo', description: notif.mensagem });

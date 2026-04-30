@@ -10,13 +10,14 @@ import { Search } from 'lucide-react';
 
 export function ProgramaDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const programaId = id ?? '';
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const { data: prog, isLoading, isError } = useQuery({
-    queryKey: ['programa', id],
-    queryFn: () => programasApi.getById(id ?? ''),
+    queryKey: ['programa', programaId],
+    queryFn: () => programasApi.getById(programaId),
     enabled: !!id,
   });
 
@@ -45,8 +46,8 @@ export function ProgramaDetailPage() {
     <div className="min-h-screen bg-canvas px-4 py-16 sm:px-6">
       <SEOHead 
         title={prog.titulo}
-        description={prog.descricao}
-        url={`https://usepdc.com/programas/${id ?? ''}`}
+        description={prog.descricao || prog.proposito || prog.titulo}
+        url={`https://usepdc.com/programas/${programaId}`}
       />
       <div className="mx-auto max-w-3xl">
         <h1 className="text-3xl font-bold text-ink-primary mb-4">{prog.titulo}</h1>

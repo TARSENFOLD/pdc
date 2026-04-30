@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3001';
+const SOCKET_URL = typeof import.meta.env.VITE_API_URL === 'string' ? import.meta.env.VITE_API_URL : 'http://localhost:3001';
 
-export function useSocket<T = unknown>(onMessage?: (msg: T) => void) {
+export function useSocket(onMessage?: (msg: unknown) => void) {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export function useSocket<T = unknown>(onMessage?: (msg: T) => void) {
     });
 
     if (onMessage) {
-      socketRef.current.on('nova_mensagem', onMessage as (args: any) => void);
+      socketRef.current.on('nova_mensagem', onMessage);
     }
 
     return () => {
@@ -24,7 +24,7 @@ export function useSocket<T = unknown>(onMessage?: (msg: T) => void) {
     };
   }, [onMessage]);
 
-  const emitir = (event: string, data: any) => {
+  const emitir = (event: string, data: unknown) => {
     socketRef.current?.emit(event, data);
   };
 

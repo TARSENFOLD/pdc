@@ -43,7 +43,7 @@ healthRoutes.get('/feature-registry', async (c) => {
       'fields[1]': 'enabled',
     });
 
-    const items = Array.isArray(res?.data) ? res.data : [];
+    const items = res.data;
     const strapiKeys = new Set(items.map((f) => f.domain));
     const registryKeys = Object.keys(Features);
 
@@ -81,7 +81,7 @@ healthRoutes.get('/schema-drift', async (c) => {
       'pagination[limit]': '5000', // Aumentado para cobrir maior volume sem paginação complexa para healthcheck
     });
 
-    const programaDrift = (programasRes.data || []).filter((p) => 
+    const programaDrift = programasRes.data.filter((p) =>
       p.descricao && !p.proposito
     ).length;
 
@@ -93,7 +93,7 @@ healthRoutes.get('/schema-drift', async (c) => {
       'pagination[limit]': '5000', // Aumentado para cobrir maior volume sem paginação complexa para healthcheck
     });
 
-    const projetoDrift = (projetosRes.data || []).filter((p) => 
+    const projetoDrift = projetosRes.data.filter((p) =>
       p.descricao && !p.abstract
     ).length;
 
@@ -105,7 +105,7 @@ healthRoutes.get('/schema-drift', async (c) => {
       'pagination[limit]': '5000',
     });
 
-    const simulacaoDrift = (simulacoesRes.data || []).filter((s) => 
+    const simulacaoDrift = simulacoesRes.data.filter((s) =>
       s.materiaisInfo && !s.materiaisLab
     ).length;
 
@@ -120,7 +120,7 @@ healthRoutes.get('/schema-drift', async (c) => {
         total: totalDrift,
       },
       message: totalDrift > 0 
-        ? `${totalDrift} registos com drift editorial detectados` 
+        ? `${totalDrift.toString()} registos com drift editorial detectados`
         : 'Esquemas editoriais sincronizados',
     }, totalDrift > 0 ? 503 : 200);
   } catch (err) {

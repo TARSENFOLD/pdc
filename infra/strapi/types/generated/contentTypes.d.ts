@@ -800,16 +800,21 @@ export interface ApiCursoCurso extends Struct.CollectionTypeSchema {
   attributes: {
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
@@ -946,6 +951,39 @@ export interface ApiDomainEventDomainEvent extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiExperienciaParticipanteExperienciaParticipante
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'experiencia_participantes';
+  info: {
+    displayName: 'Experi\u00EAncia Participante';
+    pluralName: 'experiencia-participantes';
+    singularName: 'experiencia-participante';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    estudanteId: Schema.Attribute.String & Schema.Attribute.Required;
+    experiencia: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::experiencia.experiencia'
+    >;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::experiencia-participante.experiencia-participante'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
   collectionName: 'experiencias';
   info: {
@@ -959,16 +997,21 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
   attributes: {
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
@@ -984,6 +1027,7 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.DefaultTo<'draft'>;
     gradeDestaque: Schema.Attribute.JSON;
+    gratuito: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     guiaInstitucional: Schema.Attribute.JSON;
     instituicao: Schema.Attribute.Relation<
       'manyToOne',
@@ -1115,7 +1159,8 @@ export interface ApiFeedPostFeedPost extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
-    autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
+    autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'> &
+      Schema.Attribute.Required;
     comentariosCount: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     corpo: Schema.Attribute.RichText & Schema.Attribute.Required;
     createdAt: Schema.Attribute.DateTime;
@@ -1362,16 +1407,21 @@ export interface ApiMentoriaMentoria extends Struct.CollectionTypeSchema {
   attributes: {
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     createdAt: Schema.Attribute.DateTime;
@@ -1569,16 +1619,21 @@ export interface ApiPerfilVocacionalPerfilVocacional
     aptidaoTecnica: Schema.Attribute.Float;
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     certeza: Schema.Attribute.Enumeration<['baixa', 'media', 'alta']>;
@@ -1695,12 +1750,13 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     telefone: Schema.Attribute.String;
     tipo: Schema.Attribute.Enumeration<
       [
-        'aluno',
+        'estudante',
         'mentor',
         'instituicao',
         'moderador',
-        'super_admin',
         'comite_cientifico',
+        'super_admin',
+        'patrocinador',
       ]
     > &
       Schema.Attribute.Required;
@@ -1959,6 +2015,79 @@ export interface ApiPropostaProposta extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiQaPerguntaQaPergunta extends Struct.CollectionTypeSchema {
+  collectionName: 'qa_perguntas';
+  info: {
+    displayName: 'QA Pergunta';
+    pluralName: 'qa-perguntas';
+    singularName: 'qa-pergunta';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    autorId: Schema.Attribute.String & Schema.Attribute.Required;
+    autorNome: Schema.Attribute.String;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    experiencia: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::experiencia.experiencia'
+    >;
+    likes: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::qa-pergunta.qa-pergunta'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    resposta: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::qa-resposta.qa-resposta'
+    >;
+    texto: Schema.Attribute.Text & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiQaRespostaQaResposta extends Struct.CollectionTypeSchema {
+  collectionName: 'qa_respostas';
+  info: {
+    displayName: 'QA Resposta';
+    pluralName: 'qa-respostas';
+    singularName: 'qa-resposta';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    autorId: Schema.Attribute.String & Schema.Attribute.Required;
+    autorNome: Schema.Attribute.String;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::qa-resposta.qa-resposta'
+    > &
+      Schema.Attribute.Private;
+    pergunta: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::qa-pergunta.qa-pergunta'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    texto: Schema.Attribute.Text & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiRatingRating extends Struct.CollectionTypeSchema {
   collectionName: 'ratings';
   info: {
@@ -2026,16 +2155,21 @@ export interface ApiSimulacaoSimulacao extends Struct.CollectionTypeSchema {
   attributes: {
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
@@ -2123,6 +2257,10 @@ export interface ApiSubscricaoSubscricao extends Struct.CollectionTypeSchema {
     >;
     publishedAt: Schema.Attribute.DateTime;
     quotas: Schema.Attribute.JSON;
+    tier: Schema.Attribute.Enumeration<
+      ['free', 'basic', 'premium', 'enterprise']
+    > &
+      Schema.Attribute.DefaultTo<'free'>;
     tipo: Schema.Attribute.Enumeration<['individual', 'institucional']>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -2288,10 +2426,9 @@ export interface ApiVinculoVinculo extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     criadoEm: Schema.Attribute.DateTime;
+    dataTerminacao: Schema.Attribute.DateTime;
     destinatario: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
-    documentos: Schema.Attribute.JSON;
-    estado: Schema.Attribute.Enumeration<['pending', 'connected', 'declined']> &
-      Schema.Attribute.DefaultTo<'pending'>;
+    documentoUrl: Schema.Attribute.String;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -2307,6 +2444,10 @@ export interface ApiVinculoVinculo extends Struct.CollectionTypeSchema {
     resolvidoEm: Schema.Attribute.DateTime;
     senderId: Schema.Attribute.String & Schema.Attribute.Required;
     solicitante: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
+    status: Schema.Attribute.Enumeration<
+      ['pendente', 'aprovado', 'rejeitado', 'concluido']
+    > &
+      Schema.Attribute.DefaultTo<'pendente'>;
     tipo: Schema.Attribute.Enumeration<
       ['aluno-mentor', 'mentor-instituicao', 'aluno-instituicao']
     >;
@@ -2314,7 +2455,7 @@ export interface ApiVinculoVinculo extends Struct.CollectionTypeSchema {
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     visibleOnProfile: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<true>;
+      Schema.Attribute.DefaultTo<false>;
   };
 }
 
@@ -2880,6 +3021,7 @@ declare module '@strapi/strapi' {
       'api::curso.curso': ApiCursoCurso;
       'api::denuncia.denuncia': ApiDenunciaDenuncia;
       'api::domain-event.domain-event': ApiDomainEventDomainEvent;
+      'api::experiencia-participante.experiencia-participante': ApiExperienciaParticipanteExperienciaParticipante;
       'api::experiencia.experiencia': ApiExperienciaExperiencia;
       'api::feature-flag.feature-flag': ApiFeatureFlagFeatureFlag;
       'api::feed-entry.feed-entry': ApiFeedEntryFeedEntry;
@@ -2900,6 +3042,8 @@ declare module '@strapi/strapi' {
       'api::programa.programa': ApiProgramaPrograma;
       'api::projeto.projeto': ApiProjetoProjeto;
       'api::proposta.proposta': ApiPropostaProposta;
+      'api::qa-pergunta.qa-pergunta': ApiQaPerguntaQaPergunta;
+      'api::qa-resposta.qa-resposta': ApiQaRespostaQaResposta;
       'api::rating.rating': ApiRatingRating;
       'api::simulacao.simulacao': ApiSimulacaoSimulacao;
       'api::subscricao.subscricao': ApiSubscricaoSubscricao;

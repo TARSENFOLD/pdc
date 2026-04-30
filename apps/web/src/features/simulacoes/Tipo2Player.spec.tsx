@@ -37,19 +37,31 @@ describe('Tipo2Player (Characterization)', () => {
   const mockFlush = vi.fn();
   const mockSimulacao = {
     id: 'sim-2',
+    slug: 'sim-2-slug',
     titulo: 'Simulação Tipo 2',
     descricao: 'Teste de Fidelidade Média',
     area: 'GESTAO' as const,
     tipo: 2 as const,
+    tipoSimulacao: 'tipo2' as const,
+    autorId: 'author-123',
+    estado: 'published' as const,
+    validadoAcademicamente: true,
+    criteriosAvaliacao: { pesos: { fluidez: 40, resiliencia: 30, foco: 30 } },
     createdAt: new Date().toISOString(),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useTelemetry).mockReturnValue({
-      track: mockTrack,
-      flush: mockFlush,
-    } as any);
+    const telemetryMock: ReturnType<typeof useTelemetry> = {
+      track: (tipo, payload) => {
+        mockTrack(tipo, payload);
+      },
+      flush: () => {
+        mockFlush();
+        return Promise.resolve();
+      },
+    };
+    vi.mocked(useTelemetry).mockReturnValue(telemetryMock);
   });
 
   it('deve renderizar o shell operacional', () => {
@@ -94,7 +106,7 @@ describe('Tipo2Player (Characterization)', () => {
     document.dispatchEvent(new Event('visibilitychange'));
 
     expect(mockTrack).toHaveBeenCalledWith('simulacao.foco.perdido', expect.objectContaining({
-      timestamp: expect.any(Number),
+      timestamp: expect.any(Number) as number,
     }));
   });
 
@@ -112,12 +124,9 @@ describe('Tipo2Player (Characterization)', () => {
       expect(mockTrack).toHaveBeenCalledWith('simulacao.tipo2.concluida', expect.objectContaining({
         tentativaId: 'tent-2',
       }));
-      expect(simulacoesApi.concluirTentativa).toHaveBeenCalledWith(expect.objectContaining({
-        tentativaId: 'tent-2',
-        metadata: expect.objectContaining({
-          tipo: 2,
-        }),
-      }));
+      const payload = vi.mocked(simulacoesApi.concluirTentativa).mock.calls[0]?.[0];
+      expect(payload?.tentativaId).toBe('tent-2');
+      expect(payload?.metadata).toMatchObject({ tipo: 2 });
     });
   });
 

@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from 'react-router-dom';
+import './lib/i18n'; // Initialize i18n before everything else
 import { router } from './router';
 import { AuthProvider } from './lib/auth/AuthContext';
 import { BootstrapProvider } from './lib/bootstrap/BootstrapContext';
@@ -67,7 +68,7 @@ ReactDOM.createRoot(rootElement).render(
       <QueryClientProvider client={queryClient}>
         <BootstrapProvider>
           <AuthProvider>
-            <RouterProvider router={router} />
+            <RouterProvider router={router} future={{ v7_startTransition: true }} />
             <Toaster />
             <InstallPrompt />
             <ReactQueryDevtools initialIsOpen={false} />

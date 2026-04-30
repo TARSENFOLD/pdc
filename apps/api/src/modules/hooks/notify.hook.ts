@@ -25,8 +25,8 @@ async function resolvePerfilId(payload: BaseDomainEventPayload): Promise<string 
       'fields[0]': 'id',
     });
     const id = res.data[0]?.id;
-    return id ? String(id) : undefined;
-  } catch (err) {
+    return id ?? undefined;
+  } catch (err: unknown) {
     log.warn({ err, lookupUserId }, 'Falha ao resolver perfilId via userId');
     return undefined;
   }
@@ -77,7 +77,9 @@ export const notifyHook: EcosystemHook = {
     }
 
     // 3. Processar Conquistas (Hook 4)
-    const achievementResult = results[EcosystemHookName.ACHIEVEMENT];
+    const achievementResult = EcosystemHookName.ACHIEVEMENT in results
+      ? results[EcosystemHookName.ACHIEVEMENT]
+      : undefined;
     
     if (achievementResult?.status === 'sent' && achievementResult.data) {
       const { userId, desbloqueadas } = achievementResult.data as { userId: string; desbloqueadas: { slug: string; titulo: string; descricao: string }[] };
@@ -89,14 +91,16 @@ export const notifyHook: EcosystemHook = {
         // 2. Persistência de Notificação de Conquista
         if (pId) {
           await strapiPost<unknown>('/notificacoes', {
-            perfil: String(pId),
+            perfil: pId,
             tipo: 'conquista',
             titulo: `Conquista Desbloqueada: ${conquista.titulo}`,
             mensagem: conquista.descricao, // Novo schema Strapi (obrigatório)
             corpo: conquista.descricao, // Retrocompatibilidade
             eventId: event.id,
             lida: false
-          }).catch(err => log.error({ err }, 'Falha ao persistir notificação de conquista'));
+          }).catch((err: unknown) => {
+            log.error({ err }, 'Falha ao persistir notificação de conquista');
+          });
         }
       }));
     }
@@ -106,7 +110,7 @@ export const notifyHook: EcosystemHook = {
       try {
         const mensagemAudit = `O teu evento ${event.name} foi integrado no ecossistema.`;
         await strapiPost<unknown>('/notificacoes', {
-          perfil: String(pId),
+          perfil: pId,
           tipo: 'sucesso', // Semântica real para o audit trail de sucesso
           titulo: 'Actividade Processada',
           mensagem: mensagemAudit, // Novo schema Strapi (obrigatório)

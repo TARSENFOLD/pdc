@@ -22,7 +22,7 @@ reputationRoutes.get('/me', async (c) => {
     const perfil = resPerfil.data[0];
     if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
 
-    // 2. Calcular breakdown de m\C3\A9rito (M\C3\BAsculo)
+    // 2. Calcular breakdown de mérito (Músculo)
     const breakdown = await getReputacaoBreakdown(perfil.id);
 
     return c.json({
@@ -32,12 +32,12 @@ reputationRoutes.get('/me', async (c) => {
         verified: true,
       }
     });
-  } catch (_err) {
-    return c.json({ error: 'Erro ao carregar reputa\C3\A7\C3\A3o' }, 502);
+  } catch {
+    return c.json({ error: 'Erro ao carregar reputação' }, 502);
   }
 });
 
-// GET /reputation/:perfilId — para visualiza\C3\A7\C3\A3o p\C3\BAblica de m\C3\A9rito
+// GET /reputation/:perfilId — para visualização pública de mérito
 reputationRoutes.get('/:perfilId', async (c) => {
   const perfilId = c.req.param('perfilId');
 
@@ -48,7 +48,7 @@ reputationRoutes.get('/:perfilId', async (c) => {
     });
 
     const perfil = resPerfil.data[0];
-    if (!perfil) return c.json({ error: 'Perfil n\C3\A3o encontrado' }, 404);
+    if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
 
     const created = new Date(perfil.createdAt);
     const months = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24 * 30);
@@ -56,11 +56,11 @@ reputationRoutes.get('/:perfilId', async (c) => {
     return c.json({
       data: {
         score: perfil.reputacao ?? 0,
-        ratingsMedia: perfil.reputacao ?? 0, // Placeholder at\C3\A9 termos mais dados p\C3\BAblicos
+        ratingsMedia: perfil.reputacao ?? 0, // Placeholder até termos mais dados públicos
         veteraniaMeses: Math.floor(months),
       }
     });
-  } catch (_err) {
-    return c.json({ error: 'Erro ao carregar reputa\C3\A7\C3\A3o p\C3\BAblica' }, 502);
+  } catch {
+    return c.json({ error: 'Erro ao carregar reputação pública' }, 502);
   }
 });

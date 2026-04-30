@@ -32,13 +32,13 @@ export function QuizPlayer({ perguntas, onConcluir }: QuizPlayerProps) {
   }
 
   const p = pergunta;
-  const isCorrect = selected === p.respostaCorrecta;
+  const isCorrect = selected === p.respostaCorreta;
   const answered = selected !== null;
 
   function handleSelect(index: number) {
     if (answered) return;
     setSelected(index);
-    if (index === p.respostaCorrecta) {
+    if (index === p.respostaCorreta) {
       setScore((s) => s + 1);
     }
   }
@@ -69,7 +69,7 @@ export function QuizPlayer({ perguntas, onConcluir }: QuizPlayerProps) {
           let classes = 'w-full rounded-lg border px-4 py-3 text-left text-sm transition-colors ';
           if (!answered) {
             classes += 'border-ink-tertiary/10 text-ink-secondary hover:border-accent hover:text-ink-primary cursor-pointer';
-          } else if (i === p.respostaCorrecta) {
+          } else if (i === p.respostaCorreta) {
             classes += 'border-green-500 bg-green-500/10 text-green-400';
           } else if (i === selected) {
             classes += 'border-red-500 bg-red-500/10 text-red-400';

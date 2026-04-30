@@ -451,4 +451,15 @@ graph TD
 5. **Moderação por defeito para UGC** — comentários, posts, conquistas e projetos de utilizadores recentes (< 7 dias) passam por fila.
 6. **Experiências são sempre gratuitas** — qualquer alteração desta regra requer aprovação do Super Admin e ADR formal.
 
-*Última validação: 20 de Abril de 2026.*
+## 10. Gap de Implementação Identificado em Auditoria (DC-01)
+
+> **Origem:** T-AUD-7 CCF-W5-2 · T-AUD-MASTER DC-01 · 2026-04-29
+
+O estado `hidden` está correctamente definido nesta spec (§5 — diagrama de estados: `approved --> hidden`). Contudo, o componente `EditorialStateBadge` (`apps/web/src/components/ui/EditorialStateBadge.tsx`) **não inclui `hidden` no type union nem no `STATE_CONFIG`**, fazendo com que conteúdo `hidden` seja apresentado erroneamente como "Rascunho" (fallback silencioso).
+
+**Acção necessária no código** (não nesta spec — a spec está correcta):
+- Adicionar `hidden` ao type union `EditorialState`.
+- Adicionar `hidden: { label: 'Oculto', className: 'bg-orange-500/10 text-orange-500' }` ao `STATE_CONFIG`.
+
+*Última validação: 29 de Abril de 2026.*
+*Revisão T-DOC-04 (audit-report-master 2026-04-29): DC-01 aplicado — gap de implementação documentado. Spec §5 pipeline estados está correcta; remediação requerida no código.*

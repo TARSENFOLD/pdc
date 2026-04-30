@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { denunciasApi } from '@/lib/api/denuncias';
+import { dashboardApi } from '@/lib/api/dashboard';
 import { Badge, Spinner, BentoGrid, BentoTile, GlassCard } from '@/components/ui';
-import { ContentTypeCTAGrid } from '@/components/dashboard/ContentTypeCTAGrid';
+import ContentTypeCTAGrid from '@/components/dashboard/ContentTypeCTAGrid';
 import { 
   ShieldAlert, 
   CheckCircle, 
@@ -16,12 +16,11 @@ import { motion } from 'motion/react';
 
 export function ModeradorDashboard() {
   const { data, isLoading } = useQuery({
-    queryKey: ['denuncias', 'pendentes'],
-    queryFn: () => denunciasApi.list({ estado: 'pendente', pageSize: 5 }),
+    queryKey: ['dashboard', 'moderador'],
+    queryFn: () => dashboardApi.getModerador(),
   });
 
-  const denuncias = data?.data ?? [];
-  const totalPendentes = data?.pagination.total ?? 0;
+  const denuncias = data?.denunciasCriticas ?? [];
 
   if (isLoading) return <div className="flex h-screen items-center justify-center bg-canvas"><Spinner size="lg" /></div>;
 
@@ -52,7 +51,7 @@ export function ModeradorDashboard() {
           </div>
           <div>
             <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Denúncias Pendentes</p>
-            <p className="text-3xl font-black font-mono text-accent">{totalPendentes}</p>
+            <p className="text-3xl font-black font-mono text-accent">{data?.stats.denunciasPendentes ?? 0}</p>
           </div>
         </BentoTile>
 
@@ -63,7 +62,7 @@ export function ModeradorDashboard() {
           </div>
           <div>
             <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Resolvidas Hoje</p>
-            <p className="text-3xl font-black font-mono text-ink-primary">0</p>
+            <p className="text-3xl font-black font-mono text-ink-primary">{data?.stats.resolvidasHoje ?? 0}</p>
           </div>
         </BentoTile>
 
@@ -73,10 +72,10 @@ export function ModeradorDashboard() {
             title="Operações de Integridade"
             gridCols={2}
             ctas={[
-              { label: 'Fila de Aprovações', to: '/moderacao/aprovacoes', icon: UserCheck, variant: 'primary' },
-              { label: 'Todas as Denúncias', to: '/moderacao/denuncias', icon: ShieldAlert },
-              { label: 'Gestão de Utilizadores', to: '/moderacao/utilizadores', icon: Users },
-              { label: 'Audit Trail', to: '/admin/audit', icon: ClipboardList },
+              { label: 'Fila de Aprovações', to: '/app/moderacao/aprovacoes', icon: UserCheck, variant: 'primary' },
+              { label: 'Todas as Denúncias', to: '/app/moderacao/denuncias', icon: ShieldAlert },
+              { label: 'Gestão de Utilizadores', to: '/app/moderador/utilizadores', icon: Users },
+              { label: 'Audit Trail', to: '/app/admin/audit', icon: ClipboardList },
             ]}
           />
         </BentoTile>
@@ -88,7 +87,7 @@ export function ModeradorDashboard() {
           <h2 className="font-black text-ink-primary flex items-center gap-2 uppercase text-[12px] tracking-[0.2em]">
             <Clock size={16} className="text-accent" /> Denúncias Críticas
           </h2>
-          <Link to="/moderacao/denuncias" className="text-[10px] font-black text-accent hover:underline uppercase tracking-widest">
+          <Link to="/app/moderacao/denuncias" className="text-[10px] font-black text-accent hover:underline uppercase tracking-widest">
             Ver todas →
           </Link>
         </div>
@@ -102,7 +101,7 @@ export function ModeradorDashboard() {
             {denuncias.map((d) => (
               <Link
                 key={d.id}
-                to={`/moderacao/denuncias/${d.id}`}
+                to={`/app/moderacao/denuncias/${d.id}`}
                 className="group"
               >
                 <GlassCard className="flex items-start justify-between gap-4 p-4 hover:border-accent/20 transition-all">

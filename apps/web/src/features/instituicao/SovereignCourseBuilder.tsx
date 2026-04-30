@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CriarCursoPayloadSchema } from '@pdc/shared';
+import { CriarCursoPayloadSchema, type MutationResult } from '@pdc/shared';
 import type { z } from 'zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -24,7 +24,7 @@ export function SovereignCourseBuilder() {
   const [lastEventId, setLastEventId] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(CriarCursoPayloadSchema),
+    resolver: zodResolver(CriarCursoPayloadSchema) as never,
     defaultValues: {
       titulo: '',
       descricao: '',
@@ -41,33 +41,35 @@ export function SovereignCourseBuilder() {
 
   const mutation = useMutation({
     mutationFn: (data: FormValues) => http.post('/cursos', data),
-    onSuccess: (res: any) => {
+    onSuccess: (res) => {
+      const result = res as MutationResult;
       void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
       toast({ title: 'Curso Soberano Materializado!', description: 'O impacto no ecossistema foi disparado.' });
       
-      const eventId = res.eventId || res.data?.eventId;
-      if (eventId) {
-        setLastEventId(eventId);
+      if (result.eventId) {
+        setLastEventId(result.eventId);
       } else {
         navigate('/app/dashboard/instituicao');
       }
     },
-    onError: (err: any) => toast({ 
-      title: 'Falha na Materialização', 
-      description: err.response?.data?.error || 'Erro desconhecido',
-      variant: 'error' 
-    })
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Erro desconhecido';
+      toast({ 
+        title: 'Falha na Materialização', 
+        description: message,
+        variant: 'error' 
+      });
+    }
   });
 
   const handleSave = () => {
     const data = form.getValues();
-    mutation.mutate(data as FormValues);
+    mutation.mutate(data);
   };
 
   return (
   <>
     <BuilderShell
-      form={form}
       title="Sovereign Course Builder"
       description="Define o currículo, impõe as regras de mérito e domina o ecossistema."        state="draft"      breadcrumbs={[
         { label: 'Início', to: '/app' },
@@ -98,12 +100,11 @@ export function SovereignCourseBuilder() {
         <CourseBaseInfo 
           register={register} 
           errors={errors} 
-          onCapaUploaded={(url) => setValue('capaUrl', url)} 
+          onCapaUploaded={(url) => { setValue('capaUrl', url); }} 
         />
       </BuilderSection>
 
       <BuilderSection
-        value="merit"
         title="Regras de Mérito"
         description="Define os pré-requisitos biomecânicos para aceder ao curso."
       >
@@ -132,7 +133,7 @@ export function SovereignCourseBuilder() {
               eventId={lastEventId} 
               variant="full"
               onComplete={() => {
-                setTimeout(() => navigate('/app/dashboard/instituicao'), 3000);
+                setTimeout(() => { navigate('/app/dashboard/instituicao'); }, 3000);
               }}
             />
           </div>

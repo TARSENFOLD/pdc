@@ -26,3 +26,4 @@ export * from './GlassCard';
 export * from './AsymmetricButton';
 export * from './AspirationalEmpty';
 export * from './InstallPrompt';
+export * from './HUDPanel';

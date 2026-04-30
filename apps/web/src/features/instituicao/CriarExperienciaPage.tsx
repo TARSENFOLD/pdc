@@ -14,6 +14,14 @@ import { useAuth } from '@/lib/auth/AuthContext';
 
 const STORAGE_KEY = 'pdc_builder_experiencia_draft';
 
+function muralPath(index: number, field: 'autor' | 'cargo' | 'depoimento') {
+  return ['muralVozes', index, field].join('.') as `muralVozes.${number}.${typeof field}`;
+}
+
+function timelinePath(index: number, field: 'ano' | 'foco') {
+  return ['guiaInstitucional', 'timelineCurricular', index, field].join('.') as `guiaInstitucional.timelineCurricular.${number}.${typeof field}`;
+}
+
 export function CriarExperienciaPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -43,10 +51,19 @@ export function CriarExperienciaPage() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        Object.keys(parsed).forEach(key => {
-          setValue(key as any, parsed[key]);
-        });
+        const parsed: unknown = JSON.parse(saved);
+        const draft = CriarExperienciaPayloadSchema.partial().safeParse(parsed);
+        if (draft.success) {
+          const data = draft.data;
+          if (data.titulo !== undefined) setValue('titulo', data.titulo);
+          if (data.descricao !== undefined) setValue('descricao', data.descricao);
+          if (data.area !== undefined) setValue('area', data.area);
+          if (data.nivel !== undefined) setValue('nivel', data.nivel);
+          if (data.modalidade !== undefined) setValue('modalidade', data.modalidade);
+          if (data.painelRealidade !== undefined) setValue('painelRealidade', data.painelRealidade);
+          if (data.muralVozes !== undefined) setValue('muralVozes', data.muralVozes);
+          if (data.guiaInstitucional !== undefined) setValue('guiaInstitucional', data.guiaInstitucional);
+        }
       } catch (e) {
         console.error('Falha ao recuperar draft', e);
       }
@@ -55,18 +72,19 @@ export function CriarExperienciaPage() {
     const subscription = watch((value) => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
     });
-    return () => subscription.unsubscribe();
+    return () => { subscription.unsubscribe(); };
   }, [setValue, watch]);
 
   const mutation = useMutation({
     mutationFn: (data: CriarExperienciaPayload) => experienciasApi.create(data),
-    onSuccess: (res: { data: { id: string; eventId?: string } }) => {
+    onSuccess: (res) => {
+      // Nota: o eventId é injectado pelo middleware G15 no Strapi para telemetria outbox
       void queryClient.invalidateQueries({ queryKey: ['experiencias', 'minhas'] });
       localStorage.removeItem(STORAGE_KEY);
       toast({ title: 'Experiência Materializada!' });
 
-      if (res.data?.eventId) {
-        setLastEventId(res.data.eventId);
+      if (res.eventId) {
+        setLastEventId(res.eventId);
       } else {
         navigate('/app/dashboard/instituicao');
       }
@@ -86,7 +104,6 @@ export function CriarExperienciaPage() {
   return (
     <>
       <BuilderShell
-        form={form as any}
         title="Gerador de Experiência Premium"
         description="Materializa o impacto da tua instituição através de dados reais e vozes autênticas."
         state="draft"      breadcrumbs={[
@@ -143,7 +160,6 @@ export function CriarExperienciaPage() {
       </BuilderSection>
 
       <BuilderSection
-        value="realidade"
         title="Painel de Realidade"
         description="Dados de mercado e empregabilidade (Spec 04)."
       >
@@ -160,31 +176,28 @@ export function CriarExperienciaPage() {
       </BuilderSection>
 
       <BuilderSection
-        value="vozes"
         title="Mural de Vozes"
         description="Depoimentos reais de quem já viveu a experiência."
       >
         <div className="space-y-6">
           {muralArray.fields.map((field, index) => (
             <div key={field.id} className="p-6 border border-ink-tertiary/10 rounded-2xl bg-canvas space-y-4">
-              <Input label="Autor" {...register(`muralVozes.${index}.autor`)} />
-              <Input label="Cargo/Função" {...register(`muralVozes.${index}.cargo`)} />
+              <Input label="Autor" {...register(muralPath(index, 'autor'))} />
+              <Input label="Cargo/Função" {...register(muralPath(index, 'cargo'))} />
               <textarea 
                 placeholder="O depoimento..."
                 className="w-full rounded-xl border border-ink-tertiary/10 bg-recessed p-3 text-sm"
-                {...register(`muralVozes.${index}.depoimento`)}
+                {...register(muralPath(index, 'depoimento'))}
               />
-              <Button variant="ghost" size="sm" className="text-accent-danger" onClick={() => muralArray.remove(index)}>Remover Voz</Button>
+              <Button variant="ghost" size="sm" className="text-accent-danger" onClick={() => { muralArray.remove(index); }}>Remover Voz</Button>
             </div>
           ))}
-          <Button variant="outline" className="w-full" onClick={() => muralArray.append({ autor: '', cargo: '', depoimento: '' })}>
+          <Button variant="outline" className="w-full" onClick={() => { muralArray.append({ tipo: 'aluno', autor: '', cargo: '', depoimento: '' }); }}>
             + Adicionar Testemunho
           </Button>
         </div>
       </BuilderSection>
-
       <BuilderSection
-        value="guia"
         title="Guia Institucional"
         description="Vitrinas do campus e jornada curricular."
       >
@@ -204,12 +217,12 @@ export function CriarExperienciaPage() {
               <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Timeline Curricular</p>
               {timelineArray.fields.map((field, index) => (
                 <div key={field.id} className="flex gap-4 items-end">
-                   <Input label="Ano/Fase" {...register(`guiaInstitucional.timelineCurricular.${index}.ano`)} />
-                   <Input label="Foco Principal" {...register(`guiaInstitucional.timelineCurricular.${index}.foco`)} className="flex-1" />
-                   <Button variant="ghost" onClick={() => timelineArray.remove(index)}>X</Button>
+                   <Input label="Ano/Fase" {...register(timelinePath(index, 'ano'))} />
+                   <Input label="Foco Principal" {...register(timelinePath(index, 'foco'))} className="flex-1" />
+                   <Button variant="ghost" onClick={() => { timelineArray.remove(index); }}>X</Button>
                 </div>
               ))}
-              <Button variant="outline" size="sm" onClick={() => timelineArray.append({ ano: '', foco: '' })}>+ Adicionar Fase</Button>
+              <Button variant="outline" size="sm" onClick={() => { timelineArray.append({ ano: '', foco: '' }); }}>+ Adicionar Fase</Button>
            </div>
         </div>
       </BuilderSection>
@@ -228,7 +241,7 @@ export function CriarExperienciaPage() {
               eventId={lastEventId} 
               variant="full"
               onComplete={() => {
-                setTimeout(() => navigate('/app/dashboard/instituicao'), 3000);
+                setTimeout(() => { navigate('/app/dashboard/instituicao'); }, 3000);
               }}
             />
           </div>

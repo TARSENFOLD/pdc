@@ -120,7 +120,7 @@ export default function FeedWeightsPage() {
 
   const saveMutation = useMutation({
     mutationFn: ({ tipo, weights }: { tipo: 'geral' | 'trending'; weights: FeedWeights }) =>
-      feedApi.updateWeights(tipo, weights),
+      feedApi.updateWeights(tipo, { weights }),
     onSuccess: (_data, { tipo }) => {
       toast({ title: 'Pesos guardados', description: `Feed ${tipo} actualizado.`, variant: 'success' });
       void qc.invalidateQueries({ queryKey: ['feed-weights', tipo] });

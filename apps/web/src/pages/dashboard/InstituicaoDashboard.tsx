@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { experienciasApi } from '@/lib/api/experiencias';
 import { Spinner, BentoGrid, BentoTile, GlassCard, AsymmetricButton } from '@/components/ui';
-import { ContentTypeCTAGrid } from '@/components/dashboard/ContentTypeCTAGrid';
+import ContentTypeCTAGrid from '@/components/dashboard/ContentTypeCTAGrid';
 import {
   Building2,
   ClipboardList,
@@ -18,13 +18,13 @@ import {
 import { motion } from 'motion/react';
 
 const CTAS = [
-  { label: 'Criar Experiência', to: '/instituicao/criar-experiencia', icon: Building2, variant: 'primary' as const },
-  { label: 'Criar Programa', to: '/instituicao/criar-programa', icon: Briefcase },
-  { label: 'Criar Curso', to: '/instituicao/cursos/criar', icon: ShieldCheck },
-  { label: 'Criar Post', to: '/feed/criar', icon: MessageSquare },
-  { label: 'Registar Marco', to: '/conquistas/criar', icon: Trophy },
-  { label: 'Branding', to: '/instituicao/branding', icon: Palette },
-  { label: 'Match Terminal', to: '/instituicao/propostas', icon: Search },
+  { label: 'Criar Experiência', to: '/app/instituicao/criar-experiencia', icon: Building2, variant: 'primary' as const },
+  { label: 'Criar Programa', to: '/app/instituicao/criar-programa', icon: Briefcase },
+  { label: 'Criar Curso', to: '/app/instituicao/cursos/criar', icon: ShieldCheck },
+  { label: 'Criar Post', to: '/app/feed/criar', icon: MessageSquare },
+  { label: 'Registar Marco', to: '/app/conquistas/criar', icon: Trophy },
+  { label: 'Branding', to: '/app/instituicao/branding', icon: Palette },
+  { label: 'Match Terminal', to: '/app/instituicao/propostas', icon: Search },
 ];
 
 export function InstituicaoDashboard() {

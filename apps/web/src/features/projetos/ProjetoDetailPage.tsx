@@ -69,7 +69,7 @@ export function ProjetoDetailPage() {
     <div className="max-w-3xl">
       <SEOHead
         title={projeto.titulo}
-        description={projeto.descricao}
+        description={projeto.descricao || projeto.abstract || projeto.titulo}
         url={`https://usepdc.com/projetos/${id}`}
         type="article"
       />
@@ -79,11 +79,9 @@ export function ProjetoDetailPage() {
 
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          {projeto.estado && (
-            <div className="mb-2">
-              <EditorialStateBadge state={projeto.estado} />
-            </div>
-          )}
+          <div className="mb-2">
+            <EditorialStateBadge state={projeto.estado} />
+          </div>
           <h1 className="text-4xl font-bold text-ink-primary font-display">{projeto.titulo}</h1>
           <div className="flex items-center gap-2">
             <RatingStars targetType="projeto" targetId={id} stats={ratingStats} />

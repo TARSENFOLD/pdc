@@ -1,0 +1,137 @@
+{
+  "estudante": {
+    "hero": {
+      "kicker": "Academic Journey",
+      "title": "Your Dashboard",
+      "description": "Track your progress, vocational match and next actions."
+    },
+    "kpi": {
+      "xp": "Accumulated XP",
+      "reputacao": "Reputation",
+      "conquistas": "Achievements",
+      "vinculos": "Connections",
+      "foco": "Focus"
+    },
+    "sections": {
+      "match_kicker": "Vocational Match",
+      "match_title": "Area affinity",
+      "behavior_kicker": "DNA Pattern",
+      "behavior_title": "Behavioural signature",
+      "side_title": "Next action",
+      "cursos_kicker": "In progress",
+      "cursos_title": "Courses"
+    },
+    "empty": {
+      "match": "Complete your vocational profile to discover your areas of greatest affinity.",
+      "behavior": "Complete simulations to reveal your behavioural profile.",
+      "cursos": "Enrol in a course to start validating your skills."
+    },
+    "actions": {
+      "completar_perfil": "Complete Profile",
+      "explorar_simulacoes": "Explore Simulations",
+      "explorar_cursos": "Explore Courses",
+      "ver_relatorio": "View Report",
+      "ver_catalogo": "View Catalogue"
+    },
+    "behavior": {
+      "fluidez": "Fluidity φ",
+      "resiliencia": "Resilience R",
+      "foco": "Focus"
+    },
+    "match": {
+      "authority_label": "affinity",
+      "insights_label": "Tina Insights"
+    },
+    "curso": {
+      "progresso": "Progress",
+      "certificacao": "PDC Certificate"
+    },
+    "error": {
+      "title": "Error syncing dashboard.",
+      "retry": "Try again"
+    }
+  },
+  "home": {
+    "greetings": {
+      "estudante": "Your journey starts here",
+      "mentor": "Creation Studio",
+      "instituicao": "Institutional Dashboard",
+      "moderador": "Operations Centre",
+      "comite_cientifico": "Validation Lab",
+      "super_admin": "Sovereign Control",
+      "patrocinador": "Sponsor Dashboard"
+    },
+    "cta_open": "Open",
+    "welcome_fallback": "Welcome",
+    "greeting_prefix": "Hello",
+    "subtitle": "Choose where you want to start.",
+    "oracle_kicker": "Sovereign educational decision infrastructure",
+    "oracle_body": "The Oracle observes your journey and adapts recommendations in real time.",
+    "actions": {
+      "estudante": {
+        "simulacoes_label": "Simulations",
+        "simulacoes_desc": "Test your skills in real-world scenarios",
+        "cursos_label": "Courses",
+        "cursos_desc": "Learn with mentor-validated content",
+        "perfil_label": "Vocational Profile",
+        "perfil_desc": "Discover your area of greatest affinity",
+        "ranking_label": "Ranking",
+        "ranking_desc": "See your position in the global merit table"
+      },
+      "mentor": {
+        "cursos_label": "My Courses",
+        "cursos_desc": "Manage and create educational content",
+        "criar_label": "Create Course",
+        "criar_desc": "Start a new course in the Course Builder",
+        "simulacoes_label": "Simulations",
+        "simulacoes_desc": "Create and manage practical labs",
+        "mentorados_label": "Mentees",
+        "mentorados_desc": "Track your students"
+      },
+      "instituicao": {
+        "experiencias_label": "Experiences",
+        "experiencias_desc": "Manage your curricular showcases",
+        "programas_label": "Programmes",
+        "programas_desc": "Create educational roadmaps",
+        "estudantes_label": "Students",
+        "estudantes_desc": "View linked students",
+        "relatorios_label": "Reports",
+        "relatorios_desc": "Analyse institutional impact"
+      },
+      "moderador": {
+        "aprovacoes_label": "Approval Queue",
+        "aprovacoes_desc": "Review content pending moderation",
+        "denuncias_label": "Reports",
+        "denuncias_desc": "Handle community reports",
+        "utilizadores_label": "Users",
+        "utilizadores_desc": "Manage platform users",
+        "stats_label": "Statistics",
+        "stats_desc": "Ecosystem metrics dashboard"
+      },
+      "comite_cientifico": {
+        "validacao_label": "Scientific Validation",
+        "validacao_desc": "Validate content for academic rigour",
+        "dashboard_label": "Committee Dashboard",
+        "dashboard_desc": "Committee overview",
+        "feed_label": "Feed",
+        "feed_desc": "See what's happening in the community"
+      },
+      "super_admin": {
+        "stats_label": "Statistics",
+        "stats_desc": "360° view of the ecosystem",
+        "utilizadores_label": "Users",
+        "utilizadores_desc": "Manage all users",
+        "flags_label": "Feature Flags",
+        "flags_desc": "Control features and rollouts",
+        "feed_weights_label": "Feed Weights",
+        "feed_weights_desc": "Tune the ranking algorithm"
+      },
+      "patrocinador": {
+        "feed_label": "Feed",
+        "feed_desc": "See what's happening in the community",
+        "explorar_label": "Explore",
+        "explorar_desc": "Discover content and talent"
+      }
+    }
+  }
+}

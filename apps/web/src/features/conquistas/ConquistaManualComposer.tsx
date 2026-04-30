@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trophy, ArrowLeft, Plus, X, LinkIcon } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Button } from '@/components/ui/Button';
 import { Card, Input, Badge, Spinner } from '@/components/ui';
+import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { useMutation } from '@tanstack/react-query';
 import { conquistasApi } from '@/lib/api/conquistas';
 import { toast } from '@/hooks/useToast';
-import type { CriarConquistaManualPayload } from '@pdc/shared';
+import { CriarConquistaManualPayloadSchema, type CriarConquistaManualPayload } from '@pdc/shared';
 
 const CATEGORIAS = [
   'Certificação Externa',
@@ -27,6 +29,8 @@ export default function ConquistaManualComposer(): React.ReactElement {
   const [tags, setTags] = useState<string[]>([]);
   const [mediaInput, setMediaInput] = useState('');
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [lastEventId, setLastEventId] = useState<string | null>(null);
 
   const addTag = () => {
     const t = tagInput.trim();
@@ -60,12 +64,20 @@ export default function ConquistaManualComposer(): React.ReactElement {
   const mutation = useMutation({
     mutationFn: (payload: CriarConquistaManualPayload) =>
       conquistasApi.createManual(payload),
-    onSuccess: () => {
+    onSuccess: (res) => {
       toast({ title: 'Conquista submetida!', description: 'A tua conquista será validada pelo ecossistema.', variant: 'success' });
-      navigate('/app/conquistas');
+      if (res.eventId) {
+        setLastEventId(res.eventId);
+      } else {
+        navigate('/app/conquistas');
+      }
     },
-    onError: () => {
-      toast({ title: 'Erro ao submeter', description: 'Não foi possível registar a conquista. Tenta novamente.', variant: 'error' });
+    onError: (error: unknown) => {
+      toast({
+        title: 'Erro ao submeter',
+        description: error instanceof Error ? error.message : 'Não foi possível registar a conquista. Tenta novamente.',
+        variant: 'error',
+      });
     },
   });
 
@@ -75,39 +87,48 @@ export default function ConquistaManualComposer(): React.ReactElement {
     e.preventDefault();
     if (!isValid) return;
 
-    mutation.mutate({
+    const parsed = CriarConquistaManualPayloadSchema.safeParse({
       titulo,
       descricao,
-      categoria: categoria || undefined,
+      categoria: categoria.trim() || undefined,
       mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
       tags: tags.length > 0 ? tags : undefined,
     });
+
+    if (!parsed.success) {
+      setValidationError(parsed.error.issues[0]?.message ?? 'Conquista inválida.');
+      return;
+    }
+
+    setValidationError(null);
+    mutation.mutate(parsed.data);
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 pb-20 animate-in fade-in duration-700">
-      <div className="flex items-center gap-4">
-        <Link to="/app/conquistas">
-          <Button variant="ghost" size="sm" className="rounded-xl">
-            <ArrowLeft size={16} className="mr-2" /> Voltar
-          </Button>
-        </Link>
-        <div>
-          <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 px-2 py-0.5 uppercase tracking-widest text-[8px] font-black mb-1">
-            Merit Registry
-          </Badge>
-          <h1 className="text-2xl font-black tracking-tight font-display">
-            Registar Conquista Manual
-          </h1>
+    <>
+      <div className="mx-auto max-w-2xl space-y-8 pb-20 animate-in fade-in duration-700">
+        <div className="flex items-center gap-4">
+          <Link to="/app/conquistas">
+            <Button variant="ghost" size="sm" className="rounded-xl">
+              <ArrowLeft size={16} className="mr-2" /> Voltar
+            </Button>
+          </Link>
+          <div>
+            <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 px-2 py-0.5 uppercase tracking-widest text-[8px] font-black mb-1">
+              Merit Registry
+            </Badge>
+            <h1 className="text-2xl font-black tracking-tight font-display">
+              Registar Conquista Manual
+            </h1>
+          </div>
         </div>
-      </div>
 
-      <p className="text-ink-secondary text-sm leading-relaxed">
-        Submete realizações fora do ecossistema digital para enriquecer o teu portfólio de mérito.
-        Conquistas de autores com mais de 7 dias na plataforma são auto-aprovadas.
-      </p>
+        <p className="text-ink-secondary text-sm leading-relaxed">
+          Submete realizações fora do ecossistema digital para enriquecer o teu portfólio de mérito.
+          Conquistas de autores com mais de 7 dias na plataforma são auto-aprovadas.
+        </p>
 
-      <Card className="p-8 border-white/5 bg-elevated/50">
+        <Card className="p-8 border-white/5 bg-elevated/50">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-ink-tertiary">
@@ -215,10 +236,13 @@ export default function ConquistaManualComposer(): React.ReactElement {
           </div>
 
           <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-            <p className="text-[10px] text-ink-tertiary flex items-center gap-2">
-              <Trophy size={14} className="text-accent" />
-              Validada pelo motor de mérito G15
-            </p>
+            <div className="space-y-1">
+              <p className="text-[10px] text-ink-tertiary flex items-center gap-2">
+                <Trophy size={14} className="text-accent" />
+                Validada pelo motor de mérito G15
+              </p>
+              {validationError && <p className="text-[10px] text-error">{validationError}</p>}
+            </div>
             <Button
               type="submit"
               disabled={!isValid || mutation.isPending}
@@ -228,7 +252,26 @@ export default function ConquistaManualComposer(): React.ReactElement {
             </Button>
           </div>
         </form>
-      </Card>
-    </div>
+        </Card>
+      </div>
+      <AnimatePresence>
+        {lastEventId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-canvas/95 p-6 backdrop-blur-md"
+          >
+            <div className="w-full max-w-xl">
+              <EcosystemImpactPanel
+                eventId={lastEventId}
+                variant="full"
+                onComplete={() => { navigate('/app/conquistas'); }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

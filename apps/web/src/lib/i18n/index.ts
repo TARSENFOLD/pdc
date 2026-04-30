@@ -7,7 +7,7 @@ export const SUPPORTED_LOCALES = ['pt-PT', 'pt-BR', 'en'] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_LOCALE: SupportedLocale = 'pt-PT';
-export const NAMESPACES = ['common', 'glossary'] as const;
+export const NAMESPACES = ['common', 'glossary', 'dashboard', 'landing'] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 
 const STORAGE_KEY = 'pdc:locale';
@@ -44,6 +44,7 @@ void i18n
   });
 
 export { i18n };
+export default i18n;
 
 export function setLocale(locale: SupportedLocale): void {
   try {

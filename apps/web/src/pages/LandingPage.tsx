@@ -5,6 +5,7 @@ import { LandingMarquee } from '../features/landing/LandingMarquee';
 import { LandingDestaques } from '../features/landing/LandingDestaques';
 import { CarrosselInstituicoes } from '../features/landing/CarrosselInstituicoes';
 import { LandingProblema } from '../features/landing/LandingProblema';
+import { LandingVisualDesk } from '../features/landing/LandingVisualDesk';
 import { LandingComoFunciona } from '../features/landing/LandingComoFunciona';
 import { LandingFeatures } from '../features/landing/LandingFeatures';
 import { LandingMentores } from '../features/landing/LandingMentores';
@@ -29,6 +30,7 @@ export function LandingPage() {
         <LandingDestaques />
         <CarrosselInstituicoes />
         <LandingProblema />
+        <LandingVisualDesk />
         <LandingComoFunciona />
         <LandingFeatures />
         <LandingMentores />

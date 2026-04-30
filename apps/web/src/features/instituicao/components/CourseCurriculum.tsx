@@ -6,7 +6,15 @@ import type { CriarCursoPayload } from '@pdc/shared';
 
 interface Props {
   register: UseFormRegister<CriarCursoPayload>;
-  modulosArray: UseFieldArrayReturn<CriarCursoPayload, 'modulos', 'id'>;
+  modulosArray: UseFieldArrayReturn<CriarCursoPayload, 'modulos'>;
+}
+
+function moduloPath(index: number, field: 'titulo') {
+  return ['modulos', index, field].join('.') as `modulos.${number}.${typeof field}`;
+}
+
+function itemPath(index: number, itemIndex: number, field: 'tipo' | 'titulo') {
+  return ['modulos', index, 'itens', itemIndex, field].join('.') as `modulos.${number}.itens.${number}.${typeof field}`;
 }
 
 export function CourseCurriculum({ register, modulosArray }: Props) {
@@ -23,7 +31,7 @@ export function CourseCurriculum({ register, modulosArray }: Props) {
           type="button" 
           variant="outline" 
           size="sm" 
-          onClick={() => appendModulo({ titulo: `Novo Módulo ${modulos.length + 1}`, ordem: modulos.length + 1, itens: [{ titulo: 'Novo Conteúdo', tipo: 'texto', ordem: 1 }] })} 
+          onClick={() => { appendModulo({ titulo: `Novo Módulo ${String(modulos.length + 1)}`, ordem: modulos.length + 1, itens: [{ titulo: 'Novo Conteúdo', tipo: 'texto', ordem: 1 }] }); }} 
           className="gap-2"
         >
           <Plus size={16} /> Adicionar Módulo
@@ -44,8 +52,8 @@ export function CourseCurriculum({ register, modulosArray }: Props) {
                   <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center font-black text-accent">{index + 1}</div>
                   <div className="flex-1 space-y-4">
                     <div className="flex gap-4">
-                      <Input className="bg-transparent border-b border-t-0 border-x-0 rounded-none focus:border-accent" {...register(`modulos.${index}.titulo` as const)} placeholder="Nome do Módulo" />
-                      <button type="button" onClick={() => removeModulo(index)} className="text-error opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-error/10 rounded-lg">
+	                      <Input className="bg-transparent border-b border-t-0 border-x-0 rounded-none focus:border-accent" {...register(moduloPath(index, 'titulo'))} placeholder="Nome do Módulo" />
+                      <button type="button" onClick={() => { removeModulo(index); }} className="text-error opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-error/10 rounded-lg">
                         <Trash2 size={20} />
                       </button>
                     </div>
@@ -56,13 +64,13 @@ export function CourseCurriculum({ register, modulosArray }: Props) {
                          <BookOpen size={12} /> Conteúdos do Módulo
                        </div>
                        <div className="flex gap-3">
-                         <select {...register(`modulos.${index}.itens.0.tipo` as const)} className="bg-canvas border border-white/10 rounded-lg px-3 py-1 text-xs">
+	                         <select {...register(itemPath(index, 0, 'tipo'))} className="bg-canvas border border-white/10 rounded-lg px-3 py-1 text-xs">
                            <option value="video">🎥 Vídeo</option>
                            <option value="tarefa">🛠️ Tarefa Prática</option>
                            <option value="quiz">🧠 Quiz</option>
                            <option value="texto">📄 Texto</option>
                          </select>
-                         <Input className="h-8 text-xs bg-canvas/50" {...register(`modulos.${index}.itens.0.titulo` as const)} placeholder="Título do Conteúdo" />
+	                         <Input className="h-8 text-xs bg-canvas/50" {...register(itemPath(index, 0, 'titulo'))} placeholder="Título do Conteúdo" />
                        </div>
                     </div>
                   </div>

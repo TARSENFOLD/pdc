@@ -30,7 +30,7 @@ experienciaRoutes.get('/', async (c) => {
       sort: 'createdAt:desc'
     });
     return c.json(res);
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Falha ao sincronizar o catálogo de experiências' }, 502);
   }
 });
@@ -44,8 +44,39 @@ experienciaRoutes.get('/minhas', checkRole(['instituicao', 'mentor', 'super_admi
       populate: 'capa',
     });
     return c.json(res);
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao recuperar as tuas experiências' }, 502);
+  }
+});
+
+// GET /experiencias/stats — KPIs para o dashboard institucional
+experienciaRoutes.get('/stats', checkRole(['instituicao', 'super_admin']), async (c) => {
+  const { id: userId } = c.get('user');
+  try {
+    const [experiencias, programas, inscricoes] = await Promise.all([
+      strapiGet<{ id: string }>('/experiencias', {
+        'filters[instituicaoId][$eq]': userId,
+        'filters[estado][$eq]': 'published',
+        'pagination[pageSize]': '1',
+      }),
+      strapiGet<{ id: string }>('/programas', {
+        'filters[instituicaoId][$eq]': userId,
+        'filters[estado][$eq]': 'activo',
+        'pagination[pageSize]': '1',
+      }),
+      strapiGet<{ id: string }>('/inscricoes', {
+        'filters[experiencia][instituicaoId][$eq]': userId,
+        'pagination[pageSize]': '1',
+      }),
+    ]);
+
+    return c.json({
+      experienciasPublicadas: experiencias.meta.pagination.total,
+      programasActivos: programas.meta.pagination.total,
+      inscricoesTotais: inscricoes.meta.pagination.total,
+    });
+  } catch {
+    return c.json({ error: 'Falha ao obter estatísticas institucionais' }, 502);
   }
 });
 
@@ -75,9 +106,9 @@ experienciaRoutes.post('/',
 
       return c.json({
         ...res.data,
-        eventId: event?.id
+        eventId: event.id
       }, 201);
-    } catch (_err) {
+    } catch {
       return c.json({ error: 'Falha na persistência da experiência' }, 502);
     }
   }
@@ -104,7 +135,7 @@ experienciaRoutes.put('/:id',
 
       const resPut = await strapiPut<Experiencia>(`/experiencias/${id}`, body);
       return c.json(resPut.data);
-    } catch (_err) {
+    } catch {
       return c.json({ error: 'Falha na atualização da experiência' }, 502);
     }
   }
@@ -163,7 +194,7 @@ experienciaRoutes.patch('/:id/estado',
     }
 
     return c.json({ success: true });
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Falha na transição de estado' }, 502);
   }
 });

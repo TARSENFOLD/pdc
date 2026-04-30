@@ -51,7 +51,7 @@ export default {
     if (missing.length > 0) {
       // Revert to draft instead of publishing
       data.publishedAt = null;
-      strapi.log.warn({ missing, programaId: id }, 'Programa bloqueado: campos obrigatórios em falta');
+      strapi.log.warn('Programa bloqueado: campos obrigatórios em falta', { missing, programaId: id });
       throw new Error(`Campos obrigatórios em falta para publicar o Programa: ${missing.join(', ')}`);
     }
   },

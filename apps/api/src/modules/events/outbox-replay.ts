@@ -25,7 +25,7 @@ export async function replayUnprocessedEvents() {
     });
     
     const events = res.data;
-    if (!events || events.length === 0) {
+    if (events.length === 0) {
       log.info('Nenhum evento pendente encontrado no Outbox.');
       return;
     }
@@ -74,14 +74,15 @@ export async function replayUnprocessedEvents() {
         });
       }
     }
-  } catch (err) {
+  } catch (err: unknown) {
     log.error({ err }, 'Erro fatal no script de replay do Outbox.');
   }
 }
 
 // Se foi invocado diretamente pela CLI
-if (import.meta.url === `file://${process.argv[1]}`) {
-  replayUnprocessedEvents().catch(err => {
+const entrypoint = process.argv[1];
+if (entrypoint && import.meta.url === `file://${entrypoint}`) {
+  replayUnprocessedEvents().catch((err: unknown) => {
     log.fatal({ err }, 'Falha fatal no Replay Worker');
     process.exit(1);
   });

@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { eventBus } from './event-bus.js';
 import { strapiPost, strapiPut } from '../strapi/strapi.client.js';
+import { DomainEventName, type StrapiSingleResponse } from '@pdc/shared';
+
+function singleResponse<T>(data: T & { id: string | number }): StrapiSingleResponse<T> {
+  return { data, meta: {} };
+}
 
 vi.mock('../strapi/strapi.client.js', () => ({
   strapiPost: vi.fn(),
@@ -21,10 +26,13 @@ describe('EventBus Integration', () => {
   });
 
   it('deve marcar evento como processado após execução', async () => {
-    vi.mocked(strapiPost).mockResolvedValueOnce({ data: { id: 100 } } as any);
-    vi.mocked(strapiPut).mockResolvedValueOnce({ data: { id: 100, processed: true } } as any);
+    vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({ id: 100 }));
+    vi.mocked(strapiPut).mockResolvedValueOnce(singleResponse({ id: 100, processed: true }));
 
-    await eventBus.publishWithOutbox('test.event' as any, { foo: 'bar' });
+    await eventBus.publishWithOutbox(DomainEventName.CURSO_ATUALIZADO, {
+      cursoId: 'curso-1',
+      autorId: 'autor-1',
+    });
 
     expect(strapiPut).toHaveBeenCalledWith(expect.stringContaining('/100'), expect.objectContaining({
       processed: true

@@ -2,7 +2,7 @@ import { http } from './http';
 import {
   CursoPublico, SimulacaoPublica,
   MentorPublico, InstituicaoPublica, PerfilCompleto,
-  ExplorarResultado, CatalogoMeta,
+  ExplorarResultado, CatalogoMeta, ExplorarItemTipo, AreaVocacional,
 } from '@pdc/shared';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -25,7 +25,7 @@ interface BaseFilters { page?: number; pageSize?: number; search?: string; area?
 interface CursoFiltersPublic extends BaseFilters { nivel?: string; gratuito?: boolean }
 interface SimulacaoFiltersPublic extends BaseFilters { tipo?: string; nivel?: string }
 interface InstituicaoFiltersPublic extends BaseFilters { tipo?: string; regiao?: string }
-interface ExplorarParams extends BaseFilters { tipo?: string }
+interface ExplorarParams extends Omit<BaseFilters, 'area'> { tipo?: ExplorarItemTipo; area?: AreaVocacional }
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
@@ -58,5 +58,5 @@ export const catalogoApi = {
     http.get<DetailResponse<PerfilCompleto>>(`/catalogo/perfil/${id}`).then((r) => r.data),
 
   explorar: (p?: ExplorarParams) =>
-    http.get<CatalogoResponse<ExplorarResultado>>(`/catalogo/explorar${qs({ ...p })}`),
+    http.get<ExplorarResultado>(`/catalogo/explorar${qs({ ...p })}`),
 };

@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
-import { CatalogoGridShell } from '@/components/catalogo/CatalogoGridShell';
-import { CatalogoFilterBar } from '@/components/catalogo/CatalogoFilterBar';
-import { ContentCard } from '@/components/catalogo/ContentCard';
+import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
+import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
+import ContentCard from '@/components/catalogo/ContentCard';
 import { Building2, MapPin } from 'lucide-react';
 import type { InstituicaoPublica } from '@pdc/shared';
 
@@ -69,7 +69,7 @@ export function InstituicoesCatalogoPage() {
         <CatalogoGridShell
           isLoading={isLoading}
           isEmpty={insts.length === 0}
-          onClearFilters={() => setSp(new URLSearchParams())}
+          onClearFilters={() => { setSp(new URLSearchParams()); }}
           filterBar={
             <CatalogoFilterBar
               searchTerm={search}
@@ -77,7 +77,7 @@ export function InstituicoesCatalogoPage() {
               areas={TIPOS}
               selectedArea={tipo}
               onAreaChange={handleTipoChange}
-              totalResults={data?.meta?.total}
+              totalResults={data?.meta.total}
             />
           }
         >

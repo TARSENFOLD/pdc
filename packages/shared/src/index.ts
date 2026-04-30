@@ -42,5 +42,8 @@ export * from './schemas/copy.js';
 // Cold Storage (Telemetria Inválida — Compliance)
 export * from './cold-storage.js';
 
+// Entitlements B2B (Features e Quotas por Subscrição)
+export * from './entitlements.js';
+
 // Dicionário Canónico de UI
 export * from './glossary.js';

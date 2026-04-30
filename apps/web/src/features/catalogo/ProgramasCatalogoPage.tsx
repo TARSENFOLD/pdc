@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { programasApi } from '@/lib/api/programas';
 import { SEOHead } from '@/components/layout/SEOHead';
-import { CatalogoGridShell } from '@/components/catalogo/CatalogoGridShell';
-import { CatalogoFilterBar } from '@/components/catalogo/CatalogoFilterBar';
-import { ContentCard } from '@/components/catalogo/ContentCard';
+import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
+import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
+import ContentCard from '@/components/catalogo/ContentCard';
 import { Briefcase, Layers } from 'lucide-react';
+import type { Programa } from '@pdc/shared';
 
 const TIPOS = [
   { value: 'standard', label: 'Standard' },
@@ -64,12 +65,12 @@ export function ProgramasCatalogoPage() {
               image={p.capaUrl || undefined}
               href={`/programas/${p.slug || p.id}`}
               badges={[
-                { label: p.tipo?.toUpperCase() || 'PROGRAMA', variant: 'info' },
+                { label: p.tipo.toUpperCase(), variant: 'info' },
                 { label: p.area, variant: 'outline' }
               ]}
               footerInfo={[
                 { icon: Briefcase, label: p.modalidade || 'Presencial' },
-                { icon: Layers, label: `${p.vagas || 0} vagas` }
+                { icon: Layers, label: `${String(p.vagas || 0)} vagas` }
               ]}
             />
           ))}

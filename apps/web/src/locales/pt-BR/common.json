@@ -33,11 +33,66 @@
     "network": "Erro de rede. Verifique sua conexão."
   },
   "auth": {
+    "onboarding": {
+      "badge": "PDC — Onboarding",
+      "title": "Como você quer usar o PDC?",
+      "subtitle": "Escolha o seu perfil para personalizar a sua infraestrutura de decisão."
+    },
+    "roles": {
+      "student": {
+        "title": "Estudante",
+        "desc": "Descubra a sua vocação e explore carreiras com IA.",
+        "features": [
+          "Simulações vocacionais",
+          "Perfil vocacional IA",
+          "Mentorias personalizadas",
+          "Cursos e certificados"
+        ]
+      },
+      "mentor": {
+        "title": "Mentor",
+        "desc": "Oriente estudantes e compartilhe o seu conhecimento.",
+        "features": [
+          "Criar cursos e simulações",
+          "Gerenciar mentorados",
+          "Analytics de impacto",
+          "Reputação profissional"
+        ]
+      },
+      "institution": {
+        "title": "Instituição",
+        "desc": "Atraia talentos e apresente os seus cursos.",
+        "features": [
+          "Página institucional",
+          "Publicar experiências",
+          "Propostas a estudantes",
+          "Relatórios de evasão"
+        ]
+      }
+    },
+    "common": {
+      "start": "Começar",
+      "login_link_prefix": "Já tem uma conta ativa?",
+      "login_link_action": "Entrar agora"
+    },
     "login": "Entrar",
     "logout": "Sair",
-    "register": "Cadastrar",
+    "register": "Registrar",
     "email": "Email",
     "password": "Senha",
-    "forgot_password": "Esqueceu a senha?"
+    "forgot_password": "Esqueceu a senha?",
+    "login_page": {
+      "title": "Login.",
+      "subtitle": "Bem-vindo de volta ao seu futuro.",
+      "email_label": "Identificação Acadêmica",
+      "password_label": "Chave de Acesso",
+      "submit_loading": "Processando...",
+      "submit": "Acessar Plataforma",
+      "divider": "ou",
+      "google_cta": "Continuar com Google",
+      "forgot_link": "Esqueci minha senha",
+      "register_link": "Criar conta acadêmica",
+      "error_generic": "Erro ao fazer login. Verifique suas credenciais."
+    }
   }
 }

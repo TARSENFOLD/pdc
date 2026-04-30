@@ -26,7 +26,6 @@ import { catalogoRoutes } from './routes/catalogo.js';
 import { simulacaoRoutes } from './routes/simulacoes.js';
 import { telemetriaRoutes } from './routes/telemetria.js';
 import { tinaRoutes } from './routes/tina.js';
-import { homeRoutes } from './routes/home.js';
 import { experienciaRoutes } from './routes/experiencias.js';
 import { programaRoutes } from './routes/programas.js';
 import { propostaRoutes } from './routes/propostas.js';
@@ -51,7 +50,10 @@ import { denunciaRoutes } from './routes/denuncias.js';
 import { featureFlagsRoutes } from './routes/feature-flags.js';
 import { domainEventRoutes } from './routes/domain-events.js';
 import { matchRoutes } from './routes/match.js';
+import { reputationRoutes } from './routes/reputation.js';
+import { rankingRoutes } from './routes/ranking.js';
 import { bootstrapRoutes } from './routes/bootstrap.js';
+import { dashboardRoutes } from './routes/dashboard/index.js';
 import { landingRoutes } from './routes/landing.js';
 import { healthRoutes } from './routes/health.js';
 
@@ -91,7 +93,6 @@ app.route('/catalogo', catalogoRoutes);
 app.route('/simulacoes', simulacaoRoutes);
 app.route('/telemetria', telemetriaRoutes);
 app.route('/tina', tinaRoutes);
-app.route('/app/home', homeRoutes);
 interface UiString { key: string; value: string }
 const VALID_CONTEXTS = ['landing', 'auth', 'dashboard', 'cursos', 'simulacoes', 'global'];
 
@@ -108,8 +109,6 @@ app.get('/app/copy/:contexto', async (c) => {
       'pagination[pageSize]': '1000'
     });
     
-    if (!res.data) return c.json({});
-
     const map: Record<string, string> = {};
     res.data.forEach((s) => { 
       if (s.key && s.value) map[s.key] = s.value; 
@@ -143,7 +142,11 @@ app.route('/perfis', perfilRoutes);
 app.route('/denuncias', denunciaRoutes);
 app.route('/feature-flags', featureFlagsRoutes);
 app.route('/domain-events', domainEventRoutes);
+app.route('/dashboard', dashboardRoutes);
 app.route('/match', matchRoutes);
+app.route('/reputacao', reputationRoutes);
+app.route('/reputation', reputationRoutes);
+app.route('/ranking', rankingRoutes);
 
 // ─── WELL-KNOWN ───
 app.get('/.well-known/jwks.json', async (c) => {

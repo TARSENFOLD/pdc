@@ -1,15 +1,17 @@
 import { z } from 'zod';
 import { AreaVocacionalSchema } from './enums.js';
+import { PerfilPublicoSchema } from '../user.js';
 
-// Modos do projeto (4 modos canónicos)
-export const ProjetoModoSchema = z.enum(['exposicao', 'colaboracao', 'mentoria', 'financiamento']);
+// Modos do projeto (5 modos canónicos)
+export const ProjetoModoSchema = z.enum(['exposicao', 'colaboracao', 'mentoria', 'financiamento', 'feedbackComunitario']);
+export type ProjetoModo = z.infer<typeof ProjetoModoSchema>;
 export const ProjetoEstadoSchema = z.enum(['draft', 'review', 'approved', 'published', 'archived']);
 export const ProjetoVisibilidadeSchema = z.enum(['publico', 'privado']);
 
 // ACL Entry
 export const ACLEntrySchema = z.object({
   perfilId: z.string(),
-  estado: z.enum(['pending', 'approved', 'rejected']),
+  estado: z.enum(['pendente', 'aprovado', 'rejeitado']),
   solicitadoEm: z.string().datetime(),
   respondidoEm: z.string().datetime().optional(),
 });
@@ -35,12 +37,15 @@ export const HistoricoEstadoSchema = z.object({
 
 export type HistoricoEstado = z.infer<typeof HistoricoEstadoSchema>;
 
+export const SeloSchema = z.enum(['aptidao_validada']).optional();
+export type Selo = z.infer<typeof SeloSchema>;
+
 export const ProjetoSchema = z.object({
   id: z.string(),
   titulo: z.string(),
   descricao: z.string().optional(), // DEPRECATED
-  abstract: z.string().min(10).max(1000), // Resumo público
-  core: z.string().min(10).max(5000).optional(), // Detalhes privados (null se não tiver acesso)
+  abstract: z.string().min(10).max(1000),
+  core: z.string().min(10).max(5000).optional(),
   area: AreaVocacionalSchema.optional(),
   estudanteId: z.string().optional(),
   capaUrl: z.string().url().optional(),
@@ -51,10 +56,11 @@ export const ProjetoSchema = z.object({
   estado: ProjetoEstadoSchema,
   visibilidade: ProjetoVisibilidadeSchema.optional(),
   buscandoParceiros: z.boolean().optional(),
-  modos: z.array(ProjetoModoSchema).min(1).max(4).refine(
+  modos: z.array(ProjetoModoSchema).min(1).max(5).refine(
     arr => new Set(arr).size === arr.length,
     { message: 'Modos devem ser únicos' }
   ),
+  selo: SeloSchema,
   acessoCoreACL: z.array(ACLEntrySchema).optional(),
   votos: z.array(VotoSchema).optional(),
   historicoEstados: z.array(HistoricoEstadoSchema).optional(),
@@ -84,7 +90,7 @@ export const CriarProjetoPayloadBaseSchema = z.object({
   tags: z.array(z.string()).max(10).default([]),
   visibilidade: ProjetoVisibilidadeSchema.optional(),
   buscandoParceiros: z.boolean().optional(),
-  modos: z.array(ProjetoModoSchema).min(1).max(4).refine(
+  modos: z.array(ProjetoModoSchema).min(1).max(5).refine(
     arr => new Set(arr).size === arr.length,
     { message: 'Modos devem ser únicos' }
   ),
@@ -121,13 +127,33 @@ export const CriarProjetoPayloadSchema = CriarProjetoPayloadBaseSchema.refine(
 
 export type CriarProjetoPayload = z.infer<typeof CriarProjetoPayloadSchema>;
 
-// Schema para gerir ACL (aprovar/rejeitar acesso ao core)
+// Schema para gerir ACL (aprovar/rejeitar/remover acesso ao core)
 export const GerirACLSchema = z.object({
   perfilId: z.string(),
-  acao: z.enum(['aprovar', 'rejeitar']),
+  acao: z.enum(['aprovar', 'rejeitar', 'remover']),
 });
 
 export type GerirACLPayload = z.infer<typeof GerirACLSchema>;
+
+// Schema para votar/endorsar um projeto
+export const VotoProjetoPayloadSchema = z.object({
+  tipo: z.enum(['endorsement', 'voto']),
+  comentario: z.string().max(500).optional(),
+});
+
+export type VotoProjetoPayload = z.infer<typeof VotoProjetoPayloadSchema>;
+
+export const PedidoAcessoSchema = z.object({
+  id: z.string().or(z.number()),
+  projeto: z.string().or(z.number()).optional(),
+  perfilSolicitante: PerfilPublicoSchema.optional(),
+  motivo: z.string().optional(),
+  status: z.enum(['pendente', 'aprovado', 'rejeitado']),
+  dataResposta: z.string().datetime().optional(),
+  createdAt: z.string().datetime().optional(),
+});
+
+export type PedidoAcesso = z.infer<typeof PedidoAcessoSchema>;
 
 export const ProjetoFiltersSchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),

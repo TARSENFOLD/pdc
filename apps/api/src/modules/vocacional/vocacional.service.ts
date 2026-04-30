@@ -2,7 +2,8 @@ import {
   type PerfilVocacional, 
   type Curso, 
   type BehaviorPattern, 
-  type PerfilCompleto 
+  type PerfilCompleto,
+  AreaVocacionalSchema,
 } from '@pdc/shared';
 import { type Recomendacao } from './vocacional.types.js';
 import { strapiGet } from '../strapi/strapi.client.js';
@@ -45,19 +46,24 @@ async function calcularPerfil(userId: string): Promise<PerfilVocacional> {
   const scoreGlobal = Math.round((behaviorAvg * 0.7 + xpFactor * 3) * 10);
   
   // 4. Identificação de Área por afinidade real
-  const areaMatch = patterns[0]?.domainId || perfil.areaInteresse || 'TECNOLOGIA';
+  const parsedArea = AreaVocacionalSchema.safeParse(patterns[0]?.domainId || perfil.areaInteresse);
+  const areaMatch = parsedArea.success ? parsedArea.data : 'TECNOLOGIA';
+  const now = new Date().toISOString();
 
   return {
-    estudanteId: userId,
+    id: perfil.id,
+    perfilId: perfil.id,
     scoreGlobal: Math.min(100, scoreGlobal),
     areaMatch,
-    certeza: patterns.length > 3 ? 0.9 : 0.6,
     aptidao: behaviorAvg / 10,
     dedicacao: Math.min(1, (perfil.xp || 0) / 10000),
-    consistencia: 1 - (dimensoes.hesitacao / 10),
-    diversidade: new Set(patterns.map(p => p.domainId)).size / 5,
-    updatedAt: new Date().toISOString(),
-    dimensoes
+    createdAt: now,
+    updatedAt: now,
+    dimensoes: {
+      fluidez: dimensoes.fluidez,
+      resiliencia: dimensoes.resiliencia,
+      foco: dimensoes.foco,
+    },
   };
 }
 
@@ -77,7 +83,7 @@ async function gerarRecomendacoes(perfil: PerfilVocacional | null): Promise<Reco
     const matchPercentagem = Math.max(70, 100 - diff);
 
     return {
-      id: String(curso.id),
+      id: curso.id,
       titulo: curso.titulo,
       tipo: 'curso',
       matchPercentagem: Math.round(matchPercentagem),

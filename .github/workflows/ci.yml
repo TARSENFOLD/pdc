@@ -98,6 +98,30 @@ jobs:
       - name: Build (packages/shared)
         run: npm run build -w packages/shared
 
+  # ─── Docs Validator — "Doc is Law" gate ────────────────────────────────────
+  docs:
+    name: "docs — link check + code references"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate internal links and code references
+        run: npm run validate:docs
+
+      - name: Lint Markdown
+        run: npm run lint:docs
+        continue-on-error: true
+
   # ─── E2E Smoke — Playwright (PRs + push) ────────────────────────────────────
   e2e-smoke:
     name: "e2e — Playwright smoke (Chromium)"

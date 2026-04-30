@@ -34,7 +34,26 @@ const JWT_OPTIONS = {
   algorithms: ['RS256'] as string[],
 };
 
-export const jwsVerifyMiddleware = async (c: Context, next: Next) => {
+export type EdgeContextEnv = {
+  Bindings: {
+    BFF_URL?: string;
+  };
+  Variables: {
+    userId: string;
+    perfilId: string;
+  };
+};
+
+function isJwksNoMatchingKey(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'ERR_JWKS_NO_MATCHING_KEY'
+  );
+}
+
+export const jwsVerifyMiddleware = async (c: Context<EdgeContextEnv>, next: Next) => {
   const headerToken = c.req.header('X-Telemetry-Token');
   const authHeader = c.req.header('Authorization');
   const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.replace('Bearer ', '') : undefined;
@@ -45,7 +64,7 @@ export const jwsVerifyMiddleware = async (c: Context, next: Next) => {
     return c.json({ error: 'Autoridade negada: token ausente' }, 401);
   }
 
-  const bffUrl = c.env.BFF_URL as string | undefined;
+  const bffUrl = c.env.BFF_URL;
   if (!bffUrl) {
     return c.json({ error: 'Configuração BFF_URL ausente no Edge' }, 500);
   }
@@ -70,7 +89,7 @@ export const jwsVerifyMiddleware = async (c: Context, next: Next) => {
     ({ payload: rawPayload } = await jwtVerify(token, jwks, JWT_OPTIONS));
   } catch (firstErr: unknown) {
     // kid not in cached JWKS → force-refresh once and retry (key rotation path)
-    if ((firstErr as { code?: string })?.code === 'ERR_JWKS_NO_MATCHING_KEY') {
+    if (isJwksNoMatchingKey(firstErr)) {
       try {
         jwks = invalidateJWKS(bffUrl);
         ({ payload: rawPayload } = await jwtVerify(token, jwks, JWT_OPTIONS));

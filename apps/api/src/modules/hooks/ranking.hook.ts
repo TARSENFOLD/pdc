@@ -30,7 +30,7 @@ export const rankingHook: EcosystemHook = {
       DomainEventName.LIKE_ADICIONADO
     ];
 
-    if (!meritEvents.includes(event.name as DomainEventName)) {
+    if (!meritEvents.includes(event.name)) {
       return { status: 'skipped', reason: 'not-a-merit-event' };
     }
 

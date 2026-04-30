@@ -7,13 +7,12 @@ const log = pino({ name: 'strapi-client' });
 const STRAPI_URL = env.STRAPI_URL;
 const STRAPI_API_TOKEN = env.STRAPI_API_TOKEN;
 
-function parseTimeoutEnv(envKey: string, defaultMs: number): number {
-  // @ts-ignore - dynamic access
-  const raw = env[envKey] as string | undefined;
+function parseTimeoutEnv(envKey: 'STRAPI_TIMEOUT' | 'STRAPI_WRITE_TIMEOUT', defaultMs: number): number {
+  const raw = env[envKey];
   if (raw === undefined || raw.trim() === '') return defaultMs;
   const parsed = parseInt(raw, 10);
   if (isNaN(parsed) || parsed <= 0) {
-    log.warn({ envKey, raw, fallback: defaultMs }, `Invalid timeout env var — using default`);
+    log.warn({ envKey, raw, fallback: defaultMs }, 'Invalid timeout env var — using default');
     return defaultMs;
   }
   return parsed;
@@ -47,7 +46,7 @@ function normalize<T>(response: T): T {
       }
       return item;
     });
-  } else if (typeof data === 'object' && 'attributes' in data && data !== null) {
+  } else if (typeof data === 'object' && 'attributes' in data) {
     const entry = data as { id: unknown; attributes: Record<string, unknown> };
     res['data'] = { id: entry.id, ...entry.attributes };
   }
@@ -93,7 +92,8 @@ export async function strapiGet<T>(
 ): Promise<StrapiListResponse<T>> {
   const url = new URL(`${STRAPI_URL}/api${path}`);
   if (params) {
-    for (let [k, v] of Object.entries(params)) {
+    for (const [k, originalValue] of Object.entries(params)) {
+      let v = originalValue;
       // Auto-convert comma-separated populate to array for Strapi v5
       if (k === 'populate' && typeof v === 'string' && v.includes(',')) {
         v = v.split(',').map(s => s.trim());
@@ -101,7 +101,7 @@ export async function strapiGet<T>(
 
       if (Array.isArray(v)) {
         v.forEach((val, i) => {
-          url.searchParams.append(`${k}[${i}]`, val);
+          url.searchParams.append(`${k}[${String(i)}]`, val);
         });
       } else {
         url.searchParams.set(k, v);

@@ -1,7 +1,7 @@
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { http } from '@/lib/api/http';
+import { dashboardApi } from '@/lib/api/dashboard';
 import { 
   Spinner, 
   Badge, 
@@ -11,7 +11,7 @@ import {
   BentoTile,
   GlassCard
 } from '@/components/ui';
-import { ContentTypeCTAGrid } from '@/components/dashboard/ContentTypeCTAGrid';
+import ContentTypeCTAGrid from '@/components/dashboard/ContentTypeCTAGrid';
 import {
   Users,
   Brain,
@@ -27,15 +27,6 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 import { motion } from 'motion/react';
-
-interface EstudantePattern {
-  perfil: { id: string; nome: string; avatarUrl?: string };
-  cognitiveFluidity: number;
-  resilienceIndex: number;
-  hesitationIndex: number;
-  technicalScore: number;
-  lastUpdatedAt: string;
-}
 
 const container = {
   hidden: { opacity: 0 },
@@ -53,10 +44,11 @@ const item = {
 export function MentorDashboard() {
   const { user } = useAuth();
 
-  const { data: patterns, isLoading } = useQuery<EstudantePattern[]>({
-    queryKey: ['mentor', 'patterns'],
-    queryFn: () => http.get<EstudantePattern[]>('/telemetria/patterns'),
+  const { data: dashboard, isLoading } = useQuery({
+    queryKey: ['dashboard', 'mentor'],
+    queryFn: () => dashboardApi.getMentor(),
   });
+  const patterns = dashboard?.patterns ?? [];
 
   if (isLoading) return <div className="flex h-screen items-center justify-center bg-canvas"><Spinner size="lg" /></div>;
 
@@ -86,7 +78,7 @@ export function MentorDashboard() {
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] text-ink-tertiary font-black uppercase tracking-widest">Total Talentos</span>
-              <span className="font-mono font-black text-2xl tracking-tighter text-ink-primary">{patterns?.length || 0}</span>
+              <span className="font-mono font-black text-2xl tracking-tighter text-ink-primary">{dashboard?.stats.totalTalentos ?? 0}</span>
             </div>
           </GlassCard>
         </div>
@@ -116,9 +108,7 @@ export function MentorDashboard() {
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Mérito Médio</p>
             <p className="text-3xl font-black font-mono tracking-tighter">
-              {patterns && patterns.length > 0 
-                ? (patterns.reduce((acc, p) => acc + p.technicalScore, 0) / patterns.length).toFixed(1)
-                : '0.0'}
+              {dashboard?.stats.meritoMedio.toFixed(1) ?? '0.0'}
             </p>
           </div>
         </BentoTile>
@@ -139,7 +129,7 @@ export function MentorDashboard() {
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {patterns?.length === 0 ? (
+          {patterns.length === 0 ? (
             <AspirationalEmpty
               icon={Users}
               title="Aguardando Orientandos"
@@ -152,7 +142,7 @@ export function MentorDashboard() {
                 </AsymmetricButton>
               </Link>
             </AspirationalEmpty>
-          ) : patterns?.map((p) => (
+          ) : patterns.map((p) => (
             <motion.div key={p.perfil.id} variants={item}>
               <GlassCard className="p-6 border-ink-tertiary/10 hover:border-accent/20 transition-all group overflow-hidden relative rounded-xl">
                 <div className="flex items-center gap-4 mb-6">
@@ -177,7 +167,7 @@ export function MentorDashboard() {
                   <div className="h-1.5 w-full bg-recessed rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${p.cognitiveFluidity * 10}%` }}
+                      animate={{ width: `${String(p.cognitiveFluidity * 10)}%` }}
                       className="h-full bg-accent" 
                     />
                   </div>
@@ -191,7 +181,7 @@ export function MentorDashboard() {
                   <div className="h-1.5 w-full bg-recessed rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${(10 - p.hesitationIndex) * 10}%` }}
+                      animate={{ width: `${String((10 - p.hesitationIndex) * 10)}%` }}
                       className="h-full bg-institutional-cobalt" 
                     />
                   </div>

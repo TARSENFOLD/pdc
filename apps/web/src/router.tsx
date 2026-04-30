@@ -25,6 +25,7 @@ const MentorDashboard = React.lazy(() => import('@/pages/dashboard/MentorDashboa
 const InstituicaoDashboard = React.lazy(() => import('@/pages/dashboard/InstituicaoDashboard').then(m => ({ default: m.InstituicaoDashboard })));
 const ModeradorDashboard = React.lazy(() => import('@/pages/dashboard/ModeradorDashboard').then(m => ({ default: m.ModeradorDashboard })));
 const AdminDashboard = React.lazy(() => import('@/pages/dashboard/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const PatrocinadorDashboard = React.lazy(() => import('@/pages/dashboard/PatrocinadorDashboard').then(m => ({ default: m.PatrocinadorDashboard })));
 
 const CursoListPage = React.lazy(() => import('@/features/cursos/CursoListPage').then(m => ({ default: m.CursoListPage })));
 const CursoDetailPage = React.lazy(() => import('@/features/cursos/CursoDetailPage').then(m => ({ default: m.CursoDetailPage })));
@@ -38,7 +39,7 @@ const ConfiguracoesPage = React.lazy(() => import('@/features/perfil/Configuraco
 
 const ProjetoListPage = React.lazy(() => import('@/features/projetos/ProjetoListPage').then(m => ({ default: m.ProjetoListPage })));
 const ProjetoDetailPage = React.lazy(() => import('@/features/projetos/ProjetoDetailPage').then(m => ({ default: m.ProjetoDetailPage })));
-const ProjetoFormPage = React.lazy(() => import('@/features/projetos/ProjetoFormPage'));
+const ProjetoFormPage = React.lazy(() => import('@/features/projetos/ProjetoFormPage').then(m => ({ default: m.ProjetoFormPage })));
 
 const MentoriaListPage = React.lazy(() => import('@/features/mentorias/MentoriaListPage').then(m => ({ default: m.MentoriaListPage })));
 const ConquistasPage = React.lazy(() => import('@/features/conquistas/ConquistasPage').then(m => ({ default: m.ConquistasPage })));
@@ -49,8 +50,8 @@ const SimulacaoPlayerPage = React.lazy(() => import('@/features/simulacoes/Simul
 const RelatorioVocacional = React.lazy(() => import('@/features/simulacoes/RelatorioVocacional').then(m => ({ default: m.RelatorioVocacional })));
 
 const FeedPage = React.lazy(() => import('@/features/feed/FeedPage').then(m => ({ default: m.FeedPage })));
-const PostComposer = React.lazy(() => import('@/features/feed/PostComposer').then(m => ({ default: m.PostComposer })));
-const ConquistaManualComposer = React.lazy(() => import('@/features/conquistas/ConquistaManualComposer').then(m => ({ default: m.ConquistaManualComposer })));
+const PostComposer = React.lazy(() => import('@/features/feed/PostComposer'));
+const ConquistaManualComposer = React.lazy(() => import('@/features/conquistas/ConquistaManualComposer'));
 
 const DenunciaListPage = React.lazy(() => import('@/features/moderacao/DenunciaListPage').then(m => ({ default: m.DenunciaListPage })));
 const DenunciaDetailPage = React.lazy(() => import('@/features/moderacao/DenunciaDetailPage').then(m => ({ default: m.DenunciaDetailPage })));
@@ -97,7 +98,7 @@ const MentoradosPage = React.lazy(() => import('@/features/mentor/MentoradosPage
 const MentorAnalyticsPage = React.lazy(() => import('@/features/mentor/MentorAnalyticsPage').then(m => ({ default: m.MentorAnalyticsPage })));
 
 const SovereignCourseBuilder = React.lazy(() => import('@/features/instituicao/SovereignCourseBuilder').then(m => ({ default: m.SovereignCourseBuilder })));
-const HomePage = React.lazy(() => import('@/features/home/HomePage').then(m => ({ default: m.HomePage })));
+const HomePage = React.lazy(() => import('@/features/home/HomePage'));
 
 // --- Lazy-loaded public non-critical pages ---
 const ExplorarPage = React.lazy(() => import('@/features/catalogo/ExplorarPage').then(m => ({ default: m.ExplorarPage })));
@@ -153,11 +154,13 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardRedirect /> },
       { path: 'home', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><HomePage /></Suspense> },
-      { path: 'dashboard/estudante', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><EstudanteDashboard /></Suspense> },
-      { path: 'dashboard/mentor', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><MentorDashboard /></Suspense> },
-      { path: 'dashboard/instituicao', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><InstituicaoDashboard /></Suspense> },
-      { path: 'dashboard/moderador', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ModeradorDashboard /></Suspense> },
-      { path: 'dashboard/admin', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><AdminDashboard /></Suspense> },
+      { path: 'dashboard/estudante', element: <RoleGuard allowed={['estudante', 'super_admin']}><Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><EstudanteDashboard /></Suspense></RoleGuard> },
+      { path: 'dashboard/mentor', element: <RoleGuard allowed={['mentor', 'super_admin']}><Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><MentorDashboard /></Suspense></RoleGuard> },
+      { path: 'dashboard/instituicao', element: <RoleGuard allowed={['instituicao', 'super_admin']}><Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><InstituicaoDashboard /></Suspense></RoleGuard> },
+      { path: 'dashboard/moderador', element: <RoleGuard allowed={['moderador', 'super_admin']}><Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ModeradorDashboard /></Suspense></RoleGuard> },
+      { path: 'dashboard/comite', element: <RoleGuard allowed={['comite_cientifico', 'super_admin']}><Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ComiteDashboard /></Suspense></RoleGuard> },
+      { path: 'dashboard/admin', element: <RoleGuard allowed={['super_admin']}><Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><AdminDashboard /></Suspense></RoleGuard> },
+      { path: 'dashboard/patrocinador', element: <RoleGuard allowed={['patrocinador', 'super_admin']}><Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><PatrocinadorDashboard /></Suspense></RoleGuard> },
       
       { path: 'feed', element: <FeedPage /> },
       { path: 'feed/criar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><PostComposer /></Suspense> },
@@ -185,10 +188,10 @@ export const router = createBrowserRouter([
       { path: 'conquistas/criar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ConquistaManualComposer /></Suspense> },
 
       // Estudante
-      { path: 'meus-cursos', element: <RoleGuard allowed={['estudante', 'aluno']}><MeusCursosPage /></RoleGuard> },
-      { path: 'guardados', element: <RoleGuard allowed={['estudante', 'aluno']}><GuardadosPage /></RoleGuard> },
-      { path: 'certificados', element: <RoleGuard allowed={['estudante', 'aluno']}><CertificadosPage /></RoleGuard> },
-      { path: 'ranking', element: <RoleGuard allowed={['estudante', 'aluno', 'mentor', 'instituicao', 'super_admin']}><RankingPage /></RoleGuard> },
+      { path: 'meus-cursos', element: <RoleGuard allowed={['estudante']}><MeusCursosPage /></RoleGuard> },
+      { path: 'guardados', element: <RoleGuard allowed={['estudante']}><GuardadosPage /></RoleGuard> },
+      { path: 'certificados', element: <RoleGuard allowed={['estudante']}><CertificadosPage /></RoleGuard> },
+      { path: 'ranking', element: <RoleGuard allowed={['estudante', 'mentor', 'instituicao', 'super_admin']}><RankingPage /></RoleGuard> },
 
       // Mentor
       { path: 'mentor/cursos', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentorCursosPage /></RoleGuard> },
@@ -234,7 +237,7 @@ export const router = createBrowserRouter([
       // Comité Científico
       {
         path: 'comite',
-        element: <RoleGuard allowed={['comite_cientifico', 'super_admin']}><ComiteDashboard /></RoleGuard>
+        element: <Navigate to="/app/dashboard/comite" replace />
       },
       {
         path: 'comite/validacao',
@@ -345,4 +348,12 @@ export const router = createBrowserRouter([
   { path: '/termos', element: <TermosPage /> },
   { path: '/privacidade', element: <PrivacidadePage /> },
   { path: '*', element: <NotFoundPage /> },
-]);
+], {
+  future: {
+    v7_relativeSplatPath: true,
+    v7_fetcherPersist: true,
+    v7_normalizeFormMethod: true,
+    v7_partialHydration: true,
+    v7_skipActionErrorRevalidation: true,
+  },
+});

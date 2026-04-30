@@ -34,7 +34,7 @@ programaRoutes.get('/', async (c) => {
       sort: 'createdAt:desc',
     });
     return c.json(res);
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao carregar programas' }, 502);
   }
 });
@@ -53,12 +53,12 @@ programaRoutes.get('/meus', async (c) => {
     if (!perfilId) return c.json({ data: [] });
 
     const res = await strapiGet<StrapiPrograma>('/inscricoes-programas', {
-      'filters[perfil][id][$eq]': String(perfilId),
+      'filters[perfil][id][$eq]': perfilId,
       populate: 'programa',
     });
 
     return c.json(res);
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao carregar teus programas' }, 502);
   }
 });
@@ -82,14 +82,14 @@ programaRoutes.get('/minhas', checkRole(['mentor', 'instituicao', 'super_admin']
 
     // Filtrar por criador baseado na role
     if (role === 'mentor' || role === 'super_admin') {
-      params['filters[responsavel][id][$eq]'] = String(perfilId);
+      params['filters[responsavel][id][$eq]'] = perfilId;
     } else if (role === 'instituicao') {
-      params['filters[instituicao][id][$eq]'] = String(perfilId);
+      params['filters[instituicao][id][$eq]'] = perfilId;
     }
 
     const res = await strapiGet<StrapiPrograma>('/programas', params);
     return c.json(res);
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao carregar programas criados' }, 502);
   }
 });
@@ -143,9 +143,9 @@ programaRoutes.post('/',
 
       return c.json({
         ...res.data,
-        eventId: event?.id
+        eventId: event.id
       }, 201);
-    } catch (_err) {
+    } catch {
       return c.json({ error: 'Falha ao criar programa' }, 502);
     }
   }
@@ -187,7 +187,7 @@ programaRoutes.put('/:id',
 
       const resPut = await strapiPut<StrapiPrograma>(`/programas/${id}`, body);
       return c.json(resPut.data);
-    } catch (_err) {
+    } catch {
       return c.json({ error: 'Falha ao atualizar programa' }, 502);
     }
   }
@@ -267,14 +267,14 @@ programaRoutes.patch('/:id/estado',
 
         await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_PUBLICADO, {
           programaId: id,
-          autorId: responsavelId ? String(responsavelId) : 'unknown',
+          autorId: responsavelId ?? 'unknown',
           titulo: programa.titulo,
-          instituicaoId: instituicaoId ? String(instituicaoId) : null,
+          instituicaoId: instituicaoId ?? 'unknown',
         });
       }
 
       return c.json({ success: true });
-    } catch (_err) {
+    } catch {
       return c.json({ error: 'Falha na transição de estado' }, 502);
     }
   }
@@ -316,7 +316,7 @@ programaRoutes.post('/:id/concluir', async (c) => {
     });
 
     return c.json({ success: true });
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao concluir programa' }, 502);
   }
 });

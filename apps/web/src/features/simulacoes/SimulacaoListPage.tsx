@@ -2,16 +2,18 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles, Target, Activity } from 'lucide-react';
 import { simulacoesApi } from '../../lib/api/simulacoes';
-import { CatalogoGridShell } from '@/components/catalogo/CatalogoGridShell';
-import { CatalogoFilterBar } from '@/components/catalogo/CatalogoFilterBar';
-import { ContentCard } from '@/components/catalogo/ContentCard';
+import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
+import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
+import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
+import ContentCard from '@/components/catalogo/ContentCard';
 
 interface SimulacaoItem {
   id: string;
   titulo: string;
   area: string;
-  capaUrl?: string | undefined;
+  capaUrl?: string | null | undefined;
   tipo: number;
+  estado?: string;
 }
 
 const AREAS = [
@@ -65,23 +67,29 @@ export const SimulacaoListPage = () => {
             areas={AREAS}
             selectedArea={area}
             onAreaChange={(val) => { setArea(val); setPage(1); }}
-            totalResults={data?.pagination?.total}
+            totalResults={data?.pagination.total}
           />
         }
       >
         {simulacoes.map((s: SimulacaoItem) => (
-          <ContentCard
-            key={s.id}
-            title={s.titulo}
-            subtitle={s.area}
-            image={s.capaUrl || undefined}
-            href={`/app/simulacoes/${s.id}`}
-            badges={[{ label: `Tipo ${String(s.tipo)}`, variant: 'accent' }]}
-            footerInfo={[
-              { icon: Activity, label: 'Bio-Sync ON' },
-              { icon: Target, label: 'Músculo ϕ' }
-            ]}
-          />
+          <div key={s.id} className="relative">
+            {s.estado && (
+              <div className="absolute top-3 left-3 z-10">
+                <EditorialStateBadge state={s.estado} />
+              </div>
+            )}
+            <ContentCard
+              title={s.titulo}
+              subtitle={s.area}
+              image={s.capaUrl || undefined}
+              href={`/app/simulacoes/${s.id}`}
+              badges={[{ label: `Tipo ${String(s.tipo)}`, variant: 'accent' }]}
+              footerInfo={[
+                { icon: Activity, label: 'Bio-Sync ON' },
+                { icon: Target, label: 'Músculo ϕ' }
+              ]}
+            />
+          </div>
         ))}
       </CatalogoGridShell>
     </div>

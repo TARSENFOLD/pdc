@@ -2,7 +2,8 @@ import { test as setup, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 
-const roles = ['aluno', 'mentor', 'instituicao', 'moderador', 'super_admin'] as const;
+// 7 canonical roles: aluno kept as invariant until W6 migration; estudante and comite_cientifico added
+const roles = ['aluno', 'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin'] as const;
 const AUTH_DIR = path.join(__dirname, '../.auth');
 
 // Ensure auth directory exists

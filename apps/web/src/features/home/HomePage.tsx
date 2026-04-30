@@ -8,68 +8,60 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { Role } from '@pdc/shared';
+import { useTranslation } from '@/hooks/useTranslation';
 
-interface QuickAction {
-  label: string;
+interface QuickActionDef {
+  labelKey: string;
   to: string;
   icon: React.ElementType;
-  description: string;
+  descKey: string;
 }
 
-const ACTIONS_BY_ROLE: Record<Role, QuickAction[]> = {
+const ACTIONS_BY_ROLE: Record<Role, QuickActionDef[]> = {
   estudante: [
-    { label: 'Simulações', to: '/app/simulacoes', icon: FlaskConical, description: 'Testa as tuas competências em cenários reais' },
-    { label: 'Cursos', to: '/app/cursos', icon: BookOpen, description: 'Aprende com conteúdo validado por mentores' },
-    { label: 'Perfil Vocacional', to: '/app/perfil-vocacional', icon: Star, description: 'Descobre a tua área de maior afinidade' },
-    { label: 'Ranking', to: '/app/ranking', icon: Trophy, description: 'Vê a tua posição no mérito global' },
+    { labelKey: 'home.actions.estudante.simulacoes_label', to: '/app/simulacoes', icon: FlaskConical, descKey: 'home.actions.estudante.simulacoes_desc' },
+    { labelKey: 'home.actions.estudante.cursos_label', to: '/app/cursos', icon: BookOpen, descKey: 'home.actions.estudante.cursos_desc' },
+    { labelKey: 'home.actions.estudante.perfil_label', to: '/app/perfil-vocacional', icon: Star, descKey: 'home.actions.estudante.perfil_desc' },
+    { labelKey: 'home.actions.estudante.ranking_label', to: '/app/ranking', icon: Trophy, descKey: 'home.actions.estudante.ranking_desc' },
   ],
   mentor: [
-    { label: 'Os Meus Cursos', to: '/app/mentor/cursos', icon: BookOpen, description: 'Gere e cria conteúdo educativo' },
-    { label: 'Criar Curso', to: '/app/mentor/cursos/criar', icon: PenSquare, description: 'Inicia um novo curso no Course Builder' },
-    { label: 'Simulações', to: '/app/mentor/simulacoes', icon: FlaskConical, description: 'Cria e gere laboratórios práticos' },
-    { label: 'Mentorados', to: '/app/mentor/mentorados', icon: Users, description: 'Acompanha os teus estudantes' },
+    { labelKey: 'home.actions.mentor.cursos_label', to: '/app/mentor/cursos', icon: BookOpen, descKey: 'home.actions.mentor.cursos_desc' },
+    { labelKey: 'home.actions.mentor.criar_label', to: '/app/mentor/cursos/criar', icon: PenSquare, descKey: 'home.actions.mentor.criar_desc' },
+    { labelKey: 'home.actions.mentor.simulacoes_label', to: '/app/mentor/simulacoes', icon: FlaskConical, descKey: 'home.actions.mentor.simulacoes_desc' },
+    { labelKey: 'home.actions.mentor.mentorados_label', to: '/app/mentor/mentorados', icon: Users, descKey: 'home.actions.mentor.mentorados_desc' },
   ],
   instituicao: [
-    { label: 'Experiências', to: '/app/instituicao/experiencias', icon: Building2, description: 'Gere as vitrinas curriculares' },
-    { label: 'Programas', to: '/app/instituicao/programas', icon: BookOpen, description: 'Cria roteiros educativos' },
-    { label: 'Estudantes', to: '/app/instituicao/estudantes-vinculados', icon: Users, description: 'Vê estudantes vinculados' },
-    { label: 'Relatórios', to: '/app/instituicao/relatorios', icon: BarChart3, description: 'Analisa o impacto institucional' },
+    { labelKey: 'home.actions.instituicao.experiencias_label', to: '/app/instituicao/experiencias', icon: Building2, descKey: 'home.actions.instituicao.experiencias_desc' },
+    { labelKey: 'home.actions.instituicao.programas_label', to: '/app/instituicao/programas', icon: BookOpen, descKey: 'home.actions.instituicao.programas_desc' },
+    { labelKey: 'home.actions.instituicao.estudantes_label', to: '/app/instituicao/estudantes-vinculados', icon: Users, descKey: 'home.actions.instituicao.estudantes_desc' },
+    { labelKey: 'home.actions.instituicao.relatorios_label', to: '/app/instituicao/relatorios', icon: BarChart3, descKey: 'home.actions.instituicao.relatorios_desc' },
   ],
   moderador: [
-    { label: 'Fila de Aprovações', to: '/app/moderacao/aprovacoes', icon: Shield, description: 'Revê conteúdo pendente de moderação' },
-    { label: 'Denúncias', to: '/app/moderacao/denuncias', icon: Shield, description: 'Trata denúncias da comunidade' },
-    { label: 'Utilizadores', to: '/app/moderador/utilizadores', icon: Users, description: 'Gere utilizadores da plataforma' },
-    { label: 'Estatísticas', to: '/app/admin/stats', icon: BarChart3, description: 'Painel de métricas do ecossistema' },
+    { labelKey: 'home.actions.moderador.aprovacoes_label', to: '/app/moderacao/aprovacoes', icon: Shield, descKey: 'home.actions.moderador.aprovacoes_desc' },
+    { labelKey: 'home.actions.moderador.denuncias_label', to: '/app/moderacao/denuncias', icon: Shield, descKey: 'home.actions.moderador.denuncias_desc' },
+    { labelKey: 'home.actions.moderador.utilizadores_label', to: '/app/moderador/utilizadores', icon: Users, descKey: 'home.actions.moderador.utilizadores_desc' },
+    { labelKey: 'home.actions.moderador.stats_label', to: '/app/admin/stats', icon: BarChart3, descKey: 'home.actions.moderador.stats_desc' },
   ],
   comite_cientifico: [
-    { label: 'Validação Científica', to: '/app/comite/validacao', icon: Microscope, description: 'Valida conteúdo por rigor académico' },
-    { label: 'Dashboard Comité', to: '/app/comite', icon: BarChart3, description: 'Visão geral do comité' },
-    { label: 'Feed', to: '/app/feed', icon: Zap, description: 'Vê o que se passa na comunidade' },
+    { labelKey: 'home.actions.comite_cientifico.validacao_label', to: '/app/comite/validacao', icon: Microscope, descKey: 'home.actions.comite_cientifico.validacao_desc' },
+    { labelKey: 'home.actions.comite_cientifico.dashboard_label', to: '/app/comite', icon: BarChart3, descKey: 'home.actions.comite_cientifico.dashboard_desc' },
+    { labelKey: 'home.actions.comite_cientifico.feed_label', to: '/app/feed', icon: Zap, descKey: 'home.actions.comite_cientifico.feed_desc' },
   ],
   super_admin: [
-    { label: 'Estatísticas', to: '/app/admin/stats', icon: BarChart3, description: 'Visão 360° do ecossistema' },
-    { label: 'Utilizadores', to: '/app/admin/utilizadores', icon: Users, description: 'Gere todos os utilizadores' },
-    { label: 'Feature Flags', to: '/app/admin/feature-flags', icon: Shield, description: 'Controla features e rollouts' },
-    { label: 'Feed Weights', to: '/app/admin/feed-weights', icon: Zap, description: 'Tuna o algoritmo de ranking' },
+    { labelKey: 'home.actions.super_admin.stats_label', to: '/app/admin/stats', icon: BarChart3, descKey: 'home.actions.super_admin.stats_desc' },
+    { labelKey: 'home.actions.super_admin.utilizadores_label', to: '/app/admin/utilizadores', icon: Users, descKey: 'home.actions.super_admin.utilizadores_desc' },
+    { labelKey: 'home.actions.super_admin.flags_label', to: '/app/admin/feature-flags', icon: Shield, descKey: 'home.actions.super_admin.flags_desc' },
+    { labelKey: 'home.actions.super_admin.feed_weights_label', to: '/app/admin/feed-weights', icon: Zap, descKey: 'home.actions.super_admin.feed_weights_desc' },
   ],
   patrocinador: [
-    { label: 'Feed', to: '/app/feed', icon: Zap, description: 'Vê o que se passa na comunidade' },
-    { label: 'Explorar', to: '/app/explorar', icon: Building2, description: 'Descobre conteúdo e talentos' },
+    { labelKey: 'home.actions.patrocinador.feed_label', to: '/app/feed', icon: Zap, descKey: 'home.actions.patrocinador.feed_desc' },
+    { labelKey: 'home.actions.patrocinador.explorar_label', to: '/app/explorar', icon: Building2, descKey: 'home.actions.patrocinador.explorar_desc' },
   ],
-};
-
-const GREETING_BY_ROLE: Record<Role, string> = {
-  estudante: 'O teu percurso começa aqui',
-  mentor: 'Estúdio de Criação',
-  instituicao: 'Painel Institucional',
-  moderador: 'Centro de Operações',
-  comite_cientifico: 'Laboratório de Validação',
-  super_admin: 'Controlo Soberano',
-  patrocinador: 'Painel do Patrocinador',
 };
 
 export default function HomePage(): React.ReactNode {
   const { user, isLoading } = useAuth();
+  const { t } = useTranslation('dashboard');
 
   if (isLoading) {
     return (
@@ -80,8 +72,7 @@ export default function HomePage(): React.ReactNode {
   }
 
   const role = user?.role ?? 'estudante';
-  const actions = ACTIONS_BY_ROLE[role];
-  const greeting = GREETING_BY_ROLE[role];
+  const actionDefs = ACTIONS_BY_ROLE[role];
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 pb-20 animate-in fade-in duration-1000">
@@ -89,16 +80,16 @@ export default function HomePage(): React.ReactNode {
         <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 px-3 py-1 uppercase tracking-widest text-[9px] font-black">
           {role.replace('_', ' ')}
         </Badge>
-        <h1 className="text-4xl font-black text-ink-primary tracking-tighter font-display">
-          {user?.nome ? `Olá, ${String(user.nome.split(' ')[0])}` : 'Bem-vindo'}
+        <h1 className="text-4xl font-black text-ink-primary tracking-tighter font-display" data-testid="page-hero-title">
+          {user?.nome ? `${t('home.greeting_prefix')}, ${String(user.nome.split(' ')[0])}` : t('home.welcome_fallback')}
         </h1>
         <p className="text-ink-secondary text-sm leading-relaxed max-w-lg">
-          {greeting}. Escolhe por onde queres começar.
+          {t(`home.greetings.${role}`)}. {t('home.subtitle')}
         </p>
       </header>
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4">
-        {actions.map((action, idx) => (
+        {actionDefs.map((action, idx) => (
           <motion.div
             key={action.to}
             initial={{ opacity: 0, y: 20 }}
@@ -111,11 +102,11 @@ export default function HomePage(): React.ReactNode {
                   <action.icon size={24} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-ink-primary group-hover:text-accent transition-colors">{action.label}</h3>
-                  <p className="text-xs text-ink-tertiary mt-1 leading-relaxed">{action.description}</p>
+                  <h3 className="font-bold text-ink-primary group-hover:text-accent transition-colors">{t(action.labelKey)}</h3>
+                  <p className="text-xs text-ink-tertiary mt-1 leading-relaxed">{t(action.descKey)}</p>
                 </div>
                 <div className="flex items-center text-[10px] font-black text-ink-tertiary uppercase tracking-widest group-hover:text-accent transition-colors">
-                  Abrir <ChevronRight size={12} className="ml-1" />
+                  {t('home.cta_open')} <ChevronRight size={12} className="ml-1" />
                 </div>
               </Card>
             </Link>
@@ -127,10 +118,10 @@ export default function HomePage(): React.ReactNode {
         <Card className="p-8 border-white/5 bg-recessed/30 text-center">
           <Zap size={32} className="mx-auto text-accent/30 mb-4" />
           <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-[0.3em]">
-            Infraestrutura de decisão educacional soberana
+            {t('home.oracle_kicker')}
           </p>
           <p className="text-xs text-ink-tertiary mt-2">
-            O Oráculo observa o teu percurso e adapta recomendações em tempo real.
+            {t('home.oracle_body')}
           </p>
         </Card>
       </section>

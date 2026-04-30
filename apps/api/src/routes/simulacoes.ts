@@ -133,7 +133,7 @@ simulacaoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), z
 
     return c.json({
       ...res.data,
-      eventId: event?.id
+      eventId: event.id
     }, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
@@ -252,7 +252,7 @@ simulacaoRoutes.post('/tentativas', checkRole(['estudante']), zValidator('json',
       'filters[perfil][id][$eq]': perfilId,
       'filters[simulacao][id][$eq]': simulacaoId,
     });
-    const tentativaNum = (prevTentativas.meta?.pagination?.total ?? 0) + 1;
+    const tentativaNum = prevTentativas.meta.pagination.total + 1;
 
     // D22: Usamos dataInicio (PT) para alinhar com o domínio canónico (ADR-012).
     // Strapi tem aliases startedAt/finishedAt, mas BFF prefere PT.
@@ -261,14 +261,14 @@ simulacaoRoutes.post('/tentativas', checkRole(['estudante']), zValidator('json',
       perfil: perfilId,
       dataInicio: new Date().toISOString(),
       tentativaNum,
-      executorTipo: `tipo${tipo}`,
+      executorTipo: `tipo${tipo.toString()}`,
       status: 'em_progresso',
     });
 
     // G15: Impacto no Ecossistema
     await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_INICIADA, {
       tentativaId: resPost.data.id,
-      perfilId: String(perfilId),
+      perfilId,
       simulacaoId
     });
 
@@ -331,7 +331,7 @@ simulacaoRoutes.put('/tentativas/:id', checkRole(['estudante']), zValidator('jso
       await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_CONCLUIDA, {
         tentativaId,
         score: finalScore || 0,
-        perfilId: String(perfilIdReal),
+        perfilId: perfilIdReal,
         area
       });
     }

@@ -91,4 +91,7 @@
   --ink-primary:    #ECE7DD;
   --ink-secondary:  #B5AFA3;
   --ink-tertiary:   #807A6F;
+
+  /* ─── Borders Dark ─── */
+  --glass-border-light: rgba(236, 231, 221, 0.12);
 }

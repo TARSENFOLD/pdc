@@ -5,6 +5,7 @@ import { http } from '@/lib/api/http';
 import { motion } from 'motion/react';
 import { APPLE_SPRING } from '@/lib/animations';
 import type { FeedResponse, FeedItem } from '@pdc/shared';
+import { PostComposerForm } from './PostComposer';
 
 export function FeedPage() {
   const { data, isLoading } = useQuery<FeedResponse>({
@@ -29,6 +30,10 @@ export function FeedPage() {
           </p>
         </div>
       </header>
+
+      <section className="px-4">
+        <PostComposerForm variant="inline" />
+      </section>
 
       <div className="grid grid-cols-1 gap-8">
         {items.length === 0 ? (

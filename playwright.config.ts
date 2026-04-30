@@ -49,7 +49,7 @@ export default defineConfig({
       timeout: 30_000,
     },
     {
-      command: 'npm run dev -w apps/web',
+      command: 'npm run dev -w apps/web -- --force',
       url: 'http://localhost:5173',
       reuseExistingServer: true,
       timeout: 30_000,

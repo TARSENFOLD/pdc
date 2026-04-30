@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { cursosApi } from '@/lib/api/cursos';
-import { CatalogoGridShell } from '@/components/catalogo/CatalogoGridShell';
-import { CatalogoFilterBar } from '@/components/catalogo/CatalogoFilterBar';
-import { ContentCard } from '@/components/catalogo/ContentCard';
+import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
+import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
+import ContentCard from '@/components/catalogo/ContentCard';
 import { Clock, GraduationCap, Users } from 'lucide-react';
-import { CursoItemSchema, type CursoItem } from '@pdc/shared';
+import { CursoItemSchema } from '@pdc/shared';
+import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 
 const AREAS = [
   { value: 'TECNOLOGIA', label: 'Tecnologia' },
@@ -14,6 +15,10 @@ const AREAS = [
   { value: 'DIREITO', label: 'Direito' },
   { value: 'GESTAO', label: 'Gestão' },
 ];
+
+const CursoListItemSchema = CursoItemSchema.extend({
+  estado: z.string().optional(),
+});
 
 export function CursoListPage() {
   const [search, setSearch] = useState('');
@@ -31,7 +36,7 @@ export function CursoListPage() {
   });
 
   const rawData = data?.data ?? [];
-  const parsed = z.array(CursoItemSchema).safeParse(rawData);
+  const parsed = z.array(CursoListItemSchema).safeParse(rawData);
   if (!parsed.success) {
     console.error('API validation error:', parsed.error);
   }
@@ -65,23 +70,29 @@ export function CursoListPage() {
             areas={AREAS}
             selectedArea={area}
             onAreaChange={setArea}
-            totalResults={data?.pagination?.total}
+            totalResults={data?.pagination.total}
           />
         }
       >
         {cursos.map((c) => (
-          <ContentCard
-            key={c.id}
-            title={c.titulo}
-            subtitle={c.instituicaoNome || c.instituicao?.nome || 'PDC Partner'}
-            image={c.capaUrl || undefined}
-            href={`/app/cursos/${c.id}`}
-            badges={[{ label: 'Certificação PDC', variant: 'accent' }]}
-            footerInfo={[
-              { icon: Clock, label: `${String(c.totalHoras || 0)}h` },
-              { icon: Users, label: `${String(c.inscritosCount || 0)} alunos` }
-            ]}
-          />
+          <div key={c.id} className="relative">
+            {c.estado && (
+              <div className="absolute top-3 left-3 z-10">
+                <EditorialStateBadge state={c.estado} />
+              </div>
+            )}
+            <ContentCard
+              title={c.titulo}
+              subtitle={c.instituicaoNome || c.instituicao?.nome || 'PDC Partner'}
+              image={c.capaUrl || undefined}
+              href={`/app/cursos/${c.id}`}
+              badges={[{ label: 'Certificação PDC', variant: 'accent' }]}
+              footerInfo={[
+                { icon: Clock, label: `${String(c.totalHoras || 0)}h` },
+                { icon: Users, label: `${String(c.inscritosCount || 0)} alunos` }
+              ]}
+            />
+          </div>
         ))}
       </CatalogoGridShell>
     </div>

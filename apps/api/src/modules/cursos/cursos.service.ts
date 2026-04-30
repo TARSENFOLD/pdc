@@ -22,7 +22,7 @@ export const cursosService = {
     const cursoId = res.data.id;
 
     // 2. Criar Módulos e Itens em Cascata (Sovereign Cascading)
-    if (modulos && modulos.length > 0) {
+    if (modulos.length > 0) {
       for (const mod of modulos) {
         const modRes = await strapiPost<Modulo>('/modulos', {
           titulo: mod.titulo,
@@ -46,31 +46,31 @@ export const cursosService = {
 
     // 3. CAMADA 5: IMPACTO NO ECOSSISTEMA
     await eventBus.publishWithOutbox(DomainEventName.CURSO_PUBLICADO, {
-      cursoId: String(cursoId),
+      cursoId,
       autorId,
       titulo: cursoData.titulo,
-      area: String(cursoData.area),
+      area: cursoData.area,
       regrasAcesso
     });
 
-    log.info({ cursoId: String(cursoId), autorId }, 'Curso materializado com sucesso e impacto E2E disparado.');
+    log.info({ cursoId, autorId }, 'Curso materializado com sucesso e impacto E2E disparado.');
     return res.data;
   },
 
   async atualizarCurso(id: string, payload: Partial<CriarCursoPayload>, autorId: string): Promise<Curso> {
     const resPut = await strapiPut<Curso>(`/cursos/${id}`, payload);
     await eventBus.publishWithOutbox(DomainEventName.CURSO_ATUALIZADO, {
-      cursoId: String(id),
+      cursoId: id,
       autorId,
     });
     return resPut.data;
   },
 
   async alterarEstado(id: string, estado: string, autorId: string): Promise<void> {
-    await strapiPut<{ estado: string }>(`/cursos/${id}`, { estado });
+    await strapiPut(`/cursos/${id}`, { estado });
     if (estado === 'archived') {
       await eventBus.publishWithOutbox(DomainEventName.CURSO_ARQUIVADO, {
-        cursoId: String(id),
+        cursoId: id,
         autorId,
       });
     }

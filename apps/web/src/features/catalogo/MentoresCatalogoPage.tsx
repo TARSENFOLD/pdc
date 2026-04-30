@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
-import { CatalogoGridShell } from '@/components/catalogo/CatalogoGridShell';
-import { CatalogoFilterBar } from '@/components/catalogo/CatalogoFilterBar';
-import { ContentCard } from '@/components/catalogo/ContentCard';
+import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
+import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
+import ContentCard from '@/components/catalogo/ContentCard';
 import { UserCheck, Star } from 'lucide-react';
 import type { AreaVocacional, MentorPublico } from '@pdc/shared';
 
@@ -82,7 +82,7 @@ export function MentoresCatalogoPage() {
         <CatalogoGridShell
           isLoading={isLoading}
           isEmpty={mentores.length === 0}
-          onClearFilters={() => setSp(new URLSearchParams())}
+          onClearFilters={() => { setSp(new URLSearchParams()); }}
           filterBar={
             <CatalogoFilterBar
               searchTerm={search}
@@ -90,7 +90,7 @@ export function MentoresCatalogoPage() {
               areas={AREAS}
               selectedArea={area}
               onAreaChange={handleAreaChange}
-              totalResults={data?.meta?.total}
+              totalResults={data?.meta.total}
             />
           }
         >

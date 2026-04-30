@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { redis } from '../lib/redis.js';
 import { calcRecencyScore, calcScore, type FeedFeatures } from '../modules/feed/feed.scoring.js';
-import type { FeedItem, FeedItemTipo, AreaVocacional } from '@pdc/shared';
+import { AreaVocacionalSchema, type FeedItem, type FeedItemTipo } from '@pdc/shared';
 import { env } from '../lib/env.js';
 
 // ── Strapi interfaces (Flat v5) ──────────────────────────────────────────────
@@ -14,11 +14,19 @@ export interface StrapiEntity {
   id: string | number;
   slug?: string;
   titulo?: string;
+  corpo?: string;
   descricao?: string;
   capaUrl?: string;
+  mediaUrls?: string[] | null;
   area?: string;
   autorNome?: string;
   autorId?: string;
+  autor?: {
+    id?: string | number;
+    userId?: string;
+    nome?: string;
+    foto?: { url?: string } | null;
+  } | null;
   instituicaoNome?: string;
   estudante?: { nome: string };
   estado?: string;
@@ -80,7 +88,7 @@ export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<Item
 }
 
 export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: FeedItemTipo }>> {
-  const [cursos, simulacoes, experiencias] = await Promise.all([
+  const [cursos, simulacoes, experiencias, feedPosts] = await Promise.all([
     strapiGet<StrapiEntity>('/cursos', {
       'pagination[limit]': '100',
       sort: 'publishedAt:desc',
@@ -96,15 +104,23 @@ export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: Fe
       sort: 'publishedAt:desc',
       populate: 'capa,instituicao',
     }),
+    strapiGet<StrapiEntity>('/feed-posts', {
+      'filters[estado][$eq]': 'aprovada',
+      'pagination[limit]': '100',
+      sort: 'createdAt:desc',
+      populate: 'autor.foto',
+    }),
   ]);
 
   const all = [
     ...cursos.data.map(d => ({ ...d, tipo: 'curso' as const })),
     ...simulacoes.data.map(d => ({ ...d, tipo: 'simulacao' as const })),
     ...experiencias.data.map(d => ({ ...d, tipo: 'experiencia' as const })),
+    ...feedPosts.data.map(d => ({ ...d, tipo: 'post' as const })),
   ] as Array<StrapiEntity & { tipo: FeedItemTipo }>;
 
   return all.filter(c => {
+    if (c.tipo === 'post') return c.estado === 'aprovada';
     const estado = c.estado ?? 'published';
     const vis = c.visibilidade ?? 'publico';
     return estado === 'published' && vis === 'publico';
@@ -128,19 +144,25 @@ export async function mapConcurrent<T, R>(items: T[], fn: (item: T) => Promise<R
  * Converte entidades Strapi para o FeedItem do Shared.
  */
 export function toFeedItem(c: StrapiEntity & { tipo: FeedItemTipo }, stats: ItemStats, score: number, recencyScore: number): FeedItem {
+  const parsedArea = AreaVocacionalSchema.safeParse(c.area);
+  const mediaUrls = Array.isArray(c.mediaUrls) ? c.mediaUrls : [];
+  const title = c.titulo ?? (c.tipo === 'post' ? 'Publicação' : '');
+  const body = c.corpo ?? c.descricao ?? '';
+
   return {
     id: String(c.id),
     tipo: c.tipo,
-    userId: c.autorId ?? 'system',
+    userId: c.autor?.userId ?? c.autorId ?? 'system',
     timestamp: c.publishedAt ?? c.createdAt,
-    titulo: c.titulo ?? '',
-    corpo: c.descricao ?? '',
+    titulo: title,
+    corpo: body,
     createdAt: c.publishedAt ?? c.createdAt,
-    // Metadados flexíveis via Record<string, any>
     slug: c.slug,
     capaUrl: c.capaUrl,
-    area: (c.area as AreaVocacional) || undefined,
-    autorNome: c.autorNome ?? c.instituicaoNome ?? c.estudante?.nome,
+    avatar: c.autor?.foto?.url ?? undefined,
+    imagem: mediaUrls[0],
+    area: parsedArea.success ? parsedArea.data : undefined,
+    autorNome: c.autor?.nome ?? c.autorNome ?? c.instituicaoNome ?? c.estudante?.nome,
     score,
     recencyScore,
     stats: { likes: stats.likes, ratingMedia: stats.ratingMedia, ratingTotal: stats.ratingTotal }

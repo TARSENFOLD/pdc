@@ -10,7 +10,7 @@ export const FeedPostSchema = z.object({
     nome: z.string(),
     avatarUrl: z.string().url().optional(),
   }).optional(),
-  corpo: z.string().min(1).max(10000),
+  corpo: z.string().min(1).max(2000),
   mediaUrls: z.array(z.string().url()).max(10).optional(),
   estado: FeedPostEstadoSchema,
   motivoModeracao: z.string().optional(),
@@ -24,7 +24,7 @@ export const FeedPostSchema = z.object({
 export type FeedPost = z.infer<typeof FeedPostSchema>;
 
 export const CriarPostPayloadSchema = z.object({
-  corpo: z.string().min(1).max(10000),
+  corpo: z.string().min(1).max(2000),
   mediaUrls: z.array(z.string().url()).max(10).optional(),
 });
 

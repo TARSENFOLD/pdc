@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { AreaVocacionalSchema } from '@pdc/shared';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { withPublicCache } from '../middleware/cache.js';
-import type { CursoPublico, SimulacaoPublica, ExperienciaPublica, CatalogoMeta, AreaVocacional } from '@pdc/shared';
+import type { CursoPublico, SimulacaoPublica, ExperienciaPublica, CatalogoMeta, AreaVocacional, Modalidade } from '@pdc/shared';
 import { catalogoExplorarRoutes } from './catalogo-explorar.js';
 import { mentoresRoutes, instituicoesRoutes, perfilPublicoRoutes } from './catalogo-pessoas.js';
 import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
@@ -24,13 +24,23 @@ interface StrapiCurso {
 
 interface StrapiSimulacao {
   id: string | number; slug?: string; titulo: string; descricao: string;
-  capaUrl?: string; area?: string; tipo: number; nivel?: string;
+  capaUrl?: string; area?: string; tipo: number;
+  validadoAcademicamente?: boolean;
+  estado?: 'draft' | 'review' | 'approved' | 'published' | 'rejected';
+  tipoSimulacao?: 'tipo1' | 'tipo2' | 'tipo3';
+  autorId?: string;
+  criteriosAvaliacao?: { pesos: { fluidez: number; resiliencia: number; foco: number } };
+  rating?: number;
+  tentativasMaximas?: number;
 }
 
 interface StrapiExperiencia {
   id: string | number; slug: string; titulo: string; descricao: string;
   capaUrl?: string; area?: string; nivel?: string;
   instituicaoNome?: string; dataInicio?: string; gratuito?: boolean;
+  validadoAcademicamente?: boolean;
+  estado?: 'draft' | 'review' | 'approved' | 'published' | 'rejected';
+  modalidade?: string;
 }
 
 const NivelSchema = z.enum(['basico', 'medio', 'avancado']);
@@ -64,18 +74,37 @@ function mapCurso(d: StrapiCurso): CursoPublico {
 }
 function mapSim(d: StrapiSimulacao): SimulacaoPublica {
   return {
-    id: sid(d.id), slug: d.slug || sid(d.id), titulo: d.titulo, descricao: d.descricao,
-    capaUrl: d.capaUrl, area: d.area as AreaVocacional, tipo: d.tipo as 1 | 2 | 3, nivel: d.nivel,
+    id: sid(d.id), 
+    slug: d.slug || sid(d.id), 
+    titulo: d.titulo, 
+    descricao: d.descricao,
+    capaUrl: d.capaUrl, 
+    area: d.area as AreaVocacional, 
+    tipo: d.tipo as 1 | 2 | 3,
+    validadoAcademicamente: d.validadoAcademicamente ?? false,
+    estado: d.estado ?? 'published',
+    tipoSimulacao: d.tipoSimulacao || 'tipo1',
+    autorId: d.autorId || '',
+    criteriosAvaliacao: d.criteriosAvaliacao || { pesos: { fluidez: 40, resiliencia: 30, foco: 30 } },
+    rating: d.rating ?? 0,
+    tentativasMaximas: d.tentativasMaximas ?? 0,
   };
 }
 function mapExp(d: StrapiExperiencia): ExperienciaPublica {
   return {
-    id: sid(d.id), slug: d.slug, titulo: d.titulo, descricao: d.descricao,
+    id: sid(d.id), 
+    slug: d.slug, 
+    titulo: d.titulo, 
+    descricao: d.descricao,
     capaUrl: d.capaUrl, 
     area: AreaVocacionalSchema.optional().safeParse(d.area).data, 
     nivel: NivelSchema.optional().safeParse(d.nivel).data,
-    instituicao: d.instituicaoNome ? { id: '', nome: d.instituicaoNome } : undefined, dataInicio: d.dataInicio,
-    gratuito: (d.gratuito ?? true) as true,
+    instituicao: d.instituicaoNome ? { id: '', nome: d.instituicaoNome } : undefined, 
+    dataInicio: d.dataInicio,
+    gratuito: true,
+    validadoAcademicamente: d.validadoAcademicamente ?? false,
+    estado: d.estado ?? 'published',
+    modalidade: d.modalidade as Modalidade | undefined,
   };
 }
 
@@ -119,6 +148,8 @@ const simQ = pgQ.extend({
   nivel: z.string().optional(),
 });
 
+const SIM_ALLOWED_SORTS = new Set(['createdAt:desc', 'createdAt:asc', 'updatedAt:desc', 'updatedAt:asc', 'rating:desc', 'rating:asc']);
+
 catalogoRoutes.get('/simulacoes', zValidator('query', simQ), async (c) => {
   const q = c.req.valid('query');
   const p: Record<string, string> = { 'filters[estado][$eq]': 'published' }; 
@@ -126,7 +157,11 @@ catalogoRoutes.get('/simulacoes', zValidator('query', simQ), async (c) => {
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.tipo !== undefined) p['filters[tipo][$eq]'] = q.tipo.toString();
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
-  if (q.sort) p['sort'] = q.sort;
+  if (q.sort && SIM_ALLOWED_SORTS.has(q.sort)) {
+    p['sort'] = q.sort;
+  } else {
+    p['sort'] = 'createdAt:desc';
+  }
   
   const res = await strapiGet<StrapiSimulacao>('/simulacoes', p);
   return c.json({ data: res.data.map(mapSim), meta: toMeta(res.meta) });

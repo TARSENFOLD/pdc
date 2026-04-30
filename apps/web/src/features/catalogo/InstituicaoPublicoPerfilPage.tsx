@@ -25,14 +25,14 @@ export function InstituicaoPublicoPerfilPage() {
     <div className="min-h-screen bg-canvas px-4 py-16 sm:px-6">
       <SEOHead
         title={inst.nome}
-        description={inst.descricao || `Instituição de ensino${inst.regiao ? ` na região de ${inst.regiao}` : ''}`}
+        description={inst.bio || `Instituição de ensino${inst.regiao ? ` na região de ${inst.regiao}` : ''}`}
         image={inst.logoUrl || undefined}
         url={`https://usepdc.com/instituicoes/${slug || ''}`}
         type="profile"
         jsonLd={{
           '@type': 'EducationalOrganization',
           name: inst.nome,
-          description: inst.descricao || '',
+          description: inst.bio || '',
           url: `https://usepdc.com/instituicoes/${slug || ''}`,
         }}
       />

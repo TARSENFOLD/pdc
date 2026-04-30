@@ -31,6 +31,12 @@ export function LandingMarquee() {
           </span>
         ))}
       </div>
+      <style>{`
+        @keyframes marquee-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
     </div>
   );
 }

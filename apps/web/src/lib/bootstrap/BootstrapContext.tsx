@@ -2,15 +2,16 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { http } from '@/lib/api/http';
 import type { BootstrapResponse } from '@pdc/shared';
-import { BootstrapErrorScreen } from '@/components/layout/BootstrapErrorScreen';
+import BootstrapErrorScreen from '@/components/layout/BootstrapErrorScreen';
 
 interface BootstrapContextValue {
   data: BootstrapResponse | null;
   isLoading: boolean;
   error: Error | null;
+  refresh: () => Promise<void>;
 }
 
-const BootstrapContext = createContext<BootstrapContextValue | null>(null);
+export const BootstrapContext = createContext<BootstrapContextValue | null>(null);
 
 async function fetchBootstrap(): Promise<BootstrapResponse> {
   return await http.get<BootstrapResponse>('/bootstrap');
@@ -33,6 +34,10 @@ export function BootstrapProvider({ children }: { children: ReactNode }) {
     retryDelay: exponentialBackoff,
   });
 
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
+  };
+
   if (isLoading) {
     // Loading minimalista e rápido do Sistema Operativo
     return (
@@ -44,19 +49,15 @@ export function BootstrapProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  if (isError && error) {
+  if (isError) {
     // Estado de erro premium - W0.2
     console.error('Falha crítica ao obter camada de Bootstrap', error);
 
-    const handleRetry = () => {
-      queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
-    };
-
-    return <BootstrapErrorScreen onRetry={handleRetry} />;
+    return <BootstrapErrorScreen onRetry={() => { void refresh(); }} />;
   }
 
   return (
-    <BootstrapContext.Provider value={{ data, isLoading, error }}>
+    <BootstrapContext.Provider value={{ data, isLoading, error, refresh }}>
       {children}
     </BootstrapContext.Provider>
   );
@@ -65,5 +66,5 @@ export function BootstrapProvider({ children }: { children: ReactNode }) {
 export function useBootstrap(): BootstrapContextValue {
   const ctx = useContext(BootstrapContext);
   // Em vez de crashar, devolvemos um estado de "Loading" seguro para evitar erros de renderização
-  return ctx ?? { data: null, isLoading: true, error: null };
+  return ctx ?? { data: null, isLoading: true, error: null, refresh: async () => {} };
 }

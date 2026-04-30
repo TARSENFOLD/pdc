@@ -6,7 +6,19 @@ import { matchHook } from './match.hook.js';
 import { achievementHook } from './achievement.hook.js';
 import { notifyHook } from './notify.hook.js';
 import { DomainEventName } from '@pdc/shared';
+import type { StrapiListResponse, StrapiSingleResponse } from '@pdc/shared';
 import { strapiPost, strapiPut, strapiGet } from '../strapi/strapi.client.js';
+
+function listResponse<T>(data: Array<T & { id: string | number }>): StrapiListResponse<T> {
+  return {
+    data,
+    meta: { pagination: { page: 1, pageSize: data.length, total: data.length, pageCount: 1 } },
+  };
+}
+
+function singleResponse<T>(data: T & { id: string | number }): StrapiSingleResponse<T> {
+  return { data, meta: {} };
+}
 
 // Mocks controlados
 vi.mock('../strapi/strapi.client.js', () => ({
@@ -42,20 +54,17 @@ describe('G15: EcosystemHooks Integration', () => {
     eventBus.registerHook(notifyHook);
     
     // Mock robusto de resposta de perfil (incluindo userId para achievement)
-    vi.mocked(strapiGet).mockResolvedValue({ 
-      data: [{ 
+    vi.mocked(strapiGet).mockResolvedValue(listResponse([{
         id: 'autor-1', 
         role: 'mentor', 
         reputacao: 100, 
         areaInteresse: 'Tecnologia',
         userId: 'user-123' 
-      }],
-      meta: { pagination: { page: 1, pageSize: 10, total: 1, pageCount: 1 } }
-    } as any);
+      }]));
 
     // Mock padrão de POST
-    vi.mocked(strapiPost).mockResolvedValue({ data: { id: 100 }, meta: {} } as any);
-    vi.mocked(strapiPut).mockResolvedValue({ data: { id: 100 }, meta: {} } as any);
+    vi.mocked(strapiPost).mockResolvedValue(singleResponse({ id: 100 }));
+    vi.mocked(strapiPut).mockResolvedValue(singleResponse({ id: 100 }));
   });
 
   it('deve executar o fluxo completo de 5 hooks ao publicar um curso', async () => {

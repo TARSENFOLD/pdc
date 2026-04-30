@@ -23,7 +23,6 @@ export function InstallPrompt() {
   if (!deferredPrompt || dismissed) return null;
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return;
     try {
       await deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;

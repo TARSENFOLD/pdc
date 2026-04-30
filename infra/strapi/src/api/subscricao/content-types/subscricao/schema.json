@@ -34,6 +34,11 @@
     "fimEm": { "type": "datetime" },
     "valorPago": { "type": "decimal" },
     "moeda": { "type": "string" },
+    "tier": {
+      "type": "enumeration",
+      "enum": ["free", "basic", "premium", "enterprise"],
+      "default": "free"
+    },
     "features": { "type": "json" },
     "quotas": { "type": "json" }
   }

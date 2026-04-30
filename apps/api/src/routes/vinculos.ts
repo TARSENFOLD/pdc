@@ -83,7 +83,7 @@ vinculoRoutes.post('/:id/pedir', async (c) => {
     await eventBus.publishWithOutbox(DomainEventName.VINCULO_SOLICITADO, {
       vinculoId: resPost.data.id,
       solicitanteId: String(solicitantePerfil.id),
-      destinatarioId: String(destinatarioPerfilId)
+      destinatarioId: destinatarioPerfilId
     });
 
     return c.json(resPost.data, 201);

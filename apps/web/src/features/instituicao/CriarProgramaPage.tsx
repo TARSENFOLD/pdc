@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CriarProgramaPayloadSchema, type CriarProgramaPayload } from '@pdc/shared';
+import { CriarProgramaPayloadSchema, type CriarProgramaPayload, type MutationResult } from '@pdc/shared';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { programasApi } from '@/lib/api/programas';
@@ -40,12 +40,12 @@ export default function CriarProgramaPage() {
 
   const mutation = useMutation({
     mutationFn: (data: CriarProgramaPayload) => programasApi.create(data),
-    onSuccess: (res: { data: { id: string; eventId?: string } }) => {
+    onSuccess: (res: MutationResult) => {
       void queryClient.invalidateQueries({ queryKey: ['programas', 'meus'] });
       toast({ title: 'Programa Materializado!', description: 'O ecossistema foi atualizado com a nova oferta.' });
       
-      if (res.data?.eventId) {
-        setLastEventId(res.data.eventId);
+      if (res.eventId) {
+        setLastEventId(res.eventId);
       } else {
         navigate('/app/dashboard/instituicao');
       }
@@ -65,7 +65,6 @@ export default function CriarProgramaPage() {
   return (
     <>
       <BuilderShell
-        form={form}
         title="Arquitetura de Programa de Acesso"
         description="Agrupa ativos educativos, define o propósito e governa o acesso ao talento."
         state="draft"      breadcrumbs={[
@@ -91,7 +90,6 @@ export default function CriarProgramaPage() {
       }
     >
       <BuilderSection
-        value="proposito"
         title="Propósito e Identidade"
         description="O valor diferenciador e objetivo pedagógico central."
       >
@@ -143,7 +141,6 @@ export default function CriarProgramaPage() {
       </BuilderSection>
 
       <BuilderSection
-        value="conteudos"
         title="Conteúdos Agrupados"
         description="Integração de cursos, simulações e experiências práticas."
       >
@@ -199,7 +196,7 @@ export default function CriarProgramaPage() {
               eventId={lastEventId} 
               variant="full"
               onComplete={() => {
-                setTimeout(() => navigate('/app/dashboard/instituicao'), 3000);
+                setTimeout(() => { navigate('/app/dashboard/instituicao'); }, 3000);
               }}
             />
           </div>

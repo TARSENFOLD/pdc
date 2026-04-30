@@ -30,10 +30,40 @@ interface CircuitState {
   openUntil: number;
 }
 
+function isCircuitState(value: unknown): value is CircuitState {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'consecutiveFailures' in value &&
+    typeof value.consecutiveFailures === 'number' &&
+    'openUntil' in value &&
+    typeof value.openUntil === 'number'
+  );
+}
+
+function parseJson(text: string): unknown {
+  return JSON.parse(text) as unknown;
+}
+
+function isTelemetryEventArray(value: unknown): value is TelemetriaEvento[] {
+  return Array.isArray(value) && value.every((item: unknown) => (
+    typeof item === 'object' &&
+    item !== null &&
+    'eventId' in item &&
+    typeof item.eventId === 'string' &&
+    'tipo' in item &&
+    typeof item.tipo === 'string' &&
+    'timestamp' in item &&
+    typeof item.timestamp === 'string'
+  ));
+}
+
 const getCircuitState = (): CircuitState => {
   try {
     const raw = localStorage.getItem(CIRCUIT_BREAKER_KEY);
-    return raw ? JSON.parse(raw) : { consecutiveFailures: 0, openUntil: 0 };
+    if (!raw) return { consecutiveFailures: 0, openUntil: 0 };
+    const parsed = parseJson(raw);
+    return isCircuitState(parsed) ? parsed : { consecutiveFailures: 0, openUntil: 0 };
   } catch {
     return { consecutiveFailures: 0, openUntil: 0 };
   }
@@ -92,11 +122,15 @@ export const telemetriaService = {
           return { ok: true, results: events.map(e => ({ eventId: e.eventId, ok: true })) };
         } else if (response.status >= 500) {
           // Erro de servidor: conta para o circuit breaker
-          throw new Error(`Edge error: ${response.status}`);
+          throw new Error(`Edge error: ${String(response.status)}`);
         }
-      } catch (err: any) {
-        // Fallback natural caso o Edge esteja indisponível (timeout, rede, erro 500)
-        console.warn('Edge Worker falhou ou timeout, incrementando circuit breaker', err);
+      } catch (err: unknown) {
+        // Fallback silencioso em desenvolvimento para evitar 'fetch failed' no console
+        if (import.meta.env.DEV) {
+          // Log apenas uma vez ou de forma discreta se necessário para debug interno
+        } else {
+          console.warn('Edge Worker indisponível', err);
+        }
         
         const nextFailures = circuit.consecutiveFailures + 1;
         if (nextFailures >= FAILURE_THRESHOLD) {
@@ -112,6 +146,17 @@ export const telemetriaService = {
     }
 
     // 2. Fallback Seguro para BFF (Railway)
+    // Apenas se tivermos token ou se o circuito estiver aberto mas for crítico.
+    // Se não houver token, o BFF vai dar 401. Evitamos a chamada para limpar logs.
+    if (!token) {
+      // Opcional: Guardar em localStorage para sincronizar após login
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const parsed = raw ? parseJson(raw) : [];
+      const pending = isTelemetryEventArray(parsed) ? parsed : [];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([...pending, ...events]));
+      return { ok: true, results: events.map(e => ({ eventId: e.eventId, ok: true })) }; // Reportamos como OK para o chamador
+    }
+
     return http.post<BatchResult>(
       '/telemetria/batch',
       { events },
@@ -124,7 +169,12 @@ export const telemetriaService = {
 
     let pending: TelemetriaEvento[] = [];
     try {
-      pending = JSON.parse(raw) as TelemetriaEvento[];
+      const parsed = parseJson(raw);
+      if (!isTelemetryEventArray(parsed)) {
+        localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+      pending = parsed;
     } catch {
       localStorage.removeItem(STORAGE_KEY);
       return;

@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from 'jose';
 import { redis } from '../../lib/redis.js';
 import { env } from '../../lib/env.js';
 import { createHash, randomUUID } from 'node:crypto';
-import type { User, Role, Conquista } from '@pdc/shared';
+import { type User, type Role, type Conquista, RoleSchema, normalizeTipo } from '@pdc/shared';
 import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
 
@@ -32,21 +32,15 @@ interface StrapiPerfilData {
   conquistas?: Conquista[];
 }
 
-const VALID_ROLES: Set<string> = new Set([
-  'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin', 'patrocinador',
-]);
-
 function resolveRole(strapiRoleName: string | undefined, perfilTipo: string | undefined): Role {
-  if (perfilTipo && VALID_ROLES.has(perfilTipo)) {
-    return perfilTipo as Role;
+  if (perfilTipo) {
+    const parsed = RoleSchema.safeParse(perfilTipo);
+    if (parsed.success) return parsed.data;
   }
-  const normalized = strapiRoleName?.toLowerCase();
-  
-  // Mapeamento de legado/apelidos para canónico
-  if (normalized === 'estudante' || normalized === 'aluno') return 'estudante';
-
-  if (normalized && VALID_ROLES.has(normalized)) {
-    return normalized as Role;
+  if (strapiRoleName) {
+    const lower = strapiRoleName.toLowerCase();
+    if (lower === 'admin' || lower === 'super admin') return 'super_admin';
+    return normalizeTipo(lower);
   }
   return 'estudante';
 }
@@ -139,8 +133,8 @@ export const authService = {
       'populate': ['foto', 'conquistas'],
     });
 
-    const perfilData = resPerfil.data?.[0] ?? null;
-    const reputationScore = perfilData?.id ? await getReputacao(String(perfilData.id)) : 0;
+    const perfilData = resPerfil.data[0] ?? null;
+    const reputationScore = perfilData === null ? 0 : await getReputacao(perfilData.id);
 
     return this.mapStrapiUser(user, perfilData, reputationScore);
   },
@@ -177,9 +171,11 @@ export const authService = {
       email: u.email,
       nome: perfil?.nome ?? u.nome ?? u.username,
       role: resolveRole(u.role?.name, perfil?.tipo),
-      perfilId: perfil?.id ? String(perfil.id) : undefined,
+      perfilId: perfil?.id,
       avatarUrl: perfil?.foto?.url ?? u.avatar?.url,
       reputacaoTier: getTier(reputationScore),
+      xp: 0,
+      reputacao: reputationScore,
       createdAt: u.createdAt ?? new Date().toISOString(),
       updatedAt: u.updatedAt ?? new Date().toISOString(),
       bio: perfil?.bio,

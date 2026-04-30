@@ -31,7 +31,7 @@ async function getAllFlags(): Promise<FeatureFlag[]> {
       'pagination[pageSize]': '100',
     });
 
-    const flags = res.data || [];
+    const flags = res.data;
     await redis.set(CACHE_KEY, flags, { ex: CACHE_TTL });
     return flags;
   } catch (error: unknown) {

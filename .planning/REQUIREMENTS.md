@@ -2,6 +2,15 @@
 
 > **Status:** Alinhado com `specs/IMPORTANTE/02 — Mapeamento de Funcionalidades (Canónico)` em 23 de Abril de 2026.
 > **Regra de Ouro:** Nenhum requisito é considerado "Done" sem passar pelo crivo do ESLint e do CodeRabbit.
+>
+> **⚠️ Convenção de Estado (rigorosa):**
+> - `[x]` = Implementado **E2E** (5 camadas: UI + Shared + BFF + Persistência + Ecossistema)
+> - `[~]` = Em progresso ou implementação parcial (schema existe mas sem UI, ou BFF sem persistência, etc.)
+> - `[P]` = Parcial — funciona em cenários limitados mas não cobre a spec completa
+> - `[ ]` = Não iniciado
+> - `[-]` = Descartado
+>
+> **Referência detalhada:** `docs/arquivo-fundacional/09-traycer-specs/` contém as specs originais com modelos de dados, endpoints e regras field-level.
 
 ## Legenda
 - **Estado:** `[ ]` Todo | `[x]` Done | `[~]` In Progress | `[-]` Descartado | `[P]` Parcial/Pausado
@@ -16,8 +25,8 @@
 | N3 | Idempotência de eventos (UUID + outbox) | `[x]` | W4 | Ativo no BFF |
 | N4 | Sanity Validator dual-layer (edge + BFF) | `[x]` | W2 | Validado contra cheats |
 | N5 | Score real derivado no BFF (sem hardcode) | `[x]` | W2 | Remove dependência de mocks |
-| N6 | Perfil Vocacional automático | `[x]` | W4 | 6 dimensões + 4 tiers |
-| N7 | Reputação canónica `/reputacao/me` | `[x]` | W2 | Cache Redis ativa |
+| N6 | Perfil Vocacional automático | `[~]` | W4 | ⚠️ **Triplo desync** FE/BFF/Strapi (ver `arquivo-fundacional/06-engenharia/entitlements-core-trio-analysis.md` H1). Service calcula on-demand mas não persiste. Schema Strapi rico (8 campos) nunca escrito pelo BFF. Frontend usa mock hardcoded. Faltam pesos por evento (spec `1a81656f`). |
+| N7 | Reputação canónica `/reputacao/me` | `[x]` | W2 | BFF com 3 rotas (`/me`, `/:id`, `/:id/breakdown`), cache Redis, batch recalc. Schema `ReputacaoBreakdownSchema` no Shared (Zod validated). Frontend: `ReputacaoPage` completa (Bento grid, score circular, dimensions, breakdown), `RelatorioVocacional` consome `/reputacao/me`, rota na Sidebar + CommandPalette. Testes unit + integration. |
 | N8 | Conquistas via Event Bus (12 regras) | `[x]` | W4 | 12 regras definidas |
 | N9 | Relatório Vocacional Premium | `[~]` | W2 | MVP ok; Tina insights pendentes |
 
@@ -33,7 +42,7 @@
 | C7 | Projetos (estudantes publicam) | `[x]` | Votação + feedback (Kudos) |
 | C8 | Posts e Conquistas (feed social) | `[x]` | Moderação integrada |
 | C9 | Quizzes e Tarefas dentro de Cursos | `[x]` | Notas automáticas |
-| C10 | Certificados de conclusão | `[x]` | Página `/estudante/certificados` |
+| C10 | Certificados de conclusão | `[x]` | Página `/estudante/certificados` + BFF `GET /estudante/certificados` |
 
 ## 3. Features Transversais (T1–T12)
 | ID | Requisito | Estado | Detalhe |
@@ -41,15 +50,15 @@
 | T1 | Like / Curtir (toggle, 1 por user/entidade) | `[x]` | Interaction events |
 | T2 | Bookmark / Guardar (privado, toggle) | `[x]` | Página `/guardados` |
 | T3 | Comentar (3–1000 chars, 1 nível reply) | `[x]` | Moderação ativa |
-| T4 | Avaliar (Rating) 1–5 estrelas | `[~]` | Persistência PostgreSQL migrada |
+| T4 | Avaliar (Rating) 1–5 estrelas | `[~]` | Persistência PostgreSQL. Faltam condições de elegibilidade (spec Traycer: curso ≥30%, experiência ≥3 blocos, etc. — ver `arquivo-fundacional/09-traycer-specs/mapa-paginas-features-transversais.md` §Feature 4). |
 | T5 | Partilhar (Share) interno/externo | `[ ]` | Por integrar |
 | T6 | Denunciar (Report) + auto-hide | `[x]` | Fila para moderador |
 | T7 | Telemetria (views, scroll, vídeo, decisões) | `[x]` | Identidade Total auditada |
 | T8 | Vínculo (Conexão formal bilateral) | `[~]` | Drift: schema shared vs apps/api serializer |
-| T9 | Notificações sociais/vínculo (agrupamento) | `[x]` | Push + Socket.IO |
-| T10 | Endorsements / Kudos | `[x]` | REQ-4-014 |
-| T11 | Project Votes (upvote / fork) | `[x]` | Pesos contribuem para feed |
-| T12 | Discussions / Threads | `[x]` | REQ-5-007 |
+| T9 | Notificações sociais/vínculo (agrupamento) | `[~]` | Socket.IO funcional para notificações básicas. Agrupamento e Push real pendentes. Contradição com P8 `[~]`. |
+| T10 | Endorsements / Kudos | `[P]` | Schema existe, rotas BFF parciais. Sem testes E2E. UI de endosso não verificada. |
+| T11 | Project Votes (upvote / fork) | `[P]` | Schema existe. Integração com feed scoring não verificada E2E. |
+| T12 | Discussions / Threads | `[P]` | BFF `GET /discussions/:id/replies` funcional. Frontend: `DiscussionThread` + `DiscussionsPanel` (2 componentes com ~56 linhas de lógica). Falta: criação de thread, moderação inline, delete. |
 
 ## 4. Plataforma & Identidade (P1–P10)
 | ID | Requisito | Estado | Notas |
@@ -60,7 +69,7 @@
 | P4 | FeatureRegistry SSOT | `[x]` | 7 features + 6 HUBs |
 | P5 | `GET /bootstrap` (session/capabilities) | `[x]` | 4 camadas ativas |
 | P6 | Rate limiting via Upstash | `[x]` | Middleware integrado |
-| P7 | LTI 1.3 Grade Passback | `[x]` | Outbox pattern + retry |
+| P7 | LTI 1.3 Grade Passback | `[P]` | Outbox pattern implementado. Grade passback real requer LMS de teste para validação E2E. OIDC launch flow parcial (ver `arquivo-fundacional/09-traycer-specs/algoritmos-dados-seguranca.md` §6). |
 | P8 | Realtime Socket.IO (notificações + mensagens) | `[~]` | Mensagens UI pendente |
 | P9 | Tina — Assistente IA (chat + interpretação) | `[~]` | Streaming instável |
 | P10 | RAG sobre conteúdos | `[ ]` | "Ask the Lesson" |
@@ -73,8 +82,8 @@
 | F3 | Perfil Público Showcase (LinkedIn vocacional) | `[ ]` | REQ-5-006 |
 | F4 | Stories — formato vídeo curto vertical | `[ ]` | REQ-4-011 |
 | F5 | Pílulas de Conhecimento — micro-simulações | `[ ]` | REQ-4-012 |
-| F6 | Push FOMO / Notificações inteligentes | `[x]` | Baseadas em telemetria |
-| F7 | Endorsements / Kudos públicos | `[x]` | (= T10) |
+| F6 | Push FOMO / Notificações inteligentes | `[~]` | `notify.hook.ts` (4.4KB) existe. Triggers FOMO específicos ("3 instituições viram o teu perfil", etc.) **não implementados**. |
+| F7 | Endorsements / Kudos públicos | `[P]` | (= T10 — schema parcial, sem testes E2E) |
 | F8 | Top Bar com Command+K (search global) | `[ ]` | REQ-NF-009 |
 | F9 | Sidebar slim (retrátil) | `[ ]` | REQ-NF-010 |
 | F10 | 15 áreas vocacionais globais | `[x]` | Migrado de 4 áreas (F10) |
@@ -83,8 +92,8 @@
 ## 6. Feed & Algoritmo (A1–A5)
 | ID | Requisito | Estado | Notas |
 | --- | --- | --- | --- |
-| A1 | Feed soberano (algoritmo de ranking) | `[x]` | Cache Redis + pesos |
-| A2 | 4 fontes de feed (Geral/Voc/Inst/Trend) | `[P]` | Parcial: grouped fetch pendente |
+| A1 | Feed soberano (algoritmo de ranking) | `[x]` | Pipeline 4 passos + 3 rotas BFF (`/feed`, `/feed/geral`, `/feed/trending`). Pesos admin-tunable via Redis. Scoring 7 features × weights. |
+| A2 | 4 fontes de feed (Geral/Voc/Inst/Trend) | `[~]` | Geral + Trending implementados. Faltam Vocacional e Institucional como feeds separados. |
 | A3 | Comments com moderação inline | `[P]` | Integrado com feed global |
 | A4 | Pesos de interação tunáveis via admin | `[x]` | REQ-3-003 |
 | A5 | Algoritmo de viralização e descoberta | `[ ]` | Pendente Wave 5 |
@@ -116,7 +125,7 @@
 ## 9. Não-Funcionais (NF1–NF7)
 | ID | Requisito | Estado | Notas |
 | --- | --- | --- | --- |
-| NF1 | Zero `any` em TypeScript | `[~]` | Redução massiva (~40 remanescentes) |
+| NF1 | Zero `any` em TypeScript | `[x]` | Confirmado por grep 2026-04-29 — zero `as any` / `: any` em todo o monorepo |
 | NF2 | Acessibilidade total (PWA, contraste) | `[~]` | Foco em Wave 3 |
 | NF3 | Rule of 300 linhas por ficheiro | `[~]` | Expansão de 200 -> 300 |
 | NF4 | Performance (Sentry, redis cache) | `[x]` | Performance core |
@@ -134,8 +143,8 @@
 | D2 | `apps/web/src/features/feed/FeedPage.tsx` contém 4 `any` — limpar em `W4-T2` | `R3-1` | `[ ]` |
 | D3 | Métrica `domain_events_failed_total` em logs; exporter Prometheus/Sentry pendente | `R3-1` | `[ ]` |
 | D4 | Naming mismatch de conquistas (12 regras nunca disparam) | `T-FIX-3` | `[ ]` |
-| D5 | Outbox Replay scheduler co-located com BFF main (risco de saturação) | Análise técnica | `[ ]` |
-| D6 | "Midnight Rollover Bug" potencial na chave Redis de telemetria | Análise técnica | `[ ]` |
+| D5 | Outbox Replay scheduler co-located com BFF main (risco de saturação) | Análise técnica | `[x]` ✅ outbox-worker daemon isolado |
+| D6 | "Midnight Rollover Bug" potencial na chave Redis de telemetria | Análise técnica | `[x]` ✅ SET NX EX 7d (UUID-based) |
 | D7 | Race condition entre Edge URL e BFF fallback | Análise técnica | `[ ]` |
 
 ## 11. Bugs Activos (Auditoria de Implementação)
@@ -154,4 +163,22 @@
 | BUG-10 | Cloudflare R2 Keys expostas em plain text | Auditoria | `[ ]` |
 
 ---
-*Última auditoria: 23 de Abril de 2026 · Alinhado com `specs/IMPORTANTE/02`.*
+
+## 12. Referências ao Arquivo Fundacional
+
+Para detalhes field-level sobre cada requisito, consultar:
+
+| Tema | Ficheiro no arquivo-fundacional |
+|------|--------------------------------|
+| Features Transversais (T1-T12) | `09-traycer-specs/mapa-paginas-features-transversais.md` |
+| Algoritmo Feed/Ranking (A1-A5) | `09-traycer-specs/algoritmos-dados-seguranca.md` §1 |
+| Telemetria/Vocacional (N1-N9) | `09-traycer-specs/algoritmos-dados-seguranca.md` §2 |
+| Segurança/Rate Limits (M1-M7) | `09-traycer-specs/algoritmos-dados-seguranca.md` §3 |
+| Design System (NF2) | `09-traycer-specs/design-system-completo.md` |
+| Mapa de Rotas por Role | `09-traycer-specs/mapa-paginas-features-transversais.md` Part A |
+| Modelo Dados Strapi | `09-traycer-specs/algoritmos-dados-seguranca.md` §4 |
+| Diagnóstico Hotspots | `06-engenharia/entitlements-core-trio-analysis.md` |
+| Pesos Vocacionais (11 tipos) | `docs/ROADMAP_PRODUTO_DISRUPTIVO.md` §Tier 1 |
+
+---
+*Última auditoria: 30 de Abril de 2026 · Correcção de 8 ciclos E2E quebrados (rotas BFF ausentes) + 2 STUBs substituídos + 5 FIXME falsas removidas.*

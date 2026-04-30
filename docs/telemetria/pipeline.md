@@ -57,9 +57,30 @@ Cada evento de telemetria possui um `eventId` (UUIDv4) gerado no cliente. O Cons
 Para garantir a entrega **at-least-once**, o sistema implementa o **Outbox Pattern** no Strapi (`domain-events`).
 
 1.  **Worker Isolado**: O replay não corre no processo principal da API (evita D5). É invocado via `npm run start:outbox-worker`.
-2.  **Lock Distribuído**: Usa `outbox:lock` em Redis para garantir que apenas uma instância processa a fila.
+2.  **Lock Distribuído + Fencing Token**: `apps/api/src/lib/distributed-lock.ts` usa `SET NX EX + INCR counter` para prevenir stale lock writes em caso de TTL expirado. A release verifica o token antes de `DEL`. (Upstash single-node — RedLock com quórum não aplicável.)
 3.  **Exponential Backoff**: Falhas no processamento incrementam `attempts`. O replay ignora eventos falhados recentemente baseado em `2^attempts * 1min`.
 4.  **Chunk Size**: Processamento em blocos de 50 eventos para manter o event loop desimpedido.
+
+## 🧊 Telemetry Worker Isolado
+
+O consumer de telemetria corre como **processo independente** (`apps/api/src/workers/telemetry-worker.ts`), separado do BFF (Hono), para não saturar o event loop durante picos.
+
+- **Entry point:** `npm run worker:telemetry -w apps/api`
+- **Graceful shutdown:** SIGTERM/SIGINT finalizam o worker sem perda de eventos em buffer
+- **Heartbeat Redis:** Escreve `telemetry:worker:heartbeat` a cada 30s (TTL 120s) — monitorizável via `/health/workers`
+- **Chunked processing:** 100 eventos por ciclo + `setImmediate` yield — previne block do event loop
+- **Backpressure:** Aviso de log se queue > 10.000 eventos
+- **Railway Procfile:** `worker: node dist/workers/telemetry-worker.js`
+
+## 🧳 Cold Storage (Compliance Forense)
+
+Eventos inválidos (fraude, bots, dados corrompidos) são arquivados em Cloudflare R2 para auditoria forense.
+
+- **Schema:** `ColdStorageEventSchema` em `@pdc/shared/src/cold-storage.ts`
+- **Formato:** NDJSON batch, key pattern `cold-storage/YYYY/MM/DD/HH-mm-ss-{uuid}.ndjson`
+- **Buffer:** até 100 eventos ou 60s, depois flush atómico via `uploadColdBatch()`
+- **Fallback:** Se R2 indisponível, escreve em `/tmp/pdc-cold-storage/` com log de erro
+- **Fire-and-forget:** Não bloqueia o consumer (`.catch()` registado)
 
 ---
 
@@ -73,4 +94,4 @@ O `useTelemetry` hook em `apps/web` implementa garantias de entrega de classe mu
 - **Tagging Forense**: Eventos detectados como "lentos" ou "fora de ordem" no browser são etiquetados com `metadata.clientFlagged`.
 
 ---
-*Doc is Law — Última auditoria: 22 de Abril de 2026.*
+*Doc is Law — Última auditoria: 30 de Abril de 2026.*

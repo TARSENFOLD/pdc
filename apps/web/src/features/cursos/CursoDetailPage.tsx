@@ -52,6 +52,7 @@ export function CursoDetailPage() {
   const isBlockedByMerit = curso.bloqueado;
   const motivoBloqueio = curso.motivoBloqueio;
   const isPaid = !curso.gratuito;
+  const modulos = curso.modulos ?? [];
 
   const handleEnrollClick = () => {
     if (isBlockedByMerit) return;
@@ -77,7 +78,7 @@ export function CursoDetailPage() {
         <div className="absolute bottom-8 left-8 right-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
            <div>
              <div className="flex items-center gap-2 mb-4">
-                {curso.estado && <EditorialStateBadge state={curso.estado as any} />}
+                <EditorialStateBadge state={curso.estado} />
                 <Badge variant="secondary" className="bg-accent/10 text-accent border-accent/20 font-black text-[10px] uppercase">{curso.area}</Badge>
                 <Badge variant="outline" className="bg-canvas/50 backdrop-blur-md font-bold text-[10px] uppercase">{curso.nivel}</Badge>
              </div>
@@ -105,14 +106,14 @@ export function CursoDetailPage() {
 
               <TabsContent value="visao" className="mt-8">
                 <div className="space-y-6">
-                   {curso.modulos?.map((mod: Modulo, idx: number) => (
+                   {modulos.map((mod: Modulo, idx: number) => (
                      <Card key={mod.id} className="p-6 bg-elevated border-ink-tertiary/10 hover:border-accent/20 transition-all rounded-3xl">
                         <div className="flex items-center gap-4 mb-4">
                            <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent font-black text-xs">{idx + 1}</div>
                            <h3 className="text-lg font-black text-ink-primary tracking-tight">{mod.titulo}</h3>
                         </div>
                         <ul className="space-y-2 pl-12">
-                           {mod.itens?.map((item: ItemModulo) => (
+                           {mod.itens.map((item: ItemModulo) => (
                              <li key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-elevated/30 border border-ink-tertiary/10 text-sm">
                                 <div className="flex items-center gap-3">
                                    <Zap size={14} className="text-accent" />
