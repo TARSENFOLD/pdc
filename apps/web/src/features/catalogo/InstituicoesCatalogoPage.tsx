@@ -12,7 +12,7 @@ const TIPOS = [
   { value: 'universidade', label: 'Universidade' },
   { value: 'escola_tecnica', label: 'Escola Técnica' },
   { value: 'centro_formacao', label: 'Centro de Formação' },
-  { value: 'outro', label: 'Outro' }
+  { value: 'outro', label: 'Outro' },
 ];
 
 export function InstituicoesCatalogoPage() {
@@ -33,36 +33,19 @@ export function InstituicoesCatalogoPage() {
 
   const insts = data?.data ?? [];
 
-  const handleTipoChange = (val: string) => {
-    const next = new URLSearchParams(sp);
-    if (val) next.set('tipo', val); else next.delete('tipo');
-    next.delete('page');
-    setSp(next, { replace: true });
-  };
-
-  const handleSearch = (val: string) => {
-    const next = new URLSearchParams(sp);
-    if (val) next.set('q', val); else next.delete('q');
-    next.delete('page');
-    setSp(next, { replace: true });
-  };
-
   return (
-    <div className="min-h-screen bg-canvas px-4 py-20 sm:px-8">
-      <SEOHead 
-        title="Instituições de Ensino" 
-        description="Explora as melhores universidades, institutos e centros de formação parceiros do PDC." 
-        url="https://usepdc.com/instituicoes" 
+    <>
+      <SEOHead
+        title="Instituições"
+        description="Explora as melhores universidades, institutos e centros de formação parceiros do PDC."
+        url="https://usepdc.com/instituicoes"
       />
-      
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-12">
-          <div className="inline-flex items-center rounded-full bg-elevated px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-accent border border-ink-tertiary/10 mb-4">
-            🏛️ Ecossistema Académico
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-ink-primary sm:text-5xl">Parceiros de Futuro.</h1>
-          <p className="mt-4 text-lg text-ink-secondary max-w-2xl leading-relaxed">
-            A PDC colabora com as instituições mais inovadoras para garantir que o teu percurso académico seja validado e reconhecido.
+
+      <div className="max-w-7xl mx-auto space-y-8">
+        <header>
+          <h1 className="text-2xl font-bold text-ink-primary">Instituições Parceiras</h1>
+          <p className="mt-1 text-sm text-ink-secondary">
+            Universidades, institutos e centros de formação que validam o teu percurso académico.
           </p>
         </header>
 
@@ -70,13 +53,18 @@ export function InstituicoesCatalogoPage() {
           isLoading={isLoading}
           isEmpty={insts.length === 0}
           onClearFilters={() => { setSp(new URLSearchParams()); }}
+          emptyTitle="Nenhuma instituição nesta categoria"
+          emptyDescription="Experimenta outra categoria ou aguarda novos parceiros."
           filterBar={
             <CatalogoFilterBar
-              searchTerm={search}
-              onSearchChange={handleSearch}
               areas={TIPOS}
               selectedArea={tipo}
-              onAreaChange={handleTipoChange}
+              onAreaChange={(val) => {
+                const next = new URLSearchParams(sp);
+                if (val) next.set('tipo', val); else next.delete('tipo');
+                next.delete('page');
+                setSp(next, { replace: true });
+              }}
               totalResults={data?.meta.total}
             />
           }
@@ -88,17 +76,18 @@ export function InstituicoesCatalogoPage() {
               subtitle={i.tipo ? i.tipo.charAt(0).toUpperCase() + i.tipo.slice(1).replaceAll('_', ' ') : 'Instituição Parceira'}
               image={i.logoUrl || undefined}
               href={`/instituicoes/${i.slug || i.id}`}
+              icon={Building2}
               badges={[
-                { label: i.regiao || 'Angola', variant: 'outline' }
+                { label: i.regiao || 'Angola', variant: 'outline' },
               ]}
               footerInfo={[
                 { icon: Building2, label: 'Parceiro PDC' },
-                { icon: MapPin, label: i.regiao || 'Ver Localização' }
+                { icon: MapPin, label: i.regiao || 'Ver Localização' },
               ]}
             />
           ))}
         </CatalogoGridShell>
       </div>
-    </div>
+    </>
   );
 }

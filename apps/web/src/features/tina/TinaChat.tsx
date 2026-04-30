@@ -35,20 +35,17 @@ export function TinaChat() {
             <Sparkles size={24} strokeWidth={2.5} className="animate-pulse-subtle" />
           </span>
         </div>
-        <span className="text-[10px] font-black tracking-[0.2em] text-accent uppercase opacity-60 group-hover:opacity-100 transition-opacity">Tina</span>
+        <span className="text-[10px] font-semibold tracking-widest text-accent uppercase opacity-60 group-hover:opacity-100 transition-opacity">Tina</span>
       </button>
     );
   }
 
   return (
     <div
-      className="fixed bottom-8 right-8 z-50 flex flex-col overflow-hidden shadow-2xl border border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-300"
-      style={{ 
-        width: 380, 
-        height: 560, 
-        borderRadius: 24, 
-        background: 'rgba(10, 10, 10, 0.8)',
-        backdropFilter: 'blur(24px)'
+      className="fixed bottom-8 right-8 z-50 w-[380px] h-[560px] flex flex-col overflow-hidden shadow-2xl border border-white/5 rounded-[24px] animate-in fade-in slide-in-from-bottom-4 duration-300"
+      style={{
+        background: 'var(--glass-bg-dark)',
+        backdropFilter: `blur(var(--glass-blur)) saturate(var(--glass-saturate))`,
       }}
     >
       {/* Header (Glass) */}
@@ -57,7 +54,7 @@ export function TinaChat() {
           <Cpu size={18} strokeWidth={2.5} />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-black tracking-tight text-ink-primary">Tina Intelligence</span>
+          <span className="text-sm font-semibold text-ink-primary">Tina Intelligence</span>
           <span className="text-[9px] font-bold uppercase tracking-widest text-accent/60">System Active • {AI_PROVIDER}</span>
         </div>
         <div className="ml-auto flex items-center gap-3">

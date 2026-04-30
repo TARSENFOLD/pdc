@@ -11,7 +11,7 @@ import {
   Shield, CheckCircle,
   Settings, BookOpenText, PenSquare,
   MapPin, Star, Microscope, ScrollText, ChevronRight,
-  Brain, Zap, Building2, BarChart3,
+  Brain, Zap, Building2, BarChart3, PanelLeftClose, PanelLeftOpen,
   type LucideProps,
 } from 'lucide-react';
 
@@ -137,7 +137,7 @@ const SIDEBAR_CONFIG: SidebarItem[] = [
   },
 ];
 
-export function SidebarContent({ onNavigate }: SidebarContentProps) {
+export function SidebarContent({ onNavigate, collapsed = false, onToggleCollapse }: SidebarContentProps) {
   const { user } = useAuth();
   const { isEnabled } = useFeatureFlags();
   const { i18n } = useTranslation();
@@ -180,9 +180,11 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         <NavLink
           to={resolvedTo}
           onClick={onNavigate}
+          title={collapsed ? label : undefined}
           className={({ isActive }) =>
             [
-              'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition-all duration-300 min-h-[44px]',
+              'flex items-center rounded-2xl transition-all duration-300 min-h-[44px]',
+              collapsed ? 'justify-center px-0 py-3 w-full' : 'gap-3 px-4 py-3 text-sm',
               isActive
                 ? 'bg-accent text-white font-semibold shadow-lg shadow-accent/20 scale-[1.02]'
                 : 'text-ink-secondary hover:bg-elevated hover:text-ink-primary',
@@ -190,7 +192,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
           }
         >
           <item.icon size={18} aria-hidden={true} className="shrink-0" />
-          {label}
+          {!collapsed && label}
         </NavLink>
       </li>
     );
@@ -210,6 +212,14 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
       : [];
 
     if (visibleChildren.length === 0) return null;
+
+    if (collapsed) {
+      return (
+        <li key={groupKey} className="space-y-1">
+          {visibleChildren.map(renderLeaf)}
+        </li>
+      );
+    }
 
     return (
       <li key={groupKey} className="space-y-1">
@@ -232,18 +242,32 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
   return (
     <div className="flex h-full flex-col bg-[var(--surface-elevated)] border-r border-[var(--glass-border-light)]">
-      <div className="flex items-center gap-4 px-6 py-6 border-b border-[var(--glass-border-light)]">
-        <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-asym-a)] bg-[var(--accent-terracotta)] text-[var(--ink-on-accent)] shadow-xl shadow-[var(--accent-terracotta-glow)]">
+      {/* Header: logo + botão de colapso */}
+      <div className={`flex items-center border-b border-[var(--glass-border-light)] py-5 ${collapsed ? 'justify-center px-0' : 'gap-4 px-6'}`}>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-asym-a)] bg-[var(--accent-terracotta)] text-[var(--ink-on-accent)] shadow-xl shadow-[var(--accent-terracotta-glow)]">
           <span className="font-authority font-bold text-xl">P</span>
         </div>
-        <div>
-          <span className="block text-lg font-semibold text-[var(--ink-primary)] tracking-tight">PDC</span>
-          <span className="block text-xs font-medium text-[var(--ink-tertiary)]">Por Dentro do Curso</span>
-        </div>
+        {!collapsed && (
+          <div className="flex-1 min-w-0">
+            <span className="block text-lg font-semibold text-[var(--ink-primary)] tracking-tight">PDC</span>
+            <span className="block text-xs font-medium text-[var(--ink-tertiary)]">Por Dentro do Curso</span>
+          </div>
+        )}
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            aria-label={collapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[var(--ink-tertiary)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink-primary)] ${collapsed ? 'mt-2' : ''}`}
+          >
+            {collapsed
+              ? <PanelLeftOpen size={16} aria-hidden={true} />
+              : <PanelLeftClose size={16} aria-hidden={true} />}
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-8 scrollbar-none">
-        <ul className="space-y-4 px-4">
+      <nav className="flex-1 overflow-y-auto py-6 scrollbar-none">
+        <ul className={`space-y-1 ${collapsed ? 'px-2' : 'px-4 space-y-4'}`}>
           {visibleItems.map((item) =>
             item.type === 'group' ? renderGroup(item) : renderLeaf(item)
           )}
@@ -263,8 +287,16 @@ function loadGroupState(role: Role): Record<string, boolean> {
     const raw = localStorage.getItem(getStorageKey(role));
     if (raw) return JSON.parse(raw) as Record<string, boolean>;
   } catch { /* ignore */ }
-  // Por defeito, os hubs principais de estudante estão abertos
-  return { 'aprender:estudante': true, 'meu_futuro:estudante': true };
+
+  const comKey = `comunidade:${ALL_ROLES.join(',')}`;
+  const defaults: Record<string, boolean> = { [comKey]: true };
+
+  if (role === 'estudante') {
+    defaults['aprender:estudante'] = true;
+    defaults['meu_futuro:estudante'] = true;
+  }
+
+  return defaults;
 }
 
 function saveGroupState(role: Role, state: Record<string, boolean>): void {
@@ -275,4 +307,6 @@ function saveGroupState(role: Role, state: Record<string, boolean>): void {
 
 interface SidebarContentProps {
   onNavigate?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }

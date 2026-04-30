@@ -15,10 +15,10 @@ export function PatrocinadorDashboard() {
       className="p-6 md:p-10 space-y-10 max-w-5xl mx-auto"
     >
       <header>
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase tracking-widest mb-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-semibold uppercase tracking-widest mb-4">
           <ShieldCheck size={12} /> Painel do Patrocinador
         </div>
-        <h1 className="text-4xl font-black text-ink-primary tracking-tighter sm:text-5xl font-display">
+        <h1 className="text-2xl font-bold text-ink-primary">
           Bem-vindo, {user?.nome.split(' ')[0] ?? 'Patrocinador'}<span className="text-accent">.</span>
         </h1>
         <p className="text-ink-secondary mt-2 text-lg">
@@ -34,7 +34,7 @@ export function PatrocinadorDashboard() {
             </div>
             <h3 className="font-bold text-ink-primary group-hover:text-accent transition-colors">Feed de Mérito</h3>
             <p className="text-xs text-ink-tertiary mt-1 leading-relaxed">Vê o que se passa na comunidade educativa.</p>
-            <div className="flex items-center text-[10px] font-black text-ink-tertiary uppercase tracking-widest mt-4 group-hover:text-accent transition-colors">
+            <div className="flex items-center text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mt-4 group-hover:text-accent transition-colors">
               Abrir <ChevronRight size={12} className="ml-1" />
             </div>
           </GlassCard>
@@ -47,7 +47,7 @@ export function PatrocinadorDashboard() {
             </div>
             <h3 className="font-bold text-ink-primary group-hover:text-accent transition-colors">Explorar Talentos</h3>
             <p className="text-xs text-ink-tertiary mt-1 leading-relaxed">Descobre conteúdo e profissionais em formação.</p>
-            <div className="flex items-center text-[10px] font-black text-ink-tertiary uppercase tracking-widest mt-4 group-hover:text-accent transition-colors">
+            <div className="flex items-center text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mt-4 group-hover:text-accent transition-colors">
               Abrir <ChevronRight size={12} className="ml-1" />
             </div>
           </GlassCard>

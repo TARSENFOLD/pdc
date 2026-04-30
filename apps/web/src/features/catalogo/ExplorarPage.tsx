@@ -1,9 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
-import { Spinner, Card, Pagination, Avatar } from '@/components/ui';
+import { Card, Pagination, Avatar } from '@/components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
+import { AspirationalEmpty } from '@/components/ui/AspirationalEmpty';
+import { CardGridSkeleton } from '@/components/ui/Skeleton';
 import { SEOHead } from '@/components/layout/SEOHead';
+import { SearchX } from 'lucide-react';
 import type { ExplorarResultado, ExplorarItem, MentorPublico, AreaVocacional } from '@pdc/shared';
 
 const AREAS: Array<{ value: AreaVocacional; label: string }> = [
@@ -47,10 +50,10 @@ function ResultCard({ item }: { item: ExplorarItem }) {
     <Link to={linkMap[item.tipo] ?? '#'}>
       <Card interactive className="p-5 border-ink-tertiary/10 bg-elevated hover:border-accent/30 transition-all">
         {item.capaUrl ? (
-          <img src={item.capaUrl} alt={item.titulo} className="mb-4 h-40 w-full rounded-xl object-cover shadow-sm" />
+          <img src={item.capaUrl} alt={item.titulo} className="mb-4 h-40 w-full rounded-xl object-cover shadow-sm" loading="lazy" />
         ) : (
-          <div className="mb-4 h-40 w-full rounded-xl bg-elevated flex items-center justify-center text-ink-tertiary">
-            Sem capa
+          <div className="mb-4 h-40 w-full rounded-xl bg-gradient-to-br from-accent/10 via-recessed to-elevated flex items-center justify-center">
+            <span className="text-[10px] font-medium text-accent/40 uppercase tracking-widest">{item.tipo}</span>
           </div>
         )}
         <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{item.tipo}</span>
@@ -131,21 +134,18 @@ export function ExplorarPage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas px-4 py-20 sm:px-8">
-      <SEOHead 
-        title="Explorar Catálogo" 
-        description="Descobre cursos, simulações e mentores na infraestrutura de decisão PDC." 
-        url="https://usepdc.com/explorar" 
+    <div className="min-h-screen bg-canvas">
+      <SEOHead
+        title="Explorar"
+        description="Descobre cursos, simulações e mentores na plataforma PDC."
+        url="https://usepdc.com/explorar"
       />
-      
+
       <div className="mx-auto max-w-7xl">
-        <header className="mb-12">
-          <div className="inline-flex items-center rounded-full bg-elevated px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-accent border border-ink-tertiary/10 mb-4">
-            🔍 Inteligência Coletiva
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-ink-primary sm:text-5xl">Explorar <span className="text-accent">PDC.</span></h1>
-          <p className="mt-4 text-lg text-ink-secondary max-w-2xl">
-            Acede a simulações de alto impacto, cursos certificados e mentoria de elite. O teu futuro começa aqui.
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold text-ink-primary">Explorar</h1>
+          <p className="mt-1 text-sm text-ink-secondary">
+            Cursos certificados, simulações e mentores da rede PDC.
           </p>
         </header>
 
@@ -165,7 +165,7 @@ export function ExplorarPage() {
             </div>
 
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <span className="text-[10px] font-black uppercase tracking-tighter text-ink-tertiary mr-2">Filtros:</span>
+              <span className="text-[10px] font-medium uppercase tracking-widest text-ink-tertiary mr-2">Área:</span>
               {AREAS.map((a) => (
                 <button 
                   key={a.value} 
@@ -190,19 +190,22 @@ export function ExplorarPage() {
 
           <TabsContent value={tab} className="mt-8">
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-32 gap-4">
-                <Spinner size="lg" />
-                <p className="text-sm font-mono uppercase tracking-widest text-accent animate-pulse">Sincronizando Catálogos...</p>
-              </div>
+              <CardGridSkeleton />
             ) : items.length === 0 ? (
-              <div className="py-24 text-center rounded-3xl border border-dashed border-ink-tertiary/10 bg-recessed">
-                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/5 text-ink-tertiary">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 9.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 7 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </div>
-                <h3 className="text-lg font-bold text-ink-primary">Nenhum resultado encontrado</h3>
-                <p className="mt-2 text-sm text-ink-secondary">Tenta ajustar os teus filtros ou pesquisa.</p>
-                <Link to="/explorar" onClick={() => { setSearchParams(new URLSearchParams()); }} className="mt-6 inline-block text-xs font-bold uppercase tracking-widest text-accent hover:underline">Limpar tudo</Link>
-              </div>
+              <AspirationalEmpty
+                icon={SearchX}
+                title="Nenhum resultado para esta pesquisa"
+                description="Experimenta outra área ou limpa os filtros."
+                action={
+                  <Link
+                    to="/explorar"
+                    onClick={() => { setSearchParams(new URLSearchParams()); }}
+                    className="text-xs font-semibold text-accent hover:underline uppercase tracking-widest"
+                  >
+                    Limpar tudo
+                  </Link>
+                }
+              />
             ) : (
               <>
                 <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

@@ -1,5 +1,8 @@
 import React from 'react';
-import { Spinner } from '../ui';
+import { CardGridSkeleton } from '../ui/Skeleton';
+import { AspirationalEmpty } from '../ui/AspirationalEmpty';
+import { Button } from '../ui/Button';
+import { SearchX } from 'lucide-react';
 
 interface CatalogoGridShellProps {
   isLoading?: boolean;
@@ -9,40 +12,39 @@ interface CatalogoGridShellProps {
   children: React.ReactNode;
   pageCount?: number;
   onPageChange?: (page: number) => void;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
-export function CatalogoGridShell({ 
-  isLoading, 
-  isEmpty, 
-  onClearFilters, 
-  filterBar, 
-  children 
+export function CatalogoGridShell({
+  isLoading,
+  isEmpty,
+  onClearFilters,
+  filterBar,
+  children,
+  emptyTitle = 'Sem resultados para esta área',
+  emptyDescription = 'Experimenta outra área ou aguarda novos conteúdos.',
 }: CatalogoGridShellProps): React.ReactElement {
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-20" data-testid="catalogo">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8" data-testid="catalogo">
+    <div className="space-y-6" data-testid="catalogo">
       {filterBar}
-      {isEmpty ? (
-        <div className="py-20 text-center border border-dashed rounded-3xl">
-          <p className="text-ink-tertiary">Nenhum resultado encontrado.</p>
-          {onClearFilters && (
-            <button 
-              onClick={onClearFilters} 
-              className="mt-4 text-accent font-bold hover:text-accent/80 transition-colors"
-            >
-              Limpar filtros
-            </button>
-          )}
-        </div>
+      {isLoading ? (
+        <CardGridSkeleton />
+      ) : isEmpty ? (
+        <AspirationalEmpty
+          icon={SearchX}
+          title={emptyTitle}
+          description={emptyDescription}
+          action={
+            onClearFilters ? (
+              <Button variant="outline" onClick={onClearFilters}>
+                Limpar filtros
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {children}
         </div>
       )}

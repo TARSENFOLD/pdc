@@ -5,7 +5,7 @@ import { SEOHead } from '@/components/layout/SEOHead';
 import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
 import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
 import ContentCard from '@/components/catalogo/ContentCard';
-import { Target, Activity } from 'lucide-react';
+import { Target, Activity, FlaskConical } from 'lucide-react';
 
 const AREAS = [
   { value: 'TECNOLOGIA', label: 'Tecnologia' },
@@ -33,21 +33,18 @@ export function SimulacoesCatalogoPage() {
   const sims = data?.data ?? [];
 
   return (
-    <div className="min-h-screen bg-canvas px-4 py-20 sm:px-8">
-      <SEOHead 
-        title="Catálogo de Simulações" 
-        description="Experimenta profissões reais e testa as tuas aptidões com simulações de alto impacto." 
-        url="https://usepdc.com/simulacoes" 
+    <>
+      <SEOHead
+        title="Simulações"
+        description="Experimenta profissões reais e recebe um diagnóstico sobre a tua aptidão."
+        url="https://usepdc.com/simulacoes"
       />
-      
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-12">
-          <div className="inline-flex items-center rounded-full bg-elevated px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-accent border border-ink-tertiary/10 mb-4">
-            ⚡ Decisão Baseada em Dados
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-ink-primary sm:text-5xl">Simulações Práticas.</h1>
-          <p className="mt-4 text-lg text-ink-secondary max-w-2xl leading-relaxed">
-            Não escolhas um curso por intuição. Vive o dilema real da profissão e recebe um diagnóstico de precisão sobre a tua aptidão biomecânica.
+
+      <div className="max-w-7xl mx-auto space-y-8">
+        <header>
+          <h1 className="text-2xl font-bold text-ink-primary">Simulações</h1>
+          <p className="mt-1 text-sm text-ink-secondary">
+            Vive o dilema real da profissão e recebe um diagnóstico sobre a tua aptidão.
           </p>
         </header>
 
@@ -55,15 +52,10 @@ export function SimulacoesCatalogoPage() {
           isLoading={isLoading}
           isEmpty={sims.length === 0}
           onClearFilters={() => { setSp(new URLSearchParams()); }}
+          emptyTitle="Nenhuma simulação nesta área"
+          emptyDescription="Experimenta outra área ou aguarda novos conteúdos."
           filterBar={
             <CatalogoFilterBar
-              searchTerm={search}
-              onSearchChange={(val) => {
-                const next = new URLSearchParams(sp);
-                if (val) next.set('q', val); else next.delete('q');
-                next.delete('page');
-                setSp(next, { replace: true });
-              }}
               areas={AREAS}
               selectedArea={area}
               onAreaChange={(val) => {
@@ -83,15 +75,16 @@ export function SimulacoesCatalogoPage() {
               subtitle={s.area}
               image={s.capaUrl || undefined}
               href={`/simulacoes/${s.slug || s.id}`}
+              icon={FlaskConical}
               badges={[{ label: `Tipo ${String(s.tipo)}`, variant: 'accent' }]}
               footerInfo={[
                 { icon: Activity, label: 'Telemetria Ativa' },
-                { icon: Target, label: 'Aptidão ϕ' }
+                { icon: Target, label: 'Aptidão ϕ' },
               ]}
             />
           ))}
         </CatalogoGridShell>
       </div>
-    </div>
+    </>
   );
 }

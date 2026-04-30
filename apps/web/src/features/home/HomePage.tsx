@@ -1,12 +1,13 @@
 import { useAuth } from '@/lib/auth/AuthContext';
 import { Link } from 'react-router-dom';
-import { Card, Badge, Spinner } from '@/components/ui';
+import { Card, Spinner } from '@/components/ui';
 import {
   BookOpen, FlaskConical, Trophy, Star, Zap,
   PenSquare, Users, Shield, Building2, Microscope,
   BarChart3, ChevronRight,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { cn } from '@/lib/utils';
 import type { Role } from '@pdc/shared';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -19,14 +20,14 @@ interface QuickActionDef {
 
 const ACTIONS_BY_ROLE: Record<Role, QuickActionDef[]> = {
   estudante: [
+    { labelKey: 'home.actions.estudante.perfil_label', to: '/app/perfil-vocacional', icon: Star, descKey: 'home.actions.estudante.perfil_desc' },
     { labelKey: 'home.actions.estudante.simulacoes_label', to: '/app/simulacoes', icon: FlaskConical, descKey: 'home.actions.estudante.simulacoes_desc' },
     { labelKey: 'home.actions.estudante.cursos_label', to: '/app/cursos', icon: BookOpen, descKey: 'home.actions.estudante.cursos_desc' },
-    { labelKey: 'home.actions.estudante.perfil_label', to: '/app/perfil-vocacional', icon: Star, descKey: 'home.actions.estudante.perfil_desc' },
     { labelKey: 'home.actions.estudante.ranking_label', to: '/app/ranking', icon: Trophy, descKey: 'home.actions.estudante.ranking_desc' },
   ],
   mentor: [
-    { labelKey: 'home.actions.mentor.cursos_label', to: '/app/mentor/cursos', icon: BookOpen, descKey: 'home.actions.mentor.cursos_desc' },
     { labelKey: 'home.actions.mentor.criar_label', to: '/app/mentor/cursos/criar', icon: PenSquare, descKey: 'home.actions.mentor.criar_desc' },
+    { labelKey: 'home.actions.mentor.cursos_label', to: '/app/mentor/cursos', icon: BookOpen, descKey: 'home.actions.mentor.cursos_desc' },
     { labelKey: 'home.actions.mentor.simulacoes_label', to: '/app/mentor/simulacoes', icon: FlaskConical, descKey: 'home.actions.mentor.simulacoes_desc' },
     { labelKey: 'home.actions.mentor.mentorados_label', to: '/app/mentor/mentorados', icon: Users, descKey: 'home.actions.mentor.mentorados_desc' },
   ],
@@ -73,39 +74,81 @@ export default function HomePage(): React.ReactNode {
 
   const role = user?.role ?? 'estudante';
   const actionDefs = ACTIONS_BY_ROLE[role];
+  const firstName = user?.nome ? String(user.nome.split(' ')[0]) : null;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-10 pb-20 animate-in fade-in duration-1000">
-      <header className="space-y-3 px-4">
-        <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 px-3 py-1 uppercase tracking-widest text-[9px] font-black">
+    <div className="mx-auto max-w-4xl space-y-8 pb-16 animate-in fade-in duration-500">
+      <header className="space-y-1">
+        <p className="text-xs font-medium text-ink-tertiary uppercase tracking-widest">
           {role.replace('_', ' ')}
-        </Badge>
-        <h1 className="text-4xl font-black text-ink-primary tracking-tighter font-display" data-testid="page-hero-title">
-          {user?.nome ? `${t('home.greeting_prefix')}, ${String(user.nome.split(' ')[0])}` : t('home.welcome_fallback')}
+        </p>
+        <h1 className="text-2xl font-bold text-ink-primary" data-testid="page-hero-title">
+          {firstName
+            ? `${t('home.greeting_prefix')}, ${firstName}`
+            : t('home.welcome_fallback')}
         </h1>
-        <p className="text-ink-secondary text-sm leading-relaxed max-w-lg">
-          {t(`home.greetings.${role}`)}. {t('home.subtitle')}
+        <p className="text-sm text-ink-secondary leading-relaxed">
+          {t(`home.greetings.${role}`)}
         </p>
       </header>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {actionDefs.map((action, idx) => (
           <motion.div
             key={action.to}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.08, type: 'spring', stiffness: 260, damping: 24 }}
+            transition={{ delay: idx * 0.06, type: 'spring', stiffness: 220, damping: 28 }}
+            className={idx === 0 ? 'sm:col-span-2 lg:col-span-2' : ''}
           >
-            <Link to={action.to}>
-              <Card interactive className="h-full p-6 flex flex-col gap-4 border-white/5 bg-elevated/50 hover:border-accent/30 transition-all group">
-                <div className="p-3 rounded-2xl bg-accent/5 text-accent w-fit group-hover:scale-110 transition-transform">
-                  <action.icon size={24} />
+            <Link to={action.to} className="block h-full">
+              <Card
+                interactive
+                className={cn(
+                  'h-full p-6 flex flex-col gap-4 transition-all group',
+                  idx === 0
+                    ? 'bg-accent border-accent/50 hover:bg-accent/90 min-h-[120px]'
+                    : 'border-white/5 bg-elevated/50 hover:border-accent/20',
+                )}
+              >
+                <div
+                  className={cn(
+                    'p-3 rounded-2xl w-fit group-hover:scale-110 transition-transform',
+                    idx === 0
+                      ? 'bg-white/15 text-white'
+                      : 'bg-accent/5 text-accent',
+                  )}
+                >
+                  <action.icon size={22} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-ink-primary group-hover:text-accent transition-colors">{t(action.labelKey)}</h3>
-                  <p className="text-xs text-ink-tertiary mt-1 leading-relaxed">{t(action.descKey)}</p>
+                  <h3
+                    className={cn(
+                      'font-semibold transition-colors',
+                      idx === 0
+                        ? 'text-white'
+                        : 'text-ink-primary group-hover:text-accent',
+                    )}
+                  >
+                    {t(action.labelKey)}
+                  </h3>
+                  <p
+                    className={cn(
+                      'text-xs mt-1 leading-relaxed',
+                      idx === 0 ? 'text-white/70' : 'text-ink-tertiary',
+                    )}
+                  >
+                    {t(action.descKey)}
+                  </p>
                 </div>
-                <div className="flex items-center text-[10px] font-black text-ink-tertiary uppercase tracking-widest group-hover:text-accent transition-colors">
+                <div
+                  className={cn(
+                    'flex items-center text-[10px] font-semibold uppercase tracking-widest',
+                    idx === 0
+                      ? 'text-white/60'
+                      : 'text-ink-tertiary group-hover:text-accent',
+                  )}
+                >
                   {t('home.cta_open')} <ChevronRight size={12} className="ml-1" />
                 </div>
               </Card>
@@ -114,17 +157,12 @@ export default function HomePage(): React.ReactNode {
         ))}
       </section>
 
-      <section className="px-4">
-        <Card className="p-8 border-white/5 bg-recessed/30 text-center">
-          <Zap size={32} className="mx-auto text-accent/30 mb-4" />
-          <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-[0.3em]">
-            {t('home.oracle_kicker')}
-          </p>
-          <p className="text-xs text-ink-tertiary mt-2">
-            {t('home.oracle_body')}
-          </p>
-        </Card>
-      </section>
+      <footer className="flex items-center gap-2 opacity-40">
+        <Zap size={11} className="text-accent shrink-0" />
+        <p className="text-[11px] text-ink-tertiary">
+          {t('home.oracle_body')}
+        </p>
+      </footer>
     </div>
   );
 }

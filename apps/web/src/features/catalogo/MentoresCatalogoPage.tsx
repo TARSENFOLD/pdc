@@ -46,36 +46,19 @@ export function MentoresCatalogoPage() {
 
   const mentores = data?.data ?? [];
 
-  const handleAreaChange = (val: string) => {
-    const next = new URLSearchParams(sp);
-    if (val) next.set('area', val); else next.delete('area');
-    next.delete('page');
-    setSp(next, { replace: true });
-  };
-
-  const handleSearch = (val: string) => {
-    const next = new URLSearchParams(sp);
-    if (val) next.set('q', val); else next.delete('q');
-    next.delete('page');
-    setSp(next, { replace: true });
-  };
-
   return (
-    <div className="min-h-screen bg-canvas px-4 py-20 sm:px-8">
-      <SEOHead 
-        title="Rede de Mentores" 
-        description="Encontra mentores de elite e profissionais da indústria para guiar o teu percurso." 
-        url="https://usepdc.com/mentores" 
+    <>
+      <SEOHead
+        title="Mentores"
+        description="Encontra mentores de elite e profissionais da indústria para guiar o teu percurso."
+        url="https://usepdc.com/mentores"
       />
-      
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-12">
-          <div className="inline-flex items-center rounded-full bg-elevated px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-accent border border-ink-tertiary/10 mb-4">
-            👨‍🏫 Mentoria de Elite
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-ink-primary sm:text-5xl">Mestres da Indústria.</h1>
-          <p className="mt-4 text-lg text-ink-secondary max-w-2xl leading-relaxed">
-            Conecta-te com profissionais experientes que partilham a visão de transformar o capital humano global.
+
+      <div className="max-w-7xl mx-auto space-y-8">
+        <header>
+          <h1 className="text-2xl font-bold text-ink-primary">Mentores</h1>
+          <p className="mt-1 text-sm text-ink-secondary">
+            Conecta-te com profissionais experientes que partilham a visão de transformar o capital humano.
           </p>
         </header>
 
@@ -83,13 +66,18 @@ export function MentoresCatalogoPage() {
           isLoading={isLoading}
           isEmpty={mentores.length === 0}
           onClearFilters={() => { setSp(new URLSearchParams()); }}
+          emptyTitle="Nenhum mentor nesta área"
+          emptyDescription="Experimenta outra área ou aguarda novos mentores."
           filterBar={
             <CatalogoFilterBar
-              searchTerm={search}
-              onSearchChange={handleSearch}
               areas={AREAS}
               selectedArea={area}
-              onAreaChange={handleAreaChange}
+              onAreaChange={(val) => {
+                const next = new URLSearchParams(sp);
+                if (val) next.set('area', val); else next.delete('area');
+                next.delete('page');
+                setSp(next, { replace: true });
+              }}
               totalResults={data?.meta.total}
             />
           }
@@ -101,17 +89,18 @@ export function MentoresCatalogoPage() {
               subtitle={m.areaEspecialidade || m.especialidade || 'Mentor PDC'}
               image={m.avatarUrl || undefined}
               href={`/mentores/${m.id}`}
+              icon={UserCheck}
               badges={[
-                { label: m.disponivel ? 'Disponível' : 'Ocupado', variant: m.disponivel ? 'success' : 'outline' }
+                { label: m.disponivel ? 'Disponível' : 'Ocupado', variant: m.disponivel ? 'success' : 'outline' },
               ]}
               footerInfo={[
                 { icon: UserCheck, label: 'Mentor' },
-                { icon: Star, label: m.areaEspecialidade || 'Elite' }
+                { icon: Star, label: m.areaEspecialidade || 'Elite' },
               ]}
             />
           ))}
         </CatalogoGridShell>
       </div>
-    </div>
+    </>
   );
 }

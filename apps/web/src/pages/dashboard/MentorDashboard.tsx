@@ -2,15 +2,15 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { dashboardApi } from '@/lib/api/dashboard';
-import { 
-  Spinner, 
-  Badge, 
-  AspirationalEmpty, 
+import {
+  Badge,
+  AspirationalEmpty,
   AsymmetricButton,
   BentoGrid,
   BentoTile,
   GlassCard
 } from '@/components/ui';
+import { RoleDashboardShellSkeleton } from '@/components/dashboard/RoleDashboardShellSkeleton';
 import ContentTypeCTAGrid from '@/components/dashboard/ContentTypeCTAGrid';
 import {
   Users,
@@ -50,7 +50,7 @@ export function MentorDashboard() {
   });
   const patterns = dashboard?.patterns ?? [];
 
-  if (isLoading) return <div className="flex h-screen items-center justify-center bg-canvas"><Spinner size="lg" /></div>;
+  if (isLoading) return <RoleDashboardShellSkeleton />;
 
   return (
     <motion.div 
@@ -65,7 +65,7 @@ export function MentorDashboard() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-widest mb-4">
              <ShieldCheck size={12} /> Painel de Decisão do Mentor
           </div>
-          <h1 className="text-4xl font-black text-ink-primary tracking-tighter sm:text-5xl font-display">
+          <h1 className="text-2xl font-bold text-ink-primary">
             Gestão de <span className="text-accent">Talentos.</span>
           </h1>
           <p className="text-ink-secondary mt-2 text-lg">Olá, {user?.nome}. Audita a biomecânica e o mérito dos teus orientandos.</p>
@@ -77,8 +77,8 @@ export function MentorDashboard() {
               <Users size={20} />
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] text-ink-tertiary font-black uppercase tracking-widest">Total Talentos</span>
-              <span className="font-mono font-black text-2xl tracking-tighter text-ink-primary">{dashboard?.stats.totalTalentos ?? 0}</span>
+              <span className="text-[10px] text-ink-tertiary font-bold uppercase tracking-widest">Total Talentos</span>
+              <span className="font-mono font-bold text-2xl tracking-tighter text-ink-primary">{dashboard?.stats.totalTalentos ?? 0}</span>
             </div>
           </GlassCard>
         </div>
@@ -106,8 +106,8 @@ export function MentorDashboard() {
         <BentoTile size="1x1" className="bg-accent text-ink-on-accent flex flex-col justify-between p-6">
           <Trophy size={24} />
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Mérito Médio</p>
-            <p className="text-3xl font-black font-mono tracking-tighter">
+            <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">Mérito Médio</p>
+            <p className="text-3xl font-bold font-mono tracking-tighter">
               {dashboard?.stats.meritoMedio.toFixed(1) ?? '0.0'}
             </p>
           </div>
@@ -124,7 +124,7 @@ export function MentorDashboard() {
 
       {/* Lista de Talentos */}
       <section className="space-y-6">
-        <h2 className="font-black text-ink-primary flex items-center gap-2 uppercase text-[12px] tracking-[0.2em]">
+        <h2 className="font-bold text-ink-primary flex items-center gap-2 uppercase text-[12px] tracking-[0.2em]">
           <LayoutDashboard size={16} className="text-accent" /> Auditoria Detalhada
         </h2>
         
@@ -137,7 +137,7 @@ export function MentorDashboard() {
               className="col-span-full py-20"
             >
               <Link to="/app/mentor/mentorados">
-                <AsymmetricButton className="h-12 px-8 font-black uppercase tracking-widest text-[10px]">
+                <AsymmetricButton className="h-12 px-8 font-bold uppercase tracking-widest text-[10px]">
                   Gerir Mentorias
                 </AsymmetricButton>
               </Link>
@@ -146,11 +146,11 @@ export function MentorDashboard() {
             <motion.div key={p.perfil.id} variants={item}>
               <GlassCard className="p-6 border-ink-tertiary/10 hover:border-accent/20 transition-all group overflow-hidden relative rounded-xl">
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="h-12 w-12 rounded-xl bg-accent text-ink-on-accent flex items-center justify-center font-black text-xl shadow-lg shadow-accent/20">
+                  <div className="h-12 w-12 rounded-xl bg-accent text-ink-on-accent flex items-center justify-center font-bold text-xl shadow-lg shadow-accent/20">
                     {p.perfil.nome[0]}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-lg font-black text-ink-primary truncate">{p.perfil.nome}</h3>
+                    <h3 className="text-lg font-bold text-ink-primary truncate">{p.perfil.nome}</h3>
                     <div className="flex items-center gap-2 text-[10px] text-ink-tertiary font-bold uppercase tracking-widest">
                        <Clock size={10} /> {new Date(p.lastUpdatedAt).toLocaleDateString()}
                     </div>
@@ -159,10 +159,10 @@ export function MentorDashboard() {
 
                 <div className="space-y-4">
                   <div className="flex justify-between items-end">
-                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-ink-tertiary">
+                    <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-ink-tertiary">
                       <Zap size={10} className="text-accent" /> Fluidez (\u03D5)
                     </div>
-                    <span className="text-sm font-mono font-black text-ink-primary">{p.cognitiveFluidity.toFixed(1)}</span>
+                    <span className="text-sm font-mono font-bold text-ink-primary">{p.cognitiveFluidity.toFixed(1)}</span>
                   </div>
                   <div className="h-1.5 w-full bg-recessed rounded-full overflow-hidden">
                     <motion.div 
@@ -173,10 +173,10 @@ export function MentorDashboard() {
                   </div>
 
                   <div className="flex justify-between items-end">
-                    <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-ink-tertiary">
+                    <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-ink-tertiary">
                       <Brain size={10} className="text-institutional-cobalt" /> Decisão
                     </div>
-                    <span className="text-sm font-mono font-black text-ink-primary">{(10 - p.hesitationIndex).toFixed(1)}</span>
+                    <span className="text-sm font-mono font-bold text-ink-primary">{(10 - p.hesitationIndex).toFixed(1)}</span>
                   </div>
                   <div className="h-1.5 w-full bg-recessed rounded-full overflow-hidden">
                     <motion.div 
@@ -188,10 +188,10 @@ export function MentorDashboard() {
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-ink-tertiary/10 flex items-center justify-between">
-                  <Badge variant="secondary" className="bg-accent/5 text-accent border-accent/10 font-black text-[9px]">
+                  <Badge variant="secondary" className="bg-accent/5 text-accent border-accent/10 font-bold text-[9px]">
                     SCORE: {p.technicalScore.toFixed(1)}
                   </Badge>
-                  <Link to={`/app/mentor/estudante/${p.perfil.id}`} className="text-accent flex items-center gap-1 text-[10px] font-black uppercase tracking-widest group-hover:gap-2 transition-all">
+                  <Link to={`/app/mentor/estudante/${p.perfil.id}`} className="text-accent flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest group-hover:gap-2 transition-all">
                     Ver Auditoria <ChevronRight size={14} />
                   </Link>
                 </div>

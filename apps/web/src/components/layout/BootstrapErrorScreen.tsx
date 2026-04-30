@@ -13,7 +13,7 @@ export default function BootstrapErrorScreen({ error, onRetry }: BootstrapErrorS
         <div className="h-20 w-20 bg-error/10 text-error rounded-3xl flex items-center justify-center mx-auto">
           <ShieldAlert size={40} />
         </div>
-        <h1 className="text-2xl font-black">Falha na Inicialização</h1>
+        <h1 className="text-2xl font-bold">Falha na Inicialização</h1>
         <p className="text-ink-secondary">{error?.message || 'Não foi possível ligar aos servidores soberanos.'}</p>
         <Button onClick={onRetry} className="w-full h-14 rounded-2xl bg-accent text-white font-bold">
           Tentar Re-autenticação

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { Card, Spinner, Avatar, Badge } from '@/components/ui';
+import { Card, Avatar, Badge } from '@/components/ui';
+import { FeedCardSkeleton } from '@/components/ui/Skeleton';
 import { Heart, MessageSquare, Share2, Award, Zap, Clock, Bookmark } from 'lucide-react';
 import { http } from '@/lib/api/http';
 import { motion } from 'motion/react';
@@ -13,7 +14,15 @@ export function FeedPage() {
     queryFn: () => http.get<FeedResponse>('/feed'),
   });
 
-  if (isLoading) return <div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>;
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-6 pb-20">
+        <FeedCardSkeleton />
+        <FeedCardSkeleton />
+        <FeedCardSkeleton />
+      </div>
+    );
+  }
 
   const items: FeedItem[] = data?.data ?? [];
 
@@ -21,8 +30,8 @@ export function FeedPage() {
     <div className="mx-auto max-w-4xl space-y-10 pb-20 animate-in fade-in duration-1000">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-4">
         <div>
-          <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 mb-3 px-3 py-1 uppercase tracking-widest text-[9px] font-black">Social Pulse</Badge>
-          <h1 className="text-4xl font-black text-ink-primary tracking-tighter font-display">
+          <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 mb-3 px-3 py-1 uppercase tracking-widest text-[9px] font-semibold">Social Pulse</Badge>
+          <h1 className="text-2xl font-bold text-ink-primary">
             A Comunidade de <span className="text-accent">Mérito</span>
           </h1>
           <p className="text-ink-secondary mt-2 max-w-lg leading-relaxed text-sm">

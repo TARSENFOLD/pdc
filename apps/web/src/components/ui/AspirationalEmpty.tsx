@@ -31,7 +31,7 @@ export function AspirationalEmpty({
       </div>
       
       <div className="max-w-md space-y-2">
-        <h3 className="font-display text-2xl font-black tracking-tight text-ink-primary">
+        <h3 className="font-display text-xl font-bold text-ink-primary">
           {title}
         </h3>
         <p className="text-sm text-ink-secondary leading-relaxed">
