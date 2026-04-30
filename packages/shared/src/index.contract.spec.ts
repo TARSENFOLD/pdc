@@ -17,7 +17,9 @@ const reExportTargets = source
     if (!match) {
       throw new Error(`Linha de re-export inválida em index.ts: ${line}`);
     }
-    return match[1]!;
+    const captured = match[1];
+    if (!captured) throw new Error(`Re-export sem caminho em index.ts: ${line}`);
+    return captured;
   });
 
 function resolveSourcePath(targetWithoutJs: string): string {
@@ -41,7 +43,7 @@ describe('Shared index.ts contract', () => {
         `Re-export aponta para ficheiro inexistente: ${target}.js`,
       ).toBe(true);
 
-      const moduleNs = await import(pathToFileURL(sourcePath).href);
+      const moduleNs = (await import(pathToFileURL(sourcePath).href)) as Record<string, unknown>;
       const exportedKeys = Object.keys(moduleNs).filter((key) => key !== 'default');
       const hasSourceExport = hasAnySourceExport(sourcePath);
       expect(
@@ -57,7 +59,7 @@ describe('Shared index.ts contract', () => {
 
     for (const target of reExportTargets) {
       const sourcePath = resolveSourcePath(target);
-      const moduleNs = await import(pathToFileURL(sourcePath).href);
+      const moduleNs = (await import(pathToFileURL(sourcePath).href)) as Record<string, unknown>;
       const exportedKeys = Object.keys(moduleNs).filter((key) => key !== 'default');
 
       for (const key of exportedKeys) {

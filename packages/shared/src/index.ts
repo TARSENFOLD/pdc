@@ -17,6 +17,7 @@ export * from './sanity/index.js';
 export * from './domain-events.js';
 export * from './ecosystem-hook.js';
 export * from './home.js';
+export * from './strapi.js';
 
 // Schemas Modulares
 export * from './schemas/subscricoes.js';
@@ -37,3 +38,9 @@ export * from './schemas/media.js';
 export * from './schemas/posts.js';
 export * from './schemas/conquistas.js';
 export * from './schemas/copy.js';
+
+// Cold Storage (Telemetria Inválida — Compliance)
+export * from './cold-storage.js';
+
+// Dicionário Canónico de UI
+export * from './glossary.js';

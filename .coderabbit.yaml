@@ -4,7 +4,7 @@
 # Review settings
 reviews:
   # Personality of the reviewer
-  profile: "professional"
+  profile: "assertive"
   # Detailed reviews are mandatory for PDC v2 (End-to-End integrity)
   request_review_command: 'coderabbit review'
   # Enable summary and walkthrough for every PR

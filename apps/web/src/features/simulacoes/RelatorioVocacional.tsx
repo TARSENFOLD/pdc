@@ -24,24 +24,44 @@ interface PatternData {
   resilienceIndex: number;
   focusStability: number;
   technicalScore: number;
-  tinaSummary: {
-    fluidity: string;
-    resilience: string;
-    focus: string;
+  tinaSummary?: {
+    fluidity?: string;
+    resilience?: string;
+    focus?: string;
     verdict?: string;
     lastHeuristicUpdate?: string;
-  };
+  } | undefined;
 }
 
 interface RelatorioElite {
   patterns: PatternData[];
   scoreGlobal: number;
   recomendacoes: Array<{
-    cursoId: string;
+    id: string;
     titulo: string;
     matchPercentagem: number;
     motivo: string;
   }>;
+}
+
+interface PerfilPremiumResponse {
+  scoreGlobal: number;
+  patterns: Array<{
+    id?: string;
+    domainId: string;
+    cognitiveFluidity: number;
+    resilienceIndex: number;
+    focusStability: number;
+    technicalScore: number;
+    tinaSummary?: Record<string, unknown>;
+  }>;
+  recomendacoes: Array<{
+    id: string;
+    titulo: string;
+    matchPercentagem: number;
+    motivo: string;
+  }>;
+  lastUpdate?: string;
 }
 
 // ─── Sub-component: Sovereign Gauge ───────────────────────────────────────
@@ -103,21 +123,38 @@ export const RelatorioVocacional = () => {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        // R2.T6: Consumo do breakdown canónico (Gated por Flag)
-        const repRes = await http.get<ReputacaoBreakdown>('/reputacao/me');
-        setReputacao(repRes);
-        
-        // Placeholder para patterns e recomendações (Approach §1.3)
-        // Nesta wave, usamos dados vazios ou placeholders se o endpoint elite não for chamado
-        setData({
-          patterns: [],
-          scoreGlobal: repRes.score,
-          recomendacoes: []
-        });
-      } catch (err: unknown) {
-        if (err && typeof err === 'object' && 'status' in err && err.status === 404) {
-          setReputationDisabled(true);
+        const [repRes, premiumRes] = await Promise.allSettled([
+          http.get<ReputacaoBreakdown>('/reputacao/me'),
+          http.get<PerfilPremiumResponse>('/vocacional/perfil-premium'),
+        ]);
+
+        if (repRes.status === 'fulfilled') {
+          setReputacao(repRes.value);
+        } else {
+          const err = repRes.reason as { status?: number } | undefined;
+          if (err?.status === 404) setReputationDisabled(true);
         }
+
+        const rep = repRes.status === 'fulfilled' ? repRes.value : null;
+
+        if (premiumRes.status === 'fulfilled') {
+          const p = premiumRes.value;
+          setData({
+            scoreGlobal: p.scoreGlobal,
+            patterns: p.patterns.map((pt) => ({
+              domainId: pt.domainId,
+              cognitiveFluidity: pt.cognitiveFluidity,
+              resilienceIndex: pt.resilienceIndex,
+              focusStability: pt.focusStability,
+              technicalScore: pt.technicalScore,
+              tinaSummary: pt.tinaSummary as PatternData['tinaSummary'],
+            })),
+            recomendacoes: p.recomendacoes,
+          });
+        } else {
+          setData({ patterns: [], scoreGlobal: rep?.score ?? 0, recomendacoes: [] });
+        }
+      } catch (err: unknown) {
         console.error('Falha ao sincronizar Oráculo:', err);
       } finally {
         setLoading(false);
@@ -254,13 +291,13 @@ export const RelatorioVocacional = () => {
                   <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${(mainPattern?.cognitiveFluidity ?? 0) * 10}%` }}
+                      animate={{ width: `${String((mainPattern?.cognitiveFluidity ?? 0) * 10)}%` }}
                       transition={{ duration: 2, ease: [0.23, 1, 0.32, 1] }}
                       className="h-full bg-accent shadow-[0_0_20px_rgba(210,105,30,0.5)]" 
                     />
                   </div>
                   <p className="text-sm font-medium text-ink-secondary leading-relaxed opacity-80">
-                    {mainPattern?.tinaSummary.fluidity}
+                    {mainPattern?.tinaSummary?.fluidity}
                   </p>
                 </div>
 
@@ -278,20 +315,20 @@ export const RelatorioVocacional = () => {
                   <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${(mainPattern?.resilienceIndex ?? 0) * 10}%` }}
+                      animate={{ width: `${String((mainPattern?.resilienceIndex ?? 0) * 10)}%` }}
                       transition={{ duration: 2, ease: [0.23, 1, 0.32, 1], delay: 0.2 }}
                       className="h-full bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]" 
                     />
                   </div>
                   <p className="text-sm font-medium text-ink-secondary leading-relaxed opacity-80">
-                    {mainPattern?.tinaSummary.resilience}
+                    {mainPattern?.tinaSummary?.resilience}
                   </p>
                 </div>
              </div>
 
              {/* Tina's Dynamic Verdict */}
              <AnimatePresence>
-               {mainPattern?.tinaSummary.verdict && (
+	               {mainPattern?.tinaSummary?.verdict && (
                  <motion.div 
                    initial={{ opacity: 0, y: 20 }}
                    animate={{ opacity: 1, y: 0 }}
@@ -304,7 +341,7 @@ export const RelatorioVocacional = () => {
                        <Brain size={14} /> Veredito do Oráculo
                     </h5>
                     <p className="text-lg font-black text-ink-primary leading-tight font-display tracking-tight">
-                      "{mainPattern.tinaSummary.verdict}"
+	                      "{mainPattern.tinaSummary.verdict}"
                     </p>
                  </motion.div>
                )}
@@ -341,7 +378,7 @@ export const RelatorioVocacional = () => {
                    {data?.recomendacoes.length === 0 ? (
                       <p className="text-xs text-ink-tertiary italic">A Tina está a processar cursos compatíveis com a tua biomecânica...</p>
                    ) : data?.recomendacoes.map(rec => (
-                     <div key={rec.cursoId} className="group p-4 rounded-2xl bg-recessed border border-ink-tertiary/10 hover:border-accent/30 transition-all flex items-center justify-between">
+                     <div key={rec.id} className="group p-4 rounded-2xl bg-recessed border border-ink-tertiary/10 hover:border-accent/30 transition-all flex items-center justify-between">
                         <div className="min-w-0">
                           <h4 className="font-bold text-sm text-ink-primary truncate">{rec.titulo}</h4>
                           <p className="text-[9px] text-ink-tertiary font-bold uppercase tracking-tight mt-0.5">{rec.matchPercentagem}% Match</p>
@@ -372,4 +409,3 @@ const Star = ({ size, className }: { size: number; className?: string }) => (
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
   </svg>
 );
-
