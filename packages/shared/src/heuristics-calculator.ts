@@ -94,58 +94,54 @@ export function computeHesitation(events: TelemetriaEvento[]): number {
 }
 
 /**
- * Heuristics Calculator (PDC v2 Sovereign Vision)
- * Extracts 4 dimensions from raw telemetry biomechanics.
- * Delegates to individual compute functions for zero duplication.
+ * Convenience aggregator: extracts canonical inputs from raw events and delegates
+ * to the individual compute functions. All math is centralised in those functions.
  */
 export function calculateBiomechanics(events: TelemetriaEvento[]): BiomechanicsSummary {
   if (events.length === 0) {
     return { fluidity: 0, resilience: 0, focusStability: 0, hesitation: 0 };
   }
 
-  // Focus Stability (Visibility tracking)
-  const focusEvents = events.filter(e => e.tipo === 'focus_lost' || e.tipo === 'focus_gained');
-  let focusStability = 10;
-  if (focusEvents.length > 0) {
-    focusStability = Math.max(0, 10 - focusEvents.filter(e => e.tipo === 'focus_lost').length * 2);
-  }
-
-  // Fluidity from biomechanics velocity
-  const bioEvents = events.filter(e => e.tipo === 'simulacao.biomechanics');
-  let fluidity = 5;
-  if (bioEvents.length > 1) {
-    let totalDistance = 0;
-    let totalTime = 0;
-    for (let i = 1; i < bioEvents.length; i++) {
-      const prevEvent = bioEvents[i - 1];
-      const currEvent = bioEvents[i];
-      if (!prevEvent || !currEvent) continue;
-      
-      const prev = prevEvent.payload;
-      const curr = currEvent.payload;
-      
-      if (isBiomechanicsPayload(prev) && isBiomechanicsPayload(curr)) {
-        const dx = curr.x - prev.x;
-        const dy = curr.y - prev.y;
-        totalDistance += Math.sqrt(dx * dx + dy * dy);
-        totalTime += new Date(currEvent.timestamp).getTime() - new Date(prevEvent.timestamp).getTime();
+  // Decision times: consecutive simulacao.* events (excl. biomechanics), 50ms–2min window
+  const decisionTimes: number[] = [];
+  let totalInterruptionMs = 0;
+  for (let i = 1; i < events.length; i++) {
+    const prev = events[i - 1];
+    const curr = events[i];
+    if (!prev || !curr) continue;
+    const diff = new Date(curr.timestamp).getTime() - new Date(prev.timestamp).getTime();
+    if (diff > 50 && diff < 120_000) {
+      if (curr.tipo.startsWith('simulacao.') && curr.tipo !== 'simulacao.biomechanics') {
+        decisionTimes.push(diff);
+      }
+      if (prev.tipo === 'focus_lost') {
+        totalInterruptionMs += diff;
       }
     }
-    const velocity = totalTime > 0 ? totalDistance / (totalTime / 1000) : 0;
-    fluidity = Math.min(10, velocity / 100);
   }
 
-  // Resilience (Post-error recovery)
+  const firstEvent = events[0];
+  const lastEvent = events[events.length - 1];
+  if (!firstEvent || !lastEvent) {
+    return { fluidity: 0, resilience: 0, focusStability: 0, hesitation: 0 };
+  }
+  const firstTs = new Date(firstEvent.timestamp).getTime();
+  const lastTs = new Date(lastEvent.timestamp).getTime();
+  const totalMs = Math.max(0, lastTs - firstTs);
+
   const timesPosError = events
     .filter(e => e.tipo === 'simulacao.pos_error')
     .flatMap(e => isPosErrorPayload(e.payload) ? [e.payload.timeMs] : []);
-    
-  const meanNormal = fluidity * 200; // heuristic baseline
+
+  const fluidity = computeFluidity(decisionTimes);
+  const meanNormal = decisionTimes.length > 0
+    ? decisionTimes.reduce((a, b) => a + b, 0) / decisionTimes.length
+    : 2000;
 
   return {
     fluidity,
     resilience: computeResilience(timesPosError, meanNormal),
-    focusStability,
+    focusStability: computeFocus(totalMs, totalInterruptionMs),
     hesitation: computeHesitation(events),
   };
 }
