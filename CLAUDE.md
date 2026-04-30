@@ -2,7 +2,7 @@
 
 > Espelho operacional do `GEMINI.md` para agentes Anthropic (Claude).
 > **Este documento é Lei.** Em conflito com qualquer instrução ad-hoc, este documento prevalece.
-> Ver também: `GEMINI.md` (mandato Google) · `.planning/CONSTITUTION.md` (leis inegociáveis) · `specs/IMPORTANTE/`
+> Ver também: `GEMINI.md` (mandato Google) · `AGENTS.md` (Orquestração) · `.planning/CONSTITUTION.md` (leis inegociáveis) · `specs/IMPORTANTE/`
 
 ---
 
@@ -279,8 +279,11 @@ var(--ink-*)       /* textos */
 var(--accent-*)    /* destaques */
 var(--radius-sm)   var(--radius-md)   var(--radius-lg)   var(--radius-xl)   var(--radius-full)
 
-/* ❌ Banido */
-#000000  #FFFFFF  bg-amber-*  (hex literais hardcoded)
+/* ❌ Banido em dashboards e app */
+#000000  #FFFFFF  (hex literais hardcoded)
+
+/* ⚠️ bg-amber-* — permitido APENAS em landing pages (identidade visual PDC Angola) */
+/* Banido em dashboards e componentes app — usar tokens canónicos */
 ```
 
 ### 5 Primitivos Obrigatórios
@@ -304,17 +307,34 @@ var(--radius-sm)   var(--radius-md)   var(--radius-lg)   var(--radius-xl)   var(
 7. Transições de rota com `AnimatePresence`
 8. `LayoutGroup` para animações de lista
 
-### Rotas Canónicas (Spec 03 §8)
+### Rotas Canónicas (Implementação Actual)
 
 ```
-/estudante/*       (não /app/dashboard/estudante/*)
-/mentor/*          (não /app/dashboard/mentor/*)
-/instituicao/*
-/comite/*
-/admin/*
+/app/home                      # Hub de navegação rápida (todos os roles)
+/app/dashboard/estudante       # Dashboard analítico — estudante
+/app/dashboard/mentor          # Dashboard analítico — mentor
+/app/dashboard/instituicao     # Dashboard analítico — instituição
+/app/dashboard/moderador       # Dashboard analítico — moderador
+/app/dashboard/admin           # Dashboard analítico — super_admin
+/app/dashboard/patrocinador    # Dashboard analítico — patrocinador
+/app/comite                    # Dashboard — comité científico
 ```
+
+Todas as rotas de dashboard têm `RoleGuard` — só o role correcto + super_admin acede.
+
+---
+
+## § 7 — Audit Status (2026-04-30)
+
+**Saúde global: Typecheck verde nos 3 workspaces · Testes shared 68/71 (3 falhas pré-existentes simulacoes.spec)**
+
+Relatório completo: `docs/audit/MASTER--audit-report.md`
+Dívida técnica dashboards: `docs/audit/divida-tecnica-dashboards-home.md`
+Constituição actualizada: `specs/IMPORTANTE/01-05` (DC-01..DC-03 documentados)
+Zero `as any` em todo o monorepo.
+7 dashboards com RBAC guards. BFF `/experiencias/stats` criado. Home ≠ Dashboard (Opção B).
 
 ---
 
 *Este documento é parte da Wave 0 (Meta-Governação) do PDC v2 Integrity Hardening.*
-*Última atualização: 2026-04-26 · Evidência: `chat:42d59fed-e792-4f55-8def-1f803a51ea24`*
+*Última atualização: 2026-04-30 · Evidência: auditoria Home vs Dashboard + `docs/audit/divida-tecnica-dashboards-home.md`*

@@ -115,7 +115,8 @@ export const Tipo2Player = ({ simulacao }: Props) => {
                </p>
             </div>
             <Button 
-              onClick={() => { void handleConcluir(); }} 
+              onClick={() => { void handleConcluir(); }}
+              data-testid="concluir-missao-btn"
               className="h-14 px-8 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs hover:scale-[1.02] shadow-xl shadow-accent/20"
             >
               Finalizar Missão <ChevronRight size={16} className="ml-2" />

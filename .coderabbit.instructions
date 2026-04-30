@@ -3,9 +3,9 @@
 Este guia define a alma e o rigor técnico exigido em cada revisão de código. O PDC v2 é um produto de classe mundial; a mediocridade não tem lugar.
 
 ## 📜 1. Doc is Law (Soberania da Documentação)
-- A fonte primária de verdade são os ficheiros em `/docs`, `/.planning`, `CONSTITUTION.md` e `REQUIREMENTS.md`.
+- A fonte primária de verdade são os ficheiros em `docs/`, `.planning/`, `.planning/CONSTITUTION.md` e `.planning/REQUIREMENTS.md`.
 - Se o código contradiz a especificação, o código está errado.
-- Consulte sempre `/docs/guia-tecnico` e as **Epics Canónicas** antes de sugerir mudanças.
+- Consulte sempre `docs/guia-tecnico/` e as **Epics Canónicas** (`specs/IMPORTANTE/`) antes de sugerir mudanças.
 
 ## 🏗️ 2. End-to-End (E2E) Lifecycle Integrity
 Uma funcionalidade não está completa apenas com UI ou API. Deve cumprir o ciclo real:
@@ -14,6 +14,12 @@ Uma funcionalidade não está completa apenas com UI ou API. Deve cumprir o cicl
 3. **BFF (Logic & RBAC)**: Roteamento Hono, segurança `checkRole()`, rate-limiting.
 4. **Persistência**: Gravação estruturada em Strapi + Mídia em Cloudflare R2.
 5. **Impacto Ecossistémico (G15)**: Disparo obrigatório de `eventBus.publishWithOutbox`. Nenhuma escrita de domínio é silenciosa.
+
+## 👤 2.1. Perfil ≠ Dashboard (Separação Rígida)
+- **Perfil** = identidade pública (como os outros me vêem). Serialização field-level filtrada por viewer + role.
+- **Dashboard** = progresso privado (métricas, telemetria, simulações em curso).
+- Nunca misturar componentes de identidade com componentes de métricas.
+- Ver `docs/arquivo-fundacional/02-modelo-negocio/perfis-privacidade.md`.
 
 ## ⚡ 3. Rigor Técnico (Zero Any & Zero Mock)
 - **Zero Any**: Proibição estrita de `any`. Utilize tipos exactos de `@pdc/shared`. (REQ-NF-003).
@@ -31,12 +37,24 @@ Uma funcionalidade não está completa apenas com UI ou API. Deve cumprir o cicl
     - Routes/Middleware: Arrow functions `async (c) => { ... }`.
 - **Nomes em Português**: Domínio de negócio em Português (estudante, mentor, instituicao), infraestrutura em Inglês.
 - **Slug Canónico**: Use sempre `estudante` (nunca `aluno`).
+- **7 Roles Canónicos**: estudante, mentor, instituicao, moderador, comite_cientifico, super_admin, patrocinador. Definidos em `@pdc/shared`.
+- **Programas vs Projectos**: São entidades distintas. Programas têm 3 tipos (standard, shadowapro, eduvisit). Ver `docs/arquivo-fundacional/02-modelo-negocio/programas-vs-projetos.md`.
+- **Moderação por Content-Type**: 7 content-types moderáveis com estados distintos. Ver `docs/arquivo-fundacional/03-roles-permissoes/moderacao-strapi.md`.
 
-## 🔄 6. G15 — Os 5 Hooks Ecossistémicos
-Toda escrita de domínio deve disparar o fluxo de 5 hooks:
+## 🔄 6. G15 — Os 6 Hooks Ecossistémicos
+Toda escrita de domínio deve disparar o fluxo via `eventBus.publishWithOutbox`:
 1. **RANKING**: Re-avalia reputação.
 2. **FEED**: Cria entrada nos separadores corretos.
 3. **MATCH**: Gera sugestões via "Match Terminal".
 4. **ACHIEVEMENT**: Wrapper de conquistas.
-5. **NOTIFY**: Fanout multi-canal (Socket, Web Push, Mobile, Email).
-6. **começa cada comentário com o emoji 🐰
+5. **BEHAVIOR**: Telemetria comportamental.
+6. **NOTIFY**: Fanout multi-canal (Socket, Web Push, Mobile, Email).
+
+## 🧠 7. Heurísticas e Anti-Fraude
+- **φ (Fluidez) e R (Resiliência)** são calculados **no servidor** (BFF/heuristics.ts). O cliente **nunca** declara scores.
+- **Anti-fraude D20-D22**: Qualquer score derivado no cliente é considerado violação de segurança.
+- **Tag-don't-drop**: Eventos de telemetria inválidos são tagados (`edgeInvalidated: true`), **nunca** eliminados silenciosamente.
+- Ver `docs/arquivo-fundacional/07-ux-specs/algoritmo-decisoes-design.md`.
+
+## 🐰 8. Estilo de Comentários
+- Começa cada comentário de review com o emoji 🐰.

@@ -90,7 +90,7 @@ O PDC v2 utiliza dois padrões de tokens distintos para isolar autoridade e gara
 | Camada | Tecnologia | Versão | Notas |
 |--------|-----------|--------|-------|
 | **Frontend** | React | 18.3.1 | PWA Moderno |
-| **Frontend Build** | Vite | 6.0.0 | — |
+| **Frontend Build** | Vite | 6.4.2+ | — |
 | **Design System** | TailwindCSS | 4.0.0 | — |
 | **Animações** | Motion | 11.11.0 | Antigo Framer Motion |
 | **Visual FX** | GSAP | 3.15.0 | Core de animações neurais |

@@ -45,6 +45,7 @@ Se encontrar informações contraditórias, a ordem de precedência é:
 1. [⌬ Motor de Heurísticas](vocacional/modelo.md) — A lógica do Oráculo e áreas vocacionais.
 2. [📑 Requisitos Expandidos](../.planning/REQUIREMENTS.md) — A visão de produto detalhada.
 3. [🗺️ Roadmap Estratégico](../.planning/roadmap.md) — Ondas de execução e marcos.
+4. [🚀 Roadmap Produto Disruptivo](ROADMAP_PRODUTO_DISRUPTIVO.md) — Melhorias essenciais para classe mundial (6 Tiers + métricas).
 
 ### 🧪 Quality Assurance (QA)
 1. [🧪 Testes de Carga](../README.md#4-qualidade-e-testes-k6-scripts-em-testsk6) — Catálogo de scripts k6.
@@ -76,6 +77,10 @@ Se encontrar informações contraditórias, a ordem de precedência é:
 - [🧪 Skip OTP em Dev](guia-tecnico/dev-skip-otp.md)
 - [📱 Estratégia Mobile](guia-tecnico/deploy.md#2-android-twa-pwabuilder)
 
----
-*Última auditoria de governação: 22 de Abril de 2026. (B1 Implementation)*
+### Referência & Produto
+- [📚 Arquivo Fundacional](arquivo-fundacional/README.md) — 28 ficheiros em 9 secções: visão, modelo negócio, RBAC, diagnósticos, UX specs, specs Traycer originais (tokens, rotas, features, algoritmos, segurança)
+- [🚀 Roadmap Produto Disruptivo](ROADMAP_PRODUTO_DISRUPTIVO.md) — 6 Tiers de melhorias (motor vocacional, perfil, flywheel, UI premium, programas/projectos, docs)
+- [📝 Tickets a Implementar](a_implementar/) — 16 tickets pendentes (A1–E4, H1)
 
+---
+*Última auditoria de governação: 30 de Abril de 2026.*

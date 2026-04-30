@@ -114,8 +114,22 @@ Para o template completo do Sealed Envelope, ver `CLAUDE.md § 4`.
 | `specs/IMPORTANTE/05` | Design System Soul & Elite — tokens, primitivos, animações. |
 | `specs/IMPORTANTE/03` | RBAC — os 7 roles canónicos e hierarquia de acesso. |
 | `docs/decisoes/` | ADRs — decisões arquiteturais com rastreabilidade. |
+| `AGENTS.md` | Orquestração de Agentes — protocolos de delegação, sub-agentes e Sealed Envelope. |
+
+---
+
+## § 5 — Audit Status (2026-04-30)
+
+**Saúde global: Typecheck verde nos 3 workspaces · Testes shared 68/71 (3 falhas pré-existentes simulacoes.spec)**
+
+- Relatório completo: `docs/audit/MASTER--audit-report.md`
+- Dívida técnica dashboards: `docs/audit/divida-tecnica-dashboards-home.md`
+- Constituição actualizada: `specs/IMPORTANTE/01-05` (DC-01..DC-03 documentados)
+- Zero `as any` em todo o monorepo
+- 7 dashboards com RBAC guards. Home ≠ Dashboard (Opção B)
+- `bg-amber-*` é **permitido em landing pages** (identidade visual PDC Angola) — banido em dashboards/app
 
 ---
 
 *Este documento é parte da Wave 0 (Meta-Governação) do PDC v2 Integrity Hardening.*
-*Última atualização: 2026-04-26 · Evidência: `chat:42d59fed-e792-4f55-8def-1f803a51ea24`*
+*Última atualização: 2026-04-30 · Evidência: auditoria Home vs Dashboard*

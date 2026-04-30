@@ -1,6 +1,6 @@
 # pdc-v2 Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-09
+Last updated: 2026-04-30
 
 ## Core Constraints (Constitution)
 
@@ -10,7 +10,7 @@ Auto-generated from all feature plans. Last updated: 2026-04-09
 
 ## Active Technologies
 
-- TypeScript 5.x / Node.js 24 LTS (BFF) + React 18 + Vite 5 (frontend) + Hono 4, Socket.IO 4, TanStack Query 5, motion/react, react-router-dom 6 (002-micro-desafio-live-data)
+- TypeScript 5.x / Node.js 24 LTS (BFF) + React 18 + Vite 6 (frontend) + TailwindCSS v4 + Hono 4, Socket.IO 4, TanStack Query 5, motion/react, react-router-dom 6
 
 ## Project Structure
 
@@ -29,7 +29,7 @@ tests/k6/              # K6 load testing scripts
 - **File Size Limit:** 300 lines maximum per file
 - **Type Safety:** All function parameters and return types must be typed
 - **No `any` Types:** Use generics, unions, or concrete types instead
-- **Component Files:** One primary export per file (default export)
+- **Component Files:** One primary named export per file (`export function ComponentName()`)
 - **Error Handling:** Explicit error types, structured error responses
 - **Testing Requirements:** E2E tests for critical paths, unit tests for business logic
 
@@ -50,9 +50,12 @@ npm run dev     # Start development server
 - Prefer composition over inheritance
 - Use const for immutability by default
 
-## Recent Changes
+## Key Architecture Decisions
 
-- 002-micro-desafio-live-data: Added TypeScript 5.x / Node.js 24 LTS (BFF) + React 18 + Vite 5 (frontend) + Hono 4, Socket.IO 4, TanStack Query 5, motion/react, react-router-dom 6
+- **Home ≠ Dashboard**: `/app/home` is the generic hub, `/app/dashboard/:role` is the analytics panel per role.
+- **RBAC on Routes**: All dashboard routes use `RoleGuard` enforcing role + super_admin access.
+- **G15 Ecosystem**: Every domain write dispatches via `eventBus.publishWithOutbox` (6 hooks: Ranking, Feed, Match, Achievement, Behavior, Notify).
+- **Roles**: 7 canónicos em `@pdc/shared` — estudante, mentor, instituicao, moderador, comite_cientifico, super_admin, patrocinador.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

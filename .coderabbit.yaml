@@ -32,6 +32,9 @@ ignore_patterns:
   - "infra/strapi/.cache/**"
   - "infra/strapi/build/**"
   - "apps/web/dist/**"
+  - "apps/edge/dist/**"
+  - ".windsurf/**"
+  - "docs/_archive/**"
 
 # Knowledge base
 knowledge_base:
@@ -41,15 +44,17 @@ knowledge_base:
   paths:
     - "docs/**"
     - ".planning/**"
-    - "CONSTITUTION.md"
-    - "REQUIREMENTS.md"
+    - ".planning/CONSTITUTION.md"
+    - ".planning/REQUIREMENTS.md"
+    - "specs/IMPORTANTE/**"
+    - "AGENTS.md"
+    - "CLAUDE.md"
+    - "GEMINI.md"
 
 # Tools and linting
-# We rely on existing monorepo linting, but CodeRabbit can augment this.
+# We rely on existing monorepo linting (ESLint). No Prettier in this project.
 tools:
   shellcheck:
-    enabled: true
-  prettier:
     enabled: true
 
 # PR Settings
