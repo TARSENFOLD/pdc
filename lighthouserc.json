@@ -1,0 +1,52 @@
+{
+  "ci": {
+    "collect": {
+      "numberOfRuns": 1,
+      "startServerCommand": "npx serve apps/web/dist -l 4000 --single",
+      "startServerReadyPattern": "Accepting connections",
+      "url": [
+        "http://localhost:4000/",
+        "http://localhost:4000/simulacoes",
+        "http://localhost:4000/catalogo"
+      ],
+      "settings": {
+        "preset": "desktop",
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 40,
+          "throughputKbps": 10240,
+          "cpuSlowdownMultiplier": 4,
+          "requestLatencyMs": 0,
+          "downloadThroughputKbps": 0,
+          "uploadThroughputKbps": 0
+        },
+        "screenEmulation": {
+          "mobile": true,
+          "width": 390,
+          "height": 844,
+          "deviceScaleFactor": 3,
+          "disabled": false
+        }
+      }
+    },
+    "assert": {
+      "preset": "lighthouse:no-pwa",
+      "assertions": {
+        "categories:performance": ["warn", { "minScore": 0.75 }],
+        "categories:accessibility": ["error", { "minScore": 0.85 }],
+        "categories:best-practices": ["warn", { "minScore": 0.85 }],
+        "categories:seo": ["warn", { "minScore": 0.85 }],
+        "color-contrast": "error",
+        "meta-description": "warn",
+        "document-title": "error",
+        "html-has-lang": "error",
+        "meta-viewport": "error",
+        "uses-responsive-images": "warn",
+        "unused-javascript": "warn"
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

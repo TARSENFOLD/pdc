@@ -125,8 +125,8 @@ Estamos na **Fase D — Remediação Post-Audit**. A auditoria estática de 38 t
 | D8 | ~~`ContentTypeCTAGrid` STUB~~ **Resolvido** — componente funcional, FIXME tag removida | Audit W2.2 | ✅ |
 | D9 | `ConquistaManualComposer` **implementado** (formulário real). `PostComposer` já era funcional. | Audit W4.8 | ✅ |
 | D10 | ~~`EcosystemImpactPanel`~~ **Já funcional** — polling real 1s, endpoint `/my-impact` activo | Audit W5.2 | ✅ |
-| D11 | `CommandPalette` ⌘K sem search dinâmico nem role-awareness | Audit W6.4 | T-REM-3 |
-| D12 | `lighthouserc*` ausente — NF7 Lighthouse ≥90 mobile não verificável em CI | Audit W6.5 | T-REM-5 |
+| D11 | ~~`CommandPalette` ⌘K sem search dinâmico~~ **Resolvido** — search real + role-awareness + keyboard nav | Audit W6.4 | ✅ |
+| D12 | ~~`lighthouserc*` ausente~~ **Resolvido** — `lighthouserc.json` + job CI com thresholds (perf≥75, a11y≥85) | Audit W6.5 | ✅ |
 
 **Dívida histórica (epics anteriores):**
 
@@ -142,10 +142,10 @@ Estamos na **Fase D — Remediação Post-Audit**. A auditoria estática de 38 t
 |--------|-----------|------|--------|
 | T-REM-1 | PostComposer + ConquistaManualComposer reais | 🔴 Crítico | ✅ Done |
 | T-REM-2 | EcosystemImpactPanel polling + BFF `/my-impact` | 🔴 Crítico | ✅ Já funcional |
-| T-REM-3 | CommandPalette ⌘K search dinâmico + focus trap | 🟠 Alto | ⏳ |
+| T-REM-3 | CommandPalette ⌘K search dinâmico + role-awareness | 🟠 Alto | ✅ Done (2026-04-30 sessão 6) |
 | T-REM-4 | ContentTypeCTAGrid GlassCard + primitivos catálogo | 🟠 Alto | ✅ FIXME removida |
-| T-REM-5 | Audit Infrastructure (aluno.json + lighthouserc + visual) | 🟠 Alto | ⏳ |
-| T-REM-6 | EditorialStateBadge + BootstrapErrorScreen + a11y | 🟡 Médio | ⏳ |
+| T-REM-5 | Audit Infrastructure (lighthouserc.json + CI job) | 🟠 Alto | ✅ Done (2026-04-30 sessão 6) |
+| T-REM-6 | EditorialStateBadge tokens + BUG-04 manifest | 🟡 Médio | ✅ Done (2026-04-30 sessão 6) |
 
 **Relatório completo:** `docs/audit/MASTER--audit-report.md`
 

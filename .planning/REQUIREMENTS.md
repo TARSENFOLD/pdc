@@ -25,7 +25,7 @@
 | N3 | Idempotência de eventos (UUID + outbox) | `[x]` | W4 | Ativo no BFF |
 | N4 | Sanity Validator dual-layer (edge + BFF) | `[x]` | W2 | Validado contra cheats |
 | N5 | Score real derivado no BFF (sem hardcode) | `[x]` | W2 | Remove dependência de mocks |
-| N6 | Perfil Vocacional automático | `[~]` | W4 | ⚠️ **Triplo desync** FE/BFF/Strapi (ver `arquivo-fundacional/06-engenharia/entitlements-core-trio-analysis.md` H1). Service calcula on-demand mas não persiste. Schema Strapi rico (8 campos) nunca escrito pelo BFF. Frontend usa mock hardcoded. Faltam pesos por evento (spec `1a81656f`). |
+| N6 | Perfil Vocacional automático | `[P]` | W4/P1 | P1 (2026-04-30) fechou loop: BFF persiste resultado em `/perfil-vocacionals` após calcular, FE usa `GET /vocacional/perfil-premium` via `Promise.allSettled`. Faltam: pesos por evento (spec `1a81656f`), validação E2E com Strapi real. |
 | N7 | Reputação canónica `/reputacao/me` | `[x]` | W2 | BFF com 3 rotas (`/me`, `/:id`, `/:id/breakdown`), cache Redis, batch recalc. Schema `ReputacaoBreakdownSchema` no Shared (Zod validated). Frontend: `ReputacaoPage` completa (Bento grid, score circular, dimensions, breakdown), `RelatorioVocacional` consome `/reputacao/me`, rota na Sidebar + CommandPalette. Testes unit + integration. |
 | N8 | Conquistas via Event Bus (12 regras) | `[x]` | W4 | 12 regras definidas |
 | N9 | Relatório Vocacional Premium | `[~]` | W2 | MVP ok; Tina insights pendentes |
@@ -84,7 +84,7 @@
 | F5 | Pílulas de Conhecimento — micro-simulações | `[ ]` | REQ-4-012 |
 | F6 | Push FOMO / Notificações inteligentes | `[~]` | `notify.hook.ts` (4.4KB) existe. Triggers FOMO específicos ("3 instituições viram o teu perfil", etc.) **não implementados**. |
 | F7 | Endorsements / Kudos públicos | `[P]` | (= T10 — schema parcial, sem testes E2E) |
-| F8 | Top Bar com Command+K (search global) | `[ ]` | REQ-NF-009 |
+| F8 | Top Bar com Command+K (search global) | `[x]` | T-REM-3 (2026-04-30). CommandPalette com search dinâmico via `GET /catalogo/explorar` (debounced 300ms), role-awareness (7 roles × nav items), navegação por teclado (↑↓↵), secções Nav + Conteúdo, loading state. |
 | F9 | Sidebar slim (retrátil) | `[ ]` | REQ-NF-010 |
 | F10 | 15 áreas vocacionais globais | `[x]` | Migrado de 4 áreas (F10) |
 | F11 | Rate limit Micro-Desafio (3 grátis) | `[ ]` | REQ-NF-011 |
@@ -93,7 +93,7 @@
 | ID | Requisito | Estado | Notas |
 | --- | --- | --- | --- |
 | A1 | Feed soberano (algoritmo de ranking) | `[x]` | Pipeline 4 passos + 3 rotas BFF (`/feed`, `/feed/geral`, `/feed/trending`). Pesos admin-tunable via Redis. Scoring 7 features × weights. |
-| A2 | 4 fontes de feed (Geral/Voc/Inst/Trend) | `[~]` | Geral + Trending implementados. Faltam Vocacional e Institucional como feeds separados. |
+| A2 | 4 fontes de feed (Geral/Voc/Inst/Trend) | `[x]` | Geral + Trending + Vocacional + Institucional implementados. `GET /feed/vocacional` (filtra por areaMatch do perfil-vocacional) e `GET /feed/institucional` (filtra por instituicaoNome do perfil). P5 — sessão 2026-04-30. |
 | A3 | Comments com moderação inline | `[P]` | Integrado com feed global |
 | A4 | Pesos de interação tunáveis via admin | `[x]` | REQ-3-003 |
 | A5 | Algoritmo de viralização e descoberta | `[ ]` | Pendente Wave 5 |
@@ -142,7 +142,7 @@
 | D1 | `apps/api/src/modules/analysis/heuristics.engine.ts` paralelo a `@pdc/shared/heuristics` — consolidar em W3 | `R3-1` | `[ ]` |
 | D2 | `apps/web/src/features/feed/FeedPage.tsx` contém 4 `any` — limpar em `W4-T2` | `R3-1` | `[ ]` |
 | D3 | Métrica `domain_events_failed_total` em logs; exporter Prometheus/Sentry pendente | `R3-1` | `[ ]` |
-| D4 | Naming mismatch de conquistas (12 regras nunca disparam) | `T-FIX-3` | `[ ]` |
+| D4 | Naming mismatch de conquistas — `EVENT_TO_TRIGGER_MAP` implementado em conquistas.engine.ts | `T-FIX-3` | `[x]` — mapeamento corrige handler→engine. Condições p/ eventos não-cliente (vinculos) precisam queries Strapi directas (ver DIVIDA_TECNICA). |
 | D5 | Outbox Replay scheduler co-located com BFF main (risco de saturação) | Análise técnica | `[x]` ✅ outbox-worker daemon isolado |
 | D6 | "Midnight Rollover Bug" potencial na chave Redis de telemetria | Análise técnica | `[x]` ✅ SET NX EX 7d (UUID-based) |
 | D7 | Race condition entre Edge URL e BFF fallback | Análise técnica | `[ ]` |
@@ -153,8 +153,8 @@
 | --- | --- | --- | --- |
 | BUG-01 | Edge `validEvents` ReferenceError no POST | E2 | `[~]` |
 | BUG-02 | Drift de áreas: 4 vs 15 inconsistente (F10) | E1 | `[x]` |
-| BUG-03 | Viewport `user-scalable=no` bloqueia a11y | D1 | `[ ]` |
-| BUG-04 | Manifest `theme_color` Amber vs Dark Elite | D1 | `[ ]` |
+| BUG-03 | Viewport `user-scalable=no` bloqueia a11y | D1 | `[x]` — já correcto: `width=device-width, initial-scale=1.0, viewport-fit=cover` sem `user-scalable=no` |
+| BUG-04 | Manifest `theme_color` Amber vs Dark Elite | D1 | `[x]` — corrigido para `#0E0D0C` (Dark Elite) em 2026-04-30 |
 | BUG-05 | OTP Twilio mockado (Impede onboarding real) — `REQ-1-010` | E4 | `[ ]` |
 | BUG-06 | Telemetria `payload` vs `dados` (D20 mismatch) | Auditoria | `[x]` |
 | BUG-07 | Missing `Tentativa.metadata` no CMS (D21) | Auditoria | `[ ]` |

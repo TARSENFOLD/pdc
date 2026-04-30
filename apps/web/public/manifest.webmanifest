@@ -11,7 +11,7 @@
   "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "portrait",
   "background_color": "#0E0D0C",
-  "theme_color": "#D2691E",
+  "theme_color": "#0E0D0C",
   "categories": ["education", "productivity"],
   "prefer_related_applications": false,
   "icons": [
