@@ -1679,6 +1679,8 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     areaFormacao: Schema.Attribute.String;
     areasInteresse: Schema.Attribute.JSON;
     ativo: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    avatarUrl: Schema.Attribute.String;
+    bannerUrl: Schema.Attribute.String;
     behavior_patterns: Schema.Attribute.Relation<
       'oneToMany',
       'api::behavior-pattern.behavior-pattern'
@@ -1703,12 +1705,14 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
       'oneToMany',
       'api::feed-post.feed-post'
     >;
+    formacaoAcademica: Schema.Attribute.JSON;
     foto: Schema.Attribute.Media<'images'>;
     funcao: Schema.Attribute.String;
     headline: Schema.Attribute.String &
       Schema.Attribute.SetMinMaxLength<{
         maxLength: 200;
       }>;
+    historicoProfissional: Schema.Attribute.JSON;
     inscricoes: Schema.Attribute.Relation<
       'oneToMany',
       'api::inscricao.inscricao'

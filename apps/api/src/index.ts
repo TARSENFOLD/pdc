@@ -136,7 +136,9 @@ app.route('/conquistas', conquistaRoutes);
 app.route('/mentorias', mentoriaRoutes);
 app.route('/projetos', projetoRoutes);
 app.route('/vocacional', vocacionalRoutes);
+// Public media endpoints (local dev files, no auth) must be registered before protected routes.
 app.route('/media', mediaPublicRoutes);
+// Protected media endpoints require authenticated users.
 app.route('/media', mediaRoutes);
 app.route('/notificacoes', notificacaoRoutes);
 app.route('/perfis', perfilRoutes);

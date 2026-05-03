@@ -201,4 +201,3 @@ catalogoRoutes.route('/instituicoes', instituicoesRoutes);
 catalogoRoutes.route('/pessoas', pessoasRoutes);
 catalogoRoutes.route('/perfil', perfilPublicoRoutes);
 catalogoRoutes.route('/explorar', catalogoExplorarRoutes);
-catalogoRoutes.route('/explorar', catalogoExplorarRoutes);

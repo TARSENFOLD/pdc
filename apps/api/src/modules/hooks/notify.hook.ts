@@ -34,7 +34,7 @@ async function resolvePerfilId(payload: BaseDomainEventPayload): Promise<string 
 
 // ── FOMO Triggers (F6 — Spec §3.2 ROADMAP_PRODUTO_DISRUPTIVO) ───────────────
 
-type FomoPayload = {
+interface FomoPayload {
   perfilId?: string | number;
   autorId?: string | number;
   userId?: string | number;
@@ -44,20 +44,22 @@ type FomoPayload = {
   projetoId?: string | number;
   cursoId?: string | number;
   area?: string;
-};
+}
 
 async function persistNotificacao(perfilId: string, tipo: string, titulo: string, mensagem: string, eventId: string): Promise<void> {
-  await strapiPost<unknown>('/notificacoes', {
-    perfil: perfilId,
-    tipo,
-    titulo,
-    mensagem,
-    corpo: mensagem,
-    eventId,
-    lida: false,
-  }).catch((err: unknown) => {
+  try {
+    await strapiPost<unknown>('/notificacoes', {
+      perfil: perfilId,
+      tipo,
+      titulo,
+      mensagem,
+      corpo: mensagem,
+      eventId,
+      lida: false,
+    });
+  } catch (err: unknown) {
     log.warn({ err, perfilId, tipo }, 'FOMO: falha ao persistir notificação');
-  });
+  }
 }
 
 async function resolvePerfilIdFromUserId(userId: string | number): Promise<string | undefined> {

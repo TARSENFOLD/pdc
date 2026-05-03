@@ -85,14 +85,14 @@ export function serializePublicProfile(
     avatarUrl: perfil.foto?.url ?? perfil.avatarUrl,
     bannerUrl: perfil.capa?.url ?? perfil.bannerUrl,
     headline: perfil.headline,
-    regiao: (perfil.regiao as string | undefined) ?? undefined,
+    regiao: perfil.regiao,
     bio: isVisible(vis.bio, isConnected) ? perfil.bio : undefined,
     website: isVisible(vis.socialLinks, isConnected) ? perfil.website : undefined,
     socialLinks: isVisible(vis.socialLinks, isConnected) ? perfil.socialLinks : undefined,
     areasInteresse: isVisible(vis.areasInteresse, isConnected) ? perfil.areasInteresse : undefined,
     competencias: isVisible(vis.competencias, isConnected) ? perfil.competencias : undefined,
-    historicoProfissional: perfil.historicoProfissional,
-    formacaoAcademica: perfil.formacaoAcademica,
+    historicoProfissional: isVisible(vis.historicoProfissional, isConnected) ? perfil.historicoProfissional : undefined,
+    formacaoAcademica: isVisible(vis.formacaoAcademica, isConnected) ? perfil.formacaoAcademica : undefined,
     conquistas,
   };
 }

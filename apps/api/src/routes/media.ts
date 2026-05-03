@@ -6,6 +6,7 @@ import { generatePresignedUrl, getPublicUrl, uploadToR2, readLocalUpload } from 
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import crypto from 'node:crypto';
+import path from 'node:path';
 
 type Vars = { Variables: AuthVariables };
 
@@ -142,16 +143,23 @@ const LOCAL_MIME_MAP: Record<string, string> = {
   webp: 'image/webp', gif: 'image/gif', pdf: 'application/pdf', mp4: 'video/mp4',
 };
 
-mediaPublicRoutes.get('/local/*', (c) => {
+mediaPublicRoutes.get('/local/*', (c): Response => {
+  if (process.env.NODE_ENV === 'production') {
+    return c.json({ error: 'Not available in production.' }, 403);
+  }
   const key = c.req.param('*');
-  if (!key || key.includes('..')) {
+  if (!key) {
     return c.json({ error: 'Chave inválida.' }, 400);
   }
-  const file = readLocalUpload(key);
+  const normalizedKey = path.posix.normalize(key).replace(/^\/+/, '');
+  if (normalizedKey === '.' || normalizedKey.startsWith('../') || path.isAbsolute(key)) {
+    return c.json({ error: 'Chave inválida.' }, 400);
+  }
+  const file = readLocalUpload(normalizedKey);
   if (!file) {
     return c.json({ error: 'Ficheiro não encontrado.' }, 404);
   }
-  const ext = key.split('.').pop()?.toLowerCase() ?? '';
+  const ext = normalizedKey.split('.').pop()?.toLowerCase() ?? '';
   const contentType = LOCAL_MIME_MAP[ext] ?? 'application/octet-stream';
   return new Response(file, {
     headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=86400' },

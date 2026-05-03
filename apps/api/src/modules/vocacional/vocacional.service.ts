@@ -8,6 +8,9 @@ import {
 } from '@pdc/shared';
 import { type Recomendacao } from './vocacional.types.js';
 import { strapiGet } from '../strapi/strapi.client.js';
+import pino from 'pino';
+
+const log = pino({ name: 'vocacional-service' });
 
 // ── Pesos canónicos (Spec 1a81656f) ──────────────────────────────────────────
 
@@ -30,7 +33,8 @@ async function countTelemetria(perfilId: string, tipo: string): Promise<number> 
       'filters[tipo][$eq]': tipo,
     });
     return res.meta.pagination.total;
-  } catch {
+  } catch (err) {
+    log.warn({ perfilId, tipo, err }, 'countTelemetria: falha ao contar telemetria');
     return 0;
   }
 }
@@ -47,7 +51,8 @@ async function fetchTentativas(perfilId: string, status: string, limit = 50): Pr
       'sort': 'createdAt:desc',
     });
     return res.data;
-  } catch {
+  } catch (err) {
+    log.warn({ perfilId, status, err }, 'fetchTentativas: falha ao buscar tentativas');
     return [];
   }
 }
@@ -56,7 +61,7 @@ async function calcularScoreEventos(perfilId: string): Promise<{ score: number; 
   // Fetch in parallel for performance
   const [tentativasConcluidas, tentativasAbandonadas, ...counts] = await Promise.all([
     fetchTentativas(perfilId, 'concluida', 50),
-    fetchTentativas(perfilId, 'cancelada', 1),
+    fetchTentativas(perfilId, 'cancelada', 50),
     countTelemetria(perfilId, 'curso.concluido'),
     countTelemetria(perfilId, 'curso.inscricao'),
     countTelemetria(perfilId, 'experiencia.visualizada'),

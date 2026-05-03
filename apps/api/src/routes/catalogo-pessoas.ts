@@ -1,19 +1,23 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import pino from 'pino';
 import { AreaVocacionalSchema } from '@pdc/shared';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { optionalJwt, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
 import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 import { serializePublicProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
-import type {
-  MentorPublico,
-  InstituicaoPublica,
-  PerfilPublicoBasico,
-  CatalogoMeta,
-  Role,
+import {
+  RoleSchema,
+  type MentorPublico,
+  type InstituicaoPublica,
+  type PerfilPublicoBasico,
+  type CatalogoMeta,
+  type Role,
 } from '@pdc/shared';
 import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
+
+const log = pino({ name: 'catalogo-pessoas' });
 
 // ─── Strapi shapes (Flat v5) ──────────────────────────────────────────────────
 
@@ -72,7 +76,7 @@ interface StrapiPessoaCatalogo {
   avatarUrl?: string;
   foto?: { url?: string } | null;
   areaFormacao?: string;
-  areasInteresse?: unknown;
+  areasInteresse?: string[] | string | null;
   reputacao?: number;
 }
 
@@ -201,7 +205,12 @@ const pessoaFilters = paginationQuery.extend({
   area: AreaVocacionalSchema.optional(),
 });
 
-function firstString(value: unknown): string | undefined {
+function isRole(value: string | undefined): value is Role {
+  if (value === undefined) return false;
+  return RoleSchema.safeParse(value).success;
+}
+
+function firstString(value: string[] | string | null | undefined): string | undefined {
   if (Array.isArray(value)) {
     const first = value.find((item): item is string => typeof item === 'string' && item.length > 0);
     return first;
@@ -211,11 +220,12 @@ function firstString(value: unknown): string | undefined {
 }
 
 function mapPessoa(d: StrapiPessoaCatalogo): PerfilPublicoBasico & { area?: string } {
+  const role = isRole(d.tipo) ? d.tipo : 'estudante';
   const pessoa: PerfilPublicoBasico & { area?: string } = {
     id: sid(d.id),
     nome: d.nome ?? 'Perfil PDC',
     avatarUrl: d.foto?.url ?? d.avatarUrl ?? null,
-    role: (d.tipo ?? 'estudante') as Role,
+    role,
     reputacaoTier: 'BRONZE',
   };
   const area = d.areaFormacao ?? firstString(d.areasInteresse);
@@ -238,11 +248,16 @@ pessoasRoutes.get('/', zValidator('query', pessoaFilters), async (c) => {
   if (q.area) p['filters[$or][1][areasInteresse][$containsi]'] = q.area;
   buildPagination(p, q.page, q.limit);
 
-  const res = await strapiGet<StrapiPessoaCatalogo>('/perfis', p);
-  return c.json({
-    data: res.data.map(mapPessoa),
-    meta: toMeta(res.meta),
-  });
+  try {
+    const res = await strapiGet<StrapiPessoaCatalogo>('/perfis', p);
+    return c.json({
+      data: res.data.map(mapPessoa),
+      meta: toMeta(res.meta),
+    });
+  } catch (err) {
+    log.error({ err, params: p }, 'Failed to fetch pessoas catalog');
+    return c.json({ error: 'Erro ao buscar catálogo de pessoas' }, 502);
+  }
 });
 
 // ─── Perfil Público ───────────────────────────────────────────────────────────
@@ -280,7 +295,8 @@ perfilPublicoRoutes.get('/:id', async (c) => {
   const d = res.data[0];
   if (!d) return c.json({ error: 'Utilizador não encontrado' }, 404);
 
-  const roleName = (d.role?.name.toLowerCase() ?? 'estudante') as Role;
+  const rawRole = d.role?.name.toLowerCase();
+  const roleName = isRole(rawRole) ? rawRole : 'estudante';
   const perfil: PerfilPublicoBasico = {
     id: sid(d.id),
     nome: d.nome ?? d.username ?? '',

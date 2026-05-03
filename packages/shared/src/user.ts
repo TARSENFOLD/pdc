@@ -29,6 +29,8 @@ export interface VisibilitySettings {
   socialLinks: FieldVisibility;
   areasInteresse: FieldVisibility;
   competencias: FieldVisibility;
+  historicoProfissional: FieldVisibility;
+  formacaoAcademica: FieldVisibility;
 }
 
 export const VisibilitySettingsSchema = z.object({
@@ -40,7 +42,41 @@ export const VisibilitySettingsSchema = z.object({
   socialLinks: z.enum(['public', 'private', 'vinkulated', 'publico', 'conexoes', 'privado']).default('vinkulated'),
   areasInteresse: z.enum(['public', 'private', 'vinkulated', 'publico', 'conexoes', 'privado']).default('public'),
   competencias: z.enum(['public', 'private', 'vinkulated', 'publico', 'conexoes', 'privado']).default('public'),
+  historicoProfissional: z.enum(['public', 'private', 'vinkulated', 'publico', 'conexoes', 'privado']).default('vinkulated'),
+  formacaoAcademica: z.enum(['public', 'private', 'vinkulated', 'publico', 'conexoes', 'privado']).default('vinkulated'),
 });
+
+export const NotificationPreferencesSchema = z.object({
+  emailMensagens: z.boolean().optional(),
+  emailConquistas: z.boolean().optional(),
+  emailMentorias: z.boolean().optional(),
+  emailNewsletter: z.boolean().optional(),
+});
+
+// ─── Histórico Profissional & Académico ─────────────────────────────────────
+
+export const HistoricoProfissionalSchema = z.object({
+  id: z.string().min(1),
+  cargo: z.string().min(1),
+  empresa: z.string().min(1),
+  inicio: z.string().min(1),
+  fim: z.string().min(1).optional(),
+  atual: z.boolean().optional().default(false),
+  descricao: z.string().optional(),
+});
+
+export const FormacaoAcademicaSchema = z.object({
+  id: z.string().min(1),
+  grau: z.string().min(1),
+  instituicao: z.string().min(1),
+  area: z.string().optional(),
+  inicio: z.string().min(1),
+  fim: z.string().min(1).optional(),
+  atual: z.boolean().optional().default(false),
+});
+
+export type HistoricoProfissional = z.infer<typeof HistoricoProfissionalSchema>;
+export type FormacaoAcademica = z.infer<typeof FormacaoAcademicaSchema>;
 
 // ─── Utilizador & Perfis ───────────────────────────────────────────────────
 
@@ -97,14 +133,20 @@ export type RegistoInstituicaoPayload = z.infer<typeof RegistoInstituicaoPayload
 
 export const UpdatePerfilPayloadSchema = z.object({
   nome: z.string().min(3).optional(),
-  bio: z.string().max(500).optional(),
+  bio: z.string().max(1000).optional(),
   headline: z.string().optional(),
   regiao: z.string().optional(),
   telefone: z.string().optional(),
-  website: z.string().url().optional(),
-  avatarUrl: z.string().url().optional(),
+  website: z.string().url().optional().or(z.literal('')),
+  avatarUrl: z.string().url().nullable().optional(),
+  bannerUrl: z.string().url().nullable().optional(),
   areasInteresse: z.array(z.string()).optional(),
-  visibility: VisibilitySettingsSchema.optional(),
+  competencias: z.array(z.string()).optional(),
+  socialLinks: z.array(z.object({ platform: z.string().min(1), url: z.string().url() })).optional(),
+  historicoProfissional: z.array(HistoricoProfissionalSchema).optional(),
+  formacaoAcademica: z.array(FormacaoAcademicaSchema).optional(),
+  visibilitySettings: VisibilitySettingsSchema.optional(),
+  notificationPreferences: NotificationPreferencesSchema.optional(),
 });
 
 export type UpdatePerfilPayload = z.infer<typeof UpdatePerfilPayloadSchema>;
@@ -140,10 +182,15 @@ export const PerfilCompletoSchema = UserSchema.extend({
   localizacao: z.string().optional(),
   telefone: z.string().optional(),
   website: z.string().url().optional(),
+  regiao: z.string().optional(),
+  bannerUrl: z.string().url().optional().nullable(),
   socialLinks: z.array(z.object({ platform: z.string(), url: z.string() })).default([]),
   inscricoes: z.array(InscricaoComCursoSchema).optional(),
-  visibility: VisibilitySettingsSchema.optional(),
+  visibilitySettings: VisibilitySettingsSchema.optional(),
+  notificationPreferences: NotificationPreferencesSchema.optional(),
   competencias: z.array(z.string()).optional(),
+  historicoProfissional: z.array(HistoricoProfissionalSchema).optional(),
+  formacaoAcademica: z.array(FormacaoAcademicaSchema).optional(),
 });
 
 export type PerfilCompleto = z.infer<typeof PerfilCompletoSchema>;
@@ -155,6 +202,7 @@ export const PerfilPublicoSchema = z.object({
   bio: z.string().optional(),
   headline: z.string().optional(),
   avatarUrl: z.string().url().optional().nullable(),
+  bannerUrl: z.string().url().optional().nullable(),
   reputacaoTier: ReputacaoTierSchema,
   regiao: z.string().optional(),
   areaInteresse: z.string().optional(),
@@ -175,6 +223,8 @@ export const PerfilPublicoSchema = z.object({
     titulo: z.string(),
     capaUrl: z.string().optional(),
   })).optional(),
+  historicoProfissional: z.array(HistoricoProfissionalSchema).optional(),
+  formacaoAcademica: z.array(FormacaoAcademicaSchema).optional(),
 });
 
 export type PerfilPublico = z.infer<typeof PerfilPublicoSchema>;

@@ -54,6 +54,12 @@
       "multiple": false,
       "allowedTypes": ["images"]
     },
+    "avatarUrl": {
+      "type": "string"
+    },
+    "bannerUrl": {
+      "type": "string"
+    },
     "capa": {
       "type": "media",
       "multiple": false,
@@ -72,6 +78,12 @@
       "type": "json"
     },
     "competencias": {
+      "type": "json"
+    },
+    "historicoProfissional": {
+      "type": "json"
+    },
+    "formacaoAcademica": {
       "type": "json"
     },
     "areaFormacao": {
