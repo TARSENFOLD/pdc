@@ -89,17 +89,23 @@ export interface ExplorarResultado {
 
 // ─── Perfil Vocacional (SSOT G1-T1) ─────────────────────────────────────────
 
+export const CertezaVocacionalSchema = z.enum(['BAIXA', 'MEDIA', 'ALTA']);
+export type CertezaVocacional = z.infer<typeof CertezaVocacionalSchema>;
+
 export const PerfilVocacionalSchema = z.object({
   id: z.string(),
   perfilId: z.string(),
   areaMatch: AreaVocacionalSchema,
   scoreGlobal: z.number(),
+  certeza: CertezaVocacionalSchema,
+  totalEventos: z.number().default(0),
   aptidao: z.number().default(0),
   dedicacao: z.number().default(0),
   dimensoes: z.object({
     fluidez: z.number(),
     resiliencia: z.number(),
     foco: z.number(),
+    hesitacao: z.number().optional(),
   }),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime().optional(),

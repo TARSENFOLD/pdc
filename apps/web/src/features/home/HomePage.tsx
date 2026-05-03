@@ -1,168 +1,203 @@
 import { useAuth } from '@/lib/auth/AuthContext';
 import { Link } from 'react-router-dom';
-import { Card, Spinner } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import {
-  BookOpen, FlaskConical, Trophy, Star, Zap,
-  PenSquare, Users, Shield, Building2, Microscope,
-  BarChart3, ChevronRight,
+  FlaskConical, BookOpen, FolderKanban, GraduationCap,
+  Play, PlayCircle,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { cn } from '@/lib/utils';
 import type { Role } from '@pdc/shared';
-import { useTranslation } from '@/hooks/useTranslation';
 
-interface QuickActionDef {
-  labelKey: string;
+interface QuickAction {
+  label: string;
+  labelPt: string;
   to: string;
   icon: React.ElementType;
-  descKey: string;
+  accent?: boolean;
 }
 
-const ACTIONS_BY_ROLE: Record<Role, QuickActionDef[]> = {
-  estudante: [
-    { labelKey: 'home.actions.estudante.perfil_label', to: '/app/perfil-vocacional', icon: Star, descKey: 'home.actions.estudante.perfil_desc' },
-    { labelKey: 'home.actions.estudante.simulacoes_label', to: '/app/simulacoes', icon: FlaskConical, descKey: 'home.actions.estudante.simulacoes_desc' },
-    { labelKey: 'home.actions.estudante.cursos_label', to: '/app/cursos', icon: BookOpen, descKey: 'home.actions.estudante.cursos_desc' },
-    { labelKey: 'home.actions.estudante.ranking_label', to: '/app/ranking', icon: Trophy, descKey: 'home.actions.estudante.ranking_desc' },
-  ],
+const QUICK_ACTIONS_ESTUDANTE: QuickAction[] = [
+  { label: 'Simulações', labelPt: 'Simulações', to: '/app/simulacoes', icon: FlaskConical, accent: true },
+  { label: 'Programa',   labelPt: 'Programa',   to: '/app/programas',  icon: GraduationCap },
+  { label: 'Projecto',   labelPt: 'Projecto',   to: '/app/explorar',   icon: FolderKanban },
+  { label: 'Curso',      labelPt: 'Curso',      to: '/app/cursos',     icon: BookOpen },
+  { label: 'Simulações', labelPt: 'Simulações', to: '/app/simulacoes', icon: Play },
+];
+
+const QUICK_ACTIONS_BY_ROLE: Partial<Record<Role, QuickAction[]>> = {
+  estudante: QUICK_ACTIONS_ESTUDANTE,
   mentor: [
-    { labelKey: 'home.actions.mentor.criar_label', to: '/app/mentor/cursos/criar', icon: PenSquare, descKey: 'home.actions.mentor.criar_desc' },
-    { labelKey: 'home.actions.mentor.cursos_label', to: '/app/mentor/cursos', icon: BookOpen, descKey: 'home.actions.mentor.cursos_desc' },
-    { labelKey: 'home.actions.mentor.simulacoes_label', to: '/app/mentor/simulacoes', icon: FlaskConical, descKey: 'home.actions.mentor.simulacoes_desc' },
-    { labelKey: 'home.actions.mentor.mentorados_label', to: '/app/mentor/mentorados', icon: Users, descKey: 'home.actions.mentor.mentorados_desc' },
-  ],
-  instituicao: [
-    { labelKey: 'home.actions.instituicao.experiencias_label', to: '/app/instituicao/experiencias', icon: Building2, descKey: 'home.actions.instituicao.experiencias_desc' },
-    { labelKey: 'home.actions.instituicao.programas_label', to: '/app/instituicao/programas', icon: BookOpen, descKey: 'home.actions.instituicao.programas_desc' },
-    { labelKey: 'home.actions.instituicao.estudantes_label', to: '/app/instituicao/estudantes-vinculados', icon: Users, descKey: 'home.actions.instituicao.estudantes_desc' },
-    { labelKey: 'home.actions.instituicao.relatorios_label', to: '/app/instituicao/relatorios', icon: BarChart3, descKey: 'home.actions.instituicao.relatorios_desc' },
-  ],
-  moderador: [
-    { labelKey: 'home.actions.moderador.aprovacoes_label', to: '/app/moderacao/aprovacoes', icon: Shield, descKey: 'home.actions.moderador.aprovacoes_desc' },
-    { labelKey: 'home.actions.moderador.denuncias_label', to: '/app/moderacao/denuncias', icon: Shield, descKey: 'home.actions.moderador.denuncias_desc' },
-    { labelKey: 'home.actions.moderador.utilizadores_label', to: '/app/moderador/utilizadores', icon: Users, descKey: 'home.actions.moderador.utilizadores_desc' },
-    { labelKey: 'home.actions.moderador.stats_label', to: '/app/admin/stats', icon: BarChart3, descKey: 'home.actions.moderador.stats_desc' },
-  ],
-  comite_cientifico: [
-    { labelKey: 'home.actions.comite_cientifico.validacao_label', to: '/app/comite/validacao', icon: Microscope, descKey: 'home.actions.comite_cientifico.validacao_desc' },
-    { labelKey: 'home.actions.comite_cientifico.dashboard_label', to: '/app/comite', icon: BarChart3, descKey: 'home.actions.comite_cientifico.dashboard_desc' },
-    { labelKey: 'home.actions.comite_cientifico.feed_label', to: '/app/feed', icon: Zap, descKey: 'home.actions.comite_cientifico.feed_desc' },
-  ],
-  super_admin: [
-    { labelKey: 'home.actions.super_admin.stats_label', to: '/app/admin/stats', icon: BarChart3, descKey: 'home.actions.super_admin.stats_desc' },
-    { labelKey: 'home.actions.super_admin.utilizadores_label', to: '/app/admin/utilizadores', icon: Users, descKey: 'home.actions.super_admin.utilizadores_desc' },
-    { labelKey: 'home.actions.super_admin.flags_label', to: '/app/admin/feature-flags', icon: Shield, descKey: 'home.actions.super_admin.flags_desc' },
-    { labelKey: 'home.actions.super_admin.feed_weights_label', to: '/app/admin/feed-weights', icon: Zap, descKey: 'home.actions.super_admin.feed_weights_desc' },
-  ],
-  patrocinador: [
-    { labelKey: 'home.actions.patrocinador.feed_label', to: '/app/feed', icon: Zap, descKey: 'home.actions.patrocinador.feed_desc' },
-    { labelKey: 'home.actions.patrocinador.explorar_label', to: '/app/explorar', icon: Building2, descKey: 'home.actions.patrocinador.explorar_desc' },
+    { label: 'Simulações', labelPt: 'Simulações', to: '/app/mentor/simulacoes', icon: FlaskConical, accent: true },
+    { label: 'Programa',   labelPt: 'Programa',   to: '/app/instituicao/programas', icon: GraduationCap },
+    { label: 'Projecto',   labelPt: 'Projecto',   to: '/app/explorar',              icon: FolderKanban },
+    { label: 'Curso',      labelPt: 'Curso',      to: '/app/mentor/cursos',         icon: BookOpen },
+    { label: 'Simulações', labelPt: 'Simulações', to: '/app/mentor/simulacoes',     icon: Play },
   ],
 };
 
+const SPRING = { type: 'spring', stiffness: 220, damping: 28 } as const;
+
 export default function HomePage(): React.ReactNode {
   const { user, isLoading } = useAuth();
-  const { t } = useTranslation('dashboard');
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-canvas">
+      <div className="flex h-screen items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
   }
 
-  const role = user?.role ?? 'estudante';
-  const actionDefs = ACTIONS_BY_ROLE[role];
-  const firstName = user?.nome ? String(user.nome.split(' ')[0]) : null;
+  const role: Role = user?.role ?? 'estudante';
+  const quickActions = QUICK_ACTIONS_BY_ROLE[role] ?? QUICK_ACTIONS_ESTUDANTE;
+  const firstName = user?.nome ? user.nome.split(' ')[0] : 'utilizador';
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 pb-16 animate-in fade-in duration-500">
-      <header className="space-y-1">
-        <p className="text-xs font-medium text-ink-tertiary uppercase tracking-widest">
-          {role.replace('_', ' ')}
-        </p>
-        <h1 className="text-2xl font-bold text-ink-primary" data-testid="page-hero-title">
-          {firstName
-            ? `${t('home.greeting_prefix')}, ${firstName}`
-            : t('home.welcome_fallback')}
-        </h1>
-        <p className="text-sm text-ink-secondary leading-relaxed">
-          {t(`home.greetings.${role}`)}
-        </p>
-      </header>
+    <div className="mx-auto max-w-5xl space-y-8 pb-16 animate-in fade-in duration-500">
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {actionDefs.map((action, idx) => (
-          <motion.div
-            key={action.to}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.06, type: 'spring', stiffness: 220, damping: 28 }}
-            className={idx === 0 ? 'sm:col-span-2 lg:col-span-2' : ''}
-          >
-            <Link to={action.to} className="block h-full">
-              <Card
-                interactive
-                className={cn(
-                  'h-full p-6 flex flex-col gap-4 transition-all group',
-                  idx === 0
-                    ? 'bg-accent border-accent/50 hover:bg-accent/90 min-h-[120px]'
-                    : 'border-white/5 bg-elevated/50 hover:border-accent/20',
-                )}
+      {/* ── 5 Botões Circulares — topo, centrados ── */}
+      <section aria-label="Acções rápidas" className="pt-6">
+        <div className="flex items-start justify-center gap-6 sm:gap-10 flex-wrap">
+          {quickActions.map((action, idx) => {
+            const Icon = action.icon;
+            return (
+              <motion.div
+                key={`${action.to}-${String(idx)}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...SPRING, delay: idx * 0.07 }}
+                className="flex flex-col items-center gap-2"
               >
-                <div
-                  className={cn(
-                    'p-3 rounded-2xl w-fit group-hover:scale-110 transition-transform',
-                    idx === 0
-                      ? 'bg-white/15 text-white'
-                      : 'bg-accent/5 text-accent',
-                  )}
+                <Link
+                  to={action.to}
+                  className="group relative flex h-16 w-16 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                  style={{
+                    background: action.accent
+                      ? 'var(--accent-terracotta)'
+                      : 'var(--surface-elevated)',
+                    border: `1.5px solid ${action.accent === true ? 'transparent' : 'var(--chrome-border)'}`,
+                    boxShadow: action.accent
+                      ? '0 0 0 4px rgba(182,95,42,0.18)'
+                      : 'var(--elevation-1)',
+                    color: action.accent ? '#fff' : 'var(--ink-secondary)',
+                  }}
+                  aria-label={action.labelPt}
                 >
-                  <action.icon size={22} />
-                </div>
-                <div className="flex-1">
-                  <h3
-                    className={cn(
-                      'font-semibold transition-colors',
-                      idx === 0
-                        ? 'text-white'
-                        : 'text-ink-primary group-hover:text-accent',
-                    )}
-                  >
-                    {t(action.labelKey)}
-                  </h3>
-                  <p
-                    className={cn(
-                      'text-xs mt-1 leading-relaxed',
-                      idx === 0 ? 'text-white/70' : 'text-ink-tertiary',
-                    )}
-                  >
-                    {t(action.descKey)}
-                  </p>
-                </div>
-                <div
-                  className={cn(
-                    'flex items-center text-[10px] font-semibold uppercase tracking-widest',
-                    idx === 0
-                      ? 'text-white/60'
-                      : 'text-ink-tertiary group-hover:text-accent',
-                  )}
+                  <Icon size={22} strokeWidth={1.8} />
+                </Link>
+                <span
+                  className="text-xs font-medium text-center leading-tight max-w-[72px] truncate"
+                  style={{ color: 'var(--ink-secondary)' }}
                 >
-                  {t('home.cta_open')} <ChevronRight size={12} className="ml-1" />
-                </div>
-              </Card>
-            </Link>
-          </motion.div>
-        ))}
+                  {action.labelPt}
+                </span>
+              </motion.div>
+            );
+          })}
+        </div>
       </section>
 
-      <footer className="flex items-center gap-2 opacity-40">
-        <Zap size={11} className="text-accent shrink-0" />
-        <p className="text-[11px] text-ink-tertiary">
-          {t('home.oracle_body')}
+      {/* ── Saudação discreta ── */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ ...SPRING, delay: 0.38 }}
+        className="text-center"
+      >
+        <p className="text-sm font-medium" style={{ color: 'var(--ink-secondary)' }}>
+          Bem-vindo de volta, <span style={{ color: 'var(--ink-primary)' }}>{firstName}</span>
         </p>
-      </footer>
+      </motion.div>
+
+      {/* ── Card de Vídeo "Como Começar" ── */}
+      <motion.section
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...SPRING, delay: 0.45 }}
+        aria-label="Como começar"
+      >
+        <div
+          className="relative w-full overflow-hidden rounded-2xl"
+          style={{
+            background: 'var(--surface-elevated)',
+            border: '1px solid var(--chrome-border)',
+            boxShadow: 'var(--elevation-2)',
+          }}
+        >
+          {/* Thumbnail / vídeo placeholder */}
+          <div
+            className="relative flex items-center justify-center"
+            style={{
+              aspectRatio: '16/7',
+              background: 'linear-gradient(135deg, #0D1117 0%, #161B22 50%, #1A1D21 100%)',
+            }}
+          >
+            {/* Play button centrado */}
+            <button
+              type="button"
+              aria-label="Reproduzir vídeo"
+              className="group relative flex h-16 w-16 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              style={{
+                background: 'var(--accent-terracotta)',
+                boxShadow: '0 0 0 8px rgba(182,95,42,0.18), var(--elevation-3)',
+              }}
+            >
+              <PlayCircle size={32} className="text-white" strokeWidth={1.5} />
+            </button>
+
+            {/* Label overlay */}
+            <div className="absolute bottom-4 left-6">
+              <p
+                className="text-[10px] font-semibold uppercase tracking-widest mb-1"
+                style={{ color: 'var(--accent-terracotta)' }}
+              >
+                Guia de início
+              </p>
+              <p className="text-base font-bold" style={{ color: 'var(--ink-primary)' }}>
+                Como começar no PDC
+              </p>
+              <p className="text-xs" style={{ color: 'var(--ink-secondary)' }}>
+                How to get started · 5 min
+              </p>
+            </div>
+
+            {/* Duração */}
+            <div
+              className="absolute bottom-4 right-6 rounded-md px-2 py-1 text-[11px] font-bold tabular-nums"
+              style={{
+                background: 'rgba(0,0,0,0.65)',
+                color: 'var(--ink-primary)',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              05:00
+            </div>
+          </div>
+
+          {/* Footer do card */}
+          <div
+            className="flex items-center justify-between px-5 py-4"
+            style={{ borderTop: '1px solid var(--chrome-border)' }}
+          >
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--ink-primary)' }}>
+                Descobre tudo o que o PDC tem para ti
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--ink-secondary)' }}>
+                Simulações · Programas · Projectos · Cursos
+              </p>
+            </div>
+            <button
+              type="button"
+              className="shrink-0 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
+              style={{ background: 'var(--accent-terracotta)' }}
+            >
+              Ver guia
+            </button>
+          </div>
+        </div>
+      </motion.section>
+
     </div>
   );
 }

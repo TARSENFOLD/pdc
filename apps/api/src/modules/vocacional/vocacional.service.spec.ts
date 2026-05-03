@@ -26,6 +26,8 @@ describe('VocacionalService', () => {
       id: 'pat-1',
       perfilId: 'perfil-1',
       scoreGlobal: 80,
+      certeza: 'ALTA',
+      totalEventos: 60,
       areaMatch: 'TECNOLOGIA',
       aptidao: 0.8,
       dedicacao: 0.7,

@@ -5,8 +5,8 @@ import { vocacionalService } from '../modules/vocacional/vocacional.service.js';
 import { strapiGet, strapiPost } from '../modules/strapi/strapi.client.js';
 
 import {
-  PerfilCompleto,
-  BehaviorPattern
+  type PerfilCompleto,
+  type BehaviorPattern
 } from '@pdc/shared';
 
 const log = pino({ name: 'vocacional' });
@@ -40,6 +40,8 @@ vocacionalRoutes.get('/perfil-premium', async (c) => {
         data: {
           perfil: perfil.id,
           scoreGlobal: realPerfil.scoreGlobal,
+          certeza: realPerfil.certeza,
+          totalEventos: realPerfil.totalEventos,
           areaMatch: realPerfil.areaMatch,
           aptidao: realPerfil.aptidao,
           dedicacao: realPerfil.dedicacao,
@@ -52,6 +54,8 @@ vocacionalRoutes.get('/perfil-premium', async (c) => {
 
     return c.json({
       scoreGlobal: realPerfil.scoreGlobal,
+      certeza: realPerfil.certeza,
+      totalEventos: realPerfil.totalEventos,
       patterns: patternsRes.data,
       recomendacoes,
       lastUpdate: realPerfil.updatedAt
