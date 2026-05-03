@@ -33,4 +33,13 @@ export const projetosApi = {
 
   respondPedido: (id: string, pedidoId: string, status: 'aprovado' | 'rejeitado') =>
     http.put<PedidoAcesso>(`/projetos/${id}/pedidos-acesso/${pedidoId}`, { status }),
+
+  getVotes: (id: string) =>
+    http.get<{ endorsements: number; votos_count: number; endorsed: boolean; voted: boolean }>(`/projetos/${id}/votos`),
+
+  vote: (id: string, tipo: 'endorsement' | 'voto', comentario?: string) =>
+    http.post<{ count: number; voted: boolean }>(`/projetos/${id}/votos`, { tipo, comentario }),
+
+  unvote: (id: string, tipo: 'endorsement' | 'voto') =>
+    http.delete<{ count: number; voted: boolean }>(`/projetos/${id}/votos?tipo=${tipo}`),
 };

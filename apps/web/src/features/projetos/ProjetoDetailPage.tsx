@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Search } from 'lucide-react';
 
 import { Spinner, Badge, Button, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
+import { ThumbsUp, Star } from 'lucide-react';
 import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 import { DenunciarButton } from '@/components/ui/DenunciarButton';
 import { SEOHead } from '@/components/layout/SEOHead';
@@ -27,6 +28,18 @@ export function ProjetoDetailPage() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['projetos'] });
     },
+  });
+
+  const { data: votesData } = useQuery({
+    queryKey: ['projeto', id, 'votos'],
+    queryFn: () => projetosApi.getVotes(id ?? ''),
+    enabled: !!id,
+  });
+
+  const voteMutation = useMutation({
+    mutationFn: ({ tipo, active }: { tipo: 'endorsement' | 'voto'; active: boolean }) =>
+      active ? projetosApi.unvote(id ?? '', tipo) : projetosApi.vote(id ?? '', tipo),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['projeto', id, 'votos'] }); },
   });
 
   const { data: likeStatus } = useQuery({
@@ -88,6 +101,41 @@ export function ProjetoDetailPage() {
             <div className="w-px h-6 bg-border mx-2"></div>
             <LikeButton targetType="projeto" targetId={id} initialCount={likeStatus?.count} initialLiked={likeStatus?.liked} />
             <BookmarkButton targetType="projeto" targetId={id} initialBookmarked={isBookmarked} />
+            {user && !isOwner && (
+              <>
+                <div className="w-px h-6 bg-border mx-1" />
+                <button
+                  type="button"
+                  aria-label={votesData?.endorsed ? 'Retirar endorsement' : 'Endorsar projeto'}
+                  aria-pressed={votesData?.endorsed ?? false}
+                  disabled={voteMutation.isPending}
+                  onClick={() => { voteMutation.mutate({ tipo: 'endorsement', active: votesData?.endorsed ?? false }); }}
+                  className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors min-h-[44px] min-w-[44px] ${
+                    votesData?.endorsed
+                      ? 'bg-accent/10 text-accent'
+                      : 'text-ink-tertiary hover:text-ink-secondary hover:bg-elevated'
+                  }`}
+                >
+                  <Star className="h-4 w-4" />
+                  <span>{votesData?.endorsements ?? 0}</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label={votesData?.voted ? 'Retirar voto' : 'Votar no projeto'}
+                  aria-pressed={votesData?.voted ?? false}
+                  disabled={voteMutation.isPending}
+                  onClick={() => { voteMutation.mutate({ tipo: 'voto', active: votesData?.voted ?? false }); }}
+                  className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors min-h-[44px] min-w-[44px] ${
+                    votesData?.voted
+                      ? 'bg-accent/10 text-accent'
+                      : 'text-ink-tertiary hover:text-ink-secondary hover:bg-elevated'
+                  }`}
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  <span>{votesData?.votos_count ?? 0}</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">

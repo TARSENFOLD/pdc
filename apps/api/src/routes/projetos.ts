@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { verifyJwt, optionalJwt, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut, strapiDelete } from '../modules/strapi/strapi.client.js';
-import { CriarProjetoPayloadSchema, GerirACLSchema, type Projeto, type ACLEntry } from '@pdc/shared';
+import { CriarProjetoPayloadSchema, GerirACLSchema, VotoProjetoPayloadSchema, type Projeto, type ACLEntry, type Voto } from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 
@@ -230,6 +230,108 @@ projetoRoutes.patch('/:id/acl',
     }
   }
 );
+
+// GET /projetos/:id/votos — contagens públicas + estado do utilizador autenticado
+projetoRoutes.get('/:id/votos', optionalJwt, async (c) => {
+  const id = c.req.param('id');
+  if (!id) return c.json({ error: 'Projeto não encontrado' }, 404);
+  const userId = c.get('user')?.id;
+
+  try {
+    const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, {});
+    const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+    if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
+
+    const votos: Voto[] = project.votos ?? [];
+    const perfilId = await resolvePerfilId(userId);
+
+    return c.json({
+      endorsements: votos.filter(v => v.tipo === 'endorsement').length,
+      votos_count: votos.filter(v => v.tipo === 'voto').length,
+      endorsed: perfilId ? votos.some(v => v.perfilId === perfilId && v.tipo === 'endorsement') : false,
+      voted: perfilId ? votos.some(v => v.perfilId === perfilId && v.tipo === 'voto') : false,
+    });
+  } catch {
+    return c.json({ error: 'Erro ao carregar votos' }, 502);
+  }
+});
+
+// POST /projetos/:id/votos — votar ou endorsar (não pode ser o próprio autor)
+projetoRoutes.post('/:id/votos',
+  verifyJwt,
+  zValidator('json', VotoProjetoPayloadSchema),
+  async (c) => {
+    const id = c.req.param('id');
+    if (!id) return c.json({ error: 'Projeto não encontrado' }, 404);
+    const { tipo, comentario } = c.req.valid('json');
+    const userId = c.get('user').id;
+
+    try {
+      const perfilId = await resolvePerfilId(userId);
+      if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
+
+      const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
+      const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+      if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
+
+      if (project.autor?.userId === userId) {
+        return c.json({ error: 'Não podes votar no teu próprio projeto' }, 403);
+      }
+
+      const votos: Voto[] = project.votos ?? [];
+      if (votos.some(v => v.perfilId === perfilId && v.tipo === tipo)) {
+        return c.json({ count: votos.filter(v => v.tipo === tipo).length, voted: true });
+      }
+
+      const novoVoto: Voto = { perfilId, tipo, comentario, criadoEm: new Date().toISOString() };
+      votos.push(novoVoto);
+      await strapiPut(`/projetos/${id}`, { votos });
+
+      if (tipo === 'endorsement') {
+        await eventBus.publishWithOutbox(DomainEventName.PROJETO_ENDORSEMENT_RECEBIDO, {
+          projetoId: id,
+          perfilId,
+          autorId: project.autor?.id ?? '',
+        });
+      }
+
+      return c.json({ count: votos.filter(v => v.tipo === tipo).length, voted: true });
+    } catch {
+      return c.json({ error: 'Erro ao registar voto' }, 502);
+    }
+  }
+);
+
+// DELETE /projetos/:id/votos?tipo=endorsement|voto — retirar voto
+projetoRoutes.delete('/:id/votos', verifyJwt, async (c) => {
+  const id = c.req.param('id');
+  if (!id) return c.json({ error: 'Projeto não encontrado' }, 404);
+  const tipo = c.req.query('tipo') as 'endorsement' | 'voto' | undefined;
+  if (tipo !== 'endorsement' && tipo !== 'voto') {
+    return c.json({ error: 'Parâmetro tipo deve ser endorsement ou voto' }, 400);
+  }
+  const userId = c.get('user').id;
+
+  try {
+    const perfilId = await resolvePerfilId(userId);
+    if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
+
+    const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, {});
+    const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+    if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
+
+    const votos: Voto[] = project.votos ?? [];
+    const newVotos = votos.filter(v => !(v.perfilId === perfilId && v.tipo === tipo));
+
+    if (newVotos.length < votos.length) {
+      await strapiPut(`/projetos/${id}`, { votos: newVotos });
+    }
+
+    return c.json({ count: newVotos.filter(v => v.tipo === tipo).length, voted: false });
+  } catch {
+    return c.json({ error: 'Erro ao retirar voto' }, 502);
+  }
+});
 
 // DELETE /projetos/:id — apenas o autor
 projetoRoutes.delete('/:id', verifyJwt, async (c) => {
