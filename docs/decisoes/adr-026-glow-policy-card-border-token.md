@@ -31,7 +31,8 @@ ctx.shadowBlur = currentSize * 3;
 
 // ✅ PERMITIDO (exclusivo: accent stars da landing)
 ctx.shadowBlur = 2;                  // valor fixo, nunca multiplicador
-ctx.shadowColor = rgba(accentRgb, 0.12 * starOpacity);  // alpha ≤ 0.12
+// Construir string rgba a partir de componentes (pseudo-código — ajustar conforme estrutura de accentRgb):
+ctx.shadowColor = `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, ${0.12 * starOpacity})`;  // alpha ≤ 0.12
 
 // ✅ CORRETO (cool stars, componentes app, auth canvas)
 ctx.shadowBlur = 0;

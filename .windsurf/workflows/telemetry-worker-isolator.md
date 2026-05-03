@@ -45,6 +45,7 @@ Critério Done:
 [ ] Chunked processing (max 100 eventos por ciclo, yield ao event loop)
 [ ] Typecheck verde
 [ ] Lint limpo
+[ ] STATE.md actualizado com status do worker e referência ao ADR
 ```
 
 ## Passos
@@ -69,7 +70,8 @@ Critério Done:
    ```json
    "scripts": {
      "worker:telemetry": "node --import tsx/esm src/workers/telemetry-worker.ts",
-     "worker:outbox": "node --import tsx/esm src/modules/outbox/outbox-worker.ts"
+     "worker:outbox": "node --import tsx/esm src/modules/outbox/outbox-worker.ts",
+     "worker:all": "npm run worker:outbox & npm run worker:telemetry"
    }
    ```
 
@@ -80,3 +82,28 @@ Critério Done:
 6. **Health check**
    - Worker escreve heartbeat no Redis a cada 30s
    - BFF pode expor endpoint `/health/workers` que verifica heartbeats
+
+---
+
+## Sumário
+
+O telemetry worker é extraído do BFF para um processo Railway independente. O worker processa a queue de telemetria em chunks de ≤ 100 eventos por ciclo, fazendo `yield` ao event loop entre chunks. Escreve heartbeat Redis a cada 30s; o endpoint `/health/workers` do BFF verifica esses heartbeats para monitoring de saúde.
+
+## Rollback
+
+Se o worker falhar em produção:
+1. Parar o serviço Railway do worker (ou remover o segundo processo do `Procfile`)
+2. Restaurar a invocação inline do consumer em `apps/api/src/index.ts` (reverter o commit de remoção)
+3. Os eventos acumulados na queue Redis continuam persistentes — nenhuma perda de dados
+4. Investigar logs pino do worker para identificar causa raiz antes de re-deploy
+
+## Plano de Migração
+
+1. **Pré-deploy:** verificar que `consumer.ts` exporta apenas funções (não auto-executa via `import.meta.url`)
+2. **Deploy dual:** deploiar novo worker em Railway em paralelo com o BFF existente (sem remover ainda o consumer do BFF) — validar heartbeat Redis em `/health/workers`
+3. **Cutover:** após 1 ciclo de monitoring sem erros, remover invocação inline do consumer do `index.ts` do BFF
+4. **Validação pós-cutover:** confirmar que a queue de telemetria continua a diminuir e que os dashboards de telemetria não mostram lacunas
+
+## Tracking
+
+Registar rollout e incidentes em `STATE.md` (secção Wave 3 — Resiliência & Performance). Referência: este workflow e o heartbeat em `telemetry:worker:heartbeat` no Redis.

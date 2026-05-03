@@ -19,7 +19,7 @@ Isto viola o princípio de "compilar o futuro" sugerido nas análises externas.
 
 Spec Soberana: CONSTITUTION.md (Doc is Law), ADR 007-018
 Wave/Contexto: Wave 0 (Meta-Governação)
-Caixa Autorizada: B (Código mais maduro que doc — CI não valida docs)
+Caixa Autorizada: A (Código viola lei — CI não enforça "Doc is Law"; refactoring necessário)
 
 Scope IN (Ficheiros permitidos):
 - .github/workflows/ci.yml (ou equivalente)
@@ -41,6 +41,12 @@ Critério Done:
 [ ] Falha de CI se link quebrado ou referência inexistente
 [ ] Não bloqueia builds por falsos positivos (whitelist configurável)
 [ ] Documentação de uso no README ou CONTRIBUTING.md
+[ ] npm run typecheck — verde em todos os workspaces
+[ ] npm run lint — sem novos eslint-disable
+[ ] npm run test — Vitest verde em todos os workspaces
+[ ] npx playwright test --project=chromium — happy paths
+[ ] STATE.md actualizado com progresso Wave 0 (Meta-Governação)
+[ ] Commit atómico: audit(wave0-meta): integrate CI doc validator
 ```
 
 ## Passos
@@ -69,7 +75,10 @@ Critério Done:
    - Adicionar step no workflow:
      ```yaml
      - name: Validate Documentation Links
-       run: npx markdown-link-check docs/**/*.md .planning/**/*.md --config .markdown-link-check.json
+       shell: bash
+       run: |
+         shopt -s globstar
+         npx markdown-link-check docs/**/*.md .planning/**/*.md --config .markdown-link-check.json
      - name: Validate Doc-Code References
        run: npx tsx scripts/validate-docs.ts
      ```
@@ -81,3 +90,8 @@ Critério Done:
 6. **Validação de taxonomia** (opcional, fase 2)
    - Script que lê `roadmap.md` e verifica que waves referenciadas existem em `STATE.md`
    - Verifica que ADRs citados em docs existem em `docs/adr/`
+
+7. **Actualizar STATE.md**
+   - Registar conclusão da integração CI de validação de docs
+   - Marcar progresso Wave 0 (Meta-Governação)
+   - Commit atómico: `audit(wave0-meta): integrate CI doc validator`

@@ -319,9 +319,14 @@ var(--radius-sm)   var(--radius-md)   var(--radius-lg)   var(--radius-xl)   var(
 
 ```css
 /* Definido em apps/web/src/styles/tokens.css */
---card-border: #000000;          /* light mode */
-/* .dark { */
---card-border: rgba(255, 255, 255, 0.08);  /* dark mode */
+
+/* Light mode (:root) */
+--card-border: #000000;
+
+/* Dark mode (.dark selector) */
+.dark {
+  --card-border: rgba(255, 255, 255, 0.08);
+}
 ```
 
 - ❌ Nunca `borderColor: '#000000'` hardcoded — usar sempre `var(--card-border)`

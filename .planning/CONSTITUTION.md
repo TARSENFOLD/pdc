@@ -84,7 +84,7 @@ Relatório: `docs/audit/MASTER--audit-report.md` · Epic: T-REM-1..6
 
 **Infra (30 Abril 2026):** Cold storage R2 real (`moveToColdStorage` não é mais stub) · Telemetry worker isolado (`/workers/telemetry-worker.ts`) · Distributed lock com fencing token (`/lib/distributed-lock.ts`) · CI doc validator (`scripts/validate-docs.ts`) · i18n 100% (10 componentes, 3 locales × auth + dashboard.home).
 
-**Visual & Auth Polish (3 Maio 2026):** NeuralConstellation dual (ADR-025) · Glow policy + `--card-border` token (ADR-026) · `neuralState` por campo de formulário · `PasswordInput` reutilizável · `DESIGN.md § 10` adicionado (7 padrões canónicos).
+**Visual & Auth Polish (2026-05-03):** NeuralConstellation dual (ADR-025) · Glow policy + `--card-border` token (ADR-026) · `neuralState` por campo de formulário · `PasswordInput` reutilizável · `DESIGN.md § 10` adicionado (7 padrões canónicos).
 
 > **Nota:** `bg-amber-*` é permitido em landing pages (identidade visual PDC Angola). Banido em dashboards e componentes app.
 
