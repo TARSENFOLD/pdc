@@ -26,6 +26,10 @@
     "gestao_institucional": "Gestão Institucional",
     "autoridade": "Autoridade"
   },
+  "sidebar": {
+    "expand": "Expandir sidebar",
+    "collapse": "Recolher sidebar"
+  },
   "errors": {
     "generic": "Ocorreu um erro. Por favor tente novamente.",
     "not_found": "Página não encontrada.",
@@ -90,7 +94,10 @@
       "submit": "Acessar Plataforma",
       "divider": "ou",
       "google_cta": "Continuar com Google",
-      "forgot_link": "Esqueci minha senha",
+      "linkedin_cta": "Continuar com LinkedIn",
+      "recover_password_link": "Recuperar senha",
+      "panel_headline": "Por Dentro do Curso",
+      "panel_subline": "O universo acadêmico inteiro, à sua medida.",
       "register_link": "Criar conta acadêmica",
       "error_generic": "Erro ao fazer login. Verifique suas credenciais."
     }

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import type React from 'react';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
 import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
@@ -18,12 +19,15 @@ const AREAS = [
   { value: 'ARTES', label: 'Artes' },
 ];
 
-export function CursosCatalogoPage() {
+const SITE_ORIGIN = typeof window !== 'undefined' ? window.location.origin : 'https://usepdc.com';
+
+export default function CursosCatalogoPage(): React.JSX.Element {
   const [sp, setSp] = useSearchParams();
   const location = useLocation();
   const area = sp.get('area') ?? '';
   const search = sp.get('q') ?? '';
-  const page = Number(sp.get('page') ?? '1');
+  const parsedPage = Number.parseInt(sp.get('page') ?? '1', 10);
+  const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const inApp = location.pathname.startsWith('/app');
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -43,7 +47,7 @@ export function CursosCatalogoPage() {
       <SEOHead
         title="Cursos"
         description="Percursos certificados por especialistas e instituições de prestígio."
-        url="https://usepdc.com/cursos"
+        url={`${SITE_ORIGIN}/cursos`}
       />
 
       <div className="max-w-7xl mx-auto space-y-8">
@@ -67,19 +71,19 @@ export function CursosCatalogoPage() {
               areas={AREAS}
               selectedArea={area}
               searchTerm={search}
-              onSearchChange={(val) => {
+              onSearchChange={(val: string) => {
                 const next = new URLSearchParams(sp);
                 if (val) next.set('q', val); else next.delete('q');
                 next.delete('page');
                 setSp(next, { replace: true });
               }}
-              onAreaChange={(val) => {
+              onAreaChange={(val: string) => {
                 const next = new URLSearchParams(sp);
                 if (val) next.set('area', val); else next.delete('area');
                 next.delete('page');
                 setSp(next, { replace: true });
               }}
-              totalResults={data?.meta.total}
+              totalResults={data?.meta.total ?? 0}
             />
           }
         >

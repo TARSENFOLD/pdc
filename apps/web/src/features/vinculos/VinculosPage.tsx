@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Avatar, Badge, Button, Card, EmptyState, Spinner, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
@@ -47,7 +48,7 @@ function resolveOutro(vinculo: VinculoComPerfilUser, userId: string | undefined,
   return solicitanteIsMe ? vinculo.destinatario : vinculo.solicitante;
 }
 
-export function VinculosPage() {
+export default function VinculosPage(): React.JSX.Element {
   const { user } = useAuth();
   const [tabActiva, setTabActiva] = useState('pessoas');
   const [search, setSearch] = useState('');
@@ -93,6 +94,9 @@ export function VinculosPage() {
       toast({ title: 'Pedido de vínculo enviado' });
       void queryClient.invalidateQueries({ queryKey: ['vinculos'] });
     },
+    onError: () => {
+      toast({ title: 'Erro ao enviar pedido de vínculo', variant: 'error' });
+    },
   });
 
   const resolverMutation = useMutation({
@@ -101,6 +105,9 @@ export function VinculosPage() {
     onSuccess: (_, variables) => {
       toast({ title: variables.status === 'aprovado' ? 'Vínculo aceite' : 'Vínculo rejeitado' });
       void queryClient.invalidateQueries({ queryKey: ['vinculos'] });
+    },
+    onError: () => {
+      toast({ title: 'Erro ao processar pedido de vínculo', variant: 'error' });
     },
   });
 

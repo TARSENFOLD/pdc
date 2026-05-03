@@ -70,7 +70,7 @@ export function CursoListPage() {
             areas={AREAS}
             selectedArea={area}
             onAreaChange={setArea}
-            totalResults={data?.pagination.total}
+            totalResults={data?.pagination.total ?? 0}
           />
         }
       >

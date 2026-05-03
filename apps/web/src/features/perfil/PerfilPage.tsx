@@ -1,5 +1,6 @@
-import { PerfilShowcase } from './PerfilShowcase';
+import type React from 'react';
+import PerfilShowcase from './PerfilShowcase';
 
-export function PerfilPage() {
+export default function PerfilPage(): React.JSX.Element {
   return <PerfilShowcase />;
 }

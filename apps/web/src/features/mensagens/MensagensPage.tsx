@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Spinner, Avatar, EmptyState } from '@/components/ui';
@@ -16,6 +17,7 @@ interface ConversaInfo {
 }
 
 export function MensagensPage() {
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['mensagens', 'conversas'],
@@ -23,7 +25,14 @@ export function MensagensPage() {
     refetchInterval: 30000,
   });
 
-  const conversas = data?.data ?? [];
+  const filteredConversas = useMemo(() => {
+    const conversas = data?.data ?? [];
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return conversas;
+    return conversas.filter((conversa) =>
+      `${conversa.interlocutorNome} ${conversa.ultimaMensagem ?? ''}`.toLowerCase().includes(query)
+    );
+  }, [data?.data, searchTerm]);
 
   return (
     <div className="flex h-[calc(100vh-100px)] gap-4 animate-in fade-in duration-500 max-w-7xl mx-auto pb-4">
@@ -37,6 +46,8 @@ export function MensagensPage() {
             <input 
               type="text" 
               placeholder="Procurar conversa..." 
+              value={searchTerm}
+              onChange={(event) => { setSearchTerm(event.target.value); }}
               className="w-full bg-recessed text-sm rounded-lg pl-9 pr-3 py-2 border-none focus:ring-1 focus:ring-accent transition-shadow text-ink-primary placeholder:text-ink-tertiary"
             />
           </div>
@@ -45,7 +56,7 @@ export function MensagensPage() {
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {isLoading ? (
             <div className="flex justify-center p-8"><Spinner size="sm" /></div>
-          ) : conversas.length === 0 ? (
+          ) : filteredConversas.length === 0 ? (
             <div className="p-6 text-center lg:hidden">
               <EmptyState
                 icon={MessageSquare}
@@ -56,14 +67,14 @@ export function MensagensPage() {
               />
             </div>
           ) : (
-            conversas.map(c => (
+            filteredConversas.map(c => (
               <Link 
                 key={c.id} 
                 to={`/app/mensagens/${c.id}`}
                 className="flex items-center gap-3 p-3 rounded-xl transition-colors hover:bg-recessed"
               >
                 <div className="relative">
-                   <Avatar src={c.interlocutorFoto} fallback={c.interlocutorNome[0]} size="sm" className="h-10 w-10 border border-ink-tertiary/[0.08]" />
+                   <Avatar src={c.interlocutorFoto} fallback={c.interlocutorNome.trim().charAt(0) || '?'} size="sm" className="h-10 w-10 border border-ink-tertiary/[0.08]" />
                    {c.naoLidas > 0 && (
                       <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-accent border-2 border-elevated" />
                    )}

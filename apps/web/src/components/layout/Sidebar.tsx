@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import type React from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import type { Role } from '@pdc/shared';
 import { NavItems, type NavItemSlug } from '@pdc/shared';
-import { ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { ChevronRight, PanelLeftClose, PanelLeftOpen, Settings, LogOut } from 'lucide-react';
 import { ALL_ROLES, DASHBOARD_BY_ROLE, SIDEBAR_CONFIG, type NavGroup, type NavLeaf } from './Sidebar.config';
 
-export function SidebarContent({ onNavigate, collapsed = false, onToggleCollapse }: SidebarContentProps) {
-  const { user } = useAuth();
+export default function SidebarContent({ onNavigate, collapsed = false, onToggleCollapse }: SidebarContentProps): React.JSX.Element {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const { isEnabled } = useFeatureFlags();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const role = user?.role;
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
@@ -54,11 +56,11 @@ export function SidebarContent({ onNavigate, collapsed = false, onToggleCollapse
           title={collapsed ? label : undefined}
           className={({ isActive }) =>
             [
-              'flex items-center transition-all duration-200 min-h-[44px]',
-              collapsed ? 'justify-center px-0 py-3 w-full' : 'gap-3 px-4 py-3 text-sm',
+              'flex items-center rounded-lg transition-all duration-150 min-h-[44px]',
+              collapsed ? 'justify-center px-0 py-3 mx-1' : 'gap-3 px-3 py-2 text-sm mx-1',
               isActive
-                ? 'border-b-[1.5px] border-[var(--chrome-active)] text-[var(--chrome-active)] font-bold bg-[var(--chrome-surface-strong)]'
-                : 'border-b-[1.5px] border-transparent text-[var(--ink-secondary)] hover:bg-[var(--chrome-surface-strong)] hover:text-[var(--ink-primary)]',
+                ? 'bg-[var(--accent-terracotta)] text-white font-semibold'
+                : 'text-[var(--ink-secondary)] hover:bg-[var(--chrome-surface-strong)] hover:text-[var(--ink-primary)]',
             ].join(' ')
           }
         >
@@ -98,7 +100,7 @@ export function SidebarContent({ onNavigate, collapsed = false, onToggleCollapse
           onClick={() => { toggleGroup(groupKey); }}
           className="flex w-full min-h-[44px] items-center gap-3 rounded-xl px-4 py-3 text-xs font-semibold text-[var(--ink-tertiary)] transition-all hover:bg-[var(--chrome-surface-strong)] hover:text-[var(--ink-primary)]"
         >
-          <item.icon size={16} aria-hidden={true} className="shrink-0 text-[var(--chrome-active)]" />
+          <item.icon size={16} aria-hidden={true} className="shrink-0 text-[var(--ink-secondary)]" />
           <span className="flex-1 text-left">{label}</span>
           <ChevronRight size={14} aria-hidden={true} className={`transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
         </button>
@@ -125,7 +127,7 @@ export function SidebarContent({ onNavigate, collapsed = false, onToggleCollapse
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
-            aria-label={collapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+            aria-label={collapsed ? t('sidebar.expand', 'Expandir sidebar') : t('sidebar.collapse', 'Recolher sidebar')}
             className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--ink-secondary)] transition-colors hover:bg-[var(--chrome-surface-strong)] hover:text-[var(--ink-primary)] ${collapsed ? 'mt-2' : ''}`}
           >
             {collapsed
@@ -142,6 +144,31 @@ export function SidebarContent({ onNavigate, collapsed = false, onToggleCollapse
           )}
         </ul>
       </nav>
+
+      {/* ── Footer fixo: Configurações + Sair ── */}
+      <div className={`shrink-0 border-t border-[var(--chrome-border)] py-3 ${collapsed ? 'px-2 space-y-1' : 'px-3 space-y-0.5'}`}>
+        <button
+          onClick={() => { onNavigate?.(); navigate('/app/configuracoes'); }}
+          title={collapsed ? 'Configurações' : undefined}
+          className={`flex w-full items-center rounded-lg transition-colors duration-150 min-h-[44px] text-[var(--ink-secondary)] hover:bg-[var(--chrome-surface-strong)] hover:text-[var(--ink-primary)] ${
+            collapsed ? 'justify-center px-0 py-3 mx-0' : 'gap-3 px-3 py-2 text-sm mx-0'
+          }`}
+        >
+          <Settings size={18} className="shrink-0" />
+          {!collapsed && <span>Configurações</span>}
+        </button>
+        <button
+          onClick={() => { void logout(); }}
+          title={collapsed ? 'Sair do PDC' : undefined}
+          className={`flex w-full items-center rounded-lg transition-colors duration-150 min-h-[44px] hover:bg-red-500/10 ${
+            collapsed ? 'justify-center px-0 py-3 mx-0' : 'gap-3 px-3 py-2 text-sm mx-0'
+          }`}
+          style={{ color: '#ef4444' }}
+        >
+          <LogOut size={18} className="shrink-0" />
+          {!collapsed && <span>Sair do PDC</span>}
+        </button>
+      </div>
 
     </div>
   );

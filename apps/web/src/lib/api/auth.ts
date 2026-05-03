@@ -32,4 +32,8 @@ export const authApi = {
     const baseUrl: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
     window.location.href = `${baseUrl}/auth/google`;
   },
+  loginWithLinkedIn: () => {
+    const baseUrl: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+    window.location.href = `${baseUrl}/auth/linkedin`;
+  },
 };

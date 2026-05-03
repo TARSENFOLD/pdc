@@ -14,11 +14,19 @@ export const mediaApi = {
     });
 
     if (!response.ok) {
-      const body = await response.json().catch(() => ({})) as { error?: string };
-      throw new Error(body.error ?? `Upload falhou: ${response.statusText}`);
+      const body: unknown = await response.json().catch(() => ({}));
+      const errorMessage =
+        body && typeof body === 'object' && 'error' in body && typeof (body as Record<string, unknown>).error === 'string'
+          ? (body as { error: string }).error
+          : `Upload failed: ${response.statusText}`;
+      throw new Error(errorMessage);
     }
 
     const data: unknown = await response.json();
-    return UploadResultSchema.parse(data);
+    const result = UploadResultSchema.safeParse(data);
+    if (!result.success) {
+      throw new Error(`Invalid response format from server: ${result.error.message}`);
+    }
+    return result.data;
   },
 };

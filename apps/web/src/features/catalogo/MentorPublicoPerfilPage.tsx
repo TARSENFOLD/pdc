@@ -4,9 +4,10 @@ import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Avatar, Button } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
 import { Zap, ShieldCheck, ArrowLeft } from 'lucide-react';
+import type React from 'react';
 import { MentorPublico } from '@pdc/shared';
 
-export function MentorPublicoPerfilPage() {
+export function MentorPublicoPerfilPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
 
   const { data: mentor, isLoading, isError } = useQuery<MentorPublico>({
@@ -49,9 +50,11 @@ export function MentorPublicoPerfilPage() {
               <h1 className="text-3xl font-black text-ink-primary tracking-tighter font-display">{mentor.nome}</h1>
               {mentor.areaEspecialidade ? <p className="text-sm font-medium text-accent">{mentor.areaEspecialidade}</p> : null}
               <div className="mt-3">
-                <Link to={`/perfil/${id}`} className="inline-flex items-center text-[11px] font-black uppercase tracking-wider text-ink-tertiary hover:text-accent hover:underline transition-all">
-                  Ver Perfil Completo →
-                </Link>
+                {id ? (
+                  <Link to={`/perfil/${id}`} className="inline-flex items-center text-[11px] font-black uppercase tracking-wider text-ink-tertiary hover:text-accent hover:underline transition-all">
+                    Ver Perfil Completo →
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>

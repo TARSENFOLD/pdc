@@ -26,6 +26,10 @@
     "gestao_institucional": "Gestão Institucional",
     "autoridade": "Autoridade"
   },
+  "sidebar": {
+    "expand": "Expandir sidebar",
+    "collapse": "Recolher sidebar"
+  },
   "errors": {
     "generic": "Ocorreu um erro. Por favor tenta novamente.",
     "not_found": "Página não encontrada.",
@@ -34,17 +38,17 @@
   },
   "auth": {
     "onboarding": {
-      "badge": "PDC — Onboarding",
+      "badge": "PDC - Onboarding",
       "title": "Como queres usar o PDC?",
-      "subtitle": "Escolhe o teu perfil para personalizar a tua infraestrutura de decisão."
+      "subtitle": "Escolhe o teu perfil."
     },
     "roles": {
       "student": {
         "title": "Estudante",
-        "desc": "Descobre a tua vocação e explora carreiras com IA.",
+        "desc": "Descobre a tua vocação e explora carreiras com reais.",
         "features": [
           "Simulações vocacionais",
-          "Perfil vocacional IA",
+          "Perfil vocacional",
           "Mentorias personalizadas",
           "Cursos e certificados"
         ]
@@ -82,17 +86,20 @@
     "password": "Palavra-passe",
     "forgot_password": "Esqueceste a palavra-passe?",
     "login_page": {
-      "title": "Login.",
-      "subtitle": "Bem-vindo de volta ao teu futuro.",
-      "email_label": "Identificação Académica",
-      "password_label": "Chave de Acesso",
-      "submit_loading": "A Processar...",
-      "submit": "Aceder Plataforma",
+      "title": "Entrar.",
+      "subtitle": "Bem-vindo de volta.",
+      "email_label": "Email",
+      "password_label": "Palavra-passe",
+      "submit_loading": "A entrar…",
+      "submit": "Entrar",
       "divider": "ou",
-      "google_cta": "Continuar com Google",
-      "forgot_link": "Esqueci-me da chave",
-      "register_link": "Criar conta académica",
-      "error_generic": "Erro ao iniciar sessão. Verifique as suas credenciais."
+      "google_cta": "Entrar com Google",
+      "linkedin_cta": "Entrar com LinkedIn",
+      "recover_password_link": "Recuperar palavra-passe",
+      "panel_headline": "Por Dentro do Curso",
+      "panel_subline": "Descobre um universo acadêmico inteiro a tua medidaS.",
+      "register_link": "Criar conta",
+      "error_generic": "Credenciais inválidas. Tenta novamente."
     }
   }
 }

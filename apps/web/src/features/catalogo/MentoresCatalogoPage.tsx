@@ -90,7 +90,7 @@ export function MentoresCatalogoPage() {
                 next.delete('page');
                 setSp(next, { replace: true });
               }}
-              totalResults={data?.meta.total}
+              totalResults={data?.meta.total ?? 0}
             />
           }
         >

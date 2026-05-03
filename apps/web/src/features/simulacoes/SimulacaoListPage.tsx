@@ -67,7 +67,7 @@ export const SimulacaoListPage = () => {
             areas={AREAS}
             selectedArea={area}
             onAreaChange={(val) => { setArea(val); setPage(1); }}
-            totalResults={data?.pagination.total}
+            totalResults={data?.pagination.total ?? 0}
           />
         }
       >

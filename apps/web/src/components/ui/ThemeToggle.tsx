@@ -1,4 +1,4 @@
-import { Sun, Moon, Laptop } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import { Button } from './Button';
 
@@ -7,43 +7,25 @@ import { Button } from './Button';
  * Agora é puramente passivo, consumindo o ThemeContext.
  */
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
+
+  const toggle = () => {
+    setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
+  };
 
   return (
-    <div className="flex items-center gap-1 rounded-xl bg-[var(--surface-recessed)] p-1 border border-[var(--glass-border-light)]">
-      <Button
-        variant={theme === 'light' ? 'secondary' : 'ghost'}
-        size="sm"
-        className="h-8 w-8 px-0 rounded-lg hover:bg-[var(--surface-elevated)]"
-        onClick={() => { setTheme('light'); }}
-        aria-label="Tema Claro"
-        title="Tema Claro"
-      >
-        <Sun size={14} className={theme === 'light' ? 'text-[var(--accent-terracotta)]' : 'text-[var(--ink-tertiary)]'} />
-      </Button>
-      
-      <Button
-        variant={theme === 'dark' ? 'secondary' : 'ghost'}
-        size="sm"
-        className="h-8 w-8 px-0 rounded-lg hover:bg-[var(--surface-elevated)]"
-        onClick={() => { setTheme('dark'); }}
-        aria-label="Tema Escuro"
-        title="Tema Escuro"
-      >
-        <Moon size={14} className={theme === 'dark' ? 'text-[var(--accent-terracotta)]' : 'text-[var(--ink-tertiary)]'} />
-      </Button>
-
-      <Button
-        variant={theme === 'system' ? 'secondary' : 'ghost'}
-        size="sm"
-        className="h-8 w-8 px-0 rounded-lg hover:bg-[var(--surface-elevated)]"
-        onClick={() => { setTheme('system'); }}
-        aria-label="Tema do Sistema"
-        title="Tema do Sistema"
-      >
-        <Laptop size={14} className={theme === 'system' ? 'text-[var(--accent-terracotta)]' : 'text-[var(--ink-tertiary)]'} />
-      </Button>
-    </div>
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={`Alternar para tema ${resolvedTheme === 'light' ? 'escuro' : 'claro'}`}
+      className="flex h-11 w-11 items-center justify-center rounded-lg opacity-40 transition-opacity hover:opacity-80"
+    >
+      {resolvedTheme === 'light' ? (
+        <Moon size={15} style={{ color: 'var(--ink-primary)' }} />
+      ) : (
+        <Sun size={15} style={{ color: 'var(--ink-primary)' }} />
+      )}
+    </button>
   );
 }
 

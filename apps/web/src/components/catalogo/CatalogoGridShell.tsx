@@ -12,8 +12,6 @@ interface CatalogoGridShellProps {
   onClearFilters?: () => void;
   filterBar?: React.ReactNode;
   children: React.ReactNode;
-  pageCount?: number;
-  onPageChange?: (page: number) => void;
   emptyTitle?: string;
   emptyDescription?: string;
   emptyVariant?: 'empty' | 'zero-results';

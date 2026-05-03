@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'motion/react';
@@ -32,14 +33,38 @@ const SECTIONS: Array<{ id: Section; label: string; description: string; icon: R
 ];
 
 type RichPerfil = PerfilCompleto & {
-  bannerUrl?: string | null;
-  regiao?: string;
-  website?: string;
-  competencias?: string[];
-  socialLinks?: Array<{ platform: string; url: string }>;
-  historicoProfissional?: HistoricoProfissional[];
-  formacaoAcademica?: FormacaoAcademica[];
+  bannerUrl?: string | null | undefined;
+  regiao?: string | undefined;
+  website?: string | undefined;
+  competencias?: string[] | undefined;
+  socialLinks?: Array<{ platform: string; url: string }> | undefined;
+  historicoProfissional?: HistoricoProfissional[] | undefined;
+  formacaoAcademica?: FormacaoAcademica[] | undefined;
 };
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isSocialLinks(value: unknown): value is Array<{ platform: string; url: string }> {
+  return Array.isArray(value) && value.every((item) => {
+    if (typeof item !== 'object' || item === null) return false;
+    const candidate = item as Record<string, unknown>;
+    return typeof candidate.platform === 'string' && typeof candidate.url === 'string';
+  });
+}
+
+function isHistoricoProfissionalArray(value: unknown): value is HistoricoProfissional[] {
+  return Array.isArray(value) && value.every((item) =>
+    typeof item === 'object' && item !== null && 'id' in item && 'cargo' in item && 'empresa' in item
+  );
+}
+
+function isFormacaoAcademicaArray(value: unknown): value is FormacaoAcademica[] {
+  return Array.isArray(value) && value.every((item) =>
+    typeof item === 'object' && item !== null && 'id' in item && 'grau' in item && 'instituicao' in item
+  );
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -166,7 +191,8 @@ function SocialLinksEditor({
 function ExperienciaForm({
   initial, onSave, onCancel,
 }: { initial?: Partial<HistoricoProfissional>; onSave: (v: HistoricoProfissional) => void; onCancel: () => void }) {
-  const [form, setForm] = useState<Partial<HistoricoProfissional>>(initial ?? {});
+  const initialForm: Partial<HistoricoProfissional> = initial ?? {};
+  const [form, setForm] = useState(initialForm);
 
   const set = (k: keyof HistoricoProfissional, v: string | boolean) => {
     setForm((prev) => ({ ...prev, [k]: v }));
@@ -229,7 +255,8 @@ function ExperienciaForm({
 function EducacaoForm({
   initial, onSave, onCancel,
 }: { initial?: Partial<FormacaoAcademica>; onSave: (v: FormacaoAcademica) => void; onCancel: () => void }) {
-  const [form, setForm] = useState<Partial<FormacaoAcademica>>(initial ?? {});
+  const initialForm: Partial<FormacaoAcademica> = initial ?? {};
+  const [form, setForm] = useState(initialForm);
 
   const set = (k: keyof FormacaoAcademica, v: string | boolean) => {
     setForm((prev) => ({ ...prev, [k]: v }));
@@ -282,7 +309,7 @@ function EducacaoForm({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export function EditPerfilPage() {
+export default function EditPerfilPage(): React.JSX.Element | null {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -318,23 +345,29 @@ export function EditPerfilPage() {
   const [showEduForm, setShowEduForm] = useState(false);
 
   useEffect(() => {
+    if (!isLoading && !perfil) {
+      navigate('/app/perfil');
+    }
+  }, [isLoading, perfil, navigate]);
+
+  useEffect(() => {
     if (!perfil) return;
-    const p = perfil as RichPerfil;
+    const p: RichPerfil = perfil;
     setBasicInfo({
-      nome: p.nome ?? '',
+      nome: p.nome,
       headline: p.headline ?? '',
       bio: p.bio ?? '',
       regiao: p.regiao ?? '',
       website: p.website ?? '',
     });
-    setCompetencias(Array.isArray(p.competencias) ? p.competencias : []);
-    setAreasInteresse(Array.isArray(p.areasInteresse) ? (p.areasInteresse as string[]) : []);
-    setSocialLinks(Array.isArray(p.socialLinks) ? p.socialLinks : []);
-    setExperiencias(Array.isArray(p.historicoProfissional) ? (p.historicoProfissional as HistoricoProfissional[]) : []);
-    setEducacao(Array.isArray(p.formacaoAcademica) ? (p.formacaoAcademica as FormacaoAcademica[]) : []);
+    setCompetencias(isStringArray(p.competencias) ? p.competencias : []);
+    setAreasInteresse(isStringArray(p.areasInteresse) ? p.areasInteresse : []);
+    setSocialLinks(isSocialLinks(p.socialLinks) ? p.socialLinks : []);
+    setExperiencias(isHistoricoProfissionalArray(p.historicoProfissional) ? p.historicoProfissional : []);
+    setEducacao(isFormacaoAcademicaArray(p.formacaoAcademica) ? p.formacaoAcademica : []);
   }, [perfil]);
 
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
@@ -346,7 +379,8 @@ export function EditPerfilPage() {
     try {
       const res = await mediaApi.upload(file);
       save({ bannerUrl: res.url });
-    } catch {
+    } catch (error) {
+      console.error('Banner upload failed:', error);
       toast({ title: 'Erro ao atualizar banner', variant: 'error' });
     } finally {
       setIsUploadingBanner(false);
@@ -358,11 +392,10 @@ export function EditPerfilPage() {
   }
 
   if (!perfil) {
-    void navigate('/app/perfil');
     return null;
   }
 
-  const p = perfil as RichPerfil;
+  const p: RichPerfil = perfil;
   const initials = p.nome.charAt(0).toUpperCase();
   const active = SECTIONS.find((s) => s.id === activeSection) ?? { id: 'identidade' as const, label: 'Identidade Visual', description: 'Banner e foto de perfil', icon: Camera };
 
@@ -652,7 +685,8 @@ export function EditPerfilPage() {
                         type="button"
                         isLoading={mutation.isPending}
                         onClick={() => { save({ historicoProfissional: experiencias }); }}
-                        className={cn('gap-2 ml-auto', showExpForm && 'opacity-50 pointer-events-none')}
+                        disabled={showExpForm || mutation.isPending}
+                        className="gap-2 ml-auto"
                       >
                         <Save size={13} /> Guardar
                       </Button>
@@ -712,7 +746,8 @@ export function EditPerfilPage() {
                         type="button"
                         isLoading={mutation.isPending}
                         onClick={() => { save({ formacaoAcademica: educacao }); }}
-                        className={cn('gap-2 ml-auto', showEduForm && 'opacity-50 pointer-events-none')}
+                        disabled={showEduForm || mutation.isPending}
+                        className="gap-2 ml-auto"
                       >
                         <Save size={13} /> Guardar
                       </Button>

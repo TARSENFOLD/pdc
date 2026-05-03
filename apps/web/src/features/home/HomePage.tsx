@@ -21,7 +21,6 @@ const QUICK_ACTIONS_ESTUDANTE: QuickAction[] = [
   { label: 'Programa',   labelPt: 'Programa',   to: '/app/programas',  icon: GraduationCap },
   { label: 'Projecto',   labelPt: 'Projecto',   to: '/app/explorar',   icon: FolderKanban },
   { label: 'Curso',      labelPt: 'Curso',      to: '/app/cursos',     icon: BookOpen },
-  { label: 'Simulações', labelPt: 'Simulações', to: '/app/simulacoes', icon: Play },
 ];
 
 const QUICK_ACTIONS_BY_ROLE: Partial<Record<Role, QuickAction[]>> = {
@@ -115,7 +114,22 @@ export default function HomePage(): React.ReactNode {
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...SPRING, delay: 0.45 }}
         aria-label="Como começar"
+        className="space-y-3"
       >
+        {/* Título acima do card */}
+        <div>
+          <p
+            className="text-[10px] font-semibold uppercase tracking-widest mb-1"
+            style={{ color: 'var(--accent-terracotta)' }}
+          >
+            Guia de início
+          </p>
+          <p className="text-base font-bold" style={{ color: 'var(--ink-primary)' }}>
+            Como começar no PDC
+          </p>
+        </div>
+
+        {/* Card de vídeo */}
         <div
           className="relative w-full overflow-hidden rounded-2xl"
           style={{
@@ -124,76 +138,37 @@ export default function HomePage(): React.ReactNode {
             boxShadow: 'var(--elevation-2)',
           }}
         >
-          {/* Thumbnail / vídeo placeholder */}
           <div
             className="relative flex items-center justify-center"
             style={{
               aspectRatio: '16/7',
-              background: 'linear-gradient(135deg, #0D1117 0%, #161B22 50%, #1A1D21 100%)',
+              background: 'linear-gradient(135deg, var(--surface-canvas) 0%, var(--surface-elevated) 60%, var(--chrome-surface-strong) 100%)',
             }}
           >
             {/* Play button centrado */}
             <button
               type="button"
               aria-label="Reproduzir vídeo"
-              className="group relative flex h-16 w-16 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              className="flex h-16 w-16 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               style={{
                 background: 'var(--accent-terracotta)',
-                boxShadow: '0 0 0 8px rgba(182,95,42,0.18), var(--elevation-3)',
+                boxShadow: '0 0 0 8px rgba(182,95,42,0.18)',
               }}
             >
               <PlayCircle size={32} className="text-white" strokeWidth={1.5} />
             </button>
 
-            {/* Label overlay */}
-            <div className="absolute bottom-4 left-6">
-              <p
-                className="text-[10px] font-semibold uppercase tracking-widest mb-1"
-                style={{ color: 'var(--accent-terracotta)' }}
-              >
-                Guia de início
-              </p>
-              <p className="text-base font-bold" style={{ color: 'var(--ink-primary)' }}>
-                Como começar no PDC
-              </p>
-              <p className="text-xs" style={{ color: 'var(--ink-secondary)' }}>
-                How to get started · 5 min
-              </p>
-            </div>
-
             {/* Duração */}
             <div
-              className="absolute bottom-4 right-6 rounded-md px-2 py-1 text-[11px] font-bold tabular-nums"
+              className="absolute bottom-3 right-4 rounded px-2 py-0.5 text-[11px] font-bold tabular-nums"
               style={{
-                background: 'rgba(0,0,0,0.65)',
-                color: 'var(--ink-primary)',
+                background: 'rgba(0,0,0,0.7)',
+                color: '#FAFAFA',
                 backdropFilter: 'blur(4px)',
               }}
             >
-              05:00
+              5:00
             </div>
-          </div>
-
-          {/* Footer do card */}
-          <div
-            className="flex items-center justify-between px-5 py-4"
-            style={{ borderTop: '1px solid var(--chrome-border)' }}
-          >
-            <div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--ink-primary)' }}>
-                Descobre tudo o que o PDC tem para ti
-              </p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--ink-secondary)' }}>
-                Simulações · Programas · Projectos · Cursos
-              </p>
-            </div>
-            <button
-              type="button"
-              className="shrink-0 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
-              style={{ background: 'var(--accent-terracotta)' }}
-            >
-              Ver guia
-            </button>
           </div>
         </div>
       </motion.section>

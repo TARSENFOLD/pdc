@@ -6,7 +6,7 @@ import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import TwoFactorPage from '@/features/auth/TwoFactorPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { LandingPage } from '@/pages/LandingPage';
-import { AppLayout } from '@/components/layout/AppLayout';
+import AppLayout from '@/components/layout/AppLayout';
 import { EscolhaTipoContaPage } from '@/features/auth/EscolhaTipoContaPage';
 import { RegistoEstudantePage } from '@/features/auth/RegistoEstudantePage';
 import { RegistoMentorPage } from '@/features/auth/RegistoMentorPage';
@@ -32,10 +32,10 @@ const ItemPlayer = React.lazy(() => import('@/features/cursos/ItemPlayer').then(
 
 const ExperienciaListPage = React.lazy(() => import('@/features/experiencias/ExperienciaListPage').then(m => ({ default: m.ExperienciaListPage })));
 const ExperienciaDetailPage = React.lazy(() => import('@/features/experiencias/ExperienciaDetailPage').then(m => ({ default: m.ExperienciaDetailPage })));
-const ExperienciasCatalogoPage = React.lazy(() => import('@/features/catalogo/ExperienciasCatalogoPage').then(m => ({ default: m.ExperienciasCatalogoPage })));
+const ExperienciasCatalogoPage = React.lazy(() => import('@/features/catalogo/ExperienciasCatalogoPage'));
 
-const PerfilPage = React.lazy(() => import('@/features/perfil/PerfilPage').then(m => ({ default: m.PerfilPage })));
-const EditPerfilPage = React.lazy(() => import('@/features/perfil/EditPerfilPage').then(m => ({ default: m.EditPerfilPage })));
+const PerfilPage = React.lazy(() => import('@/features/perfil/PerfilPage'));
+const EditPerfilPage = React.lazy(() => import('@/features/perfil/EditPerfilPage'));
 const ConfiguracoesPage = React.lazy(() => import('@/features/perfil/ConfiguracoesPage').then(m => ({ default: m.ConfiguracoesPage })));
 
 const ProjetoListPage = React.lazy(() => import('@/features/projetos/ProjetoListPage').then(m => ({ default: m.ProjetoListPage })));
@@ -58,7 +58,7 @@ const DenunciaDetailPage = React.lazy(() => import('@/features/moderacao/Denunci
 const FilaAprovacaoPage = React.lazy(() => import('@/features/moderacao/FilaAprovacaoPage').then(m => ({ default: m.FilaAprovacaoPage })));
 const ModeradorUtilizadoresPage = React.lazy(() => import('@/features/moderacao/ModeradorUtilizadoresPage').then(m => ({ default: m.ModeradorUtilizadoresPage })));
 
-const VinculosPage = React.lazy(() => import('@/features/vinculos/VinculosPage').then(m => ({ default: m.VinculosPage })));
+const VinculosPage = React.lazy(() => import('@/features/vinculos/VinculosPage'));
 const MensagensPage = React.lazy(() => import('@/features/mensagens/MensagensPage').then(m => ({ default: m.MensagensPage })));
 const ConversaPage = React.lazy(() => import('@/features/mensagens/ConversaPage').then(m => ({ default: m.ConversaPage })));
 
@@ -101,17 +101,17 @@ const SovereignCourseBuilder = React.lazy(() => import('@/features/instituicao/S
 const HomePage = React.lazy(() => import('@/features/home/HomePage'));
 
 // --- Lazy-loaded public non-critical pages ---
-const ExplorarPage = React.lazy(() => import('@/features/catalogo/ExplorarPage').then(m => ({ default: m.ExplorarPage })));
-const CursosCatalogoPage = React.lazy(() => import('@/features/catalogo/CursosCatalogoPage').then(m => ({ default: m.CursosCatalogoPage })));
+const ExplorarPage = React.lazy(() => import('@/features/catalogo/ExplorarPage'));
+const CursosCatalogoPage = React.lazy(() => import('@/features/catalogo/CursosCatalogoPage'));
 const CursoPublicoDetailPage = React.lazy(() => import('@/features/catalogo/CursoPublicoDetailPage').then(m => ({ default: m.CursoPublicoDetailPage })));
-const SimulacoesCatalogoPage = React.lazy(() => import('@/features/catalogo/SimulacoesCatalogoPage').then(m => ({ default: m.SimulacoesCatalogoPage })));
+const SimulacoesCatalogoPage = React.lazy(() => import('@/features/catalogo/SimulacoesCatalogoPage'));
 const SimulacaoPublicoDetailPage = React.lazy(() => import('@/features/catalogo/SimulacaoPublicoDetailPage').then(m => ({ default: m.SimulacaoPublicoDetailPage })));
 const MentoresCatalogoPage = React.lazy(() => import('@/features/catalogo/MentoresCatalogoPage').then(m => ({ default: m.MentoresCatalogoPage })));
 const MentorPublicoPerfilPage = React.lazy(() => import('@/features/catalogo/MentorPublicoPerfilPage').then(m => ({ default: m.MentorPublicoPerfilPage })));
-const InstituicoesCatalogoPage = React.lazy(() => import('@/features/catalogo/InstituicoesCatalogoPage').then(m => ({ default: m.InstituicoesCatalogoPage })));
+const InstituicoesCatalogoPage = React.lazy(() => import('@/features/catalogo/InstituicoesCatalogoPage'));
 const InstituicaoPublicoPerfilPage = React.lazy(() => import('@/features/catalogo/InstituicaoPublicoPerfilPage').then(m => ({ default: m.InstituicaoPublicoPerfilPage })));
-const PerfilPublicoPage = React.lazy(() => import('@/features/catalogo/PerfilPublicoPage').then(m => ({ default: m.PerfilPublicoPage })));
-const ProgramasCatalogoPage = React.lazy(() => import('@/features/catalogo/ProgramasCatalogoPage').then(m => ({ default: m.ProgramasCatalogoPage })));
+const PerfilPublicoPage = React.lazy(() => import('@/features/catalogo/PerfilPublicoPage'));
+const ProgramasCatalogoPage = React.lazy(() => import('@/features/catalogo/ProgramasCatalogoPage'));
 const ProgramaDetailPage = React.lazy(() => import('@/features/catalogo/ProgramaDetailPage').then(m => ({ default: m.ProgramaDetailPage })));
 
 function DashboardRedirect() {
@@ -170,11 +170,11 @@ export const router = createBrowserRouter([
 
       { path: 'experiencias', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExperienciasCatalogoPage /></Suspense> },
       { path: 'experiencias/:id', element: <ExperienciaDetailPage /> },
-      { path: 'programas', element: <ProgramasCatalogoPage /> },
+      { path: 'programas', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProgramasCatalogoPage /></Suspense> },
       { path: 'programas/:id', element: <ProgramaDetailPage /> },
-      { path: 'explorar', element: <ExplorarPage /> },
-      { path: 'mentores/:id', element: <MentorPublicoPerfilPage /> },
-      { path: 'instituicoes/:slug', element: <InstituicaoPublicoPerfilPage /> },
+      { path: 'explorar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExplorarPage /></Suspense> },
+      { path: 'mentores/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><MentorPublicoPerfilPage /></Suspense> },
+      { path: 'instituicoes/:slug', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><InstituicaoPublicoPerfilPage /></Suspense> },
 
       { path: 'simulacoes', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><SimulacoesCatalogoPage /></Suspense> },
       { path: 'simulacoes/:id', element: <SimulacaoDetailPage /> },
@@ -183,7 +183,7 @@ export const router = createBrowserRouter([
       
       { path: 'perfil', element: <PerfilPage /> },
       { path: 'perfil/editar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><EditPerfilPage /></Suspense> },
-      { path: 'perfil/:id', element: <PerfilPublicoPage /> },
+      { path: 'perfil/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><PerfilPublicoPage /></Suspense> },
       { path: 'configuracoes', element: <ConfiguracoesPage /> },
       { path: 'projetos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoListPage /></Suspense> },
       { path: 'projetos/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoDetailPage /></Suspense> },

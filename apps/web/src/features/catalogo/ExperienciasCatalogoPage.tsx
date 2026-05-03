@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import type React from 'react';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
 import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
@@ -27,12 +28,13 @@ const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'OUTRA', label: 'Outra' },
 ];
 
-export function ExperienciasCatalogoPage() {
+export default function ExperienciasCatalogoPage(): React.JSX.Element {
   const [sp, setSp] = useSearchParams();
   const location = useLocation();
   const area = sp.get('area') ?? '';
   const search = sp.get('q') ?? '';
-  const page = Number(sp.get('page') ?? '1');
+  const parsedPage = Number.parseInt(sp.get('page') ?? '1', 10);
+  const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const inApp = location.pathname.startsWith('/app');
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -76,19 +78,19 @@ export function ExperienciasCatalogoPage() {
               areas={AREAS}
               selectedArea={area}
               searchTerm={search}
-              onSearchChange={(val) => {
+              onSearchChange={(val: string) => {
                 const next = new URLSearchParams(sp);
                 if (val) next.set('q', val); else next.delete('q');
                 next.delete('page');
                 setSp(next, { replace: true });
               }}
-              onAreaChange={(val) => {
+              onAreaChange={(val: string) => {
                 const next = new URLSearchParams(sp);
                 if (val) next.set('area', val); else next.delete('area');
                 next.delete('page');
                 setSp(next, { replace: true });
               }}
-              totalResults={data?.meta.total}
+              totalResults={data?.meta.total ?? 0}
             />
           }
         >
@@ -104,11 +106,11 @@ export function ExperienciasCatalogoPage() {
               icon={MapPin}
               badges={[
                 { label: exp.area || 'Geral', variant: 'info' },
-                ...(exp.gratuito ? [{ label: 'Gratuito', variant: 'success' as const }] : []),
+                { label: 'Gratuito', variant: 'success' as const },
               ]}
               footerInfo={[
                 ...(exp.dataInicio ? [{ icon: Calendar, label: new Date(exp.dataInicio).toLocaleDateString('pt-AO', { month: 'short', year: 'numeric' }) }] : []),
-                { icon: Building2, label: exp.instituicao?.nome || 'Presencial' },
+                { icon: Building2, label: exp.instituicao?.nome || 'Instituição PDC' },
               ]}
             />
           ))}

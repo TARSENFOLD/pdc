@@ -15,7 +15,7 @@
     "sections": {
       "match_kicker": "Match Vocacional",
       "match_title": "Afinidade por área",
-      "behavior_kicker": "Padrão DNA",
+      "behavior_kicker": "Padrão De Comportamento",
       "behavior_title": "Assinatura comportamental",
       "side_title": "Próxima acção",
       "cursos_kicker": "Em progresso",
@@ -58,15 +58,15 @@
       "instituicao": "Painel Institucional",
       "moderador": "Centro de Operações",
       "comite_cientifico": "Laboratório de Validação",
-      "super_admin": "Controlo Soberano",
+      "super_admin": "Painel de Controlo",
       "patrocinador": "Painel do Patrocinador"
     },
     "cta_open": "Abrir",
     "welcome_fallback": "Bem-vindo",
     "greeting_prefix": "Olá",
     "subtitle": "Escolhe por onde queres começar.",
-    "oracle_kicker": "Infraestrutura de decisão educacional soberana",
-    "oracle_body": "O Oráculo observa o teu percurso e adapta recomendações em tempo real.",
+    "oracle_kicker": "Infraestrutura de decisão educacional",
+    "oracle_body": "O Sistema observa o teu percurso e adapta recomendações em tempo real.",
     "actions": {
       "estudante": {
         "simulacoes_label": "Simulações",

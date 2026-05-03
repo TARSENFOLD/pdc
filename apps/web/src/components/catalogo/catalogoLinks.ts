@@ -12,6 +12,10 @@ const ROUTE_BY_TYPE: Record<CatalogoLinkType, string> = {
 };
 
 export function resolveCatalogHref(type: CatalogoLinkType, idOrSlug: string, inApp: boolean): string {
+  const slug = idOrSlug.trim();
+  if (!slug) {
+    throw new Error('idOrSlug cannot be empty');
+  }
   const base = inApp ? '/app' : '';
-  return `${base}/${ROUTE_BY_TYPE[type]}/${idOrSlug}`;
+  return `${base}/${ROUTE_BY_TYPE[type]}/${encodeURIComponent(slug)}`;
 }

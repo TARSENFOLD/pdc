@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Search, Menu, Command, MessageSquare } from 'lucide-react';
 import { RoleChipMenu } from '@/components/topbar/RoleChipMenu';
@@ -13,7 +14,7 @@ interface TopBarProps {
  * TopBar - Barra superior do sistema.
  * Refactorizada para remover estilos inline e usar tokens canónicos via Tailwind.
  */
-export function TopBar({ onOpenMobileMenu }: TopBarProps) {
+export default function TopBar({ onOpenMobileMenu }: TopBarProps): React.JSX.Element {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const location = useLocation();
   const title = getPageTitle(location.pathname);
@@ -48,7 +49,7 @@ export function TopBar({ onOpenMobileMenu }: TopBarProps) {
       
       <header
         data-testid="topbar"
-        className="sticky top-0 z-30 flex min-h-16 w-full items-center justify-between border-b border-[var(--chrome-border)] px-4 backdrop-blur-[var(--glass-blur)] bg-[var(--chrome-surface)] sm:px-6 lg:px-8"
+        className="sticky top-0 z-30 flex min-h-14 w-full items-center justify-between border-b border-[var(--chrome-border)] px-4 bg-[var(--chrome-surface)] sm:px-6 lg:px-8"
       >
         {/* ── Esquerda: Logo Mobile + Breadcrumbs ── */}
         <div className="flex items-center gap-4">
@@ -60,29 +61,28 @@ export function TopBar({ onOpenMobileMenu }: TopBarProps) {
             <Menu size={20} />
           </button>
           <div className="min-w-0">
-            <div className="text-[11px] font-medium text-[var(--ink-tertiary)]">PDC / App</div>
-            <div className="truncate text-base font-semibold text-[var(--ink-primary)]">{title}</div>
+            <div className="truncate text-sm font-semibold text-[var(--ink-primary)]">{title}</div>
           </div>
         </div>
 
         {/* ── Centro: Busca Global (Cmd+K) ── */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
+        <div className="hidden md:flex flex-1 max-w-sm mx-8">
           <button
             data-testid="command-palette-trigger"
             onClick={() => { setIsCommandPaletteOpen(true); }}
-            className="relative w-full group text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--chrome-active)] rounded-xl"
+            className="relative w-full group text-left outline-none"
           >
             <div className="relative w-full">
-              <Search 
-                className="absolute left-3 top-1/2 -translate-y-1/2 transition-colors text-[var(--ink-tertiary)] group-hover:text-[var(--chrome-active)]"
-                size={16} 
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-tertiary)]"
+                size={14}
               />
               <div
-                className="h-11 w-full rounded-xl border border-[var(--chrome-border)] bg-[var(--surface-canvas)] pl-10 pr-4 text-sm transition-all flex items-center justify-between text-[var(--ink-tertiary)] hover:border-[var(--chrome-active)]"
+                className="h-9 w-full rounded-lg border border-[var(--chrome-border)] bg-[var(--surface-canvas)] pl-9 pr-3 text-sm flex items-center justify-between text-[var(--ink-tertiary)] hover:border-[var(--ink-tertiary)] transition-colors"
               >
-                <span>Procurar carreiras ou rotas...</span>
-                <div 
-                  className="flex items-center gap-1 rounded-md border border-[var(--chrome-border)] bg-[var(--chrome-active-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--chrome-active)]"
+                <span className="text-xs">Search</span>
+                <div
+                  className="flex items-center gap-0.5 rounded border border-[var(--chrome-border)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-tertiary)]"
                 >
                   <Command className="h-2.5 w-2.5" /> K
                 </div>

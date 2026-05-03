@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '../ui/Card';
 import { Badge, type BadgeVariant } from '../ui/Badge';
 import { motion } from 'motion/react';
+import type React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { CatalogoLinkType } from './catalogoLinks';
 
@@ -42,8 +43,9 @@ export default function ContentCard({
   badges,
   footerInfo,
   icon: PlaceholderIcon,
-}: ContentCardProps) {
+}: ContentCardProps): React.JSX.Element {
   const placeholder = type ? PLACEHOLDERS[type] : undefined;
+  const typeLabel = type ? TYPE_LABELS[type] : undefined;
 
   return (
     <motion.div
@@ -80,9 +82,9 @@ export default function ContentCard({
                 )}
               </div>
             )}
-            {type ? (
+            {typeLabel ? (
               <span className="absolute bottom-3 left-3 rounded-full border border-[var(--chrome-border)] bg-[var(--surface-overlay)] px-2.5 py-1 text-[10px] font-semibold text-[var(--chrome-active)]">
-                {TYPE_LABELS[type]}
+                {typeLabel}
               </span>
             ) : null}
             {badges && badges.length > 0 && (
@@ -102,8 +104,8 @@ export default function ContentCard({
             </div>
             {footerInfo && footerInfo.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                {footerInfo.map((f, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-[10px] text-ink-tertiary font-medium">
+                {footerInfo.map((f) => (
+                  <div key={f.label} className="flex items-center gap-1.5 text-[10px] text-ink-tertiary font-medium">
                     <f.icon size={12} />
                     {f.label}
                   </div>

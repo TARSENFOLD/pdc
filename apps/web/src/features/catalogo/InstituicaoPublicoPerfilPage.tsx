@@ -59,9 +59,11 @@ export function InstituicaoPublicoPerfilPage() {
                 {inst.regiao ? <Badge variant="secondary" className="bg-recessed text-[9px] uppercase font-black">{inst.regiao}</Badge> : null}
               </div>
               <div className="mt-3">
-                <Link to={`/perfil/${slug}`} className="inline-flex items-center text-[11px] font-black uppercase tracking-wider text-ink-tertiary hover:text-accent hover:underline transition-all">
-                  Ver Perfil Completo →
-                </Link>
+                {slug ? (
+                  <Link to={`/perfil/${slug}`} className="inline-flex items-center text-[11px] font-black uppercase tracking-wider text-ink-tertiary hover:text-accent hover:underline transition-all">
+                    Ver Perfil Completo →
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>

@@ -41,8 +41,10 @@ export const catalogoApi = {
   getSimulacoes: (f?: SimulacaoFiltersPublic) =>
     http.get<CatalogoResponse<SimulacaoPublica>>(`/catalogo/simulacoes${qs({ ...f })}`),
 
-  getExperiencias: (f?: ExperienciaFiltersPublic) =>
-    http.get<CatalogoResponse<ExperienciaPublica>>(`/catalogo/experiencias${qs({ ...f, limit: f?.pageSize })}`),
+  getExperiencias: (f?: ExperienciaFiltersPublic) => {
+    const { pageSize, ...rest } = f ?? {};
+    return http.get<CatalogoResponse<ExperienciaPublica>>(`/catalogo/experiencias${qs({ ...rest, limit: pageSize })}`);
+  },
 
   getSimulacao: (slug: string) =>
     http.get<DetailResponse<SimulacaoPublica>>(`/catalogo/simulacoes/${slug}`).then((r) => r.data),
@@ -59,8 +61,10 @@ export const catalogoApi = {
   getInstituicao: (slug: string) =>
     http.get<DetailResponse<InstituicaoPublica>>(`/catalogo/instituicoes/${slug}`).then((r) => r.data),
 
-  getPessoas: (f?: PessoaFiltersPublic) =>
-    http.get<CatalogoResponse<PerfilPublicoBasico & { area?: string }>>(`/catalogo/pessoas${qs({ ...f, limit: f?.pageSize })}`),
+  getPessoas: (f?: PessoaFiltersPublic) => {
+    const { pageSize, ...rest } = f ?? {};
+    return http.get<CatalogoResponse<PerfilPublicoBasico & { area?: string }>>(`/catalogo/pessoas${qs({ ...rest, limit: pageSize })}`);
+  },
 
   getPerfilPublico: (id: string) =>
     http.get<DetailResponse<PerfilCompleto>>(`/catalogo/perfil/${id}`).then((r) => r.data),

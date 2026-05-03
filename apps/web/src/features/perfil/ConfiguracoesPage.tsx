@@ -71,11 +71,13 @@ export function ConfiguracoesPage() {
     socialLinks: 'vinkulated',
     areasInteresse: 'publico',
     competencias: 'publico',
+    historicoProfissional: 'vinkulated',
+    formacaoAcademica: 'vinkulated',
   };
 
   // Local state prevents reset on re-fetch when backend doesn't persist yet
-  const [visSettings, setVisSettings] = useState<VisibilitySettings>(DEFAULT_VIS);
-  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>(DEFAULT_NOTIF_PREFS);
+  const [visSettings, setVisSettings] = useState(DEFAULT_VIS);
+  const [notifPrefs, setNotifPrefs] = useState(DEFAULT_NOTIF_PREFS);
 
   useEffect(() => {
     if (perfil?.visibilitySettings) setVisSettings(perfil.visibilitySettings);
@@ -182,7 +184,7 @@ export function ConfiguracoesPage() {
                         <span className="text-sm font-semibold text-ink-primary">{field.label}</span>
                         <VisibilityToggle
                           value={visSettings[field.key]}
-                          onChange={(v) => { handleVisibilityChange(field.key, v as FieldVisibility); }}
+                          onChange={(v) => { handleVisibilityChange(field.key, v); }}
                           saving={mutation.isPending}
                         />
                       </div>
@@ -237,15 +239,15 @@ export function ConfiguracoesPage() {
 
 const VISIBILITY_OPTIONS = [
   { value: 'publico', label: 'Público', icon: Eye },
-  { value: 'conexoes', label: 'Vínculos', icon: Users },
+  { value: 'vinkulated', label: 'Vínculos', icon: Users },
   { value: 'privado', label: 'Privado', icon: Lock },
 ] as const;
 
-function VisibilityToggle({ value, onChange, saving }: { value: string; onChange: (v: string) => void; saving?: boolean }) {
+function VisibilityToggle({ value, onChange, saving }: { value: FieldVisibility; onChange: (v: FieldVisibility) => void; saving?: boolean }): React.JSX.Element {
   return (
     <div className={`flex rounded-lg border border-white/10 bg-canvas overflow-hidden shrink-0 transition-opacity ${saving ? 'opacity-60 pointer-events-none' : ''}`}>
       {VISIBILITY_OPTIONS.map(({ value: optVal, label, icon: Icon }) => {
-        const active = value === optVal || (optVal === 'conexoes' && value === 'vinkulated');
+        const active = value === optVal;
         return (
           <button
             key={optVal}

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import type React from 'react';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
 import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
@@ -16,13 +17,15 @@ const TIPOS = [
   { value: 'outro', label: 'Outro' },
 ];
 
-export function InstituicoesCatalogoPage() {
+export default function InstituicoesCatalogoPage(): React.JSX.Element {
   const [sp, setSp] = useSearchParams();
   const location = useLocation();
   const tipo = sp.get('tipo') ?? '';
   const search = sp.get('q') ?? '';
-  const page = Number(sp.get('page') ?? '1');
+  const parsedPage = Number.parseInt(sp.get('page') ?? '1', 10);
+  const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const inApp = location.pathname.startsWith('/app');
+  const seoUrl = inApp ? `${window.location.origin}${location.pathname}` : 'https://usepdc.com/instituicoes';
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['catalogo-instituicoes', tipo, search, page],
@@ -41,7 +44,7 @@ export function InstituicoesCatalogoPage() {
       <SEOHead
         title="Instituições"
         description="Explora as melhores universidades, institutos e centros de formação parceiros do PDC."
-        url="https://usepdc.com/instituicoes"
+        url={seoUrl}
       />
 
       <div className="max-w-7xl mx-auto space-y-8">
@@ -65,23 +68,25 @@ export function InstituicoesCatalogoPage() {
               areas={TIPOS}
               selectedArea={tipo}
               searchTerm={search}
-              onSearchChange={(val) => {
+              onSearchChange={(val: string) => {
                 const next = new URLSearchParams(sp);
                 if (val) next.set('q', val); else next.delete('q');
                 next.delete('page');
                 setSp(next, { replace: true });
               }}
-              onAreaChange={(val) => {
+              onAreaChange={(val: string) => {
                 const next = new URLSearchParams(sp);
                 if (val) next.set('tipo', val); else next.delete('tipo');
                 next.delete('page');
                 setSp(next, { replace: true });
               }}
-              totalResults={data?.meta.total}
+              totalResults={data?.meta.total ?? 0}
             />
           }
         >
-          {insts.map((i: InstituicaoPublica) => (
+          {insts.map((i: InstituicaoPublica) => {
+            const regionLabel = i.regiao || 'Angola';
+            return (
             <ContentCard
               key={i.id}
               title={i.nome}
@@ -92,14 +97,14 @@ export function InstituicoesCatalogoPage() {
               ctaLabel="Ver instituição"
               icon={Building2}
               badges={[
-                { label: i.regiao || 'Angola', variant: 'outline' },
+                { label: regionLabel, variant: 'outline' },
               ]}
               footerInfo={[
                 { icon: Building2, label: 'Parceiro PDC' },
-                { icon: MapPin, label: i.regiao || 'Ver Localização' },
+                { icon: MapPin, label: regionLabel },
               ]}
             />
-          ))}
+          );})}
         </CatalogoGridShell>
       </div>
     </>

@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import type React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { SidebarContent } from './Sidebar';
-import { TopBar } from './TopBar';
+import SidebarContent from './Sidebar';
+import TopBar from './TopBar';
 import { AppErrorBoundary } from '../ui/AppErrorBoundary';
 import { TinaChat } from '@/features/tina/TinaChat';
 import { useNotificacoes } from '@/lib/realtime/useNotificacoes';
@@ -22,7 +23,7 @@ function saveCollapsed(v: boolean): void {
  * AppLayout - Estrutura principal da aplicação.
  * Unificada para usar tokens via Tailwind e suporte a acessibilidade (Reduced Motion).
  */
-export function AppLayout() {
+export default function AppLayout(): React.JSX.Element {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(loadCollapsed);
 

@@ -19,6 +19,8 @@ import type { Projeto } from '@pdc/shared';
 
 import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 
+const PAGE_SIZE = 12;
+
 function ProjetoCard({ proj, index }: { proj: Projeto; index: number }) {
   const p = proj;
 
@@ -91,8 +93,8 @@ export function ProjetoListPage() {
   const [page, setPage] = useState(1);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['projetos', 'list', page],
-    queryFn: () => projetosApi.list({ page, pageSize: 12 }),
+    queryKey: ['projetos', 'list', page, PAGE_SIZE],
+    queryFn: () => projetosApi.list({ page, pageSize: PAGE_SIZE }),
   });
 
   if (isLoading) return (
@@ -140,7 +142,7 @@ export function ProjetoListPage() {
                 type="text"
                 placeholder="Procurar ativo..."
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); }}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 className="w-full pl-12 pr-4 py-4 bg-elevated/20 backdrop-blur-md border border-white/5 rounded-2xl text-ink-primary outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/50 transition-all font-medium"
               />
             </div>
@@ -181,7 +183,7 @@ export function ProjetoListPage() {
                   <ProjetoCard key={p.id} proj={p} index={i} />
                 ))}
               </div>
-              {pageCount > 1 && (
+              {pageCount > 1 && !search && (
                 <div className="pt-16 border-t border-white/5 flex justify-center">
                   <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
                 </div>

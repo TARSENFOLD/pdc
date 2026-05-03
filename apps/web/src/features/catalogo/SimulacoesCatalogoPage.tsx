@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import type React from 'react';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
 import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
@@ -15,12 +16,13 @@ const AREAS = [
   { value: 'GESTAO', label: 'Gestão' },
 ];
 
-export function SimulacoesCatalogoPage() {
+export default function SimulacoesCatalogoPage(): React.JSX.Element {
   const [sp, setSp] = useSearchParams();
   const location = useLocation();
   const area = sp.get('area') ?? '';
   const search = sp.get('q') ?? '';
-  const page = Number(sp.get('page') ?? '1');
+  const parsedPage = Number.parseInt(sp.get('page') ?? '1', 10);
+  const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const inApp = location.pathname.startsWith('/app');
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -76,7 +78,7 @@ export function SimulacoesCatalogoPage() {
                 next.delete('page');
                 setSp(next, { replace: true });
               }}
-              totalResults={data?.meta.total}
+              {...(data ? { totalResults: data.meta.total } : {})}
             />
           }
         >

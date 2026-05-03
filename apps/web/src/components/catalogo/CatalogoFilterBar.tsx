@@ -6,10 +6,10 @@ interface CatalogoFilterBarProps {
   areas: Array<{ value: string; label: string }>;
   selectedArea: string;
   onAreaChange: (val: string) => void;
-  totalResults?: number | undefined;
-  searchTerm?: string | undefined;
-  onSearchChange?: ((val: string) => void) | undefined;
-  searchLabel?: string | undefined;
+  totalResults?: number;
+  searchTerm?: string;
+  onSearchChange?: (val: string) => void;
+  searchLabel?: string;
 }
 
 const CatalogoFilterBar = ({
@@ -40,6 +40,7 @@ const CatalogoFilterBar = ({
       )}
       <div className="flex flex-wrap items-center gap-2">
         <button
+          type="button"
           onClick={() => { onAreaChange(''); }}
           className={cn(
             'min-h-[44px] px-4 py-2 rounded-full text-sm font-medium transition-all border',
@@ -53,6 +54,7 @@ const CatalogoFilterBar = ({
         {areas.map((a) => (
           <button
             key={a.value}
+            type="button"
             onClick={() => { onAreaChange(selectedArea === a.value ? '' : a.value); }}
             className={cn(
               'min-h-[44px] px-4 py-2 rounded-full text-sm font-medium transition-all border',

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Spinner, Avatar, Card } from '@/components/ui';
@@ -37,6 +37,7 @@ export function ConversaPage() {
   const { conversaId } = useParams<{ conversaId: string }>();
   const navigate = useNavigate();
   const [novoConteudo, setNovoConteudo] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -48,9 +49,16 @@ export function ConversaPage() {
   });
 
   const conversas = conversasData?.data ?? [];
+  const filteredConversas = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return conversas;
+    return conversas.filter((conversa) =>
+      `${conversa.interlocutorNome} ${conversa.ultimaMensagem ?? ''}`.toLowerCase().includes(query)
+    );
+  }, [conversas, searchTerm]);
   const conversaAtual = conversas.find(c => c.id === conversaId);
 
-  useSocket((novaMsg) => {
+  const { connected } = useSocket((novaMsg) => {
     if (!isMensagem(novaMsg)) return;
     if (novaMsg.conversaId === conversaId) {
       void queryClient.setQueryData<{ data: Mensagem[] }>(['mensagens', 'conversa', conversaId], (old) => ({
@@ -96,6 +104,8 @@ export function ConversaPage() {
             <input 
               type="text" 
               placeholder="Procurar conversa..." 
+              value={searchTerm}
+              onChange={(event) => { setSearchTerm(event.target.value); }}
               className="w-full bg-recessed text-sm rounded-lg pl-9 pr-3 py-2 border-none focus:ring-1 focus:ring-accent transition-shadow text-ink-primary placeholder:text-ink-tertiary"
             />
           </div>
@@ -103,7 +113,7 @@ export function ConversaPage() {
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {loadingConversas ? (
             <div className="flex justify-center p-8"><Spinner size="sm" /></div>
-          ) : conversas.map(c => (
+          ) : filteredConversas.map(c => (
             <Link 
               key={c.id} 
               to={`/app/mensagens/${c.id}`}
@@ -113,7 +123,7 @@ export function ConversaPage() {
               )}
             >
               <div className="relative">
-                 <Avatar src={c.interlocutorFoto} fallback={c.interlocutorNome[0]} size="sm" className="h-10 w-10 border border-ink-tertiary/[0.08]" />
+                 <Avatar src={c.interlocutorFoto} fallback={c.interlocutorNome.trim().charAt(0) || 'U'} size="sm" className="h-10 w-10 border border-ink-tertiary/[0.08]" />
                  {c.naoLidas > 0 && c.id !== conversaId && (
                     <div className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-accent border-2 border-elevated" />
                  )}
@@ -145,10 +155,14 @@ export function ConversaPage() {
               <button onClick={() => { navigate('/app/mensagens'); }} className="p-2 -ml-2 text-ink-secondary hover:text-ink-primary lg:hidden">
                  <ArrowLeft size={18} />
               </button>
-              <Avatar src={conversaAtual?.interlocutorFoto} fallback={conversaAtual?.interlocutorNome?.[0] ?? 'U'} className="h-9 w-9 border border-ink-tertiary/[0.08]" />
+              <Avatar src={conversaAtual?.interlocutorFoto} fallback={conversaAtual ? conversaAtual.interlocutorNome.trim().charAt(0) || 'U' : 'U'} className="h-9 w-9 border border-ink-tertiary/[0.08]" />
               <div>
                  <h2 className="text-sm font-bold text-ink-primary leading-tight">{conversaAtual?.interlocutorNome ?? 'A carregar...'}</h2>
-                 <p className="text-[10px] text-ink-secondary flex items-center gap-1"><Zap size={10} className="text-accent" /> Ligação Ativa</p>
+                 {connected ? (
+                   <p className="text-[10px] text-ink-secondary flex items-center gap-1"><Zap size={10} className="text-accent" /> Ligação Ativa</p>
+                 ) : (
+                   <p className="text-[10px] text-error flex items-center gap-1"><Zap size={10} /> A reconectar...</p>
+                 )}
               </div>
            </div>
         </header>
@@ -158,7 +172,7 @@ export function ConversaPage() {
             <div className="flex justify-center py-20"><Spinner size="md" /></div>
           ) : (
             <AnimatePresence>
-              {mensagens?.data.map((msg) => {
+              {(mensagens?.data ?? []).map((msg) => {
                 const isMine = msg.remetenteId === user?.id;
                 return (
                   <motion.div 
@@ -208,7 +222,7 @@ export function ConversaPage() {
       {/* Direita: Perfil Contextual */}
       <aside className="hidden xl:block w-72 space-y-4">
          <Card className="p-6 bg-elevated border-ink-tertiary/[0.08] rounded-2xl shadow-sm flex flex-col items-center text-center">
-            <Avatar src={conversaAtual?.interlocutorFoto} fallback={conversaAtual?.interlocutorNome?.[0] ?? 'U'} className="h-20 w-20 mb-4 border-2 border-surface shadow-sm" />
+            <Avatar src={conversaAtual?.interlocutorFoto} fallback={conversaAtual ? conversaAtual.interlocutorNome.trim().charAt(0) || 'U' : 'U'} className="h-20 w-20 mb-4 border-2 border-surface shadow-sm" />
             <h3 className="text-base font-bold text-ink-primary tracking-tight mb-1">{conversaAtual?.interlocutorNome ?? 'Utilizador'}</h3>
             <p className="text-xs text-ink-secondary mb-6">Membro PDC</p>
             
@@ -226,4 +240,3 @@ export function ConversaPage() {
     </div>
   );
 }
-

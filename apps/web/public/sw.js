@@ -214,9 +214,7 @@ self.addEventListener('fetch', (event) => {
   if (
     url.pathname.startsWith('/@') ||
     url.pathname.startsWith('/src/') ||
-    url.pathname.startsWith('/node_modules/') ||
-    url.searchParams.has('t') ||
-    url.searchParams.has('v')
+    url.pathname.startsWith('/node_modules/')
   ) return;
 
   // API routes (same-origin /api/*) — NetworkFirst

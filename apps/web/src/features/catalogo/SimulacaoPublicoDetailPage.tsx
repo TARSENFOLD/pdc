@@ -8,7 +8,15 @@ import { Search } from 'lucide-react';
 
 import type { SimulacaoPublica } from '@pdc/shared';
 
-const TIPOS: Record<string, string> = { '1': 'Vídeo Guiado', '2': 'Laboratório Externo', '3': 'Ambiente Interactivo' };
+const TIPOS = {
+  '1': 'Vídeo Guiado',
+  '2': 'Laboratório Externo',
+  '3': 'Ambiente Interactivo',
+} as const;
+
+function isTipoKey(value: string): value is keyof typeof TIPOS {
+  return Object.prototype.hasOwnProperty.call(TIPOS, value);
+}
 
 export function SimulacaoPublicoDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -40,7 +48,7 @@ export function SimulacaoPublicoDetailPage() {
         {sim.capaUrl ? <img src={sim.capaUrl} alt={sim.titulo} className="mt-6 w-full rounded-lg object-cover" /> : null}
 
         <div className="mt-6 flex flex-wrap gap-2">
-          <Badge variant="warning">{TIPOS[String(sim.tipo)] ?? 'Simulação'}</Badge>
+          <Badge variant="warning">{(() => { const tipoStr = String(sim.tipo); return isTipoKey(tipoStr) ? TIPOS[tipoStr] : 'Simulação'; })()}</Badge>
           <Badge variant="info">{sim.area}</Badge>
           <Badge variant="outline">{sim.tipoSimulacao.toUpperCase()}</Badge>
         </div>

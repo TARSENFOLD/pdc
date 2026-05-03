@@ -9,16 +9,28 @@ interface Flag {
   domain: string;
   enabled: boolean;
   description: string | null;
-  overrides: Array<{ instituicaoId: number; enabled: boolean }>;
+  overrides?: unknown;
 }
 
 type FeatureFlagsResponse = Flag[] | { data: Flag[] };
+type FlagOverride = { instituicaoId: number; enabled: boolean };
+
+function isFlagOverride(value: unknown): value is FlagOverride {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'instituicaoId' in value &&
+    typeof value.instituicaoId === 'number' &&
+    'enabled' in value &&
+    typeof value.enabled === 'boolean'
+  );
+}
 
 export function FeatureFlagsPage() {
   const qc = useQueryClient();
   const [newOverride, setNewOverride] = useState<{ domain: string; instId: string } | null>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['admin-feature-flags'],
     queryFn: () => http.get<FeatureFlagsResponse>('/feature-flags'),
   });
@@ -46,13 +58,17 @@ export function FeatureFlagsPage() {
   });
 
   if (isLoading) return <div className="p-6">A carregar...</div>;
+  if (isError) {
+    const message = error instanceof Error ? error.message : 'Erro inesperado';
+    return <div className="p-6 text-error">Erro ao carregar feature flags: {message}</div>;
+  }
 
   return (
     <div className="p-6 space-y-4">
       <h1 className="text-2xl font-bold">Feature Flags</h1>
 
       {flags.map((f) => {
-        const overrides = Array.isArray(f.overrides) ? f.overrides : [];
+        const overrides = Array.isArray(f.overrides) ? f.overrides.filter(isFlagOverride) : [];
         return (
         <Card key={f.id.toString()} className="p-4 space-y-3">
           <div className="flex items-center justify-between">

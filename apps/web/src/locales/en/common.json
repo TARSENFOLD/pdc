@@ -26,6 +26,10 @@
     "gestao_institucional": "Institutional Management",
     "autoridade": "Authority"
   },
+  "sidebar": {
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar"
+  },
   "errors": {
     "generic": "An error occurred. Please try again.",
     "not_found": "Page not found.",
@@ -90,7 +94,10 @@
       "submit": "Access Platform",
       "divider": "or",
       "google_cta": "Continue with Google",
-      "forgot_link": "Forgot my key",
+      "linkedin_cta": "Continue with LinkedIn",
+      "recover_password_link": "Recover password",
+      "panel_headline": "Inside the Course",
+      "panel_subline": "The whole academic universe, tailored to you.",
       "register_link": "Create academic account",
       "error_generic": "Error signing in. Please check your credentials."
     }

@@ -7,7 +7,11 @@
       "funcionalidades": "Features"
     },
     "cta_primary": "Get started free",
-    "cta_login": "Sign in"
+    "cta_login": "Sign in",
+    "menu": {
+      "open": "Open menu",
+      "close": "Close menu"
+    }
   },
   "hero": {
     "badge": "Your educational community",

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import type React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -19,18 +20,37 @@ import { cn } from '@/lib/utils';
 const SPRING = { type: 'spring' as const, stiffness: 220, damping: 28 };
 
 type RichPerfil = PerfilCompleto & {
-  bannerUrl?: string | null;
-  regiao?: string;
-  website?: string;
-  conquistas?: Array<{ id: string; titulo: string; icone?: string; slug?: string }>;
-  competencias?: string[];
-  historicoProfissional?: HistoricoProfissional[];
-  formacaoAcademica?: FormacaoAcademica[];
+  bannerUrl?: string | null | undefined;
+  regiao?: string | undefined;
+  website?: string | undefined;
+  competencias?: string[] | undefined;
+  historicoProfissional?: HistoricoProfissional[] | undefined;
+  formacaoAcademica?: FormacaoAcademica[] | undefined;
 };
+
+function normalizeRichPerfil(perfil: PerfilCompleto): RichPerfil {
+  return {
+    ...perfil,
+    bannerUrl: perfil.bannerUrl ?? null,
+    regiao: perfil.regiao ?? undefined,
+    website: perfil.website ?? undefined,
+    conquistas: Array.isArray(perfil.conquistas) ? perfil.conquistas : [],
+    competencias: Array.isArray(perfil.competencias) ? perfil.competencias : [],
+    historicoProfissional: Array.isArray(perfil.historicoProfissional) ? perfil.historicoProfissional : [],
+    formacaoAcademica: Array.isArray(perfil.formacaoAcademica) ? perfil.formacaoAcademica : [],
+  };
+}
+
+function formatMemberSince(createdAt: string | undefined): string {
+  if (!createdAt) return '—';
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('pt-PT', { month: 'long', year: 'numeric' }).format(date);
+}
 
 // ─── Shared UI Helpers ────────────────────────────────────────────────────────
 
-function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }): React.JSX.Element {
   return (
     <div className="flex items-center justify-between mb-4">
       <h2 className="text-lg font-bold text-ink-primary font-display">{children}</h2>
@@ -59,7 +79,7 @@ const ROLE_COLORS: Record<string, string> = {
   patrocinador: 'text-yellow-600 bg-yellow-500/10',
 };
 
-function RoleBadge({ role }: { role: string }) {
+function RoleBadge({ role }: { role: string }): React.JSX.Element {
   const label = ROLE_LABELS[role] ?? role;
   const color = ROLE_COLORS[role] ?? 'text-ink-secondary bg-recessed';
   return (
@@ -69,7 +89,7 @@ function RoleBadge({ role }: { role: string }) {
   );
 }
 
-function CTAButtons({ role, isOwner, profileId }: { role: string; isOwner: boolean; profileId?: string | undefined }) {
+function CTAButtons({ role, isOwner, profileId }: { role: string; isOwner: boolean; profileId?: string | undefined }): React.JSX.Element {
   const navigate = useNavigate();
 
   if (isOwner) {
@@ -207,7 +227,7 @@ function EduList({ items, isOwner }: { items: FormacaoAcademica[]; isOwner: bool
   );
 }
 
-function CertList({ items, isOwner }: { items: Array<{ id: string; titulo: string; icone?: string; slug?: string }>; isOwner: boolean }) {
+function CertList({ items, isOwner }: { items: Array<{ id: string; titulo: string; icone?: string | undefined; slug?: string | undefined }>; isOwner: boolean }): React.JSX.Element {
   if (items.length === 0 && !isOwner) return <p className="text-sm text-ink-tertiary">Nenhuma certificação partilhada.</p>;
   return (
     <div className="space-y-6">
@@ -252,7 +272,7 @@ function CertList({ items, isOwner }: { items: Array<{ id: string; titulo: strin
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function PerfilShowcase() {
+export default function PerfilShowcase(): React.JSX.Element {
   const { id: paramId } = useParams<{ id: string }>();
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -265,9 +285,9 @@ export function PerfilShowcase() {
     queryFn: () => (paramId ? perfisApi.getById(paramId) : perfisApi.getMe()),
   });
 
-  const isOwner = !paramId || user?.id === (perfil?.id ?? '');
+  const isOwner = !paramId || (user?.id !== undefined && perfil?.id !== undefined && user.id === perfil.id);
 
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
@@ -282,7 +302,8 @@ export function PerfilShowcase() {
       void qc.invalidateQueries({ queryKey: ['perfil'] });
       void qc.invalidateQueries({ queryKey: ['perfis', 'me'] });
       toast({ title: 'Banner atualizado!' });
-    } catch {
+    } catch (error) {
+      console.error('Erro ao atualizar banner', error);
       toast({ title: 'Erro ao atualizar banner', variant: 'error' });
     } finally {
       setIsUploadingBanner(false);
@@ -303,7 +324,7 @@ export function PerfilShowcase() {
     );
   }
 
-  const p = perfil as RichPerfil;
+  const p = normalizeRichPerfil(perfil);
   const initials = p.nome.charAt(0).toUpperCase();
   const conquistas = Array.isArray(p.conquistas) ? p.conquistas : [];
   const areasInteresse = Array.isArray(p.areasInteresse) ? p.areasInteresse : [];
@@ -525,12 +546,12 @@ export function PerfilShowcase() {
                                 </div>
                               )}
                               <div className="flex items-center gap-4 text-xs text-ink-tertiary">
-                                <button type="button" className="flex items-center gap-1.5 hover:text-accent transition-colors">
-                                  <Heart size={14} /> Gosto
-                                </button>
-                                <button type="button" className="flex items-center gap-1.5 hover:text-accent transition-colors">
-                                  <MessageCircle size={14} /> Comentar
-                                </button>
+                                <span className="flex items-center gap-1.5" aria-label="Gosto indisponível">
+                                  <Heart size={14} aria-hidden={true} /> Gosto
+                                </span>
+                                <span className="flex items-center gap-1.5" aria-label="Comentário indisponível">
+                                  <MessageCircle size={14} aria-hidden={true} /> Comentar
+                                </span>
                               </div>
                             </div>
                           </article>
@@ -561,7 +582,7 @@ export function PerfilShowcase() {
                       </div>
                       <div className="flex items-center justify-between text-sm pt-3 border-t border-ink-tertiary/10">
                         <span className="text-ink-tertiary">Membro desde</span>
-                        <span className="font-medium text-ink-secondary">Abril 2026</span>
+                        <span className="font-medium text-ink-secondary">{formatMemberSince(p.createdAt)}</span>
                       </div>
                     </div>
                   </section>
