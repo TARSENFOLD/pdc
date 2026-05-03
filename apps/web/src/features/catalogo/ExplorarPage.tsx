@@ -1,13 +1,18 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
-import { Card, Pagination, Avatar } from '@/components/ui';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
-import { AspirationalEmpty } from '@/components/ui/AspirationalEmpty';
+import { programasApi } from '@/lib/api/programas';
+import { Avatar } from '@/components/ui';
 import { CardGridSkeleton } from '@/components/ui/Skeleton';
 import { SEOHead } from '@/components/layout/SEOHead';
-import { SearchX } from 'lucide-react';
-import type { ExplorarResultado, ExplorarItem, MentorPublico, AreaVocacional } from '@pdc/shared';
+import ContentCard from '@/components/catalogo/ContentCard';
+import { resolveCatalogHref } from '@/components/catalogo/catalogoLinks';
+import {
+  BookOpen, FlaskConical, MapPin, UserCheck,
+  GraduationCap, ArrowRight,
+} from 'lucide-react';
+import type { AreaVocacional, CursoPublico, SimulacaoPublica, ExperienciaPublica, MentorPublico, Programa } from '@pdc/shared';
 
 const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'SAUDE', label: 'Saúde' },
@@ -27,201 +32,266 @@ const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'OUTRA', label: 'Outra' },
 ];
 
-const CTA_LABELS: Record<string, string> = {
-  curso: 'Ver curso',
-  simulacao: 'Experimentar',
-  experiencia: 'Ver experiência',
-  mentor: 'Conectar',
-  instituicao: 'Ver instituição',
-};
-
-const EXPLORAR_TIPOS = ['curso', 'simulacao', 'experiencia', 'mentor', 'instituicao'] as const satisfies readonly ExplorarItem['tipo'][];
-
-function ResultCard({ item }: { item: ExplorarItem }) {
-  const slug = item.slug;
-  const linkMap: Record<string, string> = {
-    curso: `/cursos/${slug}`,
-    simulacao: `/simulacoes/${slug}`,
-    experiencia: `/experiencias/${item.id}`,
-    mentor: `/mentores/${item.id}`,
-    instituicao: `/instituicoes/${slug}`,
-  };
+function SectionHeader({ title, description, verTodosHref }: { title: string; description: string; verTodosHref: string }) {
   return (
-    <Link to={linkMap[item.tipo] ?? '#'}>
-      <Card interactive className="p-5 border-ink-tertiary/10 bg-elevated hover:border-accent/30 transition-all">
-        {item.capaUrl ? (
-          <img src={item.capaUrl} alt={item.titulo} className="mb-4 h-40 w-full rounded-xl object-cover shadow-sm" loading="lazy" />
-        ) : (
-          <div className="mb-4 h-40 w-full rounded-xl bg-gradient-to-br from-accent/10 via-recessed to-elevated flex items-center justify-center">
-            <span className="text-[10px] font-medium text-accent/40 uppercase tracking-widest">{item.tipo}</span>
-          </div>
-        )}
-        <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{item.tipo}</span>
-        <h3 className="mt-1 font-bold text-ink-primary line-clamp-1 text-lg">{item.titulo}</h3>
-        {item.descricao ? <p className="mt-2 text-sm text-ink-tertiary line-clamp-2 leading-relaxed">{item.descricao}</p> : null}
-        <div className="mt-4 flex items-center justify-between">
-          {item.area ? (
-            <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-ink-secondary border border-ink-tertiary/10">
-              {item.area}
-            </span>
-          ) : <span />}
-          <span className="text-xs font-bold text-accent group-hover:translate-x-1 transition-transform">
-            {CTA_LABELS[item.tipo] ?? 'Ver'} →
-          </span>
-        </div>
-      </Card>
-    </Link>
-  );
-}
-
-function PessoasSugeridas({ mentores }: { mentores: MentorPublico[] }) {
-  if (mentores.length === 0) return null;
-  return (
-    <div className="mt-16 rounded-3xl border border-ink-tertiary/10 bg-elevated p-8 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-ink-primary">Talentos em destaque</h2>
-          <p className="text-sm text-ink-tertiary">Mentores e profissionais de elite prontos para te guiar.</p>
-        </div>
-        <Link to="/explorar?tipo=mentor" className="text-sm font-bold text-accent hover:underline">Ver todos</Link>
+    <div className="flex items-end justify-between mb-6">
+      <div>
+        <h2 className="text-lg font-bold text-ink-primary">{title}</h2>
+        <p className="mt-0.5 text-xs text-ink-tertiary">{description}</p>
       </div>
-      <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
-        {mentores.slice(0, 8).map((m) => (
-          <Link key={m.id} to={`/mentores/${m.id}`} className="group flex w-44 flex-none flex-col items-center rounded-2xl border border-ink-tertiary/10 bg-elevated p-6 text-center transition-all hover:border-accent/40 hover:shadow-lg hover:shadow-accent/5">
-            <Avatar size="xl" {...(m.avatarUrl ? { src: m.avatarUrl } : {})} alt={m.nome} fallback={m.nome.substring(0, 2)} className="ring-2 ring-transparent group-hover:ring-accent/20 transition-all" />
-            <p className="mt-4 text-sm font-bold text-ink-primary line-clamp-1 group-hover:text-accent transition-colors">{m.nome}</p>
-            {m.areaEspecialidade ? <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-ink-tertiary line-clamp-1">{m.areaEspecialidade}</p> : null}
-            <div className="mt-4 rounded-full bg-accent/10 px-3 py-1 text-[10px] font-bold text-accent">Conectar</div>
-          </Link>
-        ))}
-      </div>
+      <Link
+        to={verTodosHref}
+        className="flex items-center gap-1 text-xs font-bold text-[var(--chrome-active)] hover:underline shrink-0"
+      >
+        Ver todos <ArrowRight size={13} />
+      </Link>
     </div>
   );
 }
 
 export function ExplorarPage() {
   const [sp, setSearchParams] = useSearchParams();
-  const tab = sp.get('tipo') ?? 'tudo';
-  const search = sp.get('search') ?? '';
+  const location = useLocation();
+  const navigate = useNavigate();
   const area = sp.get('area') ?? '';
-  const page = Number(sp.get('page') ?? '1');
-  const selectedTipo = EXPLORAR_TIPOS.find((tipo) => tipo === tab);
+  const tipo = sp.get('tipo') ?? '';
+  const inApp = location.pathname.startsWith('/app');
+  const base = inApp ? '/app' : '';
 
-  const { data, isLoading } = useQuery<ExplorarResultado>({
-    queryKey: ['explorar', tab, search, area, page],
-    queryFn: () => catalogoApi.explorar({
-      ...(selectedTipo ? { tipo: selectedTipo } : {}),
-      ...(search ? { search } : {}),
-      ...(area ? { area: area as AreaVocacional } : {}),
-      page,
-      pageSize: 12,
-    }),
+  // Legacy tipo redirects — anyone with old bookmarks lands in the right place
+  useEffect(() => {
+    if (tipo === 'curso') void navigate(`${base}/cursos`, { replace: true });
+    else if (tipo === 'experiencia') void navigate(`${base}/experiencias`, { replace: true });
+    else if (tipo === 'simulacao') void navigate(`${base}/simulacoes`, { replace: true });
+    else if (tipo === 'programa') void navigate(`${base}/programas`, { replace: true });
+  }, [tipo, base, navigate]);
+
+  const areaParam = area ? { area: area as AreaVocacional } : {};
+
+  const cursosQ = useQuery({
+    queryKey: ['explorar-cursos', area],
+    queryFn: () => catalogoApi.getCursos({ ...areaParam, pageSize: 4 }),
   });
 
-  const { data: mentoresData } = useQuery<{ data: MentorPublico[] }>({
-    queryKey: ['explorar-pessoas'],
+  const simsQ = useQuery({
+    queryKey: ['explorar-sims', area],
+    queryFn: () => catalogoApi.getSimulacoes({ ...areaParam, pageSize: 4 }),
+  });
+
+  const expQ = useQuery({
+    queryKey: ['explorar-exp', area],
+    queryFn: () => catalogoApi.getExperiencias({ ...areaParam, pageSize: 4 }),
+  });
+
+  const progQ = useQuery({
+    queryKey: ['explorar-prog', area],
+    queryFn: () => programasApi.list({ pageSize: 4 }),
+  });
+
+  const mentoresQ = useQuery({
+    queryKey: ['explorar-mentores'],
     queryFn: () => catalogoApi.getMentores({ pageSize: 8 }),
   });
 
-  const items = data?.data ?? [];
-  const pageCount = data?.meta.pageCount ?? 1;
-
-  const setFilter = (k: string, v: string) => {
+  const setArea = (v: string) => {
     const next = new URLSearchParams(sp);
-    if (v) next.set(k, v); else next.delete(k);
-    if (k !== 'page') next.delete('page');
+    if (v) next.set('area', v); else next.delete('area');
     setSearchParams(next, { replace: true });
   };
+
+  const cursos = cursosQ.data?.data ?? [];
+  const sims = simsQ.data?.data ?? [];
+  const exps = expQ.data?.data ?? [];
+  const progs = progQ.data?.data ?? [];
+  const mentores = mentoresQ.data?.data ?? [];
 
   return (
     <div className="min-h-screen bg-canvas">
       <SEOHead
         title="Explorar"
-        description="Descobre cursos, simulações e mentores na plataforma PDC."
+        description="Destaques de cursos, simulações, experiências e programas da rede PDC."
         url="https://usepdc.com/explorar"
       />
 
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-6">
+      <div className="mx-auto max-w-7xl space-y-16 pb-20">
+        <header className="mb-2">
           <h1 className="text-2xl font-bold text-ink-primary">Explorar</h1>
           <p className="mt-1 text-sm text-ink-secondary">
-            Cursos certificados, simulações e mentores da rede PDC.
+            Destaques de cada catálogo da rede PDC.
           </p>
         </header>
 
-        <div className="sticky top-20 z-10 bg-canvas/80 backdrop-blur-xl pt-2 pb-6 border-b border-ink-tertiary/10">
-          <div className="flex flex-col gap-4">
-            <div className="relative group">
-              <input
-                type="text" 
-                value={search} 
-                placeholder="Pesquisar carreiras, simulações ou mentores..."
-                onChange={(e) => { setFilter('search', e.target.value); }}
-                className="w-full rounded-2xl border border-ink-tertiary/10 bg-elevated p-4 pl-12 text-sm text-ink-primary placeholder:text-ink-tertiary focus:border-accent/40 focus:ring-4 focus:ring-accent/5 outline-none transition-all"
-              />
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-tertiary group-focus-within:text-accent transition-colors">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <span className="text-[10px] font-medium uppercase tracking-widest text-ink-tertiary mr-2">Área:</span>
-              {AREAS.map((a) => (
-                <button 
-                  key={a.value} 
-                  onClick={() => { setFilter('area', area === a.value ? '' : a.value); }}
-                  className={`flex-none rounded-full border px-4 py-1.5 text-xs font-bold transition-all ${area === a.value ? 'bg-accent border-accent text-white shadow-lg shadow-accent/20' : 'bg-elevated border-ink-tertiary/10 text-ink-secondary hover:border-accent/30'}`}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
+        {/* Filtro de área — aplica-se a todas as secções */}
+        <div className="sticky top-16 md:top-20 z-10 bg-canvas/90 backdrop-blur-md pt-2 pb-3 border-b border-ink-tertiary/10 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-tertiary mr-1 shrink-0">Área:</span>
+            {AREAS.map((a) => (
+              <button
+                key={a.value}
+                type="button"
+                onClick={() => { setArea(area === a.value ? '' : a.value); }}
+                className={`flex-none rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${area === a.value ? 'bg-[var(--chrome-active)] text-[var(--ink-on-accent)] shadow-sm' : 'text-ink-secondary hover:bg-recessed'}`}
+              >
+                {a.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        <Tabs value={tab} onValueChange={(v) => { setFilter('tipo', v === 'tudo' ? '' : v); }} className="mt-8">
-          <TabsList className="bg-elevated p-1 rounded-2xl border border-ink-tertiary/10">
-            {['tudo', ...EXPLORAR_TIPOS].map((t) => (
-              <TabsTrigger key={t} value={t} className="rounded-xl px-6 py-2 text-xs font-bold uppercase tracking-widest transition-all data-[state=active]:bg-accent data-[state=active]:text-white">
-                {t === 'tudo' ? 'Tudo' : `${t}s`}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        {/* ─── Cursos ─────────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Cursos certificados"
+            description="Percursos validados por especialistas e instituições de prestígio."
+            verTodosHref={`${base}/cursos${area ? `?area=${area}` : ''}`}
+          />
+          {cursosQ.isLoading ? (
+            <CardGridSkeleton />
+          ) : cursos.length === 0 ? (
+            <p className="text-sm text-ink-tertiary py-6">Nenhum curso disponível nesta área.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {cursos.map((c: CursoPublico) => (
+                <ContentCard
+                  key={c.id}
+                  title={c.titulo}
+                  subtitle={c.autorNome}
+                  image={c.capaUrl || undefined}
+                  href={resolveCatalogHref('curso', c.slug, inApp)}
+                  type="curso"
+                  ctaLabel="Ver curso"
+                  icon={BookOpen}
+                  badges={[{ label: c.area || 'Geral', variant: 'info' }]}
+                />
+              ))}
+            </div>
+          )}
+        </section>
 
-          <TabsContent value={tab} className="mt-8">
-            {isLoading ? (
-              <CardGridSkeleton />
-            ) : items.length === 0 ? (
-              <AspirationalEmpty
-                icon={SearchX}
-                title="Nenhum resultado para esta pesquisa"
-                description="Experimenta outra área ou limpa os filtros."
-                action={
-                  <Link
-                    to="/explorar"
-                    onClick={() => { setSearchParams(new URLSearchParams()); }}
-                    className="text-xs font-semibold text-accent hover:underline uppercase tracking-widest"
-                  >
-                    Limpar tudo
-                  </Link>
-                }
-              />
-            ) : (
-              <>
-                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {items.map((item) => <ResultCard key={`${item.tipo}-${item.id}`} item={item} />)}
-                </div>
-                {pageCount > 1 && (
-                  <div className="mt-16 flex justify-center border-t border-ink-tertiary/10 pt-10">
-                    <Pagination page={page} pageCount={pageCount} onPageChange={(p) => { setFilter('page', String(p)); }} />
+        {/* ─── Simulações ─────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Simulações"
+            description="Vive o dilema real da profissão e mede a tua aptidão."
+            verTodosHref={`${base}/simulacoes${area ? `?area=${area}` : ''}`}
+          />
+          {simsQ.isLoading ? (
+            <CardGridSkeleton />
+          ) : sims.length === 0 ? (
+            <p className="text-sm text-ink-tertiary py-6">Nenhuma simulação disponível nesta área.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {sims.map((s: SimulacaoPublica) => (
+                <ContentCard
+                  key={s.id}
+                  title={s.titulo}
+                  subtitle={s.area}
+                  image={s.capaUrl || undefined}
+                  href={resolveCatalogHref('simulacao', s.slug || s.id, inApp)}
+                  type="simulacao"
+                  ctaLabel="Experimentar"
+                  icon={FlaskConical}
+                  badges={[{ label: s.area || 'Geral', variant: 'info' }]}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ─── Experiências ───────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Experiências imersivas"
+            description="Roteiros em instituições de elite para validar o teu interesse real."
+            verTodosHref={`${base}/experiencias${area ? `?area=${area}` : ''}`}
+          />
+          {expQ.isLoading ? (
+            <CardGridSkeleton />
+          ) : exps.length === 0 ? (
+            <p className="text-sm text-ink-tertiary py-6">Nenhuma experiência disponível nesta área.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {exps.map((e: ExperienciaPublica) => (
+                <ContentCard
+                  key={e.id}
+                  title={e.titulo}
+                  subtitle={e.instituicao?.nome || 'Instituição PDC'}
+                  image={e.capaUrl || undefined}
+                  href={resolveCatalogHref('experiencia', e.slug || e.id, inApp)}
+                  type="experiencia"
+                  ctaLabel="Ver experiência"
+                  icon={MapPin}
+                  badges={[{ label: e.area || 'Geral', variant: 'info' }]}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ─── Programas ──────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Programas de acesso"
+            description="Percursos integrados que ligam o conhecimento teórico à prática."
+            verTodosHref={`${base}/programas`}
+          />
+          {progQ.isLoading ? (
+            <CardGridSkeleton />
+          ) : progs.length === 0 ? (
+            <p className="text-sm text-ink-tertiary py-6">Nenhum programa disponível de momento.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {progs.map((p: Programa) => (
+                <ContentCard
+                  key={p.id}
+                  title={p.titulo}
+                  subtitle={p.instituicaoNome || 'Instituição PDC'}
+                  image={p.capaUrl || undefined}
+                  href={resolveCatalogHref('programa', p.slug || p.id, inApp)}
+                  type="programa"
+                  ctaLabel="Ver programa"
+                  icon={GraduationCap}
+                  badges={[{ label: p.area, variant: 'outline' }]}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ─── Mentores em destaque ────────────────────────────────────────── */}
+        {mentores.length > 0 && (
+          <section className="pt-4 border-t border-ink-tertiary/10">
+            <SectionHeader
+              title="Mentores em destaque"
+              description="Profissionais de elite prontos para te guiar."
+              verTodosHref={`${base}/mentores`}
+            />
+            <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
+              {mentores.slice(0, 8).map((m: MentorPublico) => (
+                <Link
+                  key={m.id}
+                  to={resolveCatalogHref('mentor', m.id, inApp)}
+                  className="group flex w-36 flex-none flex-col items-center rounded-lg border border-transparent hover:bg-recessed p-4 text-center transition-all"
+                >
+                  <Avatar
+                    size="xl"
+                    {...(m.avatarUrl ? { src: m.avatarUrl } : {})}
+                    alt={m.nome}
+                    fallback={m.nome.substring(0, 2)}
+                    className="ring-2 ring-transparent group-hover:ring-[var(--chrome-active-soft)] transition-all"
+                  />
+                  <p className="mt-4 text-sm font-bold text-ink-primary line-clamp-1 group-hover:text-[var(--chrome-active)] transition-colors">{m.nome}</p>
+                  {m.areaEspecialidade ? (
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-ink-tertiary line-clamp-1">{m.areaEspecialidade}</p>
+                  ) : null}
+                  <div className="mt-4 rounded-full bg-[var(--chrome-active-soft)] px-3 py-1 text-[10px] font-bold text-[var(--chrome-active)]">
+                    <UserCheck size={10} className="inline mr-1" />Conectar
                   </div>
-                )}
-              </>
-            )}
-          </TabsContent>
-        </Tabs>
-
-        <PessoasSugeridas mentores={mentoresData?.data ?? []} />
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

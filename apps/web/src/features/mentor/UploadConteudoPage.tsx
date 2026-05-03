@@ -12,11 +12,11 @@ export function UploadConteudoPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.size > 50 * 1024 * 1024) {
-        toast({ 
-          title: 'Ficheiro muito grande', 
-          description: 'O tamanho máximo permitido é 50MB.', 
-          variant: 'error' 
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        toast({
+          title: 'Ficheiro muito grande',
+          description: 'O tamanho máximo permitido é 10MB.',
+          variant: 'error'
         });
         return;
       }
@@ -35,11 +35,10 @@ export function UploadConteudoPage() {
       setFile(null);
       toast({ title: 'Upload concluído com sucesso!' });
     } catch (err: unknown) {
-      const error = err as Error;
-      toast({ 
-        title: 'Erro no upload', 
-        description: error.message, 
-        variant: 'error' 
+      toast({
+        title: 'Erro no upload',
+        description: err instanceof Error ? err.message : 'Erro desconhecido',
+        variant: 'error'
       });
     } finally {
       setIsUploading(false);
@@ -69,21 +68,20 @@ export function UploadConteudoPage() {
                 {file ? file.name : 'Seleciona um ficheiro'}
               </p>
               <p className="text-sm text-ink-tertiary">
-                {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'PDF, PNG, JPG até 50MB'}
+                {file ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : 'PNG, JPG, WebP, GIF, PDF, MP4 até 10MB'}
               </p>
             </div>
 
             <div className="flex gap-3">
-              <label className="cursor-pointer">
-                <input 
-                  type="file" 
-                  className="hidden" 
+              <label className="inline-flex h-11 min-w-[44px] cursor-pointer items-center justify-center rounded-md border border-ink-tertiary/10 bg-recessed px-5 text-sm font-semibold text-ink-primary transition-all hover:bg-canvas/50">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4"
                   onChange={onFileSelect}
                   disabled={isUploading}
                 />
-                <Button asChild variant="secondary" disabled={isUploading}>
-                  <span>Selecionar Ficheiro</span>
-                </Button>
+                Selecionar Ficheiro
               </label>
 
               {file && (
@@ -119,7 +117,7 @@ export function UploadConteudoPage() {
           </div>
           <div>
             <h4 className="font-bold text-sm">Ficheiros Suportados</h4>
-            <p className="text-xs text-ink-tertiary mt-1">PDF, DOCX, PNG, JPG, ZIP e MP4 (até 50MB).</p>
+            <p className="text-xs text-ink-tertiary mt-1">PNG, JPG, WebP, GIF, PDF, MP4 (até 10MB).</p>
           </div>
         </Card>
         
@@ -129,7 +127,7 @@ export function UploadConteudoPage() {
           </div>
           <div>
             <h4 className="font-bold text-sm">Vídeos Grandes</h4>
-            <p className="text-xs text-ink-tertiary mt-1">Para vídeos com mais de 50MB, recomendamos usar YouTube ou Vimeo.</p>
+            <p className="text-xs text-ink-tertiary mt-1">Para vídeos com mais de 10MB, recomendamos usar YouTube ou Vimeo.</p>
           </div>
         </Card>
       </div>

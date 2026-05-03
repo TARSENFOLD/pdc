@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { AuthLeftPanel } from '@/components/auth/AuthLeftPanel';
 
 type AuthRole = 'estudante' | 'mentor' | 'instituicao';
 
@@ -9,123 +10,43 @@ interface AuthSplitLayoutProps {
   children: ReactNode;
 }
 
-const COPY: Record<AuthRole, { headline: string; bullets: string[] }> = {
+const HEADLINES: Record<AuthRole, { headline: string; subline: string }> = {
   estudante: {
     headline: 'O teu futuro começa com evidência',
-    bullets: [
-      'Simulações práticas antes de te matriculares',
-      'Perfil vocacional baseado no teu comportamento real',
-      'Mentorias com profissionais da tua área de interesse',
-    ],
+    subline: 'Simulações, mentorias e perfil vocacional.',
   },
   mentor: {
     headline: 'Inspira a próxima geração',
-    bullets: [
-      'Partilha experiência com estudantes angolanos',
-      'Cria cursos e simulações',
-      'Acompanha o progresso dos teus mentorados',
-    ],
+    subline: 'Partilha experiência com estudantes angolanos.',
   },
   instituicao: {
     headline: 'Conecta-te com quem importa',
-    bullets: [
-      'Publica experiências e programas gratuitos',
-      'Conecta-te com estudantes qualificados',
-      'Relatórios de engagement em tempo real',
-    ],
+    subline: 'Estudantes qualificados, relatórios em tempo real.',
   },
 };
 
-/* Enhanced pencil SVG - more detailed and premium */
-function PencilIllustration() {
-  return (
-    <svg
-      viewBox="0 0 160 160"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-40 w-40 drop-shadow-2xl"
-      aria-hidden={true}
-    >
-      {/* Pencil Body with Gradient effect using opacities */}
-      <rect x="70" y="20" width="20" height="90" rx="2" fill="currentColor" opacity="0.1" />
-      <rect x="74" y="20" width="12" height="90" fill="currentColor" opacity="0.2" />
-      <rect x="70" y="20" width="20" height="90" rx="2" stroke="currentColor" strokeWidth="1.5" opacity="0.3" />
-      
-      {/* Wood Part before Tip */}
-      <polygon points="70,110 90,110 80,135" fill="currentColor" opacity="0.15" />
-      <polygon points="70,110 90,110 80,135" stroke="currentColor" strokeWidth="1" opacity="0.2" />
-      
-      {/* Graphite Tip */}
-      <polygon points="76,125 84,125 80,135" fill="currentColor" opacity="0.6" />
-      
-      {/* Golden Ferrule (Metal band) */}
-      <rect x="70" y="25" width="20" height="8" fill="currentColor" opacity="0.4" />
-      <line x1="70" y1="29" x2="90" y2="29" stroke="currentColor" strokeWidth="0.5" opacity="0.5" />
-      <line x1="70" y1="31" x2="90" y2="31" stroke="currentColor" strokeWidth="0.5" opacity="0.5" />
-      
-      {/* Eraser */}
-      <path d="M70 20C70 14.4772 74.4772 10 80 10C85.5228 10 90 14.4772 90 20H70Z" fill="currentColor" opacity="0.2" />
-      <path d="M70 20C70 14.4772 74.4772 10 80 10C85.5228 10 90 14.4772 90 20" stroke="currentColor" strokeWidth="1.5" opacity="0.3" />
-
-      {/* Dynamic Swoosh / Writing Line */}
-      <path 
-        d="M40 140C60 135 70 138 80 135C90 132 110 130 130 135" 
-        stroke="currentColor" 
-        strokeWidth="2" 
-        strokeLinecap="round" 
-        opacity="0.2" 
-      />
-      <path 
-        d="M50 145C65 142 75 143 85 142" 
-        stroke="currentColor" 
-        strokeWidth="1" 
-        strokeLinecap="round" 
-        opacity="0.1" 
-      />
-    </svg>
-  );
-}
-
 export function AuthSplitLayout({ role, children }: AuthSplitLayoutProps) {
-  const { headline, bullets } = COPY[role];
+  const { headline, subline } = HEADLINES[role];
 
   return (
-    <div className="flex min-h-screen bg-canvas">
-      {/* Left branding panel - hidden on mobile */}
-      <div className="hidden w-1/2 flex-col items-center justify-center bg-canvas px-12 text-center lg:flex">
-        <Link to="/" className="mb-10 text-2xl font-bold tracking-tight text-accent">
-          PDC
-        </Link>
-
-        <div className="text-accent">
-          <PencilIllustration />
-        </div>
-
-        <h2 className="mt-8 max-w-sm text-2xl font-bold leading-snug text-ink-primary">
-          {headline}
-        </h2>
-
-        <ul className="mt-6 space-y-3 text-left">
-          {bullets.map((b) => (
-            <li key={b} className="flex items-start gap-2 text-sm text-ink-secondary">
-              <CheckCircle size={16} aria-hidden={true} className="mt-0.5 shrink-0 text-accent" />
-              {b}
-            </li>
-          ))}
-        </ul>
+    <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-canvas">
+      {/* Left: sticky neural panel — hidden on mobile */}
+      <div className="hidden lg:block">
+        <AuthLeftPanel headline={headline} subline={subline} />
       </div>
 
-      {/* Right form panel */}
-      <div className="flex w-full flex-col lg:w-1/2">
-        {/* Back link - visible on both mobile (top) and desktop (top-left of form area) */}
+      {/* Right: scrollable form */}
+      <div className="flex flex-col min-h-screen">
         <div className="p-4 lg:p-8">
-          <Link to="/criar-conta" className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover transition-colors">
-            <ArrowLeft size={18} aria-hidden={true} />
+          <Link
+            to="/criar-conta"
+            className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:text-accent-hover transition-colors"
+          >
+            <ArrowLeft size={16} aria-hidden />
             Voltar
           </Link>
         </div>
-
-        <div className="flex flex-1 items-center justify-center px-4 pb-12 lg:pt-0">
+        <div className="flex flex-1 items-center justify-center px-4 pb-12">
           {children}
         </div>
       </div>

@@ -71,12 +71,10 @@ const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         <div className="flex flex-col items-center gap-4 mb-8">
           <Avatar src={avatarUrl || undefined} fallback={user?.nome[0] ?? 'I'} size="lg" className="h-24 w-24" />
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" asChild>
-              <label className="cursor-pointer">
-                {isUploading ? 'A carregar...' : 'Alterar Logotipo'}
-                <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={isUploading} />
-              </label>
-            </Button>
+            <label className="inline-flex h-11 min-w-[44px] cursor-pointer items-center justify-center rounded-md border border-ink-tertiary/10 bg-recessed px-4 text-xs font-semibold text-ink-primary transition-all hover:bg-canvas/50">
+              {isUploading ? 'A carregar...' : 'Alterar Logotipo'}
+              <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={isUploading} />
+            </label>
           </div>
         </div>
 

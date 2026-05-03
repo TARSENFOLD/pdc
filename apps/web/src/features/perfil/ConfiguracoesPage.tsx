@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Spinner, Button } from '@/components/ui';
-import { Palette, Bell, ShieldCheck, Globe, Key } from 'lucide-react';
+import { Palette, Bell, ShieldCheck, Globe, Key, Users, Lock, Eye } from 'lucide-react';
 import { http } from '@/lib/api/http';
 import { toast } from '@/hooks/useToast';
 import type { VisibilitySettings, PerfilCompleto, UpdatePerfilPayload, FieldVisibility } from '@pdc/shared';
@@ -62,6 +62,26 @@ export function ConfiguracoesPage() {
     queryFn: () => http.get<PerfilComNotificacoes>('/perfis/me'),
   });
 
+  const DEFAULT_VIS: VisibilitySettings = {
+    email: 'privado',
+    telefone: 'privado',
+    miniFeed: 'publico',
+    vinculos: 'publico',
+    bio: 'publico',
+    socialLinks: 'vinkulated',
+    areasInteresse: 'publico',
+    competencias: 'publico',
+  };
+
+  // Local state prevents reset on re-fetch when backend doesn't persist yet
+  const [visSettings, setVisSettings] = useState<VisibilitySettings>(DEFAULT_VIS);
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>(DEFAULT_NOTIF_PREFS);
+
+  useEffect(() => {
+    if (perfil?.visibilitySettings) setVisSettings(perfil.visibilitySettings);
+    if (perfil?.notificationPreferences) setNotifPrefs({ ...DEFAULT_NOTIF_PREFS, ...perfil.notificationPreferences });
+  }, [perfil]);
+
   const mutation = useMutation({
     mutationFn: (data: UpdatePerfilComNotificacoesPayload) => http.put('/perfis/me', data),
     onSuccess: () => {
@@ -73,31 +93,16 @@ export function ConfiguracoesPage() {
     },
   });
 
-  // Mapeamento canónico (ADR-003)
-  const visSettings: VisibilitySettings = perfil?.visibility ?? {
-    email: 'privado',
-    telefone: 'privado',
-    miniFeed: 'publico',
-    vinculos: 'publico',
-    bio: 'publico',
-    socialLinks: 'vinkulated',
-    areasInteresse: 'publico',
-    competencias: 'publico',
-  };
-
-  // Fallback seguro para notificações enquanto o schema BFF é finalizado
-  const notifPrefs: NotificationPreferences = perfil?.notificationPreferences ?? DEFAULT_NOTIF_PREFS;
-
   const handleVisibilityChange = (key: keyof VisibilitySettings, value: FieldVisibility) => {
-    mutation.mutate({
-      visibility: { ...visSettings, [key]: value }
-    });
+    const next = { ...visSettings, [key]: value };
+    setVisSettings(next);
+    mutation.mutate({ visibilitySettings: next });
   };
 
   const handleNotifToggle = (key: keyof NotificationPreferences) => {
-    const nextPrefs = { ...notifPrefs, [key]: !notifPrefs[key] };
-    // Preservamos a lógica original através de um campo dinâmico no payload
-    mutation.mutate({ notificationPreferences: nextPrefs });
+    const next = { ...notifPrefs, [key]: !notifPrefs[key] };
+    setNotifPrefs(next);
+    mutation.mutate({ notificationPreferences: next });
   };
 
   return (
@@ -156,19 +161,29 @@ export function ConfiguracoesPage() {
 
             {activeTab === 'privacidade' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-bold text-ink-primary tracking-tight">Visibilidade do Perfil</h3>
-                <p className="text-sm text-ink-secondary mb-6">Controla quem pode ver os detalhes do teu perfil público (Privacidade V2).</p>
-                
+                <div>
+                  <h3 className="text-lg font-bold text-ink-primary tracking-tight">Visibilidade do Perfil</h3>
+                  <p className="text-sm text-ink-secondary mt-1">Controla quem pode ver cada campo do teu perfil público. As alterações são guardadas automaticamente.</p>
+                </div>
+
+                {/* Legend */}
+                <div className="flex flex-wrap gap-4 text-xs text-ink-secondary bg-recessed rounded-xl p-3 border border-white/5">
+                  <span className="flex items-center gap-1.5"><Eye size={12} className="text-accent" /> <strong>Público</strong> — Visível a todos</span>
+                  <span className="flex items-center gap-1.5"><Users size={12} className="text-cobalt" /> <strong>Vínculos</strong> — Apenas conexões</span>
+                  <span className="flex items-center gap-1.5"><Lock size={12} className="text-ink-tertiary" /> <strong>Privado</strong> — Só tu</span>
+                </div>
+
                 {isLoading ? (
                   <div className="flex justify-center py-12"><Spinner size="lg" /></div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {VISIBILITY_FIELDS.map((field) => (
-                      <div key={field.key} className="flex items-center justify-between rounded-xl bg-recessed p-4 border border-white/5">
-                        <span className="text-sm font-medium text-ink-primary">{field.label}</span>
-                        <VisibilitySelect 
-                          value={visSettings[field.key]} 
-                          onChange={(v) => { handleVisibilityChange(field.key, v as FieldVisibility); }} 
+                      <div key={field.key} className="flex items-center justify-between rounded-xl bg-recessed p-4 border border-white/5 gap-4">
+                        <span className="text-sm font-semibold text-ink-primary">{field.label}</span>
+                        <VisibilityToggle
+                          value={visSettings[field.key]}
+                          onChange={(v) => { handleVisibilityChange(field.key, v as FieldVisibility); }}
+                          saving={mutation.isPending}
                         />
                       </div>
                     ))}
@@ -220,17 +235,35 @@ export function ConfiguracoesPage() {
   );
 }
 
-function VisibilitySelect({ value, onChange }: { value: string, onChange: (v: string) => void }) {
+const VISIBILITY_OPTIONS = [
+  { value: 'publico', label: 'Público', icon: Eye },
+  { value: 'conexoes', label: 'Vínculos', icon: Users },
+  { value: 'privado', label: 'Privado', icon: Lock },
+] as const;
+
+function VisibilityToggle({ value, onChange, saving }: { value: string; onChange: (v: string) => void; saving?: boolean }) {
   return (
-    <select 
-      value={value} 
-      onChange={(e) => { onChange(e.target.value); }}
-      className="rounded-lg border border-white/10 bg-canvas p-2 text-xs font-bold text-ink-primary focus:ring-1 focus:ring-accent"
-    >
-      <option value="publico">Público</option>
-      <option value="conexoes">Apenas Vínculos</option>
-      <option value="privado">Privado</option>
-    </select>
+    <div className={`flex rounded-lg border border-white/10 bg-canvas overflow-hidden shrink-0 transition-opacity ${saving ? 'opacity-60 pointer-events-none' : ''}`}>
+      {VISIBILITY_OPTIONS.map(({ value: optVal, label, icon: Icon }) => {
+        const active = value === optVal || (optVal === 'conexoes' && value === 'vinkulated');
+        return (
+          <button
+            key={optVal}
+            type="button"
+            onClick={() => { onChange(optVal); }}
+            title={label}
+            className={`flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold transition-all border-r border-white/5 last:border-r-0 ${
+              active
+                ? 'bg-accent text-white'
+                : 'text-ink-tertiary hover:text-ink-primary hover:bg-recessed'
+            }`}
+          >
+            <Icon size={11} />
+            <span className="hidden sm:inline">{label}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

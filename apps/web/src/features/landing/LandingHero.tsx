@@ -31,7 +31,9 @@ export function LandingHero() {
       <NeuralConstellation choreography={choreography} />
 
       <motion.div {...stagger(0)} className="relative z-10 mb-8">
-        <div className="inline-flex items-center gap-3 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 py-1.5 px-4 text-xs font-semibold tracking-wide text-text-secondary dark:text-white/80 backdrop-blur-lg shadow-md dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.6)]">
+        <div
+          className="inline-flex items-center gap-3 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 py-1.5 px-4 text-xs font-semibold tracking-wide text-text-secondary dark:text-white/80 backdrop-blur-lg shadow-md dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.6)]"
+        >
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber opacity-75"></span>
             <span className="relative inline-flex h-2 w-2 rounded-full bg-amber"></span>

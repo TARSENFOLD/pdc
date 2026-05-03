@@ -1,0 +1,87 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-03T12:10:47.018Z",
+  "phase": null,
+  "phase_name": "review-fixes — automated code review pass",
+  "phase_dir": ".planning",
+  "plan": null,
+  "task": "pending-doc-fixes",
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "Fix data?.data?.length optional chaining bug in ProgramasCatalogoPage.tsx",
+      "status": "done",
+      "file": "apps/web/src/features/catalogo/ProgramasCatalogoPage.tsx",
+      "detail": "data?.data.length → data?.data?.length to prevent TypeError when data.data is undefined"
+    },
+    {
+      "id": 2,
+      "name": "DESIGN.md — shadow terminology fix",
+      "status": "done",
+      "file": "apps/web/DESIGN.md",
+      "detail": "§6: 'trust-colored' → 'accent-colored (trust-colored, via shadow-accent/20)'"
+    },
+    {
+      "id": 3,
+      "name": "DESIGN.md — sidebar AppLayout reference",
+      "status": "done",
+      "file": "apps/web/DESIGN.md",
+      "detail": "§8: 'drawer via app layout' → 'drawer via AppLayout component'"
+    },
+    {
+      "id": 4,
+      "name": "DESIGN.md — chrome/brand token table",
+      "status": "done",
+      "file": "apps/web/DESIGN.md",
+      "detail": "§2: Added 8 missing token rows (--brand-authority, --chrome-surface, --chrome-surface-strong, --chrome-active, --chrome-active-soft, --chrome-border, --ink-on-accent)"
+    },
+    {
+      "id": 5,
+      "name": "Verify ~15 other review findings (no changes needed)",
+      "status": "done",
+      "detail": "perfil.serializer.ts, media.ts, r2.service.ts, PerfilPublicoPage.tsx, PerfilShowcase.tsx, Sidebar.config.ts, ContentCard.tsx, ExplorarPage.tsx, NeuralConstellation.tsx, perfis.ts — all already compliant"
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 6,
+      "name": "Fix invalid ... placeholder in Zod enum",
+      "status": "not_started",
+      "file": ".windsurf/workflows/strapi-entitlement-evolver.md",
+      "line": 58,
+      "detail": "z.enum(['simulacoes', 'mentoria', 'analytics', 'export', 'api-access', ...]) — remove '...' spread syntax (invalid in Zod enum literal), add comment instead"
+    },
+    {
+      "id": 7,
+      "name": "Fix Zone 2 file count 5→6 in doc-mass-editor",
+      "status": "not_started",
+      "file": ".windsurf/workflows/doc-mass-editor.md",
+      "line": 21,
+      "detail": "Header says 'Planning (5 ficheiros)' but 6 files are listed — correct count to 6"
+    },
+    {
+      "id": 8,
+      "name": "Add HTTP error clarification to render-audit summary",
+      "status": "not_started",
+      "file": "docs/audit/render-audit-2026-04-30.md",
+      "line": 6,
+      "detail": "Summary shows 'OK 69' but table contains 401/502/500 responses — add note: 'OK = page rendered (HTML returned), HTTP errors are noted in the table but do not prevent rendering'"
+    }
+  ],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {
+      "decision": "~85% of automated review findings were already resolved in fix/pdcv2-integrity-hardening-v2",
+      "rationale": "The branch had extensive prior hardening work. Only 1 genuine bug + 3 doc gaps were actionable.",
+      "phase": "review-fixes"
+    }
+  ],
+  "uncommitted_files": [
+    "apps/web/src/features/catalogo/ProgramasCatalogoPage.tsx",
+    "apps/web/DESIGN.md"
+  ],
+  "branch": "fix/pdcv2-integrity-hardening-v2",
+  "last_commit": "da51acc fix(web/ui): design sprint wave 1"
+}

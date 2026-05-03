@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Card, Button, Avatar, EmptyState } from '@/components/ui';
+import { Card, Button, Avatar, EmptyState, Pagination } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
-import { 
-  Rocket, 
-  Star, 
-  Plus, 
-  ShieldCheck, 
+import {
+  Rocket,
+  Star,
+  Plus,
+  ShieldCheck,
   Search,
   ChevronRight,
   Layers
 } from 'lucide-react';
-import { http } from '@/lib/api/http';
+import { projetosApi } from '@/lib/api/projetos';
 import { motion } from 'motion/react';
 import { APPLE_SPRING } from '@/lib/animations';
 import type { Projeto } from '@pdc/shared';
@@ -88,10 +88,11 @@ function ProjetoCard({ proj, index }: { proj: Projeto; index: number }) {
 
 export function ProjetoListPage() {
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['projetos', 'list', search],
-    queryFn: () => http.get<Projeto[]>('/projetos'),
+    queryKey: ['projetos', 'list', page],
+    queryFn: () => projetosApi.list({ page, pageSize: 12 }),
   });
 
   if (isLoading) return (
@@ -104,9 +105,11 @@ export function ProjetoListPage() {
     </div>
   );
 
-  const projetos = (data || []).filter(p => 
-    p.titulo.toLowerCase().includes(search.toLowerCase())
-  );
+  const allProjetos = data?.data ?? [];
+  const pageCount = data?.pagination.pageCount ?? 1;
+  const projetos = search
+    ? allProjetos.filter(p => p.titulo.toLowerCase().includes(search.toLowerCase()))
+    : allProjetos;
 
   return (
     <div className="min-h-screen bg-[#050505] px-4 py-20 sm:px-6 lg:px-8 font-sans relative">
@@ -172,11 +175,18 @@ export function ProjetoListPage() {
               })}
             />
           ) : (
-            <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
-              {projetos.map((p, i) => (
-                <ProjetoCard key={p.id} proj={p} index={i} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
+                {projetos.map((p, i) => (
+                  <ProjetoCard key={p.id} proj={p} index={i} />
+                ))}
+              </div>
+              {pageCount > 1 && (
+                <div className="pt-16 border-t border-white/5 flex justify-center">
+                  <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
 import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
 import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
 import ContentCard from '@/components/catalogo/ContentCard';
+import { resolveCatalogHref } from '@/components/catalogo/catalogoLinks';
 import { Users, Clock, BookOpen } from 'lucide-react';
 import type { CursoPublico } from '@pdc/shared';
 
@@ -19,11 +20,13 @@ const AREAS = [
 
 export function CursosCatalogoPage() {
   const [sp, setSp] = useSearchParams();
+  const location = useLocation();
   const area = sp.get('area') ?? '';
   const search = sp.get('q') ?? '';
   const page = Number(sp.get('page') ?? '1');
+  const inApp = location.pathname.startsWith('/app');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['catalogo-cursos', area, search, page],
     queryFn: () => catalogoApi.getCursos({
       ...(area ? { area } : {}),
@@ -54,6 +57,8 @@ export function CursosCatalogoPage() {
         <CatalogoGridShell
           isLoading={isLoading}
           isEmpty={cursos.length === 0}
+          error={error}
+          onRetry={() => { void refetch(); }}
           onClearFilters={() => { setSp(new URLSearchParams()); }}
           emptyTitle="Nenhum curso nesta área"
           emptyDescription="Experimenta outra área ou aguarda novos conteúdos."
@@ -61,6 +66,13 @@ export function CursosCatalogoPage() {
             <CatalogoFilterBar
               areas={AREAS}
               selectedArea={area}
+              searchTerm={search}
+              onSearchChange={(val) => {
+                const next = new URLSearchParams(sp);
+                if (val) next.set('q', val); else next.delete('q');
+                next.delete('page');
+                setSp(next, { replace: true });
+              }}
               onAreaChange={(val) => {
                 const next = new URLSearchParams(sp);
                 if (val) next.set('area', val); else next.delete('area');
@@ -77,7 +89,9 @@ export function CursosCatalogoPage() {
               title={c.titulo}
               subtitle={c.autorNome}
               image={c.capaUrl || undefined}
-              href={`/cursos/${c.slug}`}
+              href={resolveCatalogHref('curso', c.slug, inApp)}
+              type="curso"
+              ctaLabel="Ver curso"
               icon={BookOpen}
               badges={[
                 { label: c.area || 'Geral', variant: 'info' },

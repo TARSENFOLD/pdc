@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { UpdatePerfilPayloadSchema, DomainEventName } from '@pdc/shared';
+import { UpdatePerfilPayloadSchema, DomainEventName, type UpdatePerfilPayload } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPut, strapiPutRaw } from '../modules/strapi/strapi.client.js';
@@ -35,6 +35,42 @@ interface StrapiPerfilRaw {
   [key: string]: unknown;
 }
 
+export function buildPerfilStrapiPayload(body: UpdatePerfilPayload): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+
+  for (const key of [
+    'nome',
+    'bio',
+    'headline',
+    'regiao',
+    'telefone',
+    'website',
+    'areasInteresse',
+    'competencias',
+    'socialLinks',
+    'historicoProfissional',
+    'formacaoAcademica',
+    'notificationPreferences',
+  ] as const) {
+    const value = body[key];
+    if (value !== undefined) payload[key] = value;
+  }
+
+  if (body.visibilitySettings !== undefined) {
+    payload['visibilitySettings'] = body.visibilitySettings;
+  }
+
+  if (body.avatarUrl !== undefined) {
+    payload['avatarUrl'] = body.avatarUrl;
+  }
+
+  if (body.bannerUrl !== undefined) {
+    payload['bannerUrl'] = body.bannerUrl;
+  }
+
+  return payload;
+}
+
 export const perfilRoutes = new Hono<Vars>();
 
 perfilRoutes.use('*', verifyJwt);
@@ -47,7 +83,7 @@ perfilRoutes.get('/me', async (c) => {
     // Buscar perfil real do Strapi v5 (coleção perfis)
     const res = await strapiGet<StrapiPerfil>('/perfis', {
       'filters[userId][$eq]': id,
-      populate: 'foto,conquistas',
+      populate: 'foto,capa,conquistas',
     });
     
     if (res.data.length > 0) {
@@ -74,6 +110,7 @@ perfilRoutes.put('/me', zValidator('json', UpdatePerfilPayloadSchema), async (c)
   const user = c.get('user');
   const id = user.id;
   const body = c.req.valid('json');
+  const strapiPayload = buildPerfilStrapiPayload(body);
   try {
     // 1. Tentar encontrar perfil na coleção 'perfis'
     const resGet = await strapiGet<StrapiPerfilRaw>('/perfis', {
@@ -85,19 +122,19 @@ perfilRoutes.put('/me', zValidator('json', UpdatePerfilPayloadSchema), async (c)
     if (resGet.data.length > 0) {
       const perfil = resGet.data[0];
       const docId = perfil?.documentId || String(perfil?.id);
-      const resPut = await strapiPut<StrapiPerfilRaw>(`/perfis/${docId}`, body);
+      const resPut = await strapiPut<StrapiPerfilRaw>(`/perfis/${docId}`, strapiPayload);
       
       // G15: Impacto no Ecossistema
       void eventBus.publishWithOutbox(DomainEventName.PERFIL_ATUALIZADO, {
         perfilId: String(perfil?.id),
-        ...body
+        ...strapiPayload
       });
 
       return c.json(resPut.data);
     }
 
     // 2. Se não existe na coleção perfis, atualizar em users-permissions (legado/fallback)
-    const data = await strapiPutRaw<unknown>(`/users/${id}`, body);
+    const data = await strapiPutRaw<unknown>(`/users/${id}`, strapiPayload);
     return c.json(data);
   } catch (err) {
     const message = (err as Error).message || 'Erro interno';
@@ -182,7 +219,7 @@ perfilRoutes.get('/:id', async (c) => {
       const resRaw = await strapiGet<StrapiPerfilRaw>('/perfis', {
         'filters[userId][$eq]': userId,
         'pagination[pageSize]': '1',
-        populate: 'foto',
+        populate: 'foto,capa,conquistas',
       });
       const first = resRaw.data[0];
       if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);

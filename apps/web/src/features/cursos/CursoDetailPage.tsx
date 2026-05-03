@@ -99,9 +99,9 @@ export function CursoDetailPage() {
         {/* Lado Esquerdo: Conteúdo */}
         <div className="lg:col-span-8 space-y-8">
            <Tabs defaultValue="visao">
-              <TabsList className="bg-elevated/50 p-1.5 rounded-2xl border border-ink-tertiary/10">
-                <TabsTrigger value="visao" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest">A Trilha</TabsTrigger>
-                <TabsTrigger value="detalhes" className="rounded-xl px-8 font-black uppercase text-[10px] tracking-widest">Syllabus</TabsTrigger>
+              <TabsList className="mb-6">
+                <TabsTrigger value="visao">A Trilha</TabsTrigger>
+                <TabsTrigger value="detalhes">Syllabus</TabsTrigger>
               </TabsList>
 
               <TabsContent value="visao" className="mt-8">

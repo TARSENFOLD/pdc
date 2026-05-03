@@ -25,7 +25,7 @@ export function LandingMentores() {
   if (isError || !mentores?.data.length) return null;
 
   return (
-    <section className="bg-surface-alt px-4 py-24 sm:px-6">
+    <section className="px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-5xl">
         <motion.div {...fadeUp} className="mb-16 text-center">
           <h2 className="text-3xl font-bold text-text-primary sm:text-4xl">
@@ -42,7 +42,7 @@ export function LandingMentores() {
               key={m.id}
               {...fadeUp}
               transition={{ delay: i * 0.1 }}
-              className="rounded-2xl border border-border bg-surface p-6 text-center transition-all hover:border-amber/20"
+              className="rounded-2xl border border-black/20 dark:border-white/50 p-6 text-center transition-all hover:border-black/40 dark:hover:border-white/70"
             >
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber/10 text-amber">
                 {m.avatarUrl ? (

@@ -13,7 +13,7 @@ export function LandingProblema() {
   const { t } = useTranslation('landing');
 
   return (
-    <section id="problema" className="bg-surface-alt px-4 py-24 sm:px-6">
+    <section id="problema" className="px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-4xl">
         <motion.div {...fadeUp} className="text-center">
           <span className="text-xs font-semibold uppercase tracking-widest text-amber">{t('problema.kicker')}</span>
@@ -33,7 +33,8 @@ export function LandingProblema() {
                 key={key}
                 {...fadeUp}
                 transition={{ duration: 0.5, delay: i * 0.1, ease: 'easeOut' }}
-                className="rounded-2xl border border-border bg-surface p-6"
+                className="rounded-2xl border-2 p-6"
+                style={{ borderColor: 'rgba(42,39,36,0.75)' }}
               >
                 <div className="mb-4 text-amber"><Icon size={20} aria-hidden={true} /></div>
                 <h3 className="mb-2 font-semibold text-text-primary">{t(`problema.cards.${key}_title`)}</h3>

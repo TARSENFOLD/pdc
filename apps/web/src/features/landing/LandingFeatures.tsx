@@ -13,7 +13,7 @@ export function LandingFeatures() {
   const { t } = useTranslation('landing');
 
   return (
-    <section id="features" className="bg-surface-alt px-4 py-24 sm:px-6">
+    <section id="features" className="px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <motion.div {...fadeUp} className="text-center">
           <span className="text-xs font-semibold uppercase tracking-widest text-amber">
@@ -28,16 +28,17 @@ export function LandingFeatures() {
           {FEATURES_KEYS.map((key, i) => {
             const Icon = FEATURES_ICONS[i] as ComponentType<LucideProps>;
             return (
-              <motion.article
+              <motion.div
                 key={key}
                 {...fadeUp}
                 transition={{ duration: 0.45, delay: i * 0.07, ease: 'easeOut' }}
-                className="group rounded-2xl border border-border bg-surface p-6 transition-colors hover:border-amber/20 hover:bg-amber/[0.03]"
+                className="rounded-2xl border-2 p-6"
+                style={{ borderColor: 'rgba(42,39,36,0.75)' }}
               >
                 <div className="mb-4 text-amber"><Icon size={20} aria-hidden={true} /></div>
                 <h3 className="mb-2 font-semibold text-text-primary">{t(`features.items.${key}_title`)}</h3>
                 <p className="text-sm leading-relaxed text-text-secondary">{t(`features.items.${key}_body`)}</p>
-              </motion.article>
+              </motion.div>
             );
           })}
         </div>

@@ -6,7 +6,7 @@ import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { withPublicCache } from '../middleware/cache.js';
 import type { CursoPublico, SimulacaoPublica, ExperienciaPublica, CatalogoMeta, AreaVocacional, Modalidade } from '@pdc/shared';
 import { catalogoExplorarRoutes } from './catalogo-explorar.js';
-import { mentoresRoutes, instituicoesRoutes, perfilPublicoRoutes } from './catalogo-pessoas.js';
+import { mentoresRoutes, instituicoesRoutes, perfilPublicoRoutes, pessoasRoutes } from './catalogo-pessoas.js';
 import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
 
 export const catalogoRoutes = new Hono();
@@ -198,6 +198,7 @@ catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
 
 catalogoRoutes.route('/mentores', mentoresRoutes);
 catalogoRoutes.route('/instituicoes', instituicoesRoutes);
+catalogoRoutes.route('/pessoas', pessoasRoutes);
 catalogoRoutes.route('/perfil', perfilPublicoRoutes);
 catalogoRoutes.route('/explorar', catalogoExplorarRoutes);
 catalogoRoutes.route('/explorar', catalogoExplorarRoutes);

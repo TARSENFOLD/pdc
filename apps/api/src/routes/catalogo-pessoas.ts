@@ -20,6 +20,7 @@ import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
 interface StrapiMentor {
   id: string | number;
   nome?: string;
+  avatarUrl?: string;
   foto?: { url?: string } | null;
   bio?: string;
   areaFormacao?: string;
@@ -62,6 +63,19 @@ interface StrapiPerfilPublic {
   visibilitySettings?: Record<string, string> | null;
 }
 
+interface StrapiPessoaCatalogo {
+  id: string | number;
+  nome?: string;
+  tipo?: string;
+  bio?: string;
+  headline?: string;
+  avatarUrl?: string;
+  foto?: { url?: string } | null;
+  areaFormacao?: string;
+  areasInteresse?: unknown;
+  reputacao?: number;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const paginationQuery = z.object({
@@ -98,7 +112,7 @@ function mapMentor(d: StrapiMentor): MentorPublico {
   return {
     id: sid(d.id), 
     nome: d.nome ?? '',
-    avatarUrl: d.foto?.url, 
+    avatarUrl: d.foto?.url ?? d.avatarUrl,
     bio: d.bio,
     areaEspecialidade: d.areaEspecialidade ?? d.areaFormacao ?? 'Especialista',
     reputacaoTier: 'BRONZE',
@@ -175,6 +189,60 @@ instituicoesRoutes.get('/:slug', async (c) => {
   const first = res.data[0];
   if (!first) return c.json({ error: 'Instituição não encontrada' }, 404);
   return c.json({ data: mapInst(first) });
+});
+
+// ─── Pessoas ─────────────────────────────────────────────────────────────────
+
+export const pessoasRoutes = new Hono();
+
+const pessoaFilters = paginationQuery.extend({
+  role: z.enum(['estudante', 'mentor']).optional().default('estudante'),
+  search: z.string().optional(),
+  area: AreaVocacionalSchema.optional(),
+});
+
+function firstString(value: unknown): string | undefined {
+  if (Array.isArray(value)) {
+    const first = value.find((item): item is string => typeof item === 'string' && item.length > 0);
+    return first;
+  }
+  if (typeof value === 'string' && value.length > 0) return value;
+  return undefined;
+}
+
+function mapPessoa(d: StrapiPessoaCatalogo): PerfilPublicoBasico & { area?: string } {
+  const pessoa: PerfilPublicoBasico & { area?: string } = {
+    id: sid(d.id),
+    nome: d.nome ?? 'Perfil PDC',
+    avatarUrl: d.foto?.url ?? d.avatarUrl ?? null,
+    role: (d.tipo ?? 'estudante') as Role,
+    reputacaoTier: 'BRONZE',
+  };
+  const area = d.areaFormacao ?? firstString(d.areasInteresse);
+  if (d.bio) pessoa.bio = d.bio;
+  if (d.headline) pessoa.headline = d.headline;
+  if (area) pessoa.area = area;
+  return pessoa;
+}
+
+pessoasRoutes.get('/', zValidator('query', pessoaFilters), async (c) => {
+  const q = c.req.valid('query');
+  const p: Record<string, string> = {
+    'filters[tipo][$eq]': q.role,
+    'filters[ativo][$ne]': 'false',
+    'populate': 'foto',
+  };
+
+  if (q.search) p['filters[nome][$containsi]'] = q.search;
+  if (q.area) p['filters[$or][0][areaFormacao][$eq]'] = q.area;
+  if (q.area) p['filters[$or][1][areasInteresse][$containsi]'] = q.area;
+  buildPagination(p, q.page, q.limit);
+
+  const res = await strapiGet<StrapiPessoaCatalogo>('/perfis', p);
+  return c.json({
+    data: res.data.map(mapPessoa),
+    meta: toMeta(res.meta),
+  });
 });
 
 // ─── Perfil Público ───────────────────────────────────────────────────────────

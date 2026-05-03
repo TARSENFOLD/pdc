@@ -6,8 +6,8 @@ import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
 import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
 import ContentCard from '@/components/catalogo/ContentCard';
 import { resolveCatalogHref } from '@/components/catalogo/catalogoLinks';
-import { UserCheck, Star } from 'lucide-react';
-import type { AreaVocacional, MentorPublico } from '@pdc/shared';
+import { MapPin, Calendar, Building2 } from 'lucide-react';
+import type { ExperienciaPublica, AreaVocacional } from '@pdc/shared';
 
 const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'SAUDE', label: 'Saúde' },
@@ -27,7 +27,7 @@ const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'OUTRA', label: 'Outra' },
 ];
 
-export function MentoresCatalogoPage() {
+export function ExperienciasCatalogoPage() {
   const [sp, setSp] = useSearchParams();
   const location = useLocation();
   const area = sp.get('area') ?? '';
@@ -35,44 +35,42 @@ export function MentoresCatalogoPage() {
   const page = Number(sp.get('page') ?? '1');
   const inApp = location.pathname.startsWith('/app');
 
-  const isValidArea = (val: string): val is AreaVocacional => AREAS.some((a) => a.value === val);
-
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['catalogo-mentores', area, search, page],
-    queryFn: () => catalogoApi.getMentores({
-      ...(area && isValidArea(area) ? { area } : {}),
-      ...(search ? { q: search } : {}),
+    queryKey: ['catalogo-experiencias', area, search, page],
+    queryFn: () => catalogoApi.getExperiencias({
+      ...(area ? { area } : {}),
+      ...(search ? { search } : {}),
       page,
       pageSize: 12,
     }),
   });
 
-  const mentores = data?.data ?? [];
+  const experiencias = data?.data ?? [];
 
   return (
     <>
       <SEOHead
-        title="Mentores"
-        description="Encontra mentores de elite e profissionais da indústria para guiar o teu percurso."
-        url="https://usepdc.com/mentores"
+        title="Experiências"
+        description="Roteiros imersivos em instituições de elite para validar o teu interesse real."
+        url="https://usepdc.com/experiencias"
       />
 
       <div className="max-w-7xl mx-auto space-y-8">
         <header>
-          <h1 className="text-2xl font-bold text-ink-primary">Mentores</h1>
+          <h1 className="text-2xl font-bold text-ink-primary">Experiências</h1>
           <p className="mt-1 text-sm text-ink-secondary">
-            Conecta-te com profissionais experientes que partilham a visão de transformar o capital humano.
+            Roteiros imersivos em instituições de elite para validar o teu interesse real.
           </p>
         </header>
 
         <CatalogoGridShell
           isLoading={isLoading}
-          isEmpty={mentores.length === 0}
+          isEmpty={experiencias.length === 0}
           error={error}
           onRetry={() => { void refetch(); }}
           onClearFilters={() => { setSp(new URLSearchParams()); }}
-          emptyTitle="Nenhum mentor nesta área"
-          emptyDescription="Experimenta outra área ou aguarda novos mentores."
+          emptyTitle="Nenhuma experiência nesta área"
+          emptyDescription="Experimenta outra área ou aguarda novos roteiros imersivos."
           filterBar={
             <CatalogoFilterBar
               areas={AREAS}
@@ -94,22 +92,23 @@ export function MentoresCatalogoPage() {
             />
           }
         >
-          {mentores.map((m: MentorPublico) => (
+          {experiencias.map((exp: ExperienciaPublica) => (
             <ContentCard
-              key={m.id}
-              title={m.nome}
-              subtitle={m.areaEspecialidade || m.especialidade || 'Mentor PDC'}
-              image={m.avatarUrl || undefined}
-              href={resolveCatalogHref('mentor', m.id, inApp)}
-              type="mentor"
-              ctaLabel="Ver mentor"
-              icon={UserCheck}
+              key={exp.id}
+              title={exp.titulo}
+              subtitle={exp.instituicao?.nome || 'Instituição PDC'}
+              image={exp.capaUrl || undefined}
+              href={resolveCatalogHref('experiencia', exp.slug || exp.id, inApp)}
+              type="experiencia"
+              ctaLabel="Ver experiência"
+              icon={MapPin}
               badges={[
-                { label: m.disponivel ? 'Disponível' : 'Ocupado', variant: m.disponivel ? 'success' : 'outline' },
+                { label: exp.area || 'Geral', variant: 'info' },
+                ...(exp.gratuito ? [{ label: 'Gratuito', variant: 'success' as const }] : []),
               ]}
               footerInfo={[
-                { icon: UserCheck, label: 'Mentor' },
-                { icon: Star, label: m.areaEspecialidade || 'Elite' },
+                ...(exp.dataInicio ? [{ icon: Calendar, label: new Date(exp.dataInicio).toLocaleDateString('pt-AO', { month: 'short', year: 'numeric' }) }] : []),
+                { icon: Building2, label: exp.instituicao?.nome || 'Presencial' },
               ]}
             />
           ))}

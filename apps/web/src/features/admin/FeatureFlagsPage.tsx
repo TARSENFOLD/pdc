@@ -12,14 +12,17 @@ interface Flag {
   overrides: Array<{ instituicaoId: number; enabled: boolean }>;
 }
 
+type FeatureFlagsResponse = Flag[] | { data: Flag[] };
+
 export function FeatureFlagsPage() {
   const qc = useQueryClient();
   const [newOverride, setNewOverride] = useState<{ domain: string; instId: string } | null>(null);
 
-  const { data: flags = [], isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['admin-feature-flags'],
-    queryFn: () => http.get<Flag[]>('/feature-flags'),
+    queryFn: () => http.get<FeatureFlagsResponse>('/feature-flags'),
   });
+  const flags = Array.isArray(data) ? data : data?.data ?? [];
 
   const toggleMutation = useMutation({
     mutationFn: ({ domain, enabled }: { domain: string; enabled: boolean }) =>
@@ -48,7 +51,9 @@ export function FeatureFlagsPage() {
     <div className="p-6 space-y-4">
       <h1 className="text-2xl font-bold">Feature Flags</h1>
 
-      {flags.map((f) => (
+      {flags.map((f) => {
+        const overrides = Array.isArray(f.overrides) ? f.overrides : [];
+        return (
         <Card key={f.id.toString()} className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
@@ -83,9 +88,9 @@ export function FeatureFlagsPage() {
               </Button>
             </div>
 
-            {f.overrides.length > 0 ? (
+            {overrides.length > 0 ? (
               <div className="space-y-1">
-                {f.overrides.map((o) => (
+                {overrides.map((o) => (
                   <div key={o.instituicaoId.toString()} className="flex items-center gap-2 text-sm">
                     <span>Inst. #{o.instituicaoId.toString()}</span>
                     <Badge variant={o.enabled ? 'success' : 'default'} className="text-xs">
@@ -152,7 +157,8 @@ export function FeatureFlagsPage() {
             )}
           </div>
         </Card>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -48,24 +48,29 @@ export function MentorPublicoPerfilPage() {
               </div>
               <h1 className="text-3xl font-black text-ink-primary tracking-tighter font-display">{mentor.nome}</h1>
               {mentor.areaEspecialidade ? <p className="text-sm font-medium text-accent">{mentor.areaEspecialidade}</p> : null}
+              <div className="mt-3">
+                <Link to={`/perfil/${id}`} className="inline-flex items-center text-[11px] font-black uppercase tracking-wider text-ink-tertiary hover:text-accent hover:underline transition-all">
+                  Ver Perfil Completo →
+                </Link>
+              </div>
             </div>
           </div>
 
           <Link to={`/login?redirect=/programas/shadow-a-pro?mentorId=${id ?? ''}`}>
-            <Button className="h-14 px-8 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs hover:scale-[1.02] shadow-xl shadow-accent/20">
+            <Button className="h-14 px-8 rounded-lg bg-accent text-white font-black uppercase tracking-widest text-xs hover:scale-[1.02] shadow-xl shadow-accent/20">
               <Zap size={16} className="mr-2 fill-current" /> Shadow a Pro
             </Button>
           </Link>
         </div>
 
         {mentor.bio ? (
-          <div className="mt-8 rounded-xl border border-ink-tertiary/10 bg-elevated p-6">
+          <div className="mt-8 pt-8 border-t border-ink-tertiary/10">
             <h2 className="text-lg font-semibold text-ink-primary">Sobre</h2>
             <p className="mt-2 text-sm text-ink-secondary">{mentor.bio}</p>
           </div>
         ) : null}
 
-        <div className="mt-6 rounded-xl border border-ink-tertiary/10 bg-elevated p-6">
+        <div className="mt-6 pt-6 border-t border-ink-tertiary/10">
           <h2 className="text-lg font-semibold text-ink-primary">Cursos e Especialização</h2>
           <p className="mt-2 text-sm text-ink-secondary">
             {mentor.areaEspecialidade ? `Especialista em ${mentor.areaEspecialidade}.` : 'Mentor da plataforma PDC.'}
@@ -73,16 +78,16 @@ export function MentorPublicoPerfilPage() {
           <p className="mt-1 text-xs text-ink-tertiary">Cria conta para ver os cursos que este mentor lecciona.</p>
         </div>
 
-        <div className="mt-6 rounded-xl border border-ink-tertiary/10 bg-elevated p-6">
+        <div className="mt-6 pt-6 border-t border-ink-tertiary/10">
           <h2 className="text-lg font-semibold text-ink-primary">Avaliações</h2>
           <p className="mt-2 text-sm text-ink-tertiary">Inicia sessão para ver as avaliações de outros estudantes.</p>
         </div>
 
         <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-          <Link to="/login" className="rounded-xl bg-accent px-6 py-3 text-center text-sm font-semibold text-black transition-colors hover:bg-accent-terracotta-soft">
+          <Link to="/login" className="rounded-lg bg-accent px-6 py-3 text-center text-sm font-semibold text-black transition-colors hover:bg-accent-terracotta-soft">
             Conectar com este mentor
           </Link>
-          <Link to="/mentores" className="rounded-xl border border-ink-tertiary/10 px-6 py-3 text-center text-sm text-ink-secondary transition-colors hover:bg-elevated">
+          <Link to="/mentores" className="rounded-lg border border-transparent px-6 py-3 text-center text-sm text-ink-secondary transition-colors hover:border-ink-tertiary/20 hover:bg-recessed">
             Ver mais mentores
           </Link>
         </div>

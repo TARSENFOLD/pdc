@@ -5,12 +5,12 @@ export function LandingFooter() {
   const { t } = useTranslation('landing');
 
   return (
-    <footer className="border-t border-border bg-background px-4 py-12 sm:px-6">
+    <footer className="bg-background px-4 py-12 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-center">
           <div>
-            <span className="text-lg font-bold text-amber">PDC</span>
-            <p className="mt-1 text-xs text-text-muted">{t('footer.tagline')}</p>
+            <img src="/logo_pdc.png" alt="PDC - Por Dentro do Curso" className="h-7 w-auto object-contain" />
+            <p className="mt-2 text-xs text-text-muted">{t('footer.tagline')}</p>
           </div>
           <div className="flex flex-wrap gap-6 text-sm text-text-secondary">
             <Link to="/login" className="transition-colors hover:text-text-primary">{t('footer.links.entrar')}</Link>

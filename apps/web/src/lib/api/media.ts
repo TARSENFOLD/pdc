@@ -1,6 +1,6 @@
-import type { UploadResult } from '@pdc/shared';
+import { UploadResultSchema, type UploadResult } from '@pdc/shared';
 
-const BASE_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 
 export const mediaApi = {
   upload: async (file: File): Promise<UploadResult> => {
@@ -11,14 +11,14 @@ export const mediaApi = {
       method: 'POST',
       body: formData,
       credentials: 'include',
-      // Note: Do NOT set Content-Type header manually for FormData, 
-      // the browser will set it with the correct boundary.
     });
 
     if (!response.ok) {
-      throw new Error(`Upload failed: ${response.statusText}`);
+      const body = await response.json().catch(() => ({})) as { error?: string };
+      throw new Error(body.error ?? `Upload falhou: ${response.statusText}`);
     }
 
-    return response.json() as Promise<UploadResult>;
+    const data: unknown = await response.json();
+    return UploadResultSchema.parse(data);
   },
 };

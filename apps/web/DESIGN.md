@@ -26,7 +26,7 @@ All colors are consumed via CSS custom properties. Never hardcode hex values in 
 | `--color-canvas` | `bg-canvas` | Page/section background |
 | `--color-elevated` | `bg-elevated` | Card / modal surface (1 level up) |
 | `--color-surface` | `bg-surface` | Input / overlay surface (2 levels up) |
-| `--color-accent` | `bg-accent`, `text-accent` | Primary action, active state, brand |
+| `--color-accent` | `bg-accent`, `text-accent` | Trust action accent (teal) for app UI |
 | `--color-ink-primary` | `text-ink-primary` | Headings, primary text |
 | `--color-ink-secondary` | `text-ink-secondary` | Body text, labels |
 | `--color-ink-tertiary` | `text-ink-tertiary` | Hints, meta, disabled |
@@ -34,6 +34,13 @@ All colors are consumed via CSS custom properties. Never hardcode hex values in 
 | `--color-success` | `text-success`, `bg-success/10` | Positive states |
 | `--color-warning` | `text-warning`, `bg-warning/10` | Caution states |
 | `--color-danger` | `text-danger`, `bg-danger/10` | Destructive / error states |
+| `--brand-authority` | `text-brand-authority` | Terracotta authority signature (landing, Tina only) |
+| `--chrome-surface` | `bg-chrome-surface` | Nav/sidebar chrome background |
+| `--chrome-surface-strong` | `bg-chrome-surface-strong` | Nav chrome emphasis / hover |
+| `--chrome-active` | `bg-chrome-active`, `text-chrome-active` | Active nav item; same token as `--accent-trust` / `bg-accent` for app CTAs |
+| `--chrome-active-soft` | `bg-chrome-active-soft` | Soft active background |
+| `--chrome-border` | `border-chrome-border` | Nav chrome borders |
+| `--ink-on-accent` | `text-ink-on-accent` | Text on accent/active backgrounds |
 
 **Role-color mapping** (chips, badges, avatars):
 
@@ -45,6 +52,12 @@ All colors are consumed via CSS custom properties. Never hardcode hex values in 
 | `moderador` | `accent-moderador` |
 | `comite_cientifico` | `accent-comite` |
 | `super_admin` | `accent-admin` |
+
+### Navy/Teal Internal Chrome
+
+Inside the authenticated app (`/app/*`), navigation chrome is navy and operational actions are teal, not terracotta. Use `--chrome-surface`, `--chrome-surface-strong`, `--chrome-active`, `--chrome-active-soft`, and `--chrome-border` for sidebar, topbar, catalogue filters, active navigation and global-command focus. Use `--accent-trust` / `bg-accent` for recurring app CTAs.
+
+Terracotta remains a rare authority signature through `--brand-authority`: landing pages, Tina, and explicit interpretive/authority moments only. Do not use terracotta as the dominant active color in dashboards or catalogue surfaces.
 
 ---
 
@@ -58,7 +71,7 @@ All colors are consumed via CSS custom properties. Never hardcode hex values in 
 | Section heading | `text-base font-semibold text-ink-primary` | Card header, section label |
 | Body | `text-sm text-ink-secondary` | General prose, descriptions |
 | Caption / meta | `text-xs text-ink-tertiary` | Timestamps, secondary labels |
-| Brand badge | `text-[7px] font-black uppercase tracking-[0.3em] text-accent` | PDC logotype chip only |
+| Brand badge | `text-[7px] font-black uppercase tracking-[0.3em] text-brand-authority` | PDC logotype chip only |
 
 **Forbidden outside of explicit allowlist:**
 - `font-black` — reserved for brand moments (logotype, 1 usage per page max).
@@ -87,7 +100,7 @@ import { GlassCard } from '@/components/ui/GlassCard';
 `AsymmetricButton` — deleted in T19; use `QuietButton variant="hero"`.
 
 ### Button hierarchy
-1. Primary action: `<Button variant="default">` — `bg-accent text-white`
+1. Primary action: `<Button variant="default">` — `bg-accent text-white` (teal trust, not terracotta)
 2. Secondary: `<Button variant="outline">` — `border-border text-ink-primary`
 3. Ghost: `<Button variant="ghost">` — no border, `text-ink-secondary`
 4. Destructive: `<Button variant="destructive">` — `bg-danger/10 text-danger`
@@ -108,7 +121,7 @@ Always pair `<Label>` with `<Input>`. Validation errors use `text-danger text-xs
 ### Sidebar
 - Width: `w-64` (256px) fixed on desktop, drawer on mobile.
 - Nav groups: collapsible, state persisted in `localStorage` per role.
-- Active item: `bg-accent text-white font-bold`.
+- Active item: `--chrome-active` with `--ink-on-accent`; do not use terracotta for active app navigation.
 
 ---
 
@@ -123,7 +136,7 @@ Elevation is expressed through background layering — not drop shadows.
 | 2 | `bg-surface` | Modals, dropdowns, popovers |
 | 3 | `bg-surface` + `border border-white/10` | Nested menus, tooltips |
 
-**Shadows:** Only accent-colored box-shadow for active/focus states (`shadow-accent/20`). No grey box-shadows.
+**Shadows:** Only accent-colored box-shadow for active/focus states (trust-colored, via `shadow-accent/20`). No grey box-shadows.
 **Borders:** `border-white/5` for structural separators; `border-border` for interactive elements.
 
 ---
@@ -133,7 +146,7 @@ Elevation is expressed through background layering — not drop shadows.
 | ✅ Do | ❌ Don't |
 |---|---|
 | Use `text-ink-primary/secondary/tertiary` for all text | Hardcode `text-gray-500` or hex values |
-| Use `bg-accent` for the single primary CTA per view | Add glow/shadow to every button |
+| Use `bg-accent` for the single primary CTA per view (teal) | Use terracotta for routine app CTAs |
 | Use `rounded-2xl` for cards | Mix `rounded-lg` and `rounded-2xl` inconsistently |
 | Use `font-bold` or `font-semibold` for emphasis | Use `font-black` outside brand moments |
 | Use `QuietCard` for dashboard content | Import `GlassCard` in non-HUD pages |
@@ -159,7 +172,7 @@ Elevation is expressed through background layering — not drop shadows.
 
 **Pattern:** design mobile-first. Add `lg:` overrides for sidebar layout, not the reverse.
 
-**Sidebar:** hidden on mobile (drawer via `<Dialog>`), fixed on `lg:` and above.
+**Sidebar:** hidden on mobile (drawer via `AppLayout` component), fixed on `lg:` and above.
 **TopBar:** always visible. On mobile shows hamburger + logo. On desktop shows breadcrumb + user menu.
 **Cards:** `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` for catalogue grids.
 

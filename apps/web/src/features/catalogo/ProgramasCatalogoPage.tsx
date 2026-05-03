@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
+import type React from 'react';
 import { programasApi } from '@/lib/api/programas';
 import { SEOHead } from '@/components/layout/SEOHead';
 import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
 import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
 import ContentCard from '@/components/catalogo/ContentCard';
+import { resolveCatalogHref } from '@/components/catalogo/catalogoLinks';
 import { Briefcase, Layers, GraduationCap } from 'lucide-react';
 import type { Programa } from '@pdc/shared';
 
@@ -14,10 +17,12 @@ const TIPOS = [
   { value: 'eduvisit', label: 'EduVisita' },
 ];
 
-export function ProgramasCatalogoPage() {
+export default function ProgramasCatalogoPage(): React.JSX.Element {
   const [tipo, setTipo] = useState('');
+  const location = useLocation();
+  const inApp = location.pathname.startsWith('/app');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['programas-publicos', tipo],
     queryFn: () => programasApi.list({
       ...(tipo ? { tipo } : {}),
@@ -44,6 +49,8 @@ export function ProgramasCatalogoPage() {
         <CatalogoGridShell
           isLoading={isLoading}
           isEmpty={programas.length === 0}
+          error={error}
+          onRetry={() => { void refetch(); }}
           onClearFilters={() => { setTipo(''); }}
           emptyTitle="Nenhum programa nesta categoria"
           emptyDescription="Experimenta outra categoria ou aguarda novos programas."
@@ -52,7 +59,7 @@ export function ProgramasCatalogoPage() {
               areas={TIPOS}
               selectedArea={tipo}
               onAreaChange={setTipo}
-              totalResults={data?.data.length}
+              totalResults={data?.data?.length ?? 0}
             />
           }
         >
@@ -62,7 +69,9 @@ export function ProgramasCatalogoPage() {
               title={p.titulo}
               subtitle={p.instituicaoNome || 'Instituição PDC'}
               image={p.capaUrl || undefined}
-              href={`/programas/${p.slug || p.id}`}
+              href={resolveCatalogHref('programa', p.slug || p.id, inApp)}
+              type="programa"
+              ctaLabel="Ver programa"
               icon={GraduationCap}
               badges={[
                 { label: p.tipo.toUpperCase(), variant: 'info' },

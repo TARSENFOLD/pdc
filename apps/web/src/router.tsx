@@ -27,14 +27,15 @@ const ModeradorDashboard = React.lazy(() => import('@/pages/dashboard/ModeradorD
 const AdminDashboard = React.lazy(() => import('@/pages/dashboard/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const PatrocinadorDashboard = React.lazy(() => import('@/pages/dashboard/PatrocinadorDashboard').then(m => ({ default: m.PatrocinadorDashboard })));
 
-const CursoListPage = React.lazy(() => import('@/features/cursos/CursoListPage').then(m => ({ default: m.CursoListPage })));
 const CursoDetailPage = React.lazy(() => import('@/features/cursos/CursoDetailPage').then(m => ({ default: m.CursoDetailPage })));
 const ItemPlayer = React.lazy(() => import('@/features/cursos/ItemPlayer').then(m => ({ default: m.ItemPlayer })));
 
 const ExperienciaListPage = React.lazy(() => import('@/features/experiencias/ExperienciaListPage').then(m => ({ default: m.ExperienciaListPage })));
 const ExperienciaDetailPage = React.lazy(() => import('@/features/experiencias/ExperienciaDetailPage').then(m => ({ default: m.ExperienciaDetailPage })));
+const ExperienciasCatalogoPage = React.lazy(() => import('@/features/catalogo/ExperienciasCatalogoPage').then(m => ({ default: m.ExperienciasCatalogoPage })));
 
 const PerfilPage = React.lazy(() => import('@/features/perfil/PerfilPage').then(m => ({ default: m.PerfilPage })));
+const EditPerfilPage = React.lazy(() => import('@/features/perfil/EditPerfilPage').then(m => ({ default: m.EditPerfilPage })));
 const ConfiguracoesPage = React.lazy(() => import('@/features/perfil/ConfiguracoesPage').then(m => ({ default: m.ConfiguracoesPage })));
 
 const ProjetoListPage = React.lazy(() => import('@/features/projetos/ProjetoListPage').then(m => ({ default: m.ProjetoListPage })));
@@ -44,7 +45,6 @@ const ProjetoFormPage = React.lazy(() => import('@/features/projetos/ProjetoForm
 const MentoriaListPage = React.lazy(() => import('@/features/mentorias/MentoriaListPage').then(m => ({ default: m.MentoriaListPage })));
 const ConquistasPage = React.lazy(() => import('@/features/conquistas/ConquistasPage').then(m => ({ default: m.ConquistasPage })));
 
-const SimulacaoListPage = React.lazy(() => import('@/features/simulacoes/SimulacaoListPage').then(m => ({ default: m.SimulacaoListPage })));
 const SimulacaoDetailPage = React.lazy(() => import('@/features/simulacoes/SimulacaoDetailPage').then(m => ({ default: m.SimulacaoDetailPage })));
 const SimulacaoPlayerPage = React.lazy(() => import('@/features/simulacoes/SimulacaoPlayerPage').then(m => ({ default: m.SimulacaoPlayerPage })));
 const RelatorioVocacional = React.lazy(() => import('@/features/simulacoes/RelatorioVocacional').then(m => ({ default: m.RelatorioVocacional })));
@@ -164,23 +164,29 @@ export const router = createBrowserRouter([
       
       { path: 'feed', element: <FeedPage /> },
       { path: 'feed/criar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><PostComposer /></Suspense> },
-      { path: 'cursos', element: <CursoListPage /> },
+      { path: 'cursos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><CursosCatalogoPage /></Suspense> },
       { path: 'cursos/:id', element: <CursoDetailPage /> },
       { path: 'cursos/:cursoId/itens/:itemId', element: <ItemPlayer /> },
-      
-      { path: 'experiencias', element: <ExperienciaListPage /> },
+
+      { path: 'experiencias', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExperienciasCatalogoPage /></Suspense> },
       { path: 'experiencias/:id', element: <ExperienciaDetailPage /> },
       { path: 'programas', element: <ProgramasCatalogoPage /> },
       { path: 'programas/:id', element: <ProgramaDetailPage /> },
       { path: 'explorar', element: <ExplorarPage /> },
-      
-      { path: 'simulacoes', element: <SimulacaoListPage /> },
+      { path: 'mentores/:id', element: <MentorPublicoPerfilPage /> },
+      { path: 'instituicoes/:slug', element: <InstituicaoPublicoPerfilPage /> },
+
+      { path: 'simulacoes', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><SimulacoesCatalogoPage /></Suspense> },
       { path: 'simulacoes/:id', element: <SimulacaoDetailPage /> },
       { path: 'simulacoes/:id/play', element: <SimulacaoPlayerPage /> },
       { path: 'perfil-vocacional', element: <RelatorioVocacional /> },
       
       { path: 'perfil', element: <PerfilPage /> },
+      { path: 'perfil/editar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><EditPerfilPage /></Suspense> },
+      { path: 'perfil/:id', element: <PerfilPublicoPage /> },
       { path: 'configuracoes', element: <ConfiguracoesPage /> },
+      { path: 'projetos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoListPage /></Suspense> },
+      { path: 'projetos/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoDetailPage /></Suspense> },
       { path: 'projetos/novo', element: <ProjetoFormPage /> },
       { path: 'projetos/:id/editar', element: <ProjetoFormPage /> },
       { path: 'mentorias', element: <MentoriaListPage /> },
@@ -325,6 +331,7 @@ export const router = createBrowserRouter([
   { path: '/register', element: <Navigate to="/criar-conta" replace /> },
   { path: '/verificar', element: <TwoFactorPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
+  { path: '/auth/recuperar', element: <ForgotPasswordPage /> },
   { path: '/projetos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoListPage /></Suspense> },
   { path: '/projetos/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoDetailPage /></Suspense> },
   { path: '/experiencias', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExperienciaListPage /></Suspense> },

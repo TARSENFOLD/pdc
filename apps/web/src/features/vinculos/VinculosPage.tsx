@@ -1,14 +1,25 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Spinner, Tabs, TabsList, TabsTrigger, TabsContent, Button, Avatar, Card, Badge, EmptyState } from '@/components/ui';
-import { useToast } from '@/hooks/useToast';
-import { useTelemetry } from '@/hooks/useTelemetry';
-import { useSocket } from '@/hooks/useSocket';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { Avatar, Badge, Button, Card, EmptyState, Spinner, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
+import { catalogoApi } from '@/lib/api/catalogo';
 import { http } from '@/lib/api/http';
-import { Users, UserPlus, ShieldCheck, ArrowUpRight, Filter, Search } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import type { VinculoComPerfil } from '@pdc/shared';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { useSocket } from '@/hooks/useSocket';
+import { useTelemetry } from '@/hooks/useTelemetry';
+import { useToast } from '@/hooks/useToast';
+import { ArrowUpRight, Search, ShieldCheck, UserCheck, UserPlus, Users } from 'lucide-react';
+import type { PerfilPublicoBasico, VinculoComPerfil } from '@pdc/shared';
+
+type CatalogoPessoa = PerfilPublicoBasico & { area?: string };
+type VinculoPerfil = VinculoComPerfil['solicitante'] & { userId?: string };
+type VinculoComPerfilUser = Omit<VinculoComPerfil, 'solicitante' | 'destinatario'> & {
+  solicitante: VinculoPerfil;
+  destinatario: VinculoPerfil;
+};
+
+const EMPTY_PESSOAS: CatalogoPessoa[] = [];
+const EMPTY_VINCULOS: VinculoComPerfilUser[] = [];
 
 function isVinculoNotification(value: unknown): value is { tipo: string; mensagem: string } {
   return (
@@ -21,9 +32,25 @@ function isVinculoNotification(value: unknown): value is { tipo: string; mensage
   );
 }
 
+function initials(nome: string): string {
+  return nome
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'P';
+}
+
+function resolveOutro(vinculo: VinculoComPerfilUser, userId: string | undefined, perfilId: string | null | undefined): VinculoPerfil {
+  const solicitanteIsMe = vinculo.solicitante.userId === userId || vinculo.solicitante.id === perfilId;
+  return solicitanteIsMe ? vinculo.destinatario : vinculo.solicitante;
+}
+
 export function VinculosPage() {
   const { user } = useAuth();
-  const [tabActiva, setTabActiva] = useState('pedidos');
+  const [tabActiva, setTabActiva] = useState('pessoas');
+  const [search, setSearch] = useState('');
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { track } = useTelemetry();
@@ -32,139 +59,201 @@ export function VinculosPage() {
     if (!isVinculoNotification(notif)) return;
     if (notif.tipo === 'vinculo_pedido') {
       void queryClient.invalidateQueries({ queryKey: ['vinculos', 'pendentes'] });
-      toast({ title: 'Novo Pedido de Vínculo', description: notif.mensagem });
+      toast({ title: 'Novo pedido de vínculo', description: notif.mensagem });
     }
   });
 
   useEffect(() => {
-    track('simulacao.iniciada'); // Placeholder para teste de track
+    track('vinculos.page_view');
   }, [track]);
 
-  const { data: pendentes, isLoading: loadingPendentes } = useQuery({
-    queryKey: ['vinculos', 'pendentes'],
-    queryFn: () => http.get<{ data: VinculoComPerfil[] }>('/vinculos/pendentes'),
-    enabled: tabActiva === 'pedidos',
+  const pessoasQuery = useQuery({
+    queryKey: ['catalogo', 'pessoas', 'estudante', search],
+    queryFn: () => catalogoApi.getPessoas({
+      role: 'estudante',
+      ...(search.trim() ? { search: search.trim() } : {}),
+      pageSize: 12,
+    }),
+    staleTime: 30_000,
   });
 
-  const { data: active, isLoading: loadingActive } = useQuery({
+  const pendentesQuery = useQuery({
+    queryKey: ['vinculos', 'pendentes'],
+    queryFn: () => http.get<{ data: VinculoComPerfilUser[] }>('/vinculos/pendentes'),
+  });
+
+  const vinculosQuery = useQuery({
     queryKey: ['vinculos', 'list'],
-    queryFn: () => http.get<{ data: VinculoComPerfil[] }>('/vinculos'),
-    enabled: tabActiva === 'conexoes',
+    queryFn: () => http.get<{ data: VinculoComPerfilUser[] }>('/vinculos'),
+  });
+
+  const pedirMutation = useMutation({
+    mutationFn: (perfilId: string) => http.post(`/vinculos/${perfilId}/pedir`, {}),
+    onSuccess: () => {
+      toast({ title: 'Pedido de vínculo enviado' });
+      void queryClient.invalidateQueries({ queryKey: ['vinculos'] });
+    },
   });
 
   const resolverMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'aprovado' | 'rejeitado' }) =>
       http.patch(`/vinculos/${id}/resolver`, { status }),
     onSuccess: (_, variables) => {
-      toast({ title: variables.status === 'aprovado' ? 'Vínculo Aceite' : 'Vínculo Rejeitado' });
+      toast({ title: variables.status === 'aprovado' ? 'Vínculo aceite' : 'Vínculo rejeitado' });
       void queryClient.invalidateQueries({ queryKey: ['vinculos'] });
     },
   });
 
+  const pessoas = pessoasQuery.data?.data ?? EMPTY_PESSOAS;
+  const pendentes = pendentesQuery.data?.data ?? EMPTY_VINCULOS;
+  const vinculos = vinculosQuery.data?.data ?? EMPTY_VINCULOS;
+  const connectedPerfilIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const vinculo of vinculos) {
+      const outro = resolveOutro(vinculo, user?.id, user?.perfilId);
+      ids.add(outro.id);
+    }
+    return ids;
+  }, [user?.id, user?.perfilId, vinculos]);
+
   return (
-    <div className="mx-auto max-w-6xl space-y-10 pb-20 animate-in fade-in duration-1000">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="mx-auto max-w-7xl space-y-8 pb-20 animate-in fade-in duration-700">
+      <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 mb-3 px-3 py-1 uppercase tracking-widest text-[9px] font-black">Social Network</Badge>
-          <h1 className="text-4xl font-black text-ink-primary tracking-tighter font-display">
-            A Minha <span className="text-accent">Rede</span>
+          <Badge variant="info" className="mb-3 px-3 py-1 text-[9px] font-black uppercase tracking-widest">
+            Rede PDC
+          </Badge>
+          <h1 className="font-display text-3xl font-black tracking-tight text-ink-primary sm:text-4xl">
+            Rede e Vínculos
           </h1>
-          <p className="text-ink-secondary mt-2 max-w-lg leading-relaxed text-sm">
-            Conexões de elite validadas por mérito e autoridade técnica.
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-secondary">
+            Descobre estudantes, gere pedidos e acompanha conexões formais validadas dentro do ecossistema.
           </p>
         </div>
-        <div className="flex gap-2">
-           <div className="relative">
-             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-tertiary" size={16} />
-             <input placeholder="Procurar na rede..." className="bg-recessed border border-white/5 rounded-xl pl-10 pr-4 py-2 text-sm focus:border-accent/40 outline-none w-64" />
-           </div>
-           <Button variant="secondary" size="md" className="bg-recessed border-white/5 px-3"><Filter size={18} /></Button>
+
+        <div className="grid grid-cols-3 gap-3 rounded-2xl border border-ink-tertiary/10 bg-elevated p-3">
+          <Metric label="Estudantes" value={pessoasQuery.data?.meta.total ?? pessoas.length} />
+          <Metric label="Pedidos" value={pendentes.length} />
+          <Metric label="Vínculos" value={vinculos.length} />
         </div>
       </header>
 
-      <Tabs defaultValue="pedidos" onValueChange={setTabActiva} className="w-full">
-        <TabsList className="bg-recessed p-1 rounded-2xl border border-white/5 w-fit">
-          <TabsTrigger value="pedidos" className="rounded-xl px-8 py-2.5 font-bold data-[state=active]:bg-accent data-[state=active]:text-white transition-all">
-            Pedidos {pendentes?.data && pendentes.data.length > 0 && <span className="ml-2 bg-white/20 px-1.5 rounded-md text-[10px]">{pendentes.data.length}</span>}
+      <Tabs value={tabActiva} onValueChange={setTabActiva} className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="pessoas">
+            Estudantes
           </TabsTrigger>
-          <TabsTrigger value="conexoes" className="rounded-xl px-8 py-2.5 font-bold data-[state=active]:bg-accent data-[state=active]:text-white transition-all">Conexões</TabsTrigger>
+          <TabsTrigger value="pedidos">
+            Pedidos {pendentes.length > 0 ? <span className="ml-2 rounded-md bg-ink-tertiary/20 px-1.5 text-[10px]">{pendentes.length}</span> : null}
+          </TabsTrigger>
+          <TabsTrigger value="vinculos">
+            Vínculos
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pedidos" className="pt-8">
-          {loadingPendentes ? (
-            <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-          ) : (pendentes?.data ?? []).length === 0 ? (
+        <TabsContent value="pessoas" className="pt-6">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-tertiary" size={16} />
+              <input
+                value={search}
+                onChange={(event) => { setSearch(event.target.value); }}
+                placeholder="Procurar estudantes"
+                className="min-h-[44px] w-full rounded-xl border border-ink-tertiary/10 bg-elevated pl-10 pr-4 text-sm text-ink-primary outline-none transition-all placeholder:text-ink-tertiary focus:border-[var(--chrome-active)] focus:ring-4 focus:ring-[var(--chrome-active-soft)]"
+              />
+            </div>
+          </div>
+
+          {pessoasQuery.isLoading ? (
+            <CenteredSpinner />
+          ) : pessoas.length === 0 ? (
             <EmptyState
-              icon={UserPlus}
-              title="Sinal Silencioso"
-              description="Não tens pedidos de conexão pendentes."
-              ctaLabel="Ver Mentores"
-              ctaTo="/app/explorar"
+              icon={Users}
+              title="Nenhum estudante encontrado"
+              description="Ajusta a pesquisa ou volta mais tarde quando houver perfis públicos disponíveis."
             />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <AnimatePresence>
-                {pendentes?.data.map((v, idx) => (
-                  <motion.div key={v.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
-                    <Card className="p-6 bg-elevated border-white/5 rounded-[32px] space-y-6 shadow-xl">
-                      <div className="flex items-center gap-4">
-                        <Avatar src={v.solicitante.avatarUrl || undefined} fallback={v.solicitante.nome[0]} className="h-14 w-14 border-2 border-accent/20" />
-                        <div>
-                          <h4 className="font-bold text-ink-primary tracking-tight">{v.solicitante.nome}</h4>
-                          <Badge variant="outline" className="text-[8px] uppercase border-white/10 text-ink-tertiary mt-1">{v.solicitante.role}</Badge>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={() => { resolverMutation.mutate({ id: String(v.id), status: 'aprovado' }); }}
-                          disabled={resolverMutation.isPending}
-                          className="flex-1 bg-accent text-white font-bold rounded-xl h-11"
-                        >Aceitar</Button>
-                        <Button 
-                          variant="ghost"
-                          onClick={() => { resolverMutation.mutate({ id: String(v.id), status: 'rejeitado' }); }}
-                          className="flex-1 border border-white/5 rounded-xl h-11"
-                        >Recusar</Button>
-                      </div>
-                    </Card>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {pessoas.map((pessoa) => (
+                <PessoaCard
+                  key={pessoa.id}
+                  pessoa={pessoa}
+                  isSelf={pessoa.id === user?.perfilId}
+                  isConnected={connectedPerfilIds.has(pessoa.id)}
+                  isPending={pedirMutation.isPending && pedirMutation.variables === pessoa.id}
+                  onPedir={() => { pedirMutation.mutate(pessoa.id); }}
+                />
+              ))}
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="conexoes" className="pt-8">
-          {loadingActive ? (
-            <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-          ) : (active?.data ?? []).length === 0 ? (
+        <TabsContent value="pedidos" className="pt-6">
+          {pendentesQuery.isLoading ? (
+            <CenteredSpinner />
+          ) : pendentes.length === 0 ? (
             <EmptyState
-              icon={Users}
-              title="Rede Isolada"
-              description="Ainda não estabeleceste vínculos formais."
-              ctaLabel="Explorar"
-              ctaTo="/app/explorar"
+              icon={UserPlus}
+              title="Sem pedidos pendentes"
+              description="Quando alguém pedir um vínculo, aparece aqui para validação."
             />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {active?.data.map((v) => {
-                const outro = v.solicitante.id === user?.id ? v.destinatario : v.solicitante;
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {pendentes.map((vinculo) => (
+                <Card key={vinculo.id} className="space-y-5 border-ink-tertiary/10 bg-elevated p-5">
+                  <PessoaHeader pessoa={vinculo.solicitante} />
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => { resolverMutation.mutate({ id: String(vinculo.id), status: 'aprovado' }); }}
+                      disabled={resolverMutation.isPending}
+                      className="min-h-[44px] flex-1"
+                    >
+                      Aceitar
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => { resolverMutation.mutate({ id: String(vinculo.id), status: 'rejeitado' }); }}
+                      disabled={resolverMutation.isPending}
+                      className="min-h-[44px] flex-1"
+                    >
+                      Recusar
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="vinculos" className="pt-6">
+          {vinculosQuery.isLoading ? (
+            <CenteredSpinner />
+          ) : vinculos.length === 0 ? (
+            <EmptyState
+              icon={ShieldCheck}
+              title="Ainda sem vínculos formais"
+              description="Usa o catálogo de estudantes para iniciar conexões dentro da rede PDC."
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {vinculos.map((vinculo) => {
+                const outro = resolveOutro(vinculo, user?.id, user?.perfilId);
                 return (
-                  <Card key={v.id} className="p-6 bg-elevated border-white/5 rounded-[32px] group hover:border-accent/30 transition-all">
-                    <div className="flex flex-col items-center text-center space-y-4">
-                       <div className="relative">
-                          <Avatar src={outro.avatarUrl || undefined} fallback={outro.nome[0]} className="h-20 w-24 rounded-[24px] border-2 border-white/5 group-hover:border-accent/20 transition-all" />
-                          <div className="absolute -bottom-2 -right-2 h-8 w-8 rounded-xl bg-success border-4 border-surface flex items-center justify-center text-white shadow-lg">
-                             <ShieldCheck size={14} />
-                          </div>
-                       </div>
-                       <div>
-                          <h4 className="font-bold text-ink-primary truncate w-full">{outro.nome}</h4>
-                          <p className="text-[10px] text-ink-tertiary uppercase font-black tracking-widest mt-1">{outro.role}</p>
-                       </div>
-                       <Button variant="ghost" size="sm" className="w-full border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest">
-                          Enviar Mensagem <ArrowUpRight size={12} className="ml-2 text-accent" />
-                       </Button>
+                  <Card key={vinculo.id} className="group border-ink-tertiary/10 bg-elevated p-5 transition-all hover:border-[var(--chrome-active)]">
+                    <div className="flex flex-col items-center gap-4 text-center">
+                      <div className="relative">
+                        <Avatar src={outro.avatarUrl || undefined} fallback={initials(outro.nome)} className="h-20 w-20 border-2 border-ink-tertiary/10" />
+                        <div className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-xl border-4 border-elevated bg-success text-white">
+                          <ShieldCheck size={14} />
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-bold text-ink-primary">{outro.nome}</h3>
+                        <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-ink-tertiary">{outro.role}</p>
+                      </div>
+                      <Link to={`/app/perfil/${outro.id}`} className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-ink-tertiary/10 text-[10px] font-black uppercase tracking-wide text-ink-secondary transition-colors hover:text-[var(--chrome-active)]">
+                        Ver perfil <ArrowUpRight size={12} className="ml-2" />
+                      </Link>
                     </div>
                   </Card>
                 );
@@ -174,5 +263,71 @@ export function VinculosPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="min-w-20 rounded-xl bg-recessed px-4 py-3 text-center">
+      <div className="text-lg font-black text-ink-primary">{value}</div>
+      <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-ink-tertiary">{label}</div>
+    </div>
+  );
+}
+
+function CenteredSpinner() {
+  return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
+}
+
+function PessoaHeader({ pessoa }: { pessoa: Pick<CatalogoPessoa, 'nome' | 'avatarUrl' | 'role' | 'headline' | 'bio'> }) {
+  return (
+    <div className="flex items-center gap-4">
+      <Avatar src={pessoa.avatarUrl || undefined} fallback={initials(pessoa.nome)} className="h-14 w-14 border border-ink-tertiary/10" />
+      <div className="min-w-0">
+        <h3 className="truncate text-sm font-bold text-ink-primary">{pessoa.nome}</h3>
+        <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-ink-tertiary">{pessoa.role}</p>
+        {pessoa.headline || pessoa.bio ? <p className="mt-1 line-clamp-1 text-xs text-ink-secondary">{pessoa.headline ?? pessoa.bio}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+function PessoaCard({
+  pessoa,
+  isSelf,
+  isConnected,
+  isPending,
+  onPedir,
+}: {
+  pessoa: CatalogoPessoa;
+  isSelf: boolean;
+  isConnected: boolean;
+  isPending: boolean;
+  onPedir: () => void;
+}) {
+  return (
+    <Card className="flex min-h-56 flex-col justify-between border-ink-tertiary/10 bg-elevated p-5 transition-all hover:border-[var(--chrome-active)]">
+      <div className="space-y-4">
+        <PessoaHeader pessoa={pessoa} />
+        <div className="flex flex-wrap gap-2">
+          {pessoa.area ? <Badge variant="outline" className="text-[10px]">{pessoa.area}</Badge> : null}
+          <Badge variant="info" className="text-[10px]">{pessoa.reputacaoTier}</Badge>
+        </div>
+      </div>
+
+      <div className="mt-5 flex gap-2">
+        <Link to={`/app/perfil/${pessoa.id}`} className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-xl border border-ink-tertiary/10 text-xs font-bold text-ink-secondary transition-colors hover:text-[var(--chrome-active)]">
+          Perfil
+        </Link>
+        <Button
+          size="sm"
+          disabled={isSelf || isConnected || isPending}
+          onClick={onPedir}
+          className="min-h-[44px] flex-1"
+        >
+          {isSelf ? 'Tu' : isConnected ? 'Vinculado' : isPending ? 'A enviar' : <><UserCheck size={14} /> Vincular</>}
+        </Button>
+      </div>
+    </Card>
   );
 }

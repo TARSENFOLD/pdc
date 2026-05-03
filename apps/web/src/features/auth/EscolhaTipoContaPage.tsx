@@ -19,8 +19,6 @@ export function EscolhaTipoContaPage() {
       descricao: t('auth.roles.student.desc'),
       href: '/criar-conta/estudante',
       features: tRaw('auth.roles.student.features', { returnObjects: true }) as string[],
-      color: 'bg-accent/10 border-accent/20 text-accent',
-      asym: true,
     },
     {
       id: 'mentor',
@@ -29,8 +27,6 @@ export function EscolhaTipoContaPage() {
       descricao: t('auth.roles.mentor.desc'),
       href: '/criar-conta/mentor',
       features: tRaw('auth.roles.mentor.features', { returnObjects: true }) as string[],
-      color: 'bg-accent/5 border-accent/10 text-accent/80',
-      asym: true,
     },
     {
       id: 'instituicao',
@@ -39,99 +35,107 @@ export function EscolhaTipoContaPage() {
       descricao: t('auth.roles.institution.desc'),
       href: '/criar-conta/instituicao',
       features: tRaw('auth.roles.institution.features', { returnObjects: true }) as string[],
-      color: 'bg-accent/5 border-accent/10 text-accent/80',
-      asym: true,
     },
   ];
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-canvas px-4 py-12">
-      <div className="w-full max-w-5xl">
-        <header className="mb-12 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-4 inline-flex items-center rounded-full bg-elevated px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-accent border border-accent/20"
-          >
-            {t('auth.onboarding.badge')}
-          </motion.div>
-          <motion.h1 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="font-authority text-4xl font-black tracking-tight text-ink-primary sm:text-5xl"
-          >
-            {t('auth.onboarding.title')}
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="mt-4 text-lg text-ink-secondary"
-          >
-            {t('auth.onboarding.subtitle')}
-          </motion.p>
-        </header>
-
-        <div className="grid gap-6 md:grid-cols-3">
-          {TIPOS.map((tipo, index) => (
-            <motion.div
-              key={tipo.id}
-              initial={{ opacity: 0, y: 20 }}
+    <div className="min-h-screen bg-canvas font-sans">
+      {/* Role selection */}
+      <div className="flex flex-col min-h-screen overflow-y-auto">
+        <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+          <div className="w-full max-w-5xl">
+            <motion.header
+              initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 * (index + 1) }}
+              className="mb-10 text-center"
             >
-              <Link 
-                to={tipo.href + query}
-                className="group relative flex h-full flex-col overflow-hidden border border-ink-tertiary/10 bg-elevated p-8 transition-all hover:border-accent/50 hover:shadow-2xl hover:shadow-accent/5 rounded-asym-a"
-              >
-                <div className={`mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl border ${tipo.color}`}>
-                  <tipo.icon size={28} />
-                </div>
-                
-                <h2 className="text-2xl font-bold text-ink-primary group-hover:text-accent transition-colors">
-                  {tipo.titulo}
-                </h2>
-                <p className="mt-3 text-sm leading-relaxed text-ink-secondary">
-                  {tipo.descricao}
-                </p>
+              <div className="mb-4 inline-flex items-center rounded-full bg-elevated px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-accent border border-accent/20">
+                {t('auth.onboarding.badge')}
+              </div>
+              <h1 className="font-authority text-4xl font-black tracking-tight text-ink-primary sm:text-5xl">
+                {t('auth.onboarding.title')}
+              </h1>
+              <p className="mt-4 text-base text-ink-secondary">
+                {t('auth.onboarding.subtitle')}
+              </p>
+            </motion.header>
 
-                <ul className="mt-8 space-y-3 flex-1">
-                  {tipo.features.map((f) => (
-                    <li key={f} className="flex items-center gap-3 text-sm text-ink-tertiary">
-                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/5 text-accent">
-                        <Check size={12} strokeWidth={3} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {TIPOS.map((tipo, index) => (
+                <motion.div
+                  key={tipo.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.08 * (index + 1) }}
+                  className="h-full"
+                >
+                  <Link
+                    to={tipo.href + query}
+                    className="group relative flex flex-col min-h-[420px] overflow-hidden border border-ink-tertiary/10 bg-elevated rounded-2xl p-8 transition-all duration-300 hover:border-accent/40 hover:shadow-2xl hover:shadow-accent/10 hover:-translate-y-1"
+                  >
+                    {/* Orbe de fundo */}
+                    <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-accent/5 blur-3xl group-hover:bg-accent/15 transition-all duration-500" />
+                    <div className="absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-accent/3 blur-2xl group-hover:bg-accent/8 transition-all duration-500" />
+
+                    {/* Ícone */}
+                    <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-accent/20 bg-accent/10 text-accent mb-6 group-hover:bg-accent/20 group-hover:border-accent/40 transition-all duration-300">
+                      <tipo.icon size={26} />
+                    </div>
+
+                    {/* Texto */}
+                    <div className="relative z-10 flex-1">
+                      <h2 className="text-xl font-bold text-ink-primary group-hover:text-accent transition-colors duration-300 leading-snug">
+                        {tipo.titulo}
+                      </h2>
+                      <p className="mt-3 text-sm leading-relaxed text-ink-secondary">
+                        {tipo.descricao}
+                      </p>
+                    </div>
+
+                    {/* Features */}
+                    <ul className="relative z-10 mt-8 space-y-2.5">
+                      {tipo.features.map((f) => (
+                        <li key={f} className="flex items-center gap-2.5 text-xs text-ink-tertiary">
+                          <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
+                            <Check size={9} strokeWidth={3} />
+                          </div>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* CTA bottom */}
+                    <div className="relative z-10 mt-8 flex items-center justify-between border-t border-ink-tertiary/8 pt-5">
+                      <span className="text-xs font-semibold text-ink-tertiary group-hover:text-accent transition-colors duration-300 uppercase tracking-wider">
+                        Começar
+                      </span>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-ink-tertiary/15 text-ink-tertiary group-hover:bg-accent group-hover:border-accent group-hover:text-white group-hover:translate-x-1 transition-all duration-300">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                          <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
                       </div>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
 
-                <div className="mt-10 flex items-center justify-between font-bold text-ink-primary">
-                  <span className="text-sm">{t('auth.common.start')}</span>
-                  <div className="h-8 w-8 rounded-full bg-elevated border border-ink-tertiary/10 flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-all group-hover:translate-x-1">
-                    →
-                  </div>
-                </div>
-
-                {/* Efeito de Vidro no Fundo */}
-                <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-accent/5 blur-3xl transition-opacity group-hover:bg-accent/10" />
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="mt-10 text-center text-sm text-ink-tertiary"
+            >
+              {t('auth.common.login_link_prefix')}{' '}
+              <Link
+                to="/login"
+                className="font-bold text-accent hover:text-accent-hover underline underline-offset-4 transition-colors"
+              >
+                {t('auth.common.login_link_action')}
               </Link>
-            </motion.div>
-          ))}
+            </motion.p>
+          </div>
         </div>
-
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-12 text-center text-sm text-ink-tertiary"
-        >
-          {t('auth.common.login_link_prefix')}{' '}
-          <Link to="/login" className="font-bold text-accent hover:text-accent-hover underline underline-offset-4 transition-colors">
-            {t('auth.common.login_link_action')}
-          </Link>
-        </motion.p>
       </div>
     </div>
   );

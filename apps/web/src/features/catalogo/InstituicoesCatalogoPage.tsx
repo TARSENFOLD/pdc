@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
 import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
 import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
 import ContentCard from '@/components/catalogo/ContentCard';
+import { resolveCatalogHref } from '@/components/catalogo/catalogoLinks';
 import { Building2, MapPin } from 'lucide-react';
 import type { InstituicaoPublica } from '@pdc/shared';
 
@@ -17,11 +18,13 @@ const TIPOS = [
 
 export function InstituicoesCatalogoPage() {
   const [sp, setSp] = useSearchParams();
+  const location = useLocation();
   const tipo = sp.get('tipo') ?? '';
   const search = sp.get('q') ?? '';
   const page = Number(sp.get('page') ?? '1');
+  const inApp = location.pathname.startsWith('/app');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['catalogo-instituicoes', tipo, search, page],
     queryFn: () => catalogoApi.getInstituicoes({
       ...(tipo ? { tipo } : {}),
@@ -52,6 +55,8 @@ export function InstituicoesCatalogoPage() {
         <CatalogoGridShell
           isLoading={isLoading}
           isEmpty={insts.length === 0}
+          error={error}
+          onRetry={() => { void refetch(); }}
           onClearFilters={() => { setSp(new URLSearchParams()); }}
           emptyTitle="Nenhuma instituição nesta categoria"
           emptyDescription="Experimenta outra categoria ou aguarda novos parceiros."
@@ -59,6 +64,13 @@ export function InstituicoesCatalogoPage() {
             <CatalogoFilterBar
               areas={TIPOS}
               selectedArea={tipo}
+              searchTerm={search}
+              onSearchChange={(val) => {
+                const next = new URLSearchParams(sp);
+                if (val) next.set('q', val); else next.delete('q');
+                next.delete('page');
+                setSp(next, { replace: true });
+              }}
               onAreaChange={(val) => {
                 const next = new URLSearchParams(sp);
                 if (val) next.set('tipo', val); else next.delete('tipo');
@@ -75,7 +87,9 @@ export function InstituicoesCatalogoPage() {
               title={i.nome}
               subtitle={i.tipo ? i.tipo.charAt(0).toUpperCase() + i.tipo.slice(1).replaceAll('_', ' ') : 'Instituição Parceira'}
               image={i.logoUrl || undefined}
-              href={`/instituicoes/${i.slug || i.id}`}
+              href={resolveCatalogHref('instituicao', i.slug || i.id, inApp)}
+              type="instituicao"
+              ctaLabel="Ver instituição"
               icon={Building2}
               badges={[
                 { label: i.regiao || 'Angola', variant: 'outline' },

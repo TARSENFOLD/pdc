@@ -9,6 +9,7 @@ interface CatalogoFilterBarProps {
   totalResults?: number | undefined;
   searchTerm?: string | undefined;
   onSearchChange?: ((val: string) => void) | undefined;
+  searchLabel?: string | undefined;
 }
 
 const CatalogoFilterBar = ({
@@ -18,18 +19,24 @@ const CatalogoFilterBar = ({
   totalResults,
   searchTerm,
   onSearchChange,
+  searchLabel = 'Pesquisar neste catálogo',
 }: CatalogoFilterBarProps): React.JSX.Element => {
   const showSearch = searchTerm !== undefined && onSearchChange !== undefined;
 
   return (
     <div className="space-y-3">
       {showSearch && (
-        <Input
-          placeholder="Pesquisar..."
-          value={searchTerm}
-          onChange={(e) => { onSearchChange(e.target.value); }}
-          className="max-w-sm"
-        />
+        <div className="max-w-sm space-y-2">
+          <label htmlFor="catalogo-search" className="block text-xs font-semibold text-ink-secondary">
+            {searchLabel}
+          </label>
+          <Input
+            id="catalogo-search"
+            placeholder="Nome, área ou instituição"
+            value={searchTerm}
+            onChange={(e) => { onSearchChange(e.target.value); }}
+          />
+        </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -37,7 +44,7 @@ const CatalogoFilterBar = ({
           className={cn(
             'min-h-[44px] px-4 py-2 rounded-full text-sm font-medium transition-all border',
             !selectedArea
-              ? 'bg-accent text-white border-accent shadow-sm shadow-accent/20'
+              ? 'bg-[var(--chrome-active)] text-[var(--ink-on-accent)] border-[var(--chrome-active)]'
               : 'bg-elevated text-ink-secondary hover:bg-recessed border-ink-tertiary/10'
           )}
         >
@@ -50,7 +57,7 @@ const CatalogoFilterBar = ({
             className={cn(
               'min-h-[44px] px-4 py-2 rounded-full text-sm font-medium transition-all border',
               selectedArea === a.value
-                ? 'bg-accent text-white border-accent shadow-sm shadow-accent/20'
+                ? 'bg-[var(--chrome-active)] text-[var(--ink-on-accent)] border-[var(--chrome-active)]'
                 : 'bg-elevated text-ink-secondary hover:bg-recessed border-ink-tertiary/10'
             )}
           >

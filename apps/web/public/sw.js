@@ -210,6 +210,15 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   if (!url.protocol.startsWith('http')) return;
 
+  // Skip Vite dev-server paths (HMR modules, transforms, timestamps)
+  if (
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/node_modules/') ||
+    url.searchParams.has('t') ||
+    url.searchParams.has('v')
+  ) return;
+
   // API routes (same-origin /api/*) — NetworkFirst
   if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(request, CACHES.api));

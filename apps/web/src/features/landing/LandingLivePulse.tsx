@@ -62,18 +62,15 @@ export function LandingLivePulse(): React.JSX.Element {
   }, [push]);
 
   return (
-    <section className="bg-surface-alt/50 px-4 py-24 sm:px-6 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute left-0 top-0 h-full w-full opacity-[0.02] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='%23F59E0B'/%3E%3C/svg%3E")`, backgroundSize: '60px 60px' }} />
-
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-16 lg:grid-cols-2 items-center">
+    <section className="px-4 py-24 sm:px-6">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-16 items-center">
         {/* Feed */}
         <div>
           <header className="mb-10">
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-500 border border-emerald-500/20 mb-4">
+            <div className="inline-flex items-center gap-2 rounded-full bg-amber/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber border border-amber/20 mb-4">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber" />
               </span>
               Live Pulse: {globalCount > 0 ? `${String(globalCount)} ativos` : 'Sistema Ativo'}
             </div>

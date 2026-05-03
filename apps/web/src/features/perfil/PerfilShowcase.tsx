@@ -1,150 +1,581 @@
-import { useQuery } from '@tanstack/react-query';
-import { useParams, Link } from 'react-router-dom';
-import { perfisApi } from '@/lib/api/perfis';
-import { Card, Spinner, Avatar, Badge, Button } from '@/components/ui';
-import { Brain, Trophy, Link2, MapPin, Globe, ExternalLink, ShieldCheck } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
+import {
+  Camera, MapPin, Globe, MessageSquare, UserPlus, Edit3, Settings,
+  Trophy, Heart, MessageCircle, ShieldCheck, Plus, Briefcase, GraduationCap,
+  ChevronRight,
+} from 'lucide-react';
+import { Avatar, Spinner } from '@/components/ui';
+import { AspirationalEmpty } from '@/components/ui/AspirationalEmpty';
+import { perfisApi } from '@/lib/api/perfis';
+import { mediaApi } from '@/lib/api/media';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { toast } from '@/hooks/useToast';
+import { type PerfilCompleto, type HistoricoProfissional, type FormacaoAcademica } from '@pdc/shared';
+import { cn } from '@/lib/utils';
 
-export function PerfilShowcase() {
-  const { id } = useParams<{ id: string }>();
-  
-  const { data: perfil, isLoading, isError } = useQuery({
-    queryKey: ['perfil', 'publico', id],
-    queryFn: () => id ? perfisApi.getById(id) : perfisApi.getMe(),
-  });
+const SPRING = { type: 'spring' as const, stiffness: 220, damping: 28 };
 
-  if (isLoading) return <div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>;
-  if (isError || !perfil) return <div className="text-center py-20 text-ink-tertiary">Perfil não encontrado ou privado.</div>;
+type RichPerfil = PerfilCompleto & {
+  bannerUrl?: string | null;
+  regiao?: string;
+  website?: string;
+  conquistas?: Array<{ id: string; titulo: string; icone?: string; slug?: string }>;
+  competencias?: string[];
+  historicoProfissional?: HistoricoProfissional[];
+  formacaoAcademica?: FormacaoAcademica[];
+};
 
-  const initials = perfil.nome.charAt(0).toUpperCase();
+// ─── Shared UI Helpers ────────────────────────────────────────────────────────
+
+function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between mb-4">
+      <h2 className="text-lg font-bold text-ink-primary font-display">{children}</h2>
+      {action}
+    </div>
+  );
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  estudante: 'Estudante',
+  mentor: 'Mentor Especialista',
+  instituicao: 'Instituição',
+  moderador: 'Moderador',
+  comite_cientifico: 'Comité Científico',
+  super_admin: 'Administrador',
+  patrocinador: 'Patrocinador',
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  estudante: 'text-accent bg-accent/10',
+  mentor: 'text-cobalt bg-cobalt/10',
+  instituicao: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
+  moderador: 'text-purple-600 dark:text-purple-400 bg-purple-500/10',
+  comite_cientifico: 'text-orange-500 bg-orange-500/10',
+  super_admin: 'text-red-600 bg-red-500/10',
+  patrocinador: 'text-yellow-600 bg-yellow-500/10',
+};
+
+function RoleBadge({ role }: { role: string }) {
+  const label = ROLE_LABELS[role] ?? role;
+  const color = ROLE_COLORS[role] ?? 'text-ink-secondary bg-recessed';
+  return (
+    <span className={cn('inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider', color)}>
+      {label}
+    </span>
+  );
+}
+
+function CTAButtons({ role, isOwner, profileId }: { role: string; isOwner: boolean; profileId?: string | undefined }) {
+  const navigate = useNavigate();
+
+  if (isOwner) {
+    return (
+      <div className="flex items-center justify-center gap-2 flex-wrap w-full">
+        <Link
+          to="/app/perfil/editar"
+          className="flex-1 inline-flex justify-center items-center gap-2 h-10 rounded-lg bg-chrome-active text-white text-sm font-bold hover:opacity-90 transition-opacity"
+        >
+          <Edit3 size={14} /> Editar Perfil
+        </Link>
+        <Link
+          to="/app/configuracoes"
+          className="inline-flex items-center justify-center h-10 w-10 rounded-lg bg-recessed text-ink-secondary hover:bg-elevated transition-colors"
+          aria-label="Configurações"
+        >
+          <Settings size={15} />
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-20 animate-in fade-in duration-700">
-      {/* ── Header: Hero Identity ── */}
-      <section className="relative overflow-hidden rounded-[32px] bg-recessed border border-white/5 p-8 md:p-12">
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-accent/10 to-transparent opacity-30" />
-        
-        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="relative"
+    <div className="flex flex-col gap-2 w-full">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => { navigate('/app/vinculos'); }}
+          className="flex-1 inline-flex justify-center items-center gap-2 h-10 rounded-lg bg-chrome-active text-white font-bold text-sm hover:opacity-90 transition-opacity shadow-sm"
+        >
+          <UserPlus size={14} /> Vincular
+        </button>
+        {role === 'mentor' && (
+          <button
+            type="button"
+            onClick={() => { navigate('/app/vinculos'); }}
+            className="flex-1 inline-flex justify-center items-center gap-2 h-10 rounded-lg bg-accent text-white font-bold text-sm hover:opacity-90 transition-opacity shadow-sm"
           >
-            <div className="h-32 w-32 md:h-40 md:w-40 rounded-full p-1 shadow-2xl shadow-accent/10">
-              <Avatar 
-                src={perfil.avatarUrl || undefined} 
-                fallback={initials} 
-                tier={perfil.reputacaoTier}
-                className="h-full w-full rounded-full object-cover text-4xl border-4" 
-              />
-            </div>
-            <div className="absolute -bottom-2 -left-2 bg-accent text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-xl uppercase tracking-[0.2em] border-4 border-surface-alt animate-in zoom-in duration-700">
-              {perfil.reputacaoTier}
-            </div>
-            <div className="absolute -bottom-2 -right-2 h-10 w-10 rounded-2xl bg-success border-4 border-surface-alt flex items-center justify-center text-white shadow-lg">
-              <ShieldCheck size={20} />
-            </div>
-          </motion.div>
+            <Briefcase size={14} /> Contratar
+          </button>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => { navigate(`/app/mensagens${profileId ? `?userId=${profileId}` : ''}`); }}
+        className="w-full inline-flex justify-center items-center gap-2 h-10 rounded-lg border border-ink-tertiary/20 text-ink-secondary text-sm font-semibold hover:bg-recessed transition-colors"
+      >
+        <MessageSquare size={14} /> Mensagem
+      </button>
+    </div>
+  );
+}
 
-          <div className="flex-1 text-center md:text-left space-y-4">
-            <div className="space-y-1">
-              <h1 className="text-3xl md:text-4xl font-black font-display tracking-tight text-ink-primary">
-                {perfil.nome}
-              </h1>
-              <p className="text-accent font-bold uppercase tracking-[0.2em] text-xs">
-                {perfil.role === 'estudante' ? 'Talento Validado' : 'Mentor de Elite'}
-              </p>
+// ─── List Views (No Cards) ─────────────────────────────────────────────────────
+
+function ExpList({ items, isOwner }: { items: HistoricoProfissional[]; isOwner: boolean }) {
+  if (items.length === 0 && !isOwner) return <p className="text-sm text-ink-tertiary">Nenhuma experiência partilhada.</p>;
+  return (
+    <div className="space-y-6">
+      <SectionTitle
+        action={isOwner && (
+          <Link to="/app/perfil/editar" className="text-accent hover:opacity-70 transition-opacity" aria-label="Editar experiência">
+            <Plus size={16} />
+          </Link>
+        )}
+      >
+        Experiência Profissional
+      </SectionTitle>
+      
+      {items.length > 0 ? (
+        <div className="space-y-6">
+          {items.map((exp) => (
+            <div key={exp.id} className="flex gap-4">
+              <div className="h-10 w-10 rounded-lg bg-chrome-active/[0.07] flex items-center justify-center shrink-0">
+                <Briefcase size={16} className="text-chrome-active" />
+              </div>
+              <div className="flex-1 min-w-0 pb-6 border-b border-ink-tertiary/10 last:border-0 last:pb-0">
+                <p className="text-base font-bold text-ink-primary leading-tight truncate">{exp.cargo}</p>
+                <p className="text-sm text-ink-secondary truncate mt-0.5">{exp.empresa}</p>
+                <p className="text-xs text-ink-tertiary mt-1">
+                  {exp.inicio}{exp.atual ? ' · Atual' : exp.fim ? ` – ${exp.fim}` : ''}
+                </p>
+                {exp.descricao && <p className="text-sm text-ink-secondary mt-3 leading-relaxed">{exp.descricao}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <Link to="/app/perfil/editar" className="flex items-center gap-2 text-sm text-ink-tertiary hover:text-accent transition-colors">
+          <Plus size={14} /> Adicionar experiência
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function EduList({ items, isOwner }: { items: FormacaoAcademica[]; isOwner: boolean }) {
+  if (items.length === 0 && !isOwner) return <p className="text-sm text-ink-tertiary">Nenhuma formação partilhada.</p>;
+  return (
+    <div className="space-y-6">
+      <SectionTitle
+        action={isOwner && (
+          <Link to="/app/perfil/editar" className="text-accent hover:opacity-70 transition-opacity" aria-label="Editar educação">
+            <Plus size={16} />
+          </Link>
+        )}
+      >
+        Formação Académica
+      </SectionTitle>
+
+      {items.length > 0 ? (
+        <div className="space-y-6">
+          {items.map((edu) => (
+            <div key={edu.id} className="flex gap-4">
+              <div className="h-10 w-10 rounded-lg bg-accent/[0.07] flex items-center justify-center shrink-0">
+                <GraduationCap size={16} className="text-accent" />
+              </div>
+              <div className="flex-1 min-w-0 pb-6 border-b border-ink-tertiary/10 last:border-0 last:pb-0">
+                <p className="text-base font-bold text-ink-primary leading-tight truncate">{edu.grau}</p>
+                <p className="text-sm text-ink-secondary truncate mt-0.5">{edu.instituicao}</p>
+                {edu.area && <p className="text-xs text-ink-tertiary mt-1">{edu.area}</p>}
+                <p className="text-xs text-ink-tertiary mt-0.5">
+                  {edu.inicio}{edu.atual ? ' · A frequentar' : edu.fim ? ` – ${edu.fim}` : ''}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <Link to="/app/perfil/editar" className="flex items-center gap-2 text-sm text-ink-tertiary hover:text-accent transition-colors">
+          <Plus size={14} /> Adicionar formação
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function CertList({ items, isOwner }: { items: Array<{ id: string; titulo: string; icone?: string; slug?: string }>; isOwner: boolean }) {
+  if (items.length === 0 && !isOwner) return <p className="text-sm text-ink-tertiary">Nenhuma certificação partilhada.</p>;
+  return (
+    <div className="space-y-6">
+      <SectionTitle
+        action={(
+          <Link to="/app/conquistas" className="text-ink-tertiary hover:text-accent transition-colors text-sm font-medium flex items-center gap-1" aria-label="Ver conquistas">
+            Ver todas <ChevronRight size={14} />
+          </Link>
+        )}
+      >
+        Certificações PDC
+      </SectionTitle>
+
+      {items.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {items.map((c) => (
+            <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg bg-recessed/50 hover:bg-elevated transition-colors border border-transparent hover:border-ink-tertiary/10">
+              <div className="h-10 w-10 rounded-lg bg-accent/[0.07] flex items-center justify-center shrink-0 text-lg leading-none">
+                {c.icone ? <span>{c.icone}</span> : <Trophy size={18} className="text-accent" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-ink-primary leading-snug truncate">{c.titulo}</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <ShieldCheck size={12} className="text-accent shrink-0" />
+                  <span className="text-[10px] font-bold text-accent uppercase tracking-wide">PDC Verificado</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm text-ink-tertiary leading-relaxed">Conquistas e certificações PDC aparecerão aqui.</p>
+          <Link to="/app/conquistas" className="inline-flex items-center gap-1.5 text-sm font-bold text-accent hover:underline">
+            <Plus size={14} /> Ver conquistas disponíveis
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export function PerfilShowcase() {
+  const { id: paramId } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [activeTab, setActiveTab] = useState<'visao_geral' | 'experiencia' | 'educacao' | 'certificacoes'>('visao_geral');
+
+  const { data: perfil, isLoading, isError } = useQuery({
+    queryKey: ['perfil', paramId ?? 'me'],
+    queryFn: () => (paramId ? perfisApi.getById(paramId) : perfisApi.getMe()),
+  });
+
+  const isOwner = !paramId || user?.id === (perfil?.id ?? '');
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Ficheiro demasiado grande', description: 'O banner deve ter menos de 5MB.', variant: 'error' });
+      return;
+    }
+    setIsUploadingBanner(true);
+    try {
+      const uploadRes = await mediaApi.upload(file);
+      await perfisApi.update({ bannerUrl: uploadRes.url });
+      void qc.invalidateQueries({ queryKey: ['perfil'] });
+      void qc.invalidateQueries({ queryKey: ['perfis', 'me'] });
+      toast({ title: 'Banner atualizado!' });
+    } catch {
+      toast({ title: 'Erro ao atualizar banner', variant: 'error' });
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
+  }
+
+  if (isError || !perfil) {
+    return (
+      <AspirationalEmpty
+        icon={Trophy}
+        title="Perfil não encontrado"
+        description="O perfil que procuras não existe ou não está disponível publicamente."
+      />
+    );
+  }
+
+  const p = perfil as RichPerfil;
+  const initials = p.nome.charAt(0).toUpperCase();
+  const conquistas = Array.isArray(p.conquistas) ? p.conquistas : [];
+  const areasInteresse = Array.isArray(p.areasInteresse) ? p.areasInteresse : [];
+  const competencias = Array.isArray(p.competencias) ? p.competencias : [];
+  const allTags = [...new Set([...areasInteresse, ...competencias])];
+  const experiencias: HistoricoProfissional[] = Array.isArray(p.historicoProfissional) ? p.historicoProfissional : [];
+  const educacao: FormacaoAcademica[] = Array.isArray(p.formacaoAcademica) ? p.formacaoAcademica : [];
+
+  const feedItems = conquistas.map((c) => ({
+    id: c.id,
+    titulo: c.titulo,
+    tags: allTags.slice(0, 2),
+  }));
+
+  const tabs = [
+    { id: 'visao_geral', label: 'Visão Geral' },
+    { id: 'experiencia', label: `Experiência (${String(experiencias.length)})` },
+    { id: 'educacao', label: `Formação (${String(educacao.length)})` },
+    { id: 'certificacoes', label: `Certificações (${String(conquistas.length)})` },
+  ] as const;
+
+  return (
+    <div className="max-w-6xl mx-auto pb-20">
+      {/* ── BANNER ── */}
+      <div className="relative h-48 md:h-64 w-full group overflow-hidden">
+        {p.bannerUrl ? (
+          <img src={p.bannerUrl} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-[#12304A] via-[#1e4d80] to-[#0d2438] relative overflow-hidden">
+            <svg className="absolute inset-0 w-full h-full opacity-[0.07]" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="pdots" width="28" height="28" patternUnits="userSpaceOnUse">
+                  <circle cx="14" cy="14" r="1.5" fill="white" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#pdots)" />
+            </svg>
+          </div>
+        )}
+
+        {isOwner && (
+          <>
+            <button
+              type="button"
+              onClick={() => { bannerInputRef.current?.click(); }}
+              disabled={isUploadingBanner}
+              className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 disabled:cursor-wait"
+              aria-label="Alterar banner"
+            >
+              <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm px-4 py-2 rounded-lg text-white text-sm font-bold shadow-lg">
+                {isUploadingBanner ? (
+                  <Spinner size="sm" className="text-white" />
+                ) : (
+                  <><Camera size={16} /> Alterar Banner</>
+                )}
+              </div>
+            </button>
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => { void handleBannerUpload(e); }}
+            />
+          </>
+        )}
+      </div>
+
+      {/* ── MAIN CONTENT GRID ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 px-6 lg:px-10">
+        
+        {/* ── LEFT COLUMN (Sidebar Flutuante) ── */}
+        <div className="-mt-16 lg:-mt-24 relative z-10 space-y-8">
+          {/* Profile Card */}
+          <div className="bg-elevated rounded-lg shadow-sm border border-ink-tertiary/[0.08] p-6 text-center">
+            <div className="relative inline-block mb-4">
+              <div className="h-40 w-40 rounded-full ring-4 ring-elevated overflow-hidden bg-canvas">
+                <Avatar
+                  src={p.avatarUrl ?? undefined}
+                  fallback={initials}
+                  tier={p.reputacaoTier}
+                  className="h-full w-full border-0 ring-0"
+                />
+              </div>
+            </div>
+
+            <h1 className="text-2xl font-black tracking-tight text-ink-primary font-display leading-tight mb-1">
+              {p.nome}
+            </h1>
+            
+            {p.headline && (
+              <p className="text-sm text-ink-secondary mb-3">{p.headline}</p>
+            )}
+
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <RoleBadge role={p.role} />
+            </div>
+
+            {(p.regiao || p.website) && (
+              <div className="flex flex-col gap-2 text-sm text-ink-tertiary mb-6">
+                {p.regiao && (
+                  <div className="flex items-center justify-center gap-1.5">
+                    <MapPin size={14} /> {p.regiao}
+                  </div>
+                )}
+                {p.website && (
+                  <a href={p.website} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-accent hover:underline">
+                    <Globe size={14} /> Website
+                  </a>
+                )}
+              </div>
+            )}
+
+            <CTAButtons role={p.role} isOwner={isOwner} profileId={paramId} />
+          </div>
+
+          {/* Competências List (Sem box, limpo) */}
+          <div className="px-2">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-ink-primary uppercase tracking-wider">Especialista em:</h3>
+              {isOwner && (
+                <Link to="/app/perfil/editar" className="text-accent hover:opacity-70 transition-opacity">
+                  <Plus size={14} />
+                </Link>
+              )}
             </div>
             
-            <p className="text-ink-secondary text-lg max-w-xl leading-relaxed">
-              {perfil.bio || 'Este talento ainda não definiu a sua biografia, mas os seus dados de telemetria falam por si.'}
-            </p>
-
-            <div className="flex flex-wrap justify-center md:justify-start gap-4 text-xs font-medium text-ink-tertiary">
-              {perfil.regiao && <div className="flex items-center gap-1.5"><MapPin size={14} /> {perfil.regiao}</div>}
-              {perfil.website && <div className="flex items-center gap-1.5"><Globe size={14} /> {perfil.website}</div>}
-              <div className="flex items-center gap-1.5"><Link2 size={14} /> Conectado com 14 instituições</div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 min-w-[200px]">
-            <Button className="w-full bg-accent text-white font-bold h-12 rounded-2xl shadow-lg shadow-accent/20 hover:scale-[1.02] transition-transform border-none">
-              Propor Vínculo
-            </Button>
-            <Button variant="ghost" className="w-full border border-white/10 rounded-2xl h-12">
-              <ExternalLink size={16} className="mr-2" /> Partilhar DNA
-            </Button>
+            {allTags.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {allTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-3 py-1.5 rounded-md text-xs font-medium bg-recessed text-ink-secondary border border-ink-tertiary/10"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-ink-tertiary">
+                {isOwner ? 'Adiciona as tuas competências.' : 'Nenhuma competência listada.'}
+              </p>
+            )}
           </div>
         </div>
-      </section>
 
-      {/* ── Grid: O Músculo Social ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Bento: DNA Score */}
-        <Card className="md:col-span-2 p-8 bg-elevated/40 backdrop-blur-xl border border-white/5 rounded-[32px] space-y-8">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold flex items-center gap-3">
-              <Brain className="text-accent" size={24} />
-              DNA Vocacional
-            </h3>
-            <Badge className="bg-accent/10 text-accent border-accent/20 px-3 py-1">Em Processamento</Badge>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 opacity-50">
-            {['Fluidez', 'Resiliência', 'Foco', 'Técnico'].map(label => (
-              <div key={label} className="text-center space-y-2 animate-pulse">
-                <div className="h-2 w-12 bg-ink-tertiary/20 rounded mx-auto" />
-                <div className="h-6 w-8 bg-ink-tertiary/20 rounded mx-auto" />
-              </div>
+        {/* ── RIGHT COLUMN (Tabs & Content) ── */}
+        <div className="pt-6 lg:pt-8 min-w-0">
+          
+          {/* Tabs Nav */}
+          <div className="flex items-center gap-6 border-b border-ink-tertiary/10 mb-8 overflow-x-auto hide-scrollbar pb-px">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => { setActiveTab(tab.id); }}
+                className={cn(
+                  "pb-3 text-sm font-bold whitespace-nowrap transition-colors border-b-2",
+                  activeTab === tab.id
+                    ? "border-chrome-active text-ink-primary"
+                    : "border-transparent text-ink-tertiary hover:text-ink-secondary hover:border-ink-tertiary/20"
+                )}
+              >
+                {tab.label}
+              </button>
             ))}
           </div>
 
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/5 italic text-ink-secondary text-sm leading-relaxed opacity-50">
-            <div className="h-3 w-full bg-ink-tertiary/20 rounded mb-2 animate-pulse" />
-            <div className="h-3 w-4/5 bg-ink-tertiary/20 rounded animate-pulse" />
-          </div>
-          
-          {/* Endorsements Area */}
-          <div className="pt-6 border-t border-white/5">
-            <p className="text-[10px] text-ink-tertiary uppercase font-black tracking-widest mb-4">Validações de Mentores</p>
-            <div className="text-sm text-ink-tertiary opacity-70">Sem validações disponíveis.</div>
-          </div>
-        </Card>
+          {/* Tabs Content */}
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={SPRING}
+          >
+            {activeTab === 'visao_geral' && (
+              <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-10">
+                {/* Left col of Visão Geral */}
+                <div className="space-y-10">
+                  {/* Sobre */}
+                  <section>
+                    <SectionTitle>Sobre mim</SectionTitle>
+                    {p.bio ? (
+                      <p className="text-base text-ink-secondary leading-relaxed whitespace-pre-wrap">{p.bio}</p>
+                    ) : (
+                      <p className="text-sm text-ink-tertiary italic">
+                        {isOwner
+                          ? <><Link to="/app/perfil/editar" className="text-accent hover:underline">Adiciona a tua bio</Link> para apresentares à comunidade.</>
+                          : 'Sem bio disponível.'}
+                      </p>
+                    )}
+                  </section>
 
-        {/* Bento: Conquistas */}
-        <Card className="p-8 bg-elevated/40 backdrop-blur-xl border border-white/5 rounded-[32px] space-y-6">
-          <h3 className="text-xl font-bold flex items-center gap-3">
-            <Trophy className="text-accent" size={24} />
-            Prestígio
-          </h3>
-          <div className="grid grid-cols-3 gap-3">
-            {perfil.conquistas.length > 0 ? (
-              perfil.conquistas.map((c, i) => (
-                <div key={i} className="aspect-square rounded-2xl bg-gradient-to-br from-accent/20 to-transparent border border-accent/10 flex items-center justify-center p-2 group cursor-pointer hover:border-accent/40 transition-all" title={c.titulo}>
-                  <div className="w-full h-full rounded-xl bg-elevated shadow-inner flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
-                    <Trophy size={20} />
-                  </div>
+                  {/* Feed */}
+                  <section>
+                    <SectionTitle>Atividade da Comunidade</SectionTitle>
+                    {feedItems.length > 0 ? (
+                      <div className="space-y-5">
+                        {feedItems.map((item) => (
+                          <article key={item.id} className="flex gap-4">
+                            <Avatar
+                              src={p.avatarUrl ?? undefined}
+                              fallback={initials}
+                              size="sm"
+                              tier={p.reputacaoTier}
+                              className="shrink-0 mt-1"
+                            />
+                            <div className="flex-1 bg-recessed/50 rounded-lg p-4 border border-ink-tertiary/5">
+                              <p className="text-sm text-ink-secondary leading-snug mb-2">
+                                desbloqueou a conquista{' '}
+                                <strong className="text-ink-primary font-semibold">"{item.titulo}"</strong>
+                              </p>
+                              {item.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mb-3">
+                                  {item.tags.map((tag) => (
+                                    <span key={tag} className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-accent/10 text-accent uppercase tracking-wide">
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="flex items-center gap-4 text-xs text-ink-tertiary">
+                                <button type="button" className="flex items-center gap-1.5 hover:text-accent transition-colors">
+                                  <Heart size={14} /> Gosto
+                                </button>
+                                <button type="button" className="flex items-center gap-1.5 hover:text-accent transition-colors">
+                                  <MessageCircle size={14} /> Comentar
+                                </button>
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center bg-recessed/30 rounded-lg border border-ink-tertiary/5">
+                        <Trophy size={24} className="text-ink-tertiary mx-auto mb-2" strokeWidth={1.5} />
+                        <p className="text-sm text-ink-secondary">Sem atividade recente</p>
+                      </div>
+                    )}
+                  </section>
                 </div>
-              ))
-            ) : (
-              <div className="col-span-3 text-sm text-ink-tertiary">Nenhuma conquista ainda.</div>
-            )}
-          </div>
-        </Card>
-      </div>
 
-      {/* ── Projetos Showcase ── */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between px-2">
-          <h3 className="text-xl font-bold font-display tracking-tight text-ink-primary text-2xl">Portfólio de Evidências</h3>
-          <Link to="/projetos" className="text-xs font-bold text-accent hover:underline uppercase tracking-widest">Explorar Projetos →</Link>
+                {/* Right col of Visão Geral */}
+                <div className="space-y-8">
+                  {/* Informação */}
+                  <section className="bg-recessed/30 rounded-lg p-5 border border-ink-tertiary/5">
+                    <h3 className="text-sm font-bold text-ink-primary uppercase tracking-wider mb-4">Métricas do PDC</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-ink-tertiary">Nível PDC</span>
+                        <span className="font-bold text-ink-primary">{p.reputacaoTier}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-ink-tertiary">Reputação</span>
+                        <span className="font-bold text-ink-primary">{p.reputacao} pts</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm pt-3 border-t border-ink-tertiary/10">
+                        <span className="text-ink-tertiary">Membro desde</span>
+                        <span className="font-medium text-ink-secondary">Abril 2026</span>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'experiencia' && <ExpList items={experiencias} isOwner={isOwner} />}
+            {activeTab === 'educacao' && <EduList items={educacao} isOwner={isOwner} />}
+            {activeTab === 'certificacoes' && <CertList items={conquistas} isOwner={isOwner} />}
+          </motion.div>
+
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="col-span-full text-center py-10 border border-dashed border-white/10 rounded-[28px] text-ink-tertiary text-sm">
-            Nenhum projeto público validado no momento.
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   );
 }

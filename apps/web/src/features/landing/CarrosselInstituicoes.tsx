@@ -18,7 +18,7 @@ export function CarrosselInstituicoes() {
   if (isError || (items.length === 0 && !isLoading)) return null;
 
   return (
-    <section className="bg-surface-alt/30 border-y border-border/50 py-12 overflow-hidden">
+    <section className="py-12 overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="text-center mb-8">
           <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted">

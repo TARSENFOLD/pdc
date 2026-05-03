@@ -36,7 +36,7 @@ export function CursoPublicoDetailPage() {
       <div className="mx-auto max-w-3xl">
         <Link to="/cursos" className="text-sm text-ink-tertiary hover:text-ink-secondary">← Voltar aos cursos</Link>
 
-        {curso.capaUrl ? <img src={curso.capaUrl} alt={curso.titulo} className="mt-6 w-full rounded-2xl object-cover" /> : null}
+        {curso.capaUrl ? <img src={curso.capaUrl} alt={curso.titulo} className="mt-6 w-full rounded-lg object-cover" /> : null}
 
         <div className="mt-6 flex flex-wrap gap-2">
           {curso.area ? <Badge variant="info">{curso.area}</Badge> : null}
@@ -52,7 +52,7 @@ export function CursoPublicoDetailPage() {
           {curso.autorNome ? <span>Por {curso.autorNome}</span> : null}
         </div>
 
-        <div className="mt-8 rounded-xl border border-ink-tertiary/10 bg-elevated p-6">
+        <div className="mt-8 pt-8 border-t border-ink-tertiary/10">
           <h2 className="text-lg font-semibold text-ink-primary">Conteúdo do curso</h2>
           <p className="mt-3 text-sm text-ink-secondary">
             {curso.totalHoras ? `${String(curso.totalHoras)} horas de conteúdo estruturado.` : 'Conteúdo estruturado em módulos.'}
@@ -63,12 +63,12 @@ export function CursoPublicoDetailPage() {
         <div className="mt-8 flex flex-col gap-4 sm:flex-row">
           <Link 
             to="/login" 
-            className="rounded-xl bg-accent px-6 py-3 text-center text-sm font-semibold transition-colors hover:bg-accent-terracotta-soft"
+            className="rounded-lg bg-accent px-6 py-3 text-center text-sm font-semibold transition-colors hover:bg-accent-terracotta-soft"
             style={{ color: 'var(--ink-on-accent)' }}
           >
             Inscrever-me neste curso
           </Link>
-          <Link to="/cursos" className="rounded-xl border border-ink-tertiary/10 px-6 py-3 text-center text-sm text-ink-secondary transition-colors hover:bg-elevated">
+          <Link to="/cursos" className="rounded-lg border border-transparent px-6 py-3 text-center text-sm text-ink-secondary transition-colors hover:border-ink-tertiary/20 hover:bg-recessed">
             Ver mais cursos
           </Link>
         </div>

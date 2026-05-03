@@ -1,24 +1,13 @@
-import { useRef, useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/lib/auth/AuthContext';
 import { authApi } from '@/lib/api/auth';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { AsymmetricButton } from '@/components/ui';
 import { useTranslation } from '@/hooks/useTranslation';
-
-gsap.registerPlugin(useGSAP);
-
-// Configuração dos Blocos (Formas e Cores Low-Poly) - Epic 05
-const defaultBlock = { shape: 'cube', color: 'var(--accent-terracotta)' } as const;
-const blockTypes = [
-  defaultBlock,
-  { shape: 'pyramid', color: 'var(--institutional-cobalt)' },
-  { shape: 'sphere', color: '#a855f7' }, // Purple elite
-  { shape: 'torus', color: 'var(--accent-success)' }
-] as const;
+import { AuthLeftPanel } from '@/components/auth/AuthLeftPanel';
+import type { NeuralState } from '@/components/auth/NeuralConstellation';
 
 function getErrorStatus(error: unknown): number | undefined {
   if (typeof error !== 'object' || error === null) return undefined;
@@ -35,173 +24,32 @@ function getErrorStatus(error: unknown): number | undefined {
 function getErrorBody(error: unknown): { error?: string } | undefined {
   if (typeof error !== 'object' || error === null || !('body' in error)) return undefined;
   const body = error.body;
-  if (typeof body === 'object' && body !== null) {
-    if ('error' in body && typeof body.error === 'string') {
-      return { error: body.error };
-    }
+  if (typeof body === 'object' && body !== null && 'error' in body && typeof body.error === 'string') {
+    return { error: body.error };
   }
   return undefined;
 }
 
 export default function LoginPage() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const leftPaneRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const blocksRefs = useRef<HTMLDivElement[]>([]);
   const { t } = useTranslation('common');
 
-  const blockCount = 15;
-  const [loginStatus, setLoginStatus] = useState<'idle' | 'typing' | 'success' | 'failure'>('idle');
-
+  const [neuralState, setNeuralState] = useState<NeuralState>('idle');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
-  const { login, logout } = useAuth();
+
+  const { login, logout, user, isLoading: isAuthLoading } = useAuth();
   const { track } = useTelemetry();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/app';
 
-  const { contextSafe } = useGSAP({ scope: leftPaneRef });
-
-  useGSAP(() => {
-    gsap.fromTo(blocksRefs.current, 
-      { 
-        x: "-=300", 
-        y: () => gsap.utils.random(-100, 100),
-        rotate: () => gsap.utils.random(-180, 180),
-        scale: 0.5,
-        opacity: 0
-      },
-      {
-        x: () => gsap.utils.random(-50, 50),
-        y: () => gsap.utils.random(-150, 150),
-        rotate: 0,
-        scale: 1,
-        opacity: 0.7,
-        stagger: 0.1,
-        duration: 1.5,
-        ease: "elastic.out(1, 0.7)",
-        onComplete: startIdleAnimation
-      }
-    );
-
-    function startIdleAnimation() {
-      if (loginStatus !== 'idle') return;
-      blocksRefs.current.forEach(block => {
-        gsap.to(block, {
-          y: "+=20",
-          x: "+=15",
-          rotate: "+=10",
-          duration: () => gsap.utils.random(2, 4),
-          repeat: -1,
-          yoyo: true,
-          ease: "sine.inOut"
-        });
-      });
-    }
-  });
-
-  const handleTypingFocus = contextSafe(() => {
-    setLoginStatus('typing');
-    gsap.killTweensOf(blocksRefs.current);
-
-    blocksRefs.current.forEach((block, i) => {
-      const yPos = 120 - (i * 18);
-      const rotation = i % 2 === 0 ? 5 : -5;
-
-      gsap.to(block, {
-        x: 0,
-        y: yPos,
-        scale: 1.2,
-        rotate: rotation,
-        opacity: 1,
-        duration: 0.6,
-        ease: "back.out(1.7)",
-        onComplete: startJiggle
-      });
-
-      function startJiggle() {
-        if (loginStatus !== 'typing') return;
-        gsap.to(block, {
-          rotate: i % 2 === 0 ? -10 : 10,
-          y: "+=3",
-          duration: 0.1 + (i * 0.01),
-          repeat: -1,
-          yoyo: true,
-          ease: "power1.inOut"
-        });
-      }
-    });
-  });
-
-  const handleInputBlur = contextSafe(() => {
-    if (loginStatus === 'success' || loginStatus === 'failure') return;
-    setLoginStatus('idle');
-    gsap.killTweensOf(blocksRefs.current);
-    gsap.to(blocksRefs.current, {
-      x: () => gsap.utils.random(-50, 50),
-      y: () => gsap.utils.random(-150, 150),
-      rotate: 0,
-      scale: 1,
-      opacity: 0.7,
-      duration: 1,
-      stagger: 0.05,
-      ease: "power2.inOut"
-    });
-  });
-
-  const simulateFailure = contextSafe(() => {
-    setLoginStatus('failure');
-    gsap.to(blocksRefs.current, {
-      y: "+=300",
-      x: () => gsap.utils.random(-200, 200),
-      rotate: () => gsap.utils.random(-180, 180),
-      scale: 0.6,
-      backgroundColor: "#404040",
-      duration: 0.8,
-      stagger: 0.02,
-      ease: "power4.in",
-      onComplete: () => {
-        gsap.fromTo(leftPaneRef.current, { x: -5 }, { x: 5, duration: 0.05, repeat: 10, yoyo: true });
-        setTimeout(() => {
-            if (document.activeElement?.tagName === 'INPUT') {
-                handleTypingFocus();
-            } else {
-                handleInputBlur();
-            }
-        }, 1500);
-      }
-    });
-  });
-
-  const simulateSuccess = contextSafe(() => {
-    setLoginStatus('success');
-    gsap.to(formRef.current, { opacity: 0, x: 20, duration: 0.5 });
-    
-    gsap.to(blocksRefs.current, {
-      backgroundColor: "var(--accent-terracotta)",
-      rotate: 0,
-      scale: 1.5,
-      opacity: 1,
-      duration: 0.4,
-      ease: "back.out(3)"
-    });
-
-    gsap.to(blocksRefs.current, {
-      y: -500,
-      scale: 0.5,
-      duration: 0.8,
-      ease: "power4.in",
-      delay: 0.5,
-      onComplete: () => {
-        navigate('/app', { replace: true });
-      }
-    });
-  });
+  const handleWarpComplete = useCallback(() => {
+    navigate(from, { replace: true });
+  }, [from, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,97 +62,101 @@ export default function LoginPage() {
         navigate('/verificar', { state: { canal: result.canal, from }, replace: true });
       } else {
         track('login.success');
-        simulateSuccess();
+        setNeuralState('warp');
+        // navigation happens via onWarpComplete
       }
     } catch (err: unknown) {
       const status = getErrorStatus(err);
-      if (status === 401) {
-        // Limpar lixo de sessões anteriores em caso de falha
-        void logout();
-      }
+      if (status === 401) void logout();
       const body = getErrorBody(err);
       setError(body?.error ?? t('auth.login_page.error_generic'));
-      simulateFailure();
+      setNeuralState('scatter');
+      setTimeout(() => { setNeuralState('idle'); }, 2200);
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (user && neuralState !== 'warp') {
+      navigate(from, { replace: true });
+    }
+  }, [from, navigate, neuralState, user]);
+
+  if (!isAuthLoading && user && neuralState !== 'warp') {
+    return <Navigate to={from} replace />;
+  }
+
   return (
-    <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-canvas overflow-hidden font-sans">
-      
-      {/* LADO ESQUERDO: A Animação */}
-      <div 
-        ref={leftPaneRef}
-        className="relative flex items-center justify-center bg-recessed border-r border-ink-tertiary/10 [perspective:1000px] hidden lg:flex"
-      >
-        {Array.from({ length: blockCount }).map((_, i) => {
-          const config = blockTypes[i % blockTypes.length] ?? defaultBlock;
-          return (
-            <div 
-              key={i}
-              ref={(el) => { if (el) blocksRefs.current[i] = el; }}
-              className="absolute w-12 h-12 shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-transform preserve-3d"
-              style={{
-                backgroundColor: config.color,
-                borderRadius: config.shape === 'sphere' ? '50%' : config.shape === 'torus' ? '30%' : '4px',
-                clipPath: config.shape === 'pyramid' ? 'polygon(50% 0%, 0% 100%, 100% 100%)' : 'none'
-              }}
-            />
-          );
-        })}
-        
-        <div className="absolute bottom-10 left-10 text-ink-tertiary text-xs font-mono tracking-tighter">
-          SYSTEM: ACTIVE <br />
-          MORPHOLOGY: MULTI-BODY_STANCE
-        </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-canvas font-sans">
+      {/* Left: sticky neural panel */}
+      <div className="hidden lg:block">
+        <AuthLeftPanel
+          neuralState={neuralState}
+          onWarpComplete={handleWarpComplete}
+          headline="Por Dentro do Curso"
+          subline="O universo académico inteiro, à tua medida."
+        />
       </div>
 
-      {/* LADO DIREITO: O Login */}
-      <div className="flex items-center justify-center p-8 lg:p-12">
+      {/* Right: login form */}
+      <div className="flex items-center justify-center p-8 lg:p-12 min-h-screen">
         <div className="w-full max-w-sm">
           <header className="mb-12">
-            <h1 className="text-5xl font-black text-ink-primary tracking-tight mb-2 font-display">{t('auth.login_page.title')}</h1>
+            <h1 className="text-5xl font-black text-ink-primary tracking-tight mb-2 font-display">
+              {t('auth.login_page.title')}
+            </h1>
             <p className="text-ink-secondary font-medium">{t('auth.login_page.subtitle')}</p>
           </header>
 
           {error && (
-            <div className="rounded-lg bg-red-500/10 p-4 font-medium text-sm text-red-500 border border-red-500/20 mb-6 backdrop-blur-md">
+            <div role="alert" data-testid="error" className="rounded-lg bg-red-500/10 p-4 font-medium text-sm text-red-500 border border-red-500/20 mb-6 backdrop-blur-md">
               {error}
             </div>
           )}
 
           <form ref={formRef} onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
             <div>
-              <label className="block text-xs font-bold text-ink-tertiary uppercase tracking-widest mb-2">{t('auth.login_page.email_label')}</label>
-              <input 
-                type="email" 
+              <label htmlFor="login-email" className="block text-xs font-bold text-ink-tertiary uppercase tracking-widest mb-2">
+                {t('auth.login_page.email_label')}
+              </label>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                aria-label="Email"
                 required
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); }}
-                onFocus={handleTypingFocus}
-                onBlur={handleInputBlur}
+                onFocus={() => { setNeuralState('align'); }}
+                onBlur={() => { if (neuralState === 'align') setNeuralState('idle'); }}
                 placeholder="nome@exemplo.com"
                 className="w-full p-4 bg-recessed border border-ink-tertiary/10 rounded-xl text-base text-ink-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all placeholder:text-ink-tertiary touch-target"
               />
             </div>
-            
+
             <div>
-              <label className="block text-xs font-bold text-ink-tertiary uppercase tracking-widest mb-2">{t('auth.login_page.password_label')}</label>
-              <input 
-                type="password" 
+              <label htmlFor="login-password" className="block text-xs font-bold text-ink-tertiary uppercase tracking-widest mb-2">
+                {t('auth.login_page.password_label')}
+              </label>
+              <input
+                id="login-password"
+                name="password"
+                type="password"
+                aria-label="Password"
                 required
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); }}
-                onFocus={handleTypingFocus}
-                onBlur={handleInputBlur}
+                onFocus={() => { setNeuralState('encrypt'); }}
+                onBlur={() => { if (neuralState === 'encrypt') setNeuralState('idle'); }}
                 placeholder="••••••••"
                 className="w-full p-4 bg-recessed border border-ink-tertiary/10 rounded-xl text-base text-ink-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all placeholder:text-ink-tertiary touch-target"
               />
             </div>
 
-            <AsymmetricButton 
+            <AsymmetricButton
               type="submit"
+              aria-label="Entrar"
               disabled={isLoading}
               className="w-full h-14 bg-ink-primary text-canvas font-black uppercase tracking-widest text-[11px] hover:bg-accent hover:text-ink-on-accent transition-all shadow-xl"
             >
@@ -314,10 +166,12 @@ export default function LoginPage() {
             <div className="mt-8">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-ink-tertiary/10"></div>
+                  <div className="w-full border-t border-ink-tertiary/10" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="bg-canvas px-4 text-ink-tertiary font-mono tracking-widest text-xs uppercase">{t('auth.login_page.divider')}</span>
+                  <span className="bg-canvas px-4 text-ink-tertiary font-mono tracking-widest text-xs uppercase">
+                    {t('auth.login_page.divider')}
+                  </span>
                 </div>
               </div>
 
@@ -328,12 +182,23 @@ export default function LoginPage() {
               >
                 {t('auth.login_page.google_cta')}
               </button>
+              <button
+                type="button"
+                disabled
+                className="mt-3 flex w-full items-center justify-center gap-3 rounded-xl border border-ink-tertiary/10 bg-recessed p-4 font-bold text-ink-secondary transition-colors opacity-70 touch-target"
+              >
+                LinkedIn
+              </button>
             </div>
           </form>
 
           <footer className="mt-12 pt-8 border-t border-ink-tertiary/10 flex flex-col gap-4 sm:flex-row sm:justify-between text-sm text-ink-tertiary font-medium">
-            <Link to="/forgot-password" replace className="hover:text-ink-primary transition-colors">{t('auth.login_page.forgot_link')}</Link>
-            <Link to="/criar-conta" replace className="hover:text-ink-primary transition-colors">{t('auth.login_page.register_link')}</Link>
+            <Link to="/auth/recuperar" replace className="hover:text-ink-primary transition-colors">
+              Recuperar password
+            </Link>
+            <Link to="/criar-conta" replace className="hover:text-ink-primary transition-colors">
+              {t('auth.login_page.register_link')}
+            </Link>
           </footer>
         </div>
       </div>

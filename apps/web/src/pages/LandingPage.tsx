@@ -2,7 +2,6 @@ import { SEOHead } from '@/components/layout/SEOHead';
 import { LandingNavbar } from '../features/landing/LandingNavbar';
 import { LandingHero } from '../features/landing/LandingHero';
 import { LandingMarquee } from '../features/landing/LandingMarquee';
-import { LandingDestaques } from '../features/landing/LandingDestaques';
 import { CarrosselInstituicoes } from '../features/landing/CarrosselInstituicoes';
 import { LandingProblema } from '../features/landing/LandingProblema';
 import { LandingVisualDesk } from '../features/landing/LandingVisualDesk';
@@ -27,8 +26,6 @@ export function LandingPage() {
       <main>
         <LandingHero />
         <LandingMarquee />
-        <LandingDestaques />
-        <CarrosselInstituicoes />
         <LandingProblema />
         <LandingVisualDesk />
         <LandingComoFunciona />
@@ -36,6 +33,7 @@ export function LandingPage() {
         <LandingMentores />
         <LandingLivePulse />
         <LandingCTAFinal />
+        <CarrosselInstituicoes />
       </main>
       <LandingFooter />
     </div>

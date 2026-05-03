@@ -1,25 +1,5 @@
 import { useState } from 'react';
-
-interface UploadResult {
-  url: string;
-  key: string;
-  tamanhoBytes: number;
-  mimeType: string;
-}
-
-interface UploadErrorResponse {
-  error?: string;
-}
-
-function isUploadResult(value: unknown): value is UploadResult {
-  if (typeof value !== 'object' || value === null) return false;
-  return (
-    'url' in value && typeof value.url === 'string' &&
-    'key' in value && typeof value.key === 'string' &&
-    'tamanhoBytes' in value && typeof value.tamanhoBytes === 'number' &&
-    'mimeType' in value && typeof value.mimeType === 'string'
-  );
-}
+import { UploadResultSchema, type UploadResult } from '@pdc/shared';
 
 function parseJson(text: string): unknown {
   return JSON.parse(text) as unknown;
@@ -27,8 +7,8 @@ function parseJson(text: string): unknown {
 
 function getUploadErrorMessage(value: unknown): string {
   if (typeof value === 'object' && value !== null && 'error' in value) {
-    const response = value as UploadErrorResponse;
-    if (typeof response.error === 'string') return response.error;
+    const err = value as { error?: unknown };
+    if (typeof err.error === 'string') return err.error;
   }
   return 'Falha no upload';
 }
@@ -47,17 +27,10 @@ export function useUpload() {
       const formData = new FormData();
       formData.append('file', file);
 
-      // Usando fetch nativo para capturar progresso se necessário, 
-      // ou apenas o http helper se preferirmos simplicidade E2E.
-      // Para o Patamar Mundial, implementamos com XHR para progresso real.
-
       return await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         const apiUrl = typeof import.meta.env.VITE_API_URL === 'string' ? import.meta.env.VITE_API_URL : '/api';
         xhr.open('POST', `${apiUrl}/media/upload`);
-
-        // Autenticação (buscamos o token do cookie ou localStorage se necessário, 
-        // mas o middleware verifyJwt espera o token nos cookies por padrão no nosso boilerplate)
         xhr.withCredentials = true;
 
         xhr.upload.onprogress = (event) => {
@@ -69,9 +42,9 @@ export function useUpload() {
 
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            const response = parseJson(xhr.responseText);
-            if (isUploadResult(response)) {
-              resolve(response);
+            const parsed = UploadResultSchema.safeParse(parseJson(xhr.responseText));
+            if (parsed.success) {
+              resolve(parsed.data);
               return;
             }
             reject(new Error('Resposta inválida do servidor de upload'));

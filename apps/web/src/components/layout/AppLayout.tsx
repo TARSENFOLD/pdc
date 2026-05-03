@@ -52,7 +52,7 @@ export function AppLayout() {
         transition={reduced ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 280 }}
       >
         <motion.div
-          className="fixed top-0 bottom-0 flex flex-col border-r border-[var(--glass-border-light)] bg-[var(--surface-recessed)] shadow-xl overflow-hidden"
+          className="fixed top-0 bottom-0 flex flex-col border-r border-[var(--chrome-border)] bg-[var(--chrome-surface)] overflow-hidden"
           animate={{ width: sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
           transition={reduced ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 280 }}
         >
@@ -95,7 +95,7 @@ export function AppLayout() {
               animate={reduced ? { opacity: 1 } : { x: 0 }}
               exit={reduced ? { opacity: 0 } : { x: -SIDEBAR_WIDTH }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[var(--glass-border-light)] bg-[var(--surface-recessed)] lg:hidden w-[260px]"
+              className="fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[var(--chrome-border)] bg-[var(--chrome-surface)] lg:hidden w-[260px]"
             >
               <SidebarContent onNavigate={() => { setDrawerOpen(false); }} />
             </motion.div>
