@@ -17,6 +17,36 @@ interface StrapiRating {
   valor: number;
 }
 
+interface StrapiInscricao {
+  id: string;
+  progressoPercentual?: number;
+}
+
+const ELIGIBILITY_MIN_PROGRESS = 30;
+
+async function checkRatingEligibility(
+  userId: string,
+  targetType: 'curso' | 'simulacao' | 'mentor',
+  targetId: string
+): Promise<boolean> {
+  // Mentors are always rateable (no progress gating)
+  if (targetType === 'mentor') return true;
+
+  const strapiCollection = targetType === 'curso' ? '/inscricaos' : '/simulacoes';
+  const filterKey = targetType === 'curso' ? 'filters[curso][id][$eq]' : 'filters[id][$eq]';
+  const filterVal = targetType === 'curso' ? targetId : targetId;
+
+  const res = await strapiGet<StrapiInscricao>(strapiCollection, {
+    'filters[perfil][userId][$eq]': userId,
+    [filterKey]: filterVal,
+    'fields[0]': 'progressoPercentual',
+    'pagination[limit]': '1',
+  });
+
+  const record = res.data[0];
+  return (record?.progressoPercentual ?? 0) >= ELIGIBILITY_MIN_PROGRESS;
+}
+
 // POST /ratings
 ratingRoutes.post('/', zValidator('json', z.object({
   targetType: z.enum(['curso', 'simulacao', 'mentor']),
@@ -27,6 +57,11 @@ ratingRoutes.post('/', zValidator('json', z.object({
   const { targetType, targetId, valor } = c.req.valid('json');
 
   try {
+    const eligible = await checkRatingEligibility(userId, targetType, targetId);
+    if (!eligible) {
+      return c.json({ error: `Completa pelo menos ${String(ELIGIBILITY_MIN_PROGRESS)}% para poder avaliar` }, 403);
+    }
+
     const res = await strapiGet<StrapiRating>('/ratings', {
       'filters[userId][$eq]': userId,
       'filters[targetType][$eq]': targetType,

@@ -50,14 +50,14 @@
 | T1 | Like / Curtir (toggle, 1 por user/entidade) | `[x]` | Interaction events |
 | T2 | Bookmark / Guardar (privado, toggle) | `[x]` | Página `/guardados` |
 | T3 | Comentar (3–1000 chars, 1 nível reply) | `[x]` | Moderação ativa |
-| T4 | Avaliar (Rating) 1–5 estrelas | `[~]` | Persistência PostgreSQL. Faltam condições de elegibilidade (spec Traycer: curso ≥30%, experiência ≥3 blocos, etc. — ver `arquivo-fundacional/09-traycer-specs/mapa-paginas-features-transversais.md` §Feature 4). |
+| T4 | Avaliar (Rating) 1–5 estrelas | `[x]` | Persistência + elegibilidade: mentor always rateable; curso/simulação ≥30% progressoPercentual (403 caso contrário). 2026-05-03. |
 | T5 | Partilhar (Share) interno/externo | `[ ]` | Por integrar |
 | T6 | Denunciar (Report) + auto-hide | `[x]` | Fila para moderador |
 | T7 | Telemetria (views, scroll, vídeo, decisões) | `[x]` | Identidade Total auditada |
 | T8 | Vínculo (Conexão formal bilateral) | `[~]` | Drift: schema shared vs apps/api serializer |
 | T9 | Notificações sociais/vínculo (agrupamento) | `[~]` | Socket.IO funcional para notificações básicas. Agrupamento e Push real pendentes. Contradição com P8 `[~]`. |
-| T10 | Endorsements / Kudos | `[P]` | Schema existe, rotas BFF parciais. Sem testes E2E. UI de endosso não verificada. |
-| T11 | Project Votes (upvote / fork) | `[P]` | Schema existe. Integração com feed scoring não verificada E2E. |
+| T10 | Endorsements / Kudos | `[x]` | `POST /projetos/:id/votos` tipo=endorsement + GET + DELETE; UI botão Star em ProjetoDetailPage; domain event PROJETO_ENDORSEMENT_RECEBIDO. 2026-05-03. |
+| T11 | Project Votes (upvote / fork) | `[x]` | `POST /projetos/:id/votos` tipo=voto + GET + DELETE; UI botão ThumbsUp em ProjetoDetailPage. 2026-05-03. |
 | T12 | Discussions / Threads | `[P]` | BFF `GET /discussions/:id/replies` funcional. Frontend: `DiscussionThread` + `DiscussionsPanel` (2 componentes com ~56 linhas de lógica). Falta: criação de thread, moderação inline, delete. |
 
 ## 4. Plataforma & Identidade (P1–P10)
@@ -83,7 +83,7 @@
 | F4 | Stories — formato vídeo curto vertical | `[ ]` | REQ-4-011 |
 | F5 | Pílulas de Conhecimento — micro-simulações | `[ ]` | REQ-4-012 |
 | F6 | Push FOMO / Notificações inteligentes | `[~]` | `notify.hook.ts` (4.4KB) existe. Triggers FOMO específicos ("3 instituições viram o teu perfil", etc.) **não implementados**. |
-| F7 | Endorsements / Kudos públicos | `[P]` | (= T10 — schema parcial, sem testes E2E) |
+| F7 | Endorsements / Kudos públicos | `[x]` | (= T10 — implementado 2026-05-03 via votos em projetos) |
 | F8 | Top Bar com Command+K (search global) | `[x]` | T-REM-3 (2026-04-30). CommandPalette com search dinâmico via `GET /catalogo/explorar` (debounced 300ms), role-awareness (7 roles × nav items), navegação por teclado (↑↓↵), secções Nav + Conteúdo, loading state. |
 | F9 | Sidebar slim (retrátil) | `[ ]` | REQ-NF-010 |
 | F10 | 15 áreas vocacionais globais | `[x]` | Migrado de 4 áreas (F10) |
