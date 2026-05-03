@@ -62,20 +62,25 @@ function thresholdCondition(
 
 // ── Strategy A: DomainEventName → trigger string mapping (ADR-008.bis) ─────
 export const EVENT_TO_TRIGGER_MAP: Readonly<Record<string, string>> = {
-  [DomainEventName.TENTATIVA_CONCLUIDA]: 'simulacao.concluida',
-  [DomainEventName.CURSO_CONCLUIDO]:     DomainEventName.CURSO_CONCLUIDO,
-  [DomainEventName.VINCULO_CONNECTED]:   DomainEventName.VINCULO_CONNECTED,
-  [DomainEventName.LOGIN]:               DomainEventName.LOGIN,
-  [DomainEventName.MENTORIA_ACEITE]:     DomainEventName.MENTORIA_ACEITE,
-  [DomainEventName.EXPERIENCIA_PUBLICADA]: DomainEventName.EXPERIENCIA_PUBLICADA,
-  [DomainEventName.RATING_CRIADO]:       DomainEventName.RATING_CRIADO,
-  [DomainEventName.PERFIL_ATUALIZADO]:   DomainEventName.PERFIL_ATUALIZADO,
-  [DomainEventName.SIMULACAO_CRIADA]:    DomainEventName.SIMULACAO_CRIADA,
-  [DomainEventName.CURSO_PUBLICADO]:     DomainEventName.CURSO_PUBLICADO,
-  [DomainEventName.CURSO_INSCRICAO]:     DomainEventName.CURSO_INSCRICAO,
-  [DomainEventName.COMENTARIO_CRIADO]:   DomainEventName.COMENTARIO_CRIADO,
-  [DomainEventName.PROJETO_PUBLICADO]:   DomainEventName.PROJETO_PUBLICADO,
-  [DomainEventName.PROGRAMA_APROVADO]:   DomainEventName.PROGRAMA_APROVADO,
+  [DomainEventName.TENTATIVA_CONCLUIDA]:        'simulacao.concluida',
+  [DomainEventName.CURSO_CONCLUIDO]:            DomainEventName.CURSO_CONCLUIDO,
+  [DomainEventName.VINCULO_CONNECTED]:          DomainEventName.VINCULO_CONNECTED,
+  [DomainEventName.LOGIN]:                      DomainEventName.LOGIN,
+  [DomainEventName.MENTORIA_ACEITE]:            DomainEventName.MENTORIA_ACEITE,
+  [DomainEventName.EXPERIENCIA_PUBLICADA]:      DomainEventName.EXPERIENCIA_PUBLICADA,
+  [DomainEventName.RATING_CRIADO]:              DomainEventName.RATING_CRIADO,
+  [DomainEventName.PERFIL_ATUALIZADO]:          DomainEventName.PERFIL_ATUALIZADO,
+  [DomainEventName.SIMULACAO_CRIADA]:           DomainEventName.SIMULACAO_CRIADA,
+  [DomainEventName.CURSO_PUBLICADO]:            DomainEventName.CURSO_PUBLICADO,
+  [DomainEventName.CURSO_INSCRICAO]:            DomainEventName.CURSO_INSCRICAO,
+  [DomainEventName.COMENTARIO_CRIADO]:          DomainEventName.COMENTARIO_CRIADO,
+  [DomainEventName.PROJETO_PUBLICADO]:          DomainEventName.PROJETO_PUBLICADO,
+  [DomainEventName.PROGRAMA_APROVADO]:          DomainEventName.PROGRAMA_APROVADO,
+  [DomainEventName.PROGRAMA_CONCLUIDO]:         DomainEventName.PROGRAMA_CONCLUIDO,
+  [DomainEventName.PROJETO_ENDORSEMENT_RECEBIDO]: DomainEventName.PROJETO_ENDORSEMENT_RECEBIDO,
+  [DomainEventName.PROJETO_ACESSO_CONCEDIDO]:   DomainEventName.PROJETO_ACESSO_CONCEDIDO,
+  [DomainEventName.COMITE_APROVOU]:             DomainEventName.COMITE_APROVOU,
+  [DomainEventName.LIKE_ADICIONADO]:            DomainEventName.LIKE_ADICIONADO,
 } as const;
 
 // ── Declarative rules (25+) ─────────────────────────────────────────────────
@@ -220,10 +225,10 @@ export const REGRAS: readonly ConquistaRule[] = [
   },
   {
     slug: 'programa-completo',
-    trigger: DomainEventName.PROGRAMA_APROVADO,
+    trigger: DomainEventName.PROGRAMA_CONCLUIDO,
     titulo: 'Programa Concluído',
     descricao: 'Participou e concluiu um programa institucional',
-    condition: thresholdCondition('programa.concluido', 1),
+    condition: thresholdCondition(DomainEventName.PROGRAMA_CONCLUIDO, 1),
   },
   {
     slug: 'streak-7-dias',
@@ -238,10 +243,10 @@ export const REGRAS: readonly ConquistaRule[] = [
   },
   {
     slug: 'primeiro-endorsement',
-    trigger: DomainEventName.PROJETO_PUBLICADO,
+    trigger: DomainEventName.PROJETO_ENDORSEMENT_RECEBIDO,
     titulo: 'Talento Reconhecido',
     descricao: 'Recebeu o seu primeiro endorsement num projeto',
-    condition: thresholdCondition('projeto.endorsement', 1),
+    condition: thresholdCondition(DomainEventName.PROJETO_ENDORSEMENT_RECEBIDO, 1),
   },
   {
     slug: 'mentor-elite',
@@ -259,10 +264,10 @@ export const REGRAS: readonly ConquistaRule[] = [
   },
   {
     slug: 'colaborador-projeto',
-    trigger: DomainEventName.PROJETO_PUBLICADO,
+    trigger: DomainEventName.PROJETO_ACESSO_CONCEDIDO,
     titulo: 'Colaborador Ativo',
     descricao: 'Foi aceite como colaborador num projeto alheio',
-    condition: thresholdCondition('projeto.colaborador_aceite', 1),
+    condition: thresholdCondition(DomainEventName.PROJETO_ACESSO_CONCEDIDO, 1),
   },
   {
     slug: 'autoridade-em-area',
