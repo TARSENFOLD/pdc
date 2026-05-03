@@ -59,7 +59,7 @@ export default function ProgramasCatalogoPage(): React.JSX.Element {
               areas={TIPOS}
               selectedArea={tipo}
               onAreaChange={setTipo}
-              totalResults={data?.data?.length ?? 0}
+              totalResults={data?.data.length ?? 0}
             />
           }
         >

@@ -32,10 +32,6 @@ export interface NavGroup {
 
 export type SidebarItem = NavLeaf | NavGroup;
 
-export const ALL_ROLES: Role[] = [
-  'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin', 'patrocinador',
-];
-
 export const DASHBOARD_BY_ROLE: Record<Role, string> = {
   estudante: '/app/dashboard/estudante',
   mentor: '/app/dashboard/mentor',
@@ -45,6 +41,10 @@ export const DASHBOARD_BY_ROLE: Record<Role, string> = {
   super_admin: '/app/dashboard/admin',
   patrocinador: '/app/dashboard/patrocinador',
 };
+
+export const ALL_ROLES: Role[] = Object.keys(DASHBOARD_BY_ROLE).filter(
+  (key): key is Role => key in DASHBOARD_BY_ROLE
+);
 
 export const SIDEBAR_CONFIG: SidebarItem[] = [
   { type: 'leaf', slug: 'inicio', to: '/app/home', icon: LayoutDashboard, roles: ALL_ROLES },

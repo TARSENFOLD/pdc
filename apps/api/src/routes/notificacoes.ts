@@ -33,16 +33,46 @@ notificacaoRoutes.get('/', async (c) => {
   }
 });
 
+// GET /notificacoes/agrupadas — notificações agrupadas por tipo com contagem
+notificacaoRoutes.get('/agrupadas', async (c) => {
+  const { id } = c.get('user');
+  try {
+    const data = await strapiGet<{ tipo: string; lida: boolean }>('/notificacoes', {
+      'filters[userId][$eq]': id,
+      'fields[0]': 'tipo',
+      'fields[1]': 'lida',
+      'pagination[pageSize]': '500',
+    });
+
+    if (data.meta.pagination.total > data.data.length) {
+      console.warn({ userId: id, total: data.meta.pagination.total, fetched: data.data.length }, 'Notificações agrupadas truncadas — contagem parcial');
+    }
+
+    const grupos: Record<string, { tipo: string; total: number; naoLidas: number }> = {};
+    for (const item of data.data) {
+      const tipo = item.tipo;
+      if (!grupos[tipo]) grupos[tipo] = { tipo, total: 0, naoLidas: 0 };
+      grupos[tipo].total += 1;
+      if (!item.lida) grupos[tipo].naoLidas += 1;
+    }
+
+    return c.json({ agrupadas: Object.values(grupos) });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro interno';
+    return c.json({ error: message }, 502);
+  }
+});
+
 // GET /notificacoes/contador — contagem de não lidas
 notificacaoRoutes.get('/contador', async (c) => {
   const { id } = c.get('user');
   try {
     const [all, unread] = await Promise.all([
-      strapiGet<{ meta: { pagination: { total: number } } }>('/notificacoes', {
+      strapiGet<unknown>('/notificacoes', {
         'filters[userId][$eq]': id,
         'pagination[pageSize]': '1',
       }),
-      strapiGet<{ meta: { pagination: { total: number } } }>('/notificacoes', {
+      strapiGet<unknown>('/notificacoes', {
         'filters[userId][$eq]': id,
         'filters[lida][$eq]': 'false',
         'pagination[pageSize]': '1',

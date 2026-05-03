@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import type React from 'react';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { programasApi } from '@/lib/api/programas';
 import { Avatar } from '@/components/ui';
@@ -32,7 +33,7 @@ const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'OUTRA', label: 'Outra' },
 ];
 
-function SectionHeader({ title, description, verTodosHref }: { title: string; description: string; verTodosHref: string }) {
+function SectionHeader({ title, description, verTodosHref }: { title: string; description: string; verTodosHref: string }): React.JSX.Element {
   return (
     <div className="flex items-end justify-between mb-6">
       <div>
@@ -49,7 +50,22 @@ function SectionHeader({ title, description, verTodosHref }: { title: string; de
   );
 }
 
-export function ExplorarPage() {
+function isAreaVocacional(value: string): value is AreaVocacional {
+  return AREAS.some((area) => area.value === value);
+}
+
+function QueryError({ label }: { label: string }): React.JSX.Element {
+  return <p className="py-6 text-sm text-error">Erro ao carregar {label}. Tenta novamente.</p>;
+}
+
+const LEGACY_TIPO_ROUTES: Record<string, string> = {
+  curso: 'cursos',
+  experiencia: 'experiencias',
+  simulacao: 'simulacoes',
+  programa: 'programas',
+};
+
+export default function ExplorarPage(): React.JSX.Element {
   const [sp, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,40 +73,44 @@ export function ExplorarPage() {
   const tipo = sp.get('tipo') ?? '';
   const inApp = location.pathname.startsWith('/app');
   const base = inApp ? '/app' : '';
+  const shouldRedirect = ['curso', 'experiencia', 'simulacao', 'programa'].includes(tipo);
 
   // Legacy tipo redirects — anyone with old bookmarks lands in the right place
   useEffect(() => {
-    if (tipo === 'curso') void navigate(`${base}/cursos`, { replace: true });
-    else if (tipo === 'experiencia') void navigate(`${base}/experiencias`, { replace: true });
-    else if (tipo === 'simulacao') void navigate(`${base}/simulacoes`, { replace: true });
-    else if (tipo === 'programa') void navigate(`${base}/programas`, { replace: true });
+    const route = LEGACY_TIPO_ROUTES[tipo];
+    if (route) navigate(`${base}/${route}`, { replace: true });
   }, [tipo, base, navigate]);
 
-  const areaParam = area ? { area: area as AreaVocacional } : {};
+  const areaParam = isAreaVocacional(area) ? { area } : {};
 
   const cursosQ = useQuery({
     queryKey: ['explorar-cursos', area],
     queryFn: () => catalogoApi.getCursos({ ...areaParam, pageSize: 4 }),
+    enabled: !shouldRedirect,
   });
 
   const simsQ = useQuery({
     queryKey: ['explorar-sims', area],
     queryFn: () => catalogoApi.getSimulacoes({ ...areaParam, pageSize: 4 }),
+    enabled: !shouldRedirect,
   });
 
   const expQ = useQuery({
     queryKey: ['explorar-exp', area],
     queryFn: () => catalogoApi.getExperiencias({ ...areaParam, pageSize: 4 }),
+    enabled: !shouldRedirect,
   });
 
   const progQ = useQuery({
     queryKey: ['explorar-prog', area],
     queryFn: () => programasApi.list({ pageSize: 4 }),
+    enabled: !shouldRedirect,
   });
 
   const mentoresQ = useQuery({
     queryKey: ['explorar-mentores'],
     queryFn: () => catalogoApi.getMentores({ pageSize: 8 }),
+    enabled: !shouldRedirect,
   });
 
   const setArea = (v: string) => {
@@ -129,6 +149,7 @@ export function ExplorarPage() {
               <button
                 key={a.value}
                 type="button"
+                aria-pressed={area === a.value}
                 onClick={() => { setArea(area === a.value ? '' : a.value); }}
                 className={`flex-none rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${area === a.value ? 'bg-[var(--chrome-active)] text-[var(--ink-on-accent)] shadow-sm' : 'text-ink-secondary hover:bg-recessed'}`}
               >
@@ -147,6 +168,8 @@ export function ExplorarPage() {
           />
           {cursosQ.isLoading ? (
             <CardGridSkeleton />
+          ) : cursosQ.isError ? (
+            <QueryError label="cursos" />
           ) : cursos.length === 0 ? (
             <p className="text-sm text-ink-tertiary py-6">Nenhum curso disponível nesta área.</p>
           ) : (
@@ -177,6 +200,8 @@ export function ExplorarPage() {
           />
           {simsQ.isLoading ? (
             <CardGridSkeleton />
+          ) : simsQ.isError ? (
+            <QueryError label="simulações" />
           ) : sims.length === 0 ? (
             <p className="text-sm text-ink-tertiary py-6">Nenhuma simulação disponível nesta área.</p>
           ) : (
@@ -191,7 +216,7 @@ export function ExplorarPage() {
                   type="simulacao"
                   ctaLabel="Experimentar"
                   icon={FlaskConical}
-                  badges={[{ label: s.area || 'Geral', variant: 'info' }]}
+                  badges={[{ label: s.area, variant: 'info' }]}
                 />
               ))}
             </div>
@@ -207,6 +232,8 @@ export function ExplorarPage() {
           />
           {expQ.isLoading ? (
             <CardGridSkeleton />
+          ) : expQ.isError ? (
+            <QueryError label="experiências" />
           ) : exps.length === 0 ? (
             <p className="text-sm text-ink-tertiary py-6">Nenhuma experiência disponível nesta área.</p>
           ) : (
@@ -237,6 +264,8 @@ export function ExplorarPage() {
           />
           {progQ.isLoading ? (
             <CardGridSkeleton />
+          ) : progQ.isError ? (
+            <QueryError label="programas" />
           ) : progs.length === 0 ? (
             <p className="text-sm text-ink-tertiary py-6">Nenhum programa disponível de momento.</p>
           ) : (
@@ -259,7 +288,9 @@ export function ExplorarPage() {
         </section>
 
         {/* ─── Mentores em destaque ────────────────────────────────────────── */}
-        {mentores.length > 0 && (
+        {mentoresQ.isError ? (
+          <QueryError label="mentores" />
+        ) : mentores.length > 0 && (
           <section className="pt-4 border-t border-ink-tertiary/10">
             <SectionHeader
               title="Mentores em destaque"
