@@ -511,10 +511,10 @@ export default function PerfilPublicoPage(): React.JSX.Element {
                                   </div>
                                 )}
                                 <div className="flex items-center gap-4 text-xs text-ink-tertiary">
-                                  <span className="flex items-center gap-1.5" aria-label="Gosto indisponível">
+                                  <span className="flex items-center gap-1.5 opacity-50 cursor-not-allowed" aria-label="Gosto indisponível" title="Em breve">
                                     <Heart size={14} aria-hidden={true} /> Gosto
                                   </span>
-                                  <span className="flex items-center gap-1.5" aria-label="Comentário indisponível">
+                                  <span className="flex items-center gap-1.5 opacity-50 cursor-not-allowed" aria-label="Comentário indisponível" title="Em breve">
                                     <MessageCircle size={14} aria-hidden={true} /> Comentar
                                   </span>
                                 </div>

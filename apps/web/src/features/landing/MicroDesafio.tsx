@@ -44,7 +44,13 @@ const EMOJI_ICON: Record<string, LucideIcon> = {
 };
 
 function OpcaoIcon({ emoji }: { emoji: string }) {
-  const Icon = EMOJI_ICON[emoji] ?? Lightbulb;
+  const Icon = EMOJI_ICON[emoji];
+  if (!Icon) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`OpcaoIcon: emoji sem mapeamento "${emoji}", usando fallback`);
+    }
+    return <Lightbulb size={22} strokeWidth={1.5} style={{ color: 'var(--accent-terracotta, #B65F2A)' }} />;
+  }
   return <Icon size={22} strokeWidth={1.5} style={{ color: 'var(--accent-terracotta, #B65F2A)' }} />;
 }
 
@@ -69,7 +75,7 @@ export function MicroDesafio() {
   const perguntaActual: PerguntaData | undefined = perguntas[state.perguntaActual];
 
   return (
-    <div className="mx-auto mt-14 rounded-2xl backdrop-blur-lg dark:border-white/10 dark:bg-white/5" style={{ width: 'min(100%, 36rem)', border: '1px solid rgba(182,95,42,0.25)', background: 'rgba(182,95,42,0.08)' }}>
+    <div className="mx-auto mt-14 rounded-2xl backdrop-blur-lg dark:border-white/10 dark:bg-white/5" style={{ width: 'min(100%, 36rem)', borderColor: 'var(--card-border)', border: '1px solid', background: 'rgba(182,95,42,0.08)' }}>
       {/* Container de dimensões fixas — não encolhe entre fases */}
       <div className="relative flex items-center justify-center" style={{ minHeight: '380px', width: '100%' }}>
         <div className="w-full p-6 sm:p-10">
@@ -116,7 +122,7 @@ function Intro({ pulso, onComecar, f }: { pulso: { count: number; area?: string 
   return (
     <motion.div {...f} className="flex flex-col items-center gap-6 text-center">
       <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--accent-terracotta, #B65F2A)', border: '1px solid var(--accent-terracotta, #B65F2A)', background: 'rgba(182,95,42,0.12)' }}>
-        ⚡ Diagnóstico Instantâneo
+        Diagnóstico Instantâneo
       </span>
       <h3 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--ink-primary, #1A1614)' }}>
         Descobre o teu perfil vocacional em 60 segundos
@@ -192,10 +198,7 @@ function PerguntaCard({ pergunta, index, total, onResponder, f }: {
           <button
             key={i}
             onClick={() => { onResponder(i); }}
-            className="group flex flex-col items-center gap-3 rounded-xl border-2 px-3 py-6 text-center transition-all"
-            style={{ borderColor: 'rgba(0,0,0,0.12)', background: 'rgba(182,95,42,0.04)' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(182,95,42,0.5)'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(182,95,42,0.08)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0,0,0,0.12)'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(182,95,42,0.04)'; }}
+            className="group flex flex-col items-center gap-3 rounded-xl border-2 px-3 py-6 text-center transition-all border-black/10 bg-accent/[0.04] hover:border-accent/50 hover:bg-accent/[0.08]"
           >
             <span className="transition-transform group-hover:scale-110"><OpcaoIcon emoji={opcao.emoji} /></span>
             <span className="text-[11px] font-bold uppercase tracking-widest text-text-secondary group-hover:text-text-primary">{opcao.texto}</span>

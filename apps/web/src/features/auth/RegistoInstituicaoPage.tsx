@@ -16,11 +16,19 @@ const TIPOS = [
   { value: 'outro', label: 'Outro' }
 ] as const;
 
+function isValidTipo(value: string): value is RegistoInstituicaoPayload['tipo'] {
+  return (TIPOS as readonly { value: string; label: string }[]).some((t) => t.value === value);
+}
+
 const REGIOES = [
-  'Bengo', 'Benguela', 'Bié', 'Cabinda', 'Cuando Cubango', 'Cuanza Norte', 
-  'Cuanza Sul', 'Cunene', 'Huambo', 'Huíla', 'Luanda', 'Lunda Norte', 
-  'Lunda Sul', 'Malanje', 'Moxico', 'Namibe', 'Uíge', 'Zaire'
+  'Bengo', 'Benguela', 'Bié', 'Cabinda', 'Cuando Cubango', 'Cuanza Norte',
+  'Cuanza Sul', 'Cunene', 'Huambo', 'Huíla', 'Luanda', 'Lunda Norte',
+  'Lunda Sul', 'Malanje', 'Moxico', 'Namibe', 'Uíge', 'Zaire',
 ] as const;
+type Regiao = typeof REGIOES[number];
+function isValidRegiao(value: string): value is Regiao {
+  return (REGIOES as readonly string[]).includes(value);
+}
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -144,7 +152,7 @@ export function RegistoInstituicaoPage() {
               <select required value={form.tipo}
                 onFocus={() => { setNeuralState('flow'); }}
                 onBlur={() => { setNeuralState('idle'); }}
-                onChange={(e) => { handleChange('tipo', e.target.value); }}
+                onChange={(e) => { if (isValidTipo(e.target.value)) handleChange('tipo', e.target.value); }}
                 className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
                 {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
@@ -155,7 +163,7 @@ export function RegistoInstituicaoPage() {
               <select required value={form.regiao}
                 onFocus={() => { setNeuralState('flow'); }}
                 onBlur={() => { setNeuralState('idle'); }}
-                onChange={(e) => { handleChange('regiao', e.target.value); }}
+                onChange={(e) => { if (isValidRegiao(e.target.value)) handleChange('regiao', e.target.value); }}
                 className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
                 <option value="">Seleciona…</option>
                 {REGIOES.map((r) => <option key={r} value={r}>{r}</option>)}

@@ -26,6 +26,7 @@ Scope IN (Ficheiros permitidos):
 - scripts/validate-docs.ts (NOVO)
 - package.json (root — adicionar script)
 - .markdownlint.json (NOVO — config)
+- .markdown-link-check.json (NOVO — whitelist config)
 
 Scope OUT (PROIBIDO TOCAR):
 - apps/* (Nenhum app muda)
@@ -58,8 +59,9 @@ Critério Done:
    - Para cada ficheiro:
      - Extrair links internos (`[text](path)`)
      - Verificar se `path` resolve para ficheiro real
-     - Extrair referências a código (e.g., backtick `filename.ts` ou `functionName`)
-     - Verificar se existem no codebase via `fs.existsSync` ou glob
+     - Extrair referências a código: **apenas backticks com caminhos explícitos** contendo separadores de pasta ou extensão de ficheiro (ex: `src/components/Button.tsx`, `apps/api/src/lib/r2.ts`) — referências genéricas como `functionName` são ignoradas nesta fase
+     - Verificar se esses caminhos existem no codebase via `fs.existsSync` ou glob
+     - Validação por nome de função/classe — reservada para Fase 2 com convenção de marcação (ex: `@file:path/to/file.ts`)
    - Output: lista de links/referências quebradas
    - Exit code 1 se houver falhas
 

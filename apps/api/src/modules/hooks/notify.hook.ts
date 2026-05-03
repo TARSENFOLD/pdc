@@ -19,17 +19,7 @@ async function resolvePerfilId(payload: BaseDomainEventPayload): Promise<string 
   const lookupUserId = payload.autorId || payload.userId;
   if (!lookupUserId) return undefined;
 
-  try {
-    const res = await strapiGet<{ id: string }>('/perfis', {
-      'filters[userId][$eq]': String(lookupUserId),
-      'fields[0]': 'id',
-    });
-    const id = res.data[0]?.id;
-    return id ?? undefined;
-  } catch (err: unknown) {
-    log.warn({ err, lookupUserId }, 'Falha ao resolver perfilId via userId');
-    return undefined;
-  }
+  return resolvePerfilIdFromUserId(lookupUserId);
 }
 
 // ── FOMO Triggers (F6 — Spec §3.2 ROADMAP_PRODUTO_DISRUPTIVO) ───────────────
@@ -69,7 +59,8 @@ async function resolvePerfilIdFromUserId(userId: string | number): Promise<strin
       'fields[0]': 'id',
     });
     return res.data[0]?.id;
-  } catch {
+  } catch (err: unknown) {
+    log.warn({ err, userId }, 'Falha ao resolver perfilId via userId');
     return undefined;
   }
 }

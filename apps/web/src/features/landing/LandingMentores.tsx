@@ -43,7 +43,7 @@ export function LandingMentores() {
               {...fadeUp}
               transition={{ delay: i * 0.1 }}
               className="rounded-2xl border-2 p-6 text-center transition-all"
-              style={{ borderColor: 'var(--card-border, #000000)', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}
+              style={{ borderColor: 'var(--card-border)', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}
               whileHover={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}
             >
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber/10 text-amber">

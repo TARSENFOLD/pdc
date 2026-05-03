@@ -19,7 +19,8 @@ e implementa se justificado pelo scale actual.
 ```
 [SEALED ENVELOPE — PDC v2 INTEGRITY]
 
-Spec Soberana: ADR 005 (Resiliência), CONSTITUTION.md (Zero data loss)
+Spec Soberana: ADR 005 (Outbox + Resiliência), CONSTITUTION.md (Zero data loss)
+ADR a criar: ADR-XXX-distributed-locking.md (complementa ADR 005 — foca na estratégia de lock distribuído)
 Wave/Contexto: Wave 3 (Resiliência)
 Caixa Autorizada: C (Divergência — lock actual funcional mas não resiliente a falha Redis)
 
@@ -50,6 +51,7 @@ Critério Done:
 [ ] Documentação da API do lock wrapper (acquireLock, LockHandle, erros, exemplos)
 [ ] Monitoring e alertas validados em staging (lock acquisition time, contention rate)
 [ ] Runbook operacional: deadlocks, Redis indisponível, recovery
+[ ] STATE.md atualizado com resumo da mudança e referência ao ADR-XXX-distributed-locking.md
 ```
 
 ## Passos

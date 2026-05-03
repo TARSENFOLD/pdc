@@ -285,7 +285,7 @@ Definido em `apps/web/src/styles/tokens.css`:
 ```
 
 Todos os cards da landing usam `style={{ borderColor: 'var(--card-border)' }}`.
-❌ Nunca hardcodar `borderColor: '#000000'` — invisível em dark mode.
+❌ Nunca hardcodar `borderColor: '#000000'` em componentes — usar sempre `var(--card-border)` (invisível em dark mode se hardcoded).
 
 ### 10.4 — Auth `neuralState` Pattern
 
@@ -321,4 +321,4 @@ Exportado via `src/components/ui/index.ts`. Usar sempre em vez de `<input type="
 Termos proibidos em copy de produto visível ao utilizador:
 - ❌ "Oráculo" — substituir por "PDC" ou "sistema"
 - ❌ "Heurísticas" — substituir por "análise" ou "perfil"
-- Emojis em badges/pills de produto: ❌ remover, manter apenas texto uppercase tracking-wider
+- Emojis em badges/pills de produto: ❌ proibidos — usar apenas texto uppercase tracking-wider

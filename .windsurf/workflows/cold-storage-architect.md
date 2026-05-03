@@ -34,11 +34,16 @@ Blacklist Nominal (AP-01 a AP-07): Aplicável na totalidade.
 Critério Done:
 [ ] moveToColdStorage faz upload real para R2 (NDJSON batch)
 [ ] Schema Zod em @pdc/shared para ColdStorageEvent
-[ ] Fallback local (escrever em disco) se R2 estiver indisponível
+[ ] Fallback local (PDC_COLD_STORAGE_PATH — volume persistente em produção) se R2 indisponível
 [ ] Testes unitários com mock de R2
+[ ] Testes de integração contra bucket R2 de teste
+[ ] Métricas para falhas de upload e uso do fallback (pino structured log)
+[ ] Alertas configurados para fallback persistente (> 5 min sem upload bem-sucedido)
+[ ] Política de retenção documentada (quanto tempo manter eventos — ex: 90 dias)
 [ ] Typecheck verde
 [ ] Lint sem novos eslint-disable
 [ ] ADR documentando decisão de cold storage format (NDJSON vs JSON)
+[ ] STATE.md atualizado com resumo da mudança e referência ao ADR
 ```
 
 ## Passos
@@ -58,8 +63,10 @@ Critério Done:
    - Função `listColdEvents(prefix: string): Promise<string[]>` para auditoria futura
 
 3. **Implementar fallback local**
-   - Se R2 falhar, escrever batch em `/tmp/pdc-cold-storage/` com mesmo naming
-   - Log com `pino` nível `error` para alertar ops
+   - Se R2 falhar, escrever batch no caminho configurado via env var `PDC_COLD_STORAGE_PATH` (default: `/data/pdc-cold-storage/` em produção, `/tmp/pdc-cold-storage/` em desenvolvimento)
+   - ⚠️ `/tmp` é efémero — reinício de container apaga os dados. Em produção, `PDC_COLD_STORAGE_PATH` deve apontar para volume persistente
+   - Log com `pino` nível `error` para alertar ops, incluindo contagem de eventos em fallback
+   - Background job para re-upload de ficheiros em fallback quando R2 recuperar (polling a cada 5 min)
 
 4. **Refactoring do `consumer.ts`**
    - Substituir stub `moveToColdStorage` por import real

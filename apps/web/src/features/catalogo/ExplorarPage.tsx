@@ -9,9 +9,10 @@ import { CardGridSkeleton } from '@/components/ui/Skeleton';
 import { SEOHead } from '@/components/layout/SEOHead';
 import ContentCard from '@/components/catalogo/ContentCard';
 import { resolveCatalogHref } from '@/components/catalogo/catalogoLinks';
+import { AspirationalEmpty } from '@/components/ui/AspirationalEmpty';
 import {
   BookOpen, FlaskConical, MapPin, UserCheck,
-  GraduationCap, ArrowRight,
+  GraduationCap, ArrowRight, AlertCircle,
 } from 'lucide-react';
 import type { AreaVocacional, CursoPublico, SimulacaoPublica, ExperienciaPublica, MentorPublico, Programa } from '@pdc/shared';
 
@@ -55,7 +56,13 @@ function isAreaVocacional(value: string): value is AreaVocacional {
 }
 
 function QueryError({ label }: { label: string }): React.JSX.Element {
-  return <p className="py-6 text-sm text-error">Erro ao carregar {label}. Tenta novamente.</p>;
+  return (
+    <AspirationalEmpty
+      icon={AlertCircle}
+      title="Erro ao carregar"
+      description={`Não foi possível carregar ${label}. Tenta novamente.`}
+    />
+  );
 }
 
 const LEGACY_TIPO_ROUTES: Record<string, string> = {

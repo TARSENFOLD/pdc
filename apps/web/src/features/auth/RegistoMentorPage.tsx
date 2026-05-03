@@ -27,7 +27,12 @@ const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'OUTRA', label: 'Geral' },
 ];
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+const AREA_VALUES = AREAS.map((a) => a.value);
+function isValidArea(value: string): value is AreaVocacional {
+  return AREA_VALUES.includes(value as AreaVocacional);
+}
 
 export function RegistoMentorPage() {
   const [form, setForm] = useState<RegistoMentorPayload>({
@@ -145,7 +150,7 @@ export function RegistoMentorPage() {
             <select required value={form.areaEspecialidade}
               onFocus={() => { setNeuralState('flow'); }}
               onBlur={() => { setNeuralState('idle'); }}
-              onChange={(e) => { handleChange('areaEspecialidade', e.target.value as AreaVocacional); }}
+              onChange={(e) => { if (isValidArea(e.target.value)) handleChange('areaEspecialidade', e.target.value); }}
               className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
               {AREAS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
             </select>

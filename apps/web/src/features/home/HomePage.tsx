@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { Spinner } from '@/components/ui';
 import {
   FlaskConical, BookOpen, FolderKanban, GraduationCap,
-  Play, PlayCircle,
+  PlayCircle,
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import type { Role } from '@pdc/shared';
 
 interface QuickAction {
@@ -30,14 +30,16 @@ const QUICK_ACTIONS_BY_ROLE: Partial<Record<Role, QuickAction[]>> = {
     { label: 'Programa',   labelPt: 'Programa',   to: '/app/instituicao/programas', icon: GraduationCap },
     { label: 'Projecto',   labelPt: 'Projecto',   to: '/app/explorar',              icon: FolderKanban },
     { label: 'Curso',      labelPt: 'Curso',      to: '/app/mentor/cursos',         icon: BookOpen },
-    { label: 'Simulações', labelPt: 'Simulações', to: '/app/mentor/simulacoes',     icon: Play },
   ],
 };
 
 const SPRING = { type: 'spring', stiffness: 220, damping: 28 } as const;
+const NO_MOTION = { duration: 0 } as const;
 
 export default function HomePage(): React.ReactNode {
   const { user, isLoading } = useAuth();
+  const prefersReducedMotion = useReducedMotion();
+  const transition = prefersReducedMotion ? NO_MOTION : SPRING;
 
   if (isLoading) {
     return (
@@ -64,7 +66,7 @@ export default function HomePage(): React.ReactNode {
                 key={`${action.to}-${String(idx)}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ ...SPRING, delay: idx * 0.07 }}
+                transition={prefersReducedMotion ? NO_MOTION : { ...SPRING, delay: idx * 0.07 }}
                 className="flex flex-col items-center gap-2"
               >
                 <Link
@@ -78,7 +80,7 @@ export default function HomePage(): React.ReactNode {
                     boxShadow: action.accent
                       ? '0 0 0 4px rgba(182,95,42,0.18)'
                       : 'var(--elevation-1)',
-                    color: action.accent ? '#fff' : 'var(--ink-secondary)',
+                    color: action.accent ? 'var(--ink-on-accent)' : 'var(--ink-secondary)',
                   }}
                   aria-label={action.labelPt}
                 >
@@ -98,9 +100,9 @@ export default function HomePage(): React.ReactNode {
 
       {/* ── Saudação discreta ── */}
       <motion.div
-        initial={{ opacity: 0 }}
+        initial={prefersReducedMotion ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ ...SPRING, delay: 0.38 }}
+        transition={{ ...transition, delay: 0.38 }}
         className="text-center"
       >
         <p className="text-sm font-medium" style={{ color: 'var(--ink-secondary)' }}>
@@ -110,9 +112,9 @@ export default function HomePage(): React.ReactNode {
 
       {/* ── Card de Vídeo "Como Começar" ── */}
       <motion.section
-        initial={{ opacity: 0, y: 24 }}
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ ...SPRING, delay: 0.45 }}
+        transition={{ ...transition, delay: 0.45 }}
         aria-label="Como começar"
         className="space-y-3"
       >
@@ -155,15 +157,15 @@ export default function HomePage(): React.ReactNode {
                 boxShadow: '0 0 0 8px rgba(182,95,42,0.18)',
               }}
             >
-              <PlayCircle size={32} className="text-white" strokeWidth={1.5} />
+              <PlayCircle size={32} className="text-[var(--ink-on-accent)]" strokeWidth={1.5} />
             </button>
 
             {/* Duração */}
             <div
               className="absolute bottom-3 right-4 rounded px-2 py-0.5 text-[11px] font-bold tabular-nums"
               style={{
-                background: 'rgba(0,0,0,0.7)',
-                color: '#FAFAFA',
+                background: 'var(--overlay-dark, rgba(13,17,23,0.70))',
+                color: 'var(--ink-on-accent)',
                 backdropFilter: 'blur(4px)',
               }}
             >
