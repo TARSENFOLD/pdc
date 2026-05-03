@@ -1,0 +1,84 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-03T12:38:16.621Z",
+  "phase": null,
+  "phase_name": "feature-completeness — Fase D requirements closeout",
+  "phase_dir": ".planning",
+  "plan": null,
+  "task": "remaining-requirements",
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "T10/T11 — Project votes + endorsements",
+      "status": "done",
+      "commit": "0aad8e4",
+      "files": ["apps/api/src/routes/projetos.ts", "apps/web/src/lib/api/projetos.ts", "apps/web/src/features/projetos/ProjetoDetailPage.tsx"],
+      "detail": "POST/GET/DELETE /projetos/:id/votos; tipo=endorsement (Star) + tipo=voto (ThumbsUp); domain event PROJETO_ENDORSEMENT_RECEBIDO; UI buttons with aria-pressed, min-h-[44px]"
+    },
+    {
+      "id": 2,
+      "name": "T4 — Rating eligibility gate",
+      "status": "done",
+      "commit": "25d4cff",
+      "files": ["apps/api/src/routes/ratings.ts"],
+      "detail": "checkRatingEligibility(): mentor=always; curso/simulacao requires progressoPercentual>=30 from inscricaos collection; 403 if ineligible"
+    },
+    {
+      "id": 3,
+      "name": "T8 — Vinculos isConnected filter bug",
+      "status": "done",
+      "commit": "5d76c8f",
+      "files": ["apps/api/src/routes/perfis.ts"],
+      "detail": "GET /perfis/:id: was using senderId/receiverId/estado='connected' (invalid fields) → fixed to solicitante[userId]/destinatario[userId]/status='aprovado' bidirectional. estudantes-vinculados endpoint fixed too."
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 4,
+      "name": "N6 — Vocacional pesos por evento",
+      "status": "not_started",
+      "detail": "BFF loop is closed (persists to /perfil-vocacionals). Missing: event weights from spec 1a81656f, E2E validation with real Strapi. Check apps/api/src/routes/vocacional.ts and packages/shared/src/schemas/vocacional.ts"
+    },
+    {
+      "id": 5,
+      "name": "F6 — FOMO trigger notifications",
+      "status": "not_started",
+      "detail": "notify.hook.ts (4.4KB) exists but FOMO-specific triggers not implemented: '3 instituições viram o teu perfil', 'Perfil visitado X vezes esta semana', etc. Check apps/api/src/modules/hooks/notify.hook.ts"
+    },
+    {
+      "id": 6,
+      "name": "T9 — Notification grouping + agrupamento",
+      "status": "not_started",
+      "detail": "Socket.IO funcional for basic notifications. Grouping and real Push pending. Check apps/api/src/routes/notificacoes.ts"
+    },
+    {
+      "id": 7,
+      "name": "E4-T3 — Conquistas naming mismatch (D4)",
+      "status": "not_started",
+      "detail": "12 conquistas with naming mismatch don't fire. Check apps/api/src/modules/conquistas/conquistas.engine.ts + conquistas.handler.ts. E2E: completion of simulacao 1 → 'Primeiro Passo' conquista at /estudante/conquistas"
+    }
+  ],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {
+      "decision": "T10 and T11 both implemented via same /projetos/:id/votos endpoint with tipo discriminator",
+      "rationale": "VotoSchema already has tipo: 'endorsement'|'voto'; single endpoint is DRY and consistent",
+      "phase": "feature-completeness"
+    },
+    {
+      "decision": "T8 was a silent bug: isConnected was always false, causing visibility-protected fields to never show to connections",
+      "rationale": "The Strapi vinculos schema uses solicitante/destinatario relations not senderId/receiverId flat fields",
+      "phase": "feature-completeness"
+    },
+    {
+      "decision": "T12 (Discussions) skipped — requires creating Strapi content types for discussion+reply collections first",
+      "rationale": "No discussion/reply content-types exist in infra/strapi/src/api/ — too invasive without dedicated planning",
+      "phase": "feature-completeness"
+    }
+  ],
+  "uncommitted_files": [],
+  "branch": "fix/pdcv2-integrity-hardening-v2",
+  "last_commit": "5d76c8f fix(T8): correct vinculos isConnected filter"
+}
