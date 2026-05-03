@@ -142,6 +142,9 @@ O PDC tem de parecer um **instrumento científico de elite global** — onde a a
 --radius-asym-b: 6px 18px 6px 18px
 ```
 
+> [!WARNING]
+> **ANTI-PADRÃO (Estilo Minecraft):** É ESTRITAMENTE PROIBIDO o uso de `rounded-2xl` ou `rounded-3xl` conjugado com fundos rígidos (`bg-elevated`). A UI deve ser fluída, respirar com `bg-canvas` e usar dividers (`border-t`) ou pílulas subtis. Manter sempre `rounded-md` ou `rounded-lg` no máximo para cartões estruturais. O excesso de caixas estilo "bloco" mata o visual Soul & Elite.
+
 <user_quoted_section>Regra das Bordas Assimétricas (subliminar Kente/Adinkra): apenas em momentos de autoridade — CTA primário do hero, badge de conquista milestone, card de score do Perfil Vocacional, selo "Aptidão Validada". Misturar A e B numa página dá assimetria deliberada sem parecer aleatório.</user_quoted_section>
 
 ### 3.8 Sombras (elevação suave, sem dramatismo)

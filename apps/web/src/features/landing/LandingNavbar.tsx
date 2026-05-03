@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import type React from 'react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useTranslation } from '@/hooks/useTranslation';
 
-export function LandingNavbar() {
+export default function LandingNavbar(): React.JSX.Element {
   const { t } = useTranslation('landing');
   const [open, setOpen] = useState(false);
 
@@ -41,7 +42,7 @@ export function LandingNavbar() {
           </Link>
           <Link
             to="/criar-conta"
-            className="hidden rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-accent/20 transition-all hover:bg-accent-hover hover:scale-[1.02] active:scale-[0.98] sm:block"
+            className="hidden rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-accent px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-accent/20 transition-all hover:bg-accent-hover hover:scale-[1.02] active:scale-[0.98] sm:block"
           >
             {t('navbar.cta_primary')}
           </Link>
@@ -49,7 +50,7 @@ export function LandingNavbar() {
           <button
             type="button"
             className="flex items-center justify-center rounded-lg p-2 text-text-secondary transition-colors hover:text-text-primary md:hidden"
-            aria-label={open ? 'Fechar menu' : 'Abrir menu'}
+            aria-label={open ? t('navbar.menu.close') : t('navbar.menu.open')}
             onClick={() => { setOpen((v) => !v); }}
           >
             {open ? <X size={22} /> : <Menu size={22} />}
@@ -76,7 +77,7 @@ export function LandingNavbar() {
               </Link>
               <Link
                 to="/criar-conta"
-                className="rounded-lg bg-accent px-5 py-3 text-center text-sm font-semibold text-white"
+                className="rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-accent px-5 py-3 text-center text-sm font-semibold text-white"
                 onClick={() => { setOpen(false); }}
               >
                 {t('navbar.cta_primary')}

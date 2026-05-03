@@ -25,14 +25,18 @@ export function LandingHero() {
   return (
     <section
       className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 pt-24 pb-16 text-center sm:px-6"
-      style={{ WebkitTapHighlightColor: 'transparent' }}
+      style={{
+        WebkitTapHighlightColor: 'transparent',
+        background: 'radial-gradient(ellipse 70% 50% at 50% -10%, rgba(182,95,42,0.12) 0%, rgba(210,140,60,0.06) 50%, transparent 80%)',
+      }}
     >
       {/* Neural Constellation — the hero visual centerpiece */}
       <NeuralConstellation choreography={choreography} />
 
       <motion.div {...stagger(0)} className="relative z-10 mb-8">
         <div
-          className="inline-flex items-center gap-3 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 py-1.5 px-4 text-xs font-semibold tracking-wide text-text-secondary dark:text-white/80 backdrop-blur-lg shadow-md dark:shadow-[0_4px_24px_-8px_rgba(0,0,0,0.6)]"
+          className="inline-flex items-center gap-3 rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 py-1.5 px-4 text-xs font-semibold tracking-wide dark:text-white/80 backdrop-blur-lg"
+          style={{ color: 'var(--ink-secondary, #3A3632)' }}
         >
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber opacity-75"></span>
@@ -44,7 +48,8 @@ export function LandingHero() {
 
       <motion.h1
         {...stagger(1)}
-        className="relative z-10 mx-auto max-w-4xl text-5xl font-medium tracking-tight text-text-primary sm:text-6xl lg:text-7xl leading-[1.1]"
+        className="relative z-10 mx-auto max-w-4xl text-5xl font-medium tracking-tight sm:text-6xl lg:text-7xl leading-[1.1] dark:text-white"
+        style={{ color: 'var(--ink-primary, #1A1614)' }}
       >
         {t('hero.headline')}{' '}
         <span className="font-display italic text-amber drop-shadow-md dark:drop-shadow-[0_0_30px_rgba(193,68,14,0.3)]">{t('hero.headline_emphasis')}</span>
@@ -52,7 +57,8 @@ export function LandingHero() {
 
       <motion.p
         {...stagger(2)}
-        className="relative z-10 mx-auto mt-6 max-w-xl text-lg text-text-secondary dark:text-white/70"
+        className="relative z-10 mx-auto mt-6 max-w-xl text-lg dark:text-white/70"
+        style={{ color: 'var(--ink-secondary, #3A3632)' }}
       >
         {t('hero.body')}
       </motion.p>
@@ -70,7 +76,7 @@ export function LandingHero() {
             setChoreography('warp');
             setTimeout(() => { navigate('/criar-conta'); }, 600);
           }}
-          className="relative w-full rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-amber px-8 py-4 text-sm font-bold text-background transition-colors sm:w-auto overflow-hidden shadow-md active:scale-[0.98] hover:bg-amber-hover"
+          className="relative w-full rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-amber px-8 py-4 text-sm font-bold text-white transition-colors sm:w-auto overflow-hidden shadow-md active:scale-[0.98] hover:bg-amber-hover"
         >
           {t('hero.cta_primary')}
         </Link>
@@ -78,14 +84,16 @@ export function LandingHero() {
           href="#como-funciona"
           onMouseEnter={() => { setChoreography('swarm'); }}
           onMouseLeave={() => { setChoreography('idle'); }}
-          className="w-full rounded-tr-sm rounded-bl-sm rounded-tl-2xl rounded-br-2xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 backdrop-blur-lg px-8 py-4 text-sm font-bold text-text-primary transition-all hover:bg-black/10 dark:hover:bg-white/10 hover:text-text-primary dark:hover:text-white sm:w-auto active:scale-[0.98]"
+          className="w-full rounded-tr-sm rounded-bl-sm rounded-tl-2xl rounded-br-2xl backdrop-blur-lg px-8 py-4 text-sm font-bold transition-all hover:scale-[1.02] sm:w-auto active:scale-[0.98]"
+          style={{ border: '1px solid rgba(182,95,42,0.25)', background: 'rgba(182,95,42,0.08)', color: 'var(--ink-primary)' }}
         >
           {t('hero.cta_secondary')}
         </a>
       </motion.div>
 
       <div
-        className="relative z-10"
+        className="relative z-10 w-full px-4 sm:px-6"
+        style={{ maxWidth: '36rem' }}
         onMouseEnter={() => { setChoreography('swarm'); }}
         onMouseLeave={() => { setChoreography('idle'); }}
       >

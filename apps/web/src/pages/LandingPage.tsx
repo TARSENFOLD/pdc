@@ -1,7 +1,7 @@
 import { SEOHead } from '@/components/layout/SEOHead';
-import { LandingNavbar } from '../features/landing/LandingNavbar';
+import LandingNavbar from '../features/landing/LandingNavbar';
 import { LandingHero } from '../features/landing/LandingHero';
-import { LandingMarquee } from '../features/landing/LandingMarquee';
+import LandingMarquee from '../features/landing/LandingMarquee';
 import { CarrosselInstituicoes } from '../features/landing/CarrosselInstituicoes';
 import { LandingProblema } from '../features/landing/LandingProblema';
 import { LandingVisualDesk } from '../features/landing/LandingVisualDesk';

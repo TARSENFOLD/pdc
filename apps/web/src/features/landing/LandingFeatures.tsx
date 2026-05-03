@@ -24,21 +24,21 @@ export function LandingFeatures() {
           </h2>
         </motion.div>
 
-        <div className="mt-16 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES_KEYS.map((key, i) => {
             const Icon = FEATURES_ICONS[i] as ComponentType<LucideProps>;
             return (
-              <motion.div
+              <motion.article
                 key={key}
                 {...fadeUp}
-                transition={{ duration: 0.45, delay: i * 0.07, ease: 'easeOut' }}
+                transition={{ type: 'spring', stiffness: 220, damping: 28, delay: i * 0.07 }}
                 className="rounded-2xl border-2 p-6"
-                style={{ borderColor: 'rgba(42,39,36,0.75)' }}
+                style={{ borderColor: 'var(--card-border, #000000)', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}
               >
                 <div className="mb-4 text-amber"><Icon size={20} aria-hidden={true} /></div>
                 <h3 className="mb-2 font-semibold text-text-primary">{t(`features.items.${key}_title`)}</h3>
                 <p className="text-sm leading-relaxed text-text-secondary">{t(`features.items.${key}_body`)}</p>
-              </motion.div>
+              </motion.article>
             );
           })}
         </div>

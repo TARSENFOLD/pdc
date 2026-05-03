@@ -107,7 +107,7 @@ export function EscolhaTipoContaPage() {
                     {/* CTA bottom */}
                     <div className="relative z-10 mt-8 flex items-center justify-between border-t border-ink-tertiary/8 pt-5">
                       <span className="text-xs font-semibold text-ink-tertiary group-hover:text-accent transition-colors duration-300 uppercase tracking-wider">
-                        Começar
+                        {t('auth.common.start')}
                       </span>
                       <div className="flex h-8 w-8 items-center justify-center rounded-full border border-ink-tertiary/15 text-ink-tertiary group-hover:bg-accent group-hover:border-accent group-hover:text-white group-hover:translate-x-1 transition-all duration-300">
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">

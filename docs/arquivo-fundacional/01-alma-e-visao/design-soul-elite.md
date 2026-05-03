@@ -46,7 +46,7 @@
 
 ### Tipografia
 - **Títulos:** Inter (ou Satoshi) — 600 weight, letter-spacing ajustado
-- **Títulos premium:** Instrument Serif para destaque
+- **Títulos premium:** Inter para destaque
 - **Dados numéricos:** JetBrains Mono — aspecto de laboratório de alta tecnologia
 - **Regra:** Contrastes brutais — título 32px ao lado de dado técnico 10px Mono
 
@@ -65,12 +65,13 @@
 
 ### Identidade Africana Moderna
 - Não padrões tribais óbvios — elegância moderna: texturas de terra com néon, tipografia que fuja do "padrão Silicon Valley".
-- O PDC é inovação vinda de África, não cópia de dashboard americano.
+- O PDC é inovação vinda de África, não cópia de dashboard americano, mas em nenhum momento deve gritar África, deve ser sutil e elegante, quase imperceptível.
 
 ### Data-Viz como Joia da Coroa
 - Relatório Vocacional = infográfico interativo de luxo, não gráfico de Excel.
 - Bloomberg/Linear como inspiração, não apps de brincadeira.
 - Menos ícones infantis, mais tipografia técnica e grelhas matemáticas.
+- Substituir emojis por svgs ou icones mais sofisticados.
 
 ---
 
@@ -81,7 +82,7 @@
 - Esquerda: Logo + breadcrumb. Centro: Cmd+K search. Direita: Notificações + Status Tina + Seletor de contexto.
 
 ### Sidebar
-- "Slim": apenas ícones (sem texto) ou retrátil.
+- "Slim": apenas ícones (sem texto) ou retrátil - quando não estiver estendida.
 - Item activo: linha vertical lateral ou mudança subtil de cor (sem fundo sólido laranja).
 
 ### Cards

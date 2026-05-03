@@ -78,7 +78,7 @@ export function LandingDestaques() {
     <section className="bg-background px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-7xl">
         <motion.div {...fadeUp} className="mb-16">
-          <h2 className="text-3xl font-bold text-text-primary sm:text-4xl font-display tracking-tight">
+          <h2 className="text-2xl font-bold text-text-primary sm:text-3xl lg:text-4xl font-display tracking-tight">
             {t('destaques.title')}
           </h2>
           <p className="mt-4 max-w-2xl text-text-secondary">

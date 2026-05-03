@@ -16,13 +16,13 @@ export function LandingComoFunciona() {
           <span className="text-xs font-semibold uppercase tracking-widest text-amber">
             {t('como_funciona.kicker')}
           </span>
-          <h2 className="mt-4 text-3xl font-bold text-text-primary sm:text-4xl">
+          <h2 className="mt-4 text-2xl font-bold text-text-primary sm:text-3xl lg:text-4xl">
             {t('como_funciona.title')}
           </h2>
           <div className="mx-auto mt-8 h-px w-2/3 bg-linear-to-r from-transparent via-amber/30 to-transparent" />
         </motion.div>
 
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
           {STEP_KEYS.map((key, i) => (
             <motion.div
               key={key}

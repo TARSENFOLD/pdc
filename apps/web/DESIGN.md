@@ -232,3 +232,93 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { Roles, ContentTypes, NavItems } from '@pdc/shared';
 import type { Role } from '@pdc/shared';
 ```
+
+---
+
+## 10. Padrões Estabelecidos (2026-05-03)
+
+### 10.1 — NeuralConstellation Dual (ADR-024)
+
+Existem **dois componentes distintos** com o mesmo nome visual mas propósito diferente:
+
+| Ficheiro | Contexto | Características |
+|---|---|---|
+| `src/features/landing/NeuralConstellation.tsx` | Landing page pública | 300 partículas, DPR scaling via GSAP, twinkle, `ChoreographyState` (`idle`/`align`/`swarm`/`warp`), cores CSS vars do tema |
+| `src/components/auth/NeuralConstellation.tsx` | Páginas de autenticação | 110 partículas, Canvas2D puro, `NeuralState` (`idle`/`align`/`encrypt`/`warp`/`scatter`/`pulse`/`flow`/`focus`), fundo preto fixo |
+
+**Regras:**
+- ❌ Nunca fundir os dois num único componente — propósitos e contextos são distintos.
+- ❌ Nunca importar o da landing nas páginas de auth, ou vice-versa.
+- O da landing usa `getComputedStyle` para ler CSS vars e adapta-se ao tema claro/escuro.
+- O de auth tem fundo preto fixo e reage ao `state` prop via `onFocus`/`onBlur` dos campos.
+
+### 10.2 — Glow Policy (ADR-025)
+
+**Regra: Zero shadowBlur em contexto profissional.**
+
+```ts
+// ❌ BANIDO — glow excessivo em canvas
+ctx.shadowBlur = currentSize * 8;
+ctx.shadowColor = rgba(accentRgb, 0.6);
+
+// ✅ PERMITIDO — toque mínimo apenas em accent stars da landing
+ctx.shadowBlur = 2;  // fixo, nunca multiplicador de tamanho
+ctx.shadowColor = rgba(accentRgb, 0.12 * starOpacity);
+
+// ✅ CORRETO — cool stars e componentes app: sem glow
+ctx.shadowBlur = 0;
+ctx.shadowColor = 'transparent';
+```
+
+Cross flares (`p.baseSize > 2.0`) e bright cores (segundo pass de arc) foram eliminados — criavam halos brancos visualmente perturbadores.
+
+### 10.3 — `--card-border` Token
+
+Definido em `apps/web/src/styles/tokens.css`:
+
+```css
+/* Light mode */
+--card-border: #000000;
+
+/* Dark mode (.dark) */
+--card-border: rgba(236, 231, 221, 0.7);
+```
+
+Todos os cards da landing usam `style={{ borderColor: 'var(--card-border)' }}`.
+❌ Nunca hardcodar `borderColor: '#000000'` — invisível em dark mode.
+
+### 10.4 — Auth `neuralState` Pattern
+
+Cada campo de formulário nas páginas de registo dispara um `NeuralState` específico via `onFocus`/`onBlur`:
+
+| Campo | Estado |
+|---|---|
+| Nome / título | `pulse` |
+| Email / NIF | `align` |
+| Password | `encrypt` |
+| Confirmar password | `focus` |
+| Select (área, região, tipo) | `flow` |
+| Erro de validação | `scatter` |
+
+O estado é gerido localmente com `useState<NeuralState>('idle')` e passado ao `AuthSplitLayout` via prop `neuralState`. O `AuthSplitLayout` distribui-o ao painel desktop (`AuthLeftPanel`) e ao banner mobile.
+
+### 10.5 — Layout Auth Mobile/Desktop
+
+```
+Desktop (lg:): painel neural fixo à esquerda (AuthLeftPanel) + formulário à direita
+Mobile (<lg:): banner neural sticky h-48 no topo + formulário a rolar abaixo
+```
+
+O banner mobile usa `className="sticky top-0 z-20 lg:hidden h-48 bg-black overflow-hidden"` — preso no topo durante o scroll.
+
+### 10.6 — `PasswordInput` Component
+
+Componente reutilizável em `src/components/ui/PasswordInput.tsx` com toggle show/hide via ícone Eye.
+Exportado via `src/components/ui/index.ts`. Usar sempre em vez de `<input type="password">` raw.
+
+### 10.7 — Copy sem Jargão
+
+Termos proibidos em copy de produto visível ao utilizador:
+- ❌ "Oráculo" — substituir por "PDC" ou "sistema"
+- ❌ "Heurísticas" — substituir por "análise" ou "perfil"
+- Emojis em badges/pills de produto: ❌ remover, manter apenas texto uppercase tracking-wider

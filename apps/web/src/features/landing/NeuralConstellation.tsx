@@ -92,17 +92,35 @@ export function NeuralConstellation({
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
     // ─── Resize com High-DPI (DPR) ───
+    let prevW = 0;
+    let prevH = 0;
     const resize = () => {
       const el = containerRef.current;
       if (!el) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const rect = el.getBoundingClientRect();
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      canvas.style.width = `${String(rect.width)}px`;
-      canvas.style.height = `${String(rect.height)}px`;
+      const newW = rect.width;
+      const newH = rect.height;
+      canvas.width = newW * dpr;
+      canvas.height = newH * dpr;
+      canvas.style.width = `${String(newW)}px`;
+      canvas.style.height = `${String(newH)}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      init();
+      if (prevW > 0 && prevH > 0 && particles.length > 0) {
+        // Reposicionar proporcionalmente — sem artefactos de círculos
+        const scaleX = newW / prevW;
+        const scaleY = newH / prevH;
+        particles.forEach(p => {
+          p.x = p.x * scaleX;
+          p.y = p.y * scaleY;
+          p.baseX = p.baseX * scaleX;
+          p.baseY = p.baseY * scaleY;
+        });
+      } else {
+        init();
+      }
+      prevW = newW;
+      prevH = newH;
     };
 
     // ─── Init Partículas (Constellation-grade) ───
@@ -117,11 +135,11 @@ export function NeuralConstellation({
         const sizeRoll = Math.random();
         let size: number;
         if (sizeRoll < 0.6) {
-          size = Math.random() * 0.8 + 0.3; // tiny stars (60%)
+          size = Math.random() * 0.6 + 0.2; // tiny stars (60%)
         } else if (sizeRoll < 0.9) {
-          size = Math.random() * 1.5 + 0.8; // medium stars (30%)
+          size = Math.random() * 0.8 + 0.6; // medium stars (30%)
         } else {
-          size = Math.random() * 2.5 + 1.5; // bright stars (10%)
+          size = Math.random() * 0.8 + 1.0; // bright stars (10%)
         }
 
         const depth = Math.random();
@@ -156,6 +174,8 @@ export function NeuralConstellation({
       const cy = h / 2;
       const state = choreoRef.current;
       const dark = isDark();
+      // Escalar distância de conexão com o tamanho real do ecrã
+      const effectiveConnectionDist = connectionDistance * Math.min(w / 1200, 1);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -187,10 +207,10 @@ export function NeuralConstellation({
           const dy = p.y - p2.y;
           const d = Math.sqrt(dx * dx + dy * dy);
 
-          if (d < connectionDistance) {
+          if (d < effectiveConnectionDist) {
             connections++;
             // Exponential opacity falloff
-            const proximity = 1 - d / connectionDistance;
+            const proximity = 1 - d / effectiveConnectionDist;
             const opacity = Math.pow(proximity, 2.5) * 0.35;
 
             // Terracotta golden threads: when both ends are accent or 3% chance
@@ -201,14 +221,14 @@ export function NeuralConstellation({
               ctx.strokeStyle = rgba(accentSoftRgb, Math.min(0.7, glowOpacity));
               ctx.lineWidth = state === 'align' ? 1.2 : 0.8;
               // Subtle glow on golden threads
-              ctx.shadowColor = rgba(accentRgb, 0.4);
-              ctx.shadowBlur = 6;
+              ctx.shadowColor = 'transparent';
+              ctx.shadowBlur = 0;
             } else {
               const lineColor = dark
                 ? rgba(trustRgb, opacity * 0.8)
-                : rgba(trustRgb, opacity * 0.5);
+                : rgba(trustRgb, opacity * 0.55);
               ctx.strokeStyle = lineColor;
-              ctx.lineWidth = 0.6;
+              ctx.lineWidth = 0.5;
               ctx.shadowColor = 'transparent';
               ctx.shadowBlur = 0;
             }
@@ -296,19 +316,17 @@ export function NeuralConstellation({
         const currentSize = Math.max(0.3, p.size * (0.8 + twinkleIntensity * 0.4));
 
         if (p.isAccent) {
-          // ── Accent stars: warm terracotta/amber glow ──
-          ctx.shadowColor = rgba(accentRgb, 0.6 * starOpacity);
-          ctx.shadowBlur = currentSize * 8;
+          // ── Accent stars: terracotta, glow mínimo ──
+          ctx.shadowColor = rgba(accentRgb, 0.12 * starOpacity);
+          ctx.shadowBlur = 2;
           ctx.fillStyle = rgba(accentSoftRgb, starOpacity);
         } else {
-          // ── Cool stars: silver/blue glow ──
+          // ── Cool stars: sem glow ──
           const starColor = dark
             ? rgbaChannels(220, 225, 240, starOpacity)
-            : rgba(trustRgb, starOpacity * 0.7);
-          ctx.shadowColor = dark
-            ? rgbaChannels(180, 200, 255, 0.4 * starOpacity)
-            : rgba(trustRgb, 0.3 * starOpacity);
-          ctx.shadowBlur = currentSize * 5;
+            : rgbaChannels(40, 50, 80, starOpacity * 0.85);
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
           ctx.fillStyle = starColor;
         }
 
@@ -316,41 +334,6 @@ export function NeuralConstellation({
         ctx.arc(p.x, p.y, currentSize, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── Second pass: bright core for larger stars ──
-        if (p.baseSize > 1.2) {
-          ctx.shadowBlur = 0;
-          const coreOpacity = starOpacity * 0.9;
-          ctx.fillStyle = p.isAccent
-            ? rgbaChannels(255, 220, 180, coreOpacity)
-            : rgbaChannels(255, 255, 255, dark ? coreOpacity : coreOpacity * 0.5);
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, currentSize * 0.4, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        // ── Cross flare on biggest stars ──
-        if (p.baseSize > 2.0 && twinkleIntensity > 0.6) {
-          const flareLen = currentSize * 4 * twinkleIntensity;
-          const flareOpacity = (twinkleIntensity - 0.6) * 2.5 * starOpacity * 0.3;
-          const flareColor = p.isAccent
-            ? rgba(accentSoftRgb, flareOpacity)
-            : rgbaChannels(200, 210, 255, flareOpacity);
-          ctx.strokeStyle = flareColor;
-          ctx.lineWidth = 0.6;
-          ctx.shadowBlur = 0;
-
-          // Horizontal flare
-          ctx.beginPath();
-          ctx.moveTo(p.x - flareLen, p.y);
-          ctx.lineTo(p.x + flareLen, p.y);
-          ctx.stroke();
-
-          // Vertical flare
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y - flareLen);
-          ctx.lineTo(p.x, p.y + flareLen);
-          ctx.stroke();
-        }
 
         // Reset shadow for next iteration
         ctx.shadowBlur = 0;

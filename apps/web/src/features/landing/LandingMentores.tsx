@@ -28,7 +28,7 @@ export function LandingMentores() {
     <section className="px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-5xl">
         <motion.div {...fadeUp} className="mb-16 text-center">
-          <h2 className="text-3xl font-bold text-text-primary sm:text-4xl">
+          <h2 className="text-2xl font-bold text-text-primary sm:text-3xl lg:text-4xl">
             {t('mentores.title')}
           </h2>
           <p className="mt-4 text-text-secondary">
@@ -36,13 +36,15 @@ export function LandingMentores() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
           {mentores.data.map((m: MentorPublico, i: number) => (
             <motion.div
               key={m.id}
               {...fadeUp}
               transition={{ delay: i * 0.1 }}
-              className="rounded-2xl border border-black/20 dark:border-white/50 p-6 text-center transition-all hover:border-black/40 dark:hover:border-white/70"
+              className="rounded-2xl border-2 p-6 text-center transition-all"
+              style={{ borderColor: 'var(--card-border, #000000)', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}
+              whileHover={{ boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }}
             >
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber/10 text-amber">
                 {m.avatarUrl ? (
@@ -57,7 +59,7 @@ export function LandingMentores() {
           ))}
         </div>
         <div className="mt-12 text-center">
-          <Link to="/mentores" className="inline-block rounded-xl bg-amber px-8 py-3 text-sm font-semibold text-black transition-colors hover:bg-amber-hover">
+          <Link to="/mentores" className="inline-block rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-amber px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-amber-hover">
             {t('mentores.cta')} →
           </Link>
         </div>

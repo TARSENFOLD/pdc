@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 
-export type NeuralState = 'idle' | 'align' | 'encrypt' | 'warp' | 'scatter';
+export type NeuralState = 'idle' | 'align' | 'encrypt' | 'warp' | 'scatter' | 'pulse' | 'flow' | 'focus';
 
 interface NeuralConstellationProps {
   state?: NeuralState;
@@ -14,7 +14,7 @@ const BASE = '45, 212, 191'; // teal-400
 type Particle = { x: number; y: number; vx: number; vy: number; r: number };
 
 // Converts a float alpha to "rgba(teal, a)" with explicit string conversion
-const teal = (a: number) => `rgba(${BASE}, ${a.toFixed(3)})`;
+const teal = (a: number): string => `rgba(${BASE}, ${a.toFixed(3)})`;
 
 function makeParticles(w: number, h: number): Particle[] {
   return Array.from({ length: N }, () => ({
@@ -26,7 +26,7 @@ function makeParticles(w: number, h: number): Particle[] {
   }));
 }
 
-function ringPos(i: number, cx: number, cy: number, radius: number) {
+function ringPos(i: number, cx: number, cy: number, radius: number): { x: number; y: number } {
   const a = (i / N) * Math.PI * 2 - Math.PI / 2;
   return { x: cx + Math.cos(a) * radius, y: cy + Math.sin(a) * radius };
 }
@@ -48,6 +48,8 @@ function runAnimation(
   let prevState: NeuralState = 'idle';
   let warpProgress = 0;
   let scatterFrames = 0;
+  let lastTimestamp = performance.now();
+  const warpSpeed = 0.96;
 
   function draw() {
     rafId = requestAnimationFrame(draw);
@@ -57,6 +59,8 @@ function runAnimation(
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
     const now = performance.now();
+    const deltaSeconds = Math.min((now - lastTimestamp) / 1000, 0.1);
+    lastTimestamp = now;
 
     if (s !== prevState) {
       if (s !== 'warp') warpProgress = 0;
@@ -68,7 +72,7 @@ function runAnimation(
 
     // ── WARP ──────────────────────────────────────────────────────
     if (s === 'warp') {
-      warpProgress = Math.min(1, warpProgress + 0.016);
+      warpProgress = Math.min(1, warpProgress + deltaSeconds * warpSpeed);
       const alpha = 1 - warpProgress;
       for (const p of pts) {
         const dx = p.x - cx;
@@ -225,6 +229,95 @@ function runAnimation(
       return;
     }
 
+    // ── PULSE (nome — partículas expandem em ondas suaves) ────────
+    if (s === 'pulse') {
+      const t = now * 0.001;
+      for (let i = 0; i < N; i++) {
+        const p = pts[i] as Particle;
+        const wave = Math.sin(t * 1.8 + i * 0.18) * 18;
+        const angle = (i / N) * Math.PI * 2;
+        const r = Math.min(cx, cy) * 0.38 + wave;
+        const tx = cx + Math.cos(angle) * r;
+        const ty = cy + Math.sin(angle) * r;
+        p.x += (tx - p.x) * 0.04;
+        p.y += (ty - p.y) * 0.04;
+        ctx.fillStyle = teal(0.7 + Math.sin(t * 2 + i * 0.2) * 0.3);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * (1 + Math.abs(Math.sin(t + i * 0.15)) * 0.6), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      for (let i = 0; i < N; i += 3) {
+        const a = pts[i] as Particle;
+        const b = pts[(i + 5) % N] as Particle;
+        ctx.strokeStyle = teal(0.18);
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      return;
+    }
+
+    // ── FLOW (área/select — partículas fluem em espiral) ──────────
+    if (s === 'flow') {
+      const t = now * 0.001;
+      for (let i = 0; i < N; i++) {
+        const p = pts[i] as Particle;
+        const prog = i / N;
+        const spiralR = 20 + prog * Math.min(cx, cy) * 0.7;
+        const angle = prog * Math.PI * 6 + t * 0.5;
+        const tx = cx + Math.cos(angle) * spiralR;
+        const ty = cy + Math.sin(angle) * spiralR;
+        p.x += (tx - p.x) * 0.05;
+        p.y += (ty - p.y) * 0.05;
+        ctx.fillStyle = teal(0.5 + prog * 0.5);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * (0.8 + prog * 0.6), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      for (let i = 0; i < N - 1; i++) {
+        const a = pts[i] as Particle;
+        const b = pts[i + 1] as Particle;
+        ctx.strokeStyle = teal(0.12);
+        ctx.lineWidth = 0.4;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      return;
+    }
+
+    // ── FOCUS (confirm password — dois anéis convergem) ───────────
+    if (s === 'focus') {
+      const t = now * 0.001;
+      const r1 = Math.min(cx, cy) * 0.35;
+      const r2 = Math.min(cx, cy) * 0.6;
+      for (let i = 0; i < N; i++) {
+        const p = pts[i] as Particle;
+        const inner = i < N / 2;
+        const r = inner ? r1 : r2;
+        const spd = inner ? 0.0014 : -0.0009;
+        const idx = inner ? i : i - N / 2;
+        const angle = (idx / (N / 2)) * Math.PI * 2 + now * spd;
+        const tx = cx + Math.cos(angle) * r;
+        const ty = cy + Math.sin(angle) * r;
+        p.x += (tx - p.x) * 0.08;
+        p.y += (ty - p.y) * 0.08;
+        const brightness = Math.abs(Math.sin(t * 2.5 + i * 0.1));
+        ctx.fillStyle = teal(0.5 + brightness * 0.5);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * (1 + brightness * 0.4), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = teal(0.06);
+      ctx.lineWidth = 0.5;
+      ctx.beginPath(); ctx.arc(cx, cy, r1, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, r2, 0, Math.PI * 2); ctx.stroke();
+      return;
+    }
+
     // ── SCATTER (failure) ────────────────────────────────────────
     scatterFrames++;
     for (let i = 0; i < N; i++) {
@@ -269,7 +362,7 @@ function runAnimation(
   return () => { cancelAnimationFrame(rafId); };
 }
 
-export function NeuralConstellation({ state = 'idle', onWarpComplete }: NeuralConstellationProps) {
+export function NeuralConstellation({ state = 'idle', onWarpComplete }: NeuralConstellationProps): React.JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<NeuralState>(state);
   const warpCbRef = useRef(onWarpComplete);

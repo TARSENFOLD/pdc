@@ -17,7 +17,7 @@ export function LandingProblema() {
       <div className="mx-auto max-w-4xl">
         <motion.div {...fadeUp} className="text-center">
           <span className="text-xs font-semibold uppercase tracking-widest text-amber">{t('problema.kicker')}</span>
-          <h2 className="mt-4 text-3xl font-bold text-text-primary sm:text-4xl">
+          <h2 className="mt-4 text-2xl font-bold text-text-primary sm:text-3xl lg:text-4xl">
             {t('problema.title')}
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-text-secondary">
@@ -25,16 +25,16 @@ export function LandingProblema() {
           </p>
         </motion.div>
 
-        <div className="mt-16 grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {PROBLEMAS_KEYS.map((key, i) => {
             const Icon = PROBLEMAS_ICONS[i] as ComponentType<LucideProps>;
             return (
               <motion.div
                 key={key}
                 {...fadeUp}
-                transition={{ duration: 0.5, delay: i * 0.1, ease: 'easeOut' }}
+                transition={{ type: 'spring', stiffness: 220, damping: 28, delay: i * 0.1 }}
                 className="rounded-2xl border-2 p-6"
-                style={{ borderColor: 'rgba(42,39,36,0.75)' }}
+                style={{ borderColor: 'var(--card-border)', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}
               >
                 <div className="mb-4 text-amber"><Icon size={20} aria-hidden={true} /></div>
                 <h3 className="mb-2 font-semibold text-text-primary">{t(`problema.cards.${key}_title`)}</h3>

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import type React from 'react';
 import { NeuralConstellation, type NeuralState } from './NeuralConstellation';
 
 interface AuthLeftPanelProps {
@@ -13,13 +14,13 @@ export function AuthLeftPanel({
   onWarpComplete,
   headline = 'Por Dentro do Curso',
   subline = 'O universo académico inteiro, à tua medida.',
-}: AuthLeftPanelProps) {
+}: AuthLeftPanelProps): React.JSX.Element {
   return (
-    <div className="sticky top-0 h-screen overflow-hidden relative select-none bg-black">
+    <div className="fixed top-0 left-0 w-1/2 h-screen overflow-hidden select-none bg-black" style={{ zIndex: 10 }}>
       {/* Neural constellation canvas */}
       <NeuralConstellation
         state={neuralState}
-        {...(onWarpComplete !== undefined ? { onWarpComplete } : {})}
+        onWarpComplete={onWarpComplete}
       />
 
 
@@ -49,15 +50,6 @@ export function AuthLeftPanel({
           {subline && (
             <p className="mt-1.5 text-sm text-teal-400/50 font-medium">{subline}</p>
           )}
-          <Link
-            to="/"
-            className="hidden lg:inline-flex items-center gap-1.5 mt-6 text-xs text-white/30 hover:text-white/70 transition-colors pointer-events-auto"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M9 11L5 7l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Voltar à página inicial
-          </Link>
         </div>
       </div>
     </div>

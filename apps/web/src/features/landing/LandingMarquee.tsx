@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useInView } from 'motion/react';
+import type React from 'react';
 
 const STATS = [
   { value: 12840, suffix: 'h', label: 'Horas poupadas na decisão' },
@@ -7,60 +8,61 @@ const STATS = [
   { value: 4800,  suffix: '+', label: 'Estudantes com rota definida' },
 ];
 
-function useCountUp(target: number, duration = 2000, active = false) {
+function useCountUp(target: number, active = false): number {
   const [value, setValue] = useState(0);
   useEffect(() => {
     if (!active) return;
-    let frame: number;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const t = Math.min((now - start) / duration, 1);
-      setValue(Math.round((1 - Math.pow(1 - t, 4)) * target));
-      if (t < 1) {
-        frame = requestAnimationFrame(tick);
-      }
+    const start = Math.floor(target * 0.91);
+    setValue(start);
+    let current = start;
+
+    const schedule = () => {
+      const delay = 4000 + Math.random() * 4000; // 4–8s entre incrementos
+      return setTimeout(() => {
+        const delta = Math.random() < 0.55 ? 1 : Math.random() < 0.25 ? 2 : 0;
+        current = current + delta;
+        setValue(current);
+        timerRef = schedule();
+      }, delay);
     };
-    frame = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(frame); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
+
+    let timerRef = schedule();
+    return () => { clearTimeout(timerRef); };
+  }, [active, target]);
   return value;
 }
 
 function StatItem({
   value, suffix, label, active, delay,
-}: typeof STATS[number] & { active: boolean; delay: number }) {
-  const count = useCountUp(value, 2000, active);
+}: typeof STATS[number] & { active: boolean; delay: number }): React.JSX.Element {
+  const count = useCountUp(value, active);
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={active ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
-      className="flex flex-col gap-1 px-10 py-5"
+      transition={{ type: 'spring', stiffness: 220, damping: 28, delay }}
+      className="flex w-full flex-col items-center justify-center gap-1.5 px-4 py-6 text-center"
     >
-      <span className="text-2xl font-black tabular-nums tracking-tight text-white">
-        {count.toLocaleString('pt-PT')}<span className="text-white/80">{suffix}</span>
+      <span className="text-3xl font-black tabular-nums tracking-tight text-white sm:text-4xl">
+        {count.toLocaleString('pt-PT')}<span className="text-white/70">{suffix}</span>
       </span>
-      <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/70">
+      <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/60 leading-tight">
         {label}
       </span>
     </motion.div>
   );
 }
 
-export function LandingMarquee() {
+export default function LandingMarquee(): React.JSX.Element {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: '-5% 0px' });
 
   return (
     <div ref={ref} style={{ backgroundColor: '#B65F2A' }}>
-      <div className="mx-auto flex max-w-5xl flex-col items-stretch sm:flex-row sm:justify-between">
+      <div className="mx-auto flex w-full max-w-4xl items-stretch divide-x divide-white/15 px-4 sm:px-6">
         {STATS.map((stat, i) => (
-          <div key={stat.label} className="flex items-stretch">
+          <div key={stat.label} className="flex flex-1 items-stretch">
             <StatItem {...stat} active={inView} delay={0.06 + i * 0.1} />
-            {i < STATS.length - 1 && (
-              <div className="hidden sm:block my-4 w-px bg-white/20" aria-hidden />
-            )}
           </div>
         ))}
       </div>
