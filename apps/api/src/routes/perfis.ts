@@ -13,8 +13,8 @@ type Vars = { Variables: AuthVariables };
 
 interface StrapiVinculo {
   id: string | number;
-  senderId?: string;
-  receiverId?: string;
+  status?: string;
+  solicitante?: { userId?: string; id?: string };
 }
 
 interface StrapiPerfilRaw {
@@ -35,37 +35,34 @@ interface StrapiPerfilRaw {
   [key: string]: unknown;
 }
 
-export function buildPerfilStrapiPayload(body: UpdatePerfilPayload): Record<string, unknown> {
-  const payload: Record<string, unknown> = {};
+const STRAPI_PAYLOAD_FIELDS = [
+  'nome',
+  'bio',
+  'headline',
+  'regiao',
+  'telefone',
+  'website',
+  'areasInteresse',
+  'competencias',
+  'socialLinks',
+  'historicoProfissional',
+  'formacaoAcademica',
+  'notificationPreferences',
+  'visibilitySettings',
+  'avatarUrl',
+  'bannerUrl',
+] as const satisfies readonly (keyof UpdatePerfilPayload)[];
 
-  for (const key of [
-    'nome',
-    'bio',
-    'headline',
-    'regiao',
-    'telefone',
-    'website',
-    'areasInteresse',
-    'competencias',
-    'socialLinks',
-    'historicoProfissional',
-    'formacaoAcademica',
-    'notificationPreferences',
-  ] as const) {
+export type PerfilStrapiPayload = Partial<Pick<UpdatePerfilPayload, (typeof STRAPI_PAYLOAD_FIELDS)[number]>>;
+
+export function buildPerfilStrapiPayload(body: UpdatePerfilPayload): PerfilStrapiPayload {
+  const payload: PerfilStrapiPayload = {};
+
+  for (const key of STRAPI_PAYLOAD_FIELDS) {
     const value = body[key];
-    if (value !== undefined) payload[key] = value;
-  }
-
-  if (body.visibilitySettings !== undefined) {
-    payload['visibilitySettings'] = body.visibilitySettings;
-  }
-
-  if (body.avatarUrl !== undefined) {
-    payload['avatarUrl'] = body.avatarUrl;
-  }
-
-  if (body.bannerUrl !== undefined) {
-    payload['bannerUrl'] = body.bannerUrl;
+    if (value !== undefined) {
+      (payload as Record<string, unknown>)[key] = value;
+    }
   }
 
   return payload;
@@ -180,13 +177,14 @@ perfilRoutes.get('/estudantes-vinculados', checkRole(['instituicao', 'super_admi
   const { id: userId } = c.get('user');
   try {
     const resVinculos = await strapiGet<StrapiVinculo>('/vinculos', {
-      'filters[receiverId][$eq]': userId,
+      'filters[destinatario][userId][$eq]': userId,
       'filters[connectionType][$eq]': 'student-institution',
-      'filters[estado][$eq]': 'connected',
+      'filters[status][$eq]': 'aprovado',
       'pagination[pageSize]': '100',
+      populate: 'solicitante',
     });
 
-    const studentIds = resVinculos.data.map((v) => v.senderId).filter(Boolean) as string[];
+    const studentIds = resVinculos.data.map((v) => v.solicitante?.userId).filter(Boolean) as string[];
     if (studentIds.length === 0) {
       return c.json({ data: [] });
     }
@@ -227,13 +225,21 @@ perfilRoutes.get('/:id', async (c) => {
       let isConnected = false;
       if (requesterId && requesterId !== userId) {
         try {
-          const resVinculos = await strapiGet<StrapiVinculo>('/vinculos', {
-            'filters[senderId][$eq]': requesterId,
-            'filters[receiverId][$eq]': userId,
-            'filters[estado][$eq]': 'connected',
-            'pagination[pageSize]': '1',
-          });
-          isConnected = resVinculos.data.length > 0;
+          const [r1, r2] = await Promise.all([
+            strapiGet<StrapiVinculo>('/vinculos', {
+              'filters[solicitante][userId][$eq]': requesterId,
+              'filters[destinatario][userId][$eq]': userId,
+              'filters[status][$eq]': 'aprovado',
+              'pagination[limit]': '1',
+            }),
+            strapiGet<StrapiVinculo>('/vinculos', {
+              'filters[solicitante][userId][$eq]': userId,
+              'filters[destinatario][userId][$eq]': requesterId,
+              'filters[status][$eq]': 'aprovado',
+              'pagination[limit]': '1',
+            }),
+          ]);
+          isConnected = r1.data.length > 0 || r2.data.length > 0;
         } catch { /* ignore vinculos fail */ }
       }
 

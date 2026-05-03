@@ -54,7 +54,7 @@
 | T5 | Partilhar (Share) interno/externo | `[ ]` | Por integrar |
 | T6 | Denunciar (Report) + auto-hide | `[x]` | Fila para moderador |
 | T7 | Telemetria (views, scroll, vídeo, decisões) | `[x]` | Identidade Total auditada |
-| T8 | Vínculo (Conexão formal bilateral) | `[~]` | Drift: schema shared vs apps/api serializer |
+| T8 | Vínculo (Conexão formal bilateral) | `[x]` | Fix: isConnected check em GET /perfis/:id usava senderId/receiverId/estado='connected' (inválidos) → corrigido para solicitante[userId]/destinatario[userId]/status='aprovado'. estudantes-vinculados idem. 2026-05-03. |
 | T9 | Notificações sociais/vínculo (agrupamento) | `[~]` | Socket.IO funcional para notificações básicas. Agrupamento e Push real pendentes. Contradição com P8 `[~]`. |
 | T10 | Endorsements / Kudos | `[x]` | `POST /projetos/:id/votos` tipo=endorsement + GET + DELETE; UI botão Star em ProjetoDetailPage; domain event PROJETO_ENDORSEMENT_RECEBIDO. 2026-05-03. |
 | T11 | Project Votes (upvote / fork) | `[x]` | `POST /projetos/:id/votos` tipo=voto + GET + DELETE; UI botão ThumbsUp em ProjetoDetailPage. 2026-05-03. |
