@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, useInView } from 'motion/react';
+import { motion, useInView, useReducedMotion } from 'motion/react';
 import type React from 'react';
 
 const STATS = [
@@ -17,12 +17,13 @@ function useCountUp(target: number, active = false): number {
     let current = start;
 
     const schedule = () => {
-      const delay = 4000 + Math.random() * 4000; // 4–8s entre incrementos
+      const delay = 4000 + Math.random() * 4000;
       return setTimeout(() => {
+        if (current >= target) return;
         const delta = Math.random() < 0.55 ? 1 : Math.random() < 0.25 ? 2 : 0;
-        current = current + delta;
+        current = Math.min(current + delta, target);
         setValue(current);
-        timerRef = schedule();
+        if (current < target) timerRef = schedule();
       }, delay);
     };
 
@@ -36,11 +37,12 @@ function StatItem({
   value, suffix, label, active, delay,
 }: typeof STATS[number] & { active: boolean; delay: number }): React.JSX.Element {
   const count = useCountUp(value, active);
+  const reduced = useReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={reduced ? { opacity: 0 } : { opacity: 0, y: 8 }}
       animate={active ? { opacity: 1, y: 0 } : {}}
-      transition={{ type: 'spring', stiffness: 220, damping: 28, delay }}
+      transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 220, damping: 28, delay }}
       className="flex w-full flex-col items-center justify-center gap-1.5 px-4 py-6 text-center"
     >
       <span className="text-3xl font-black tabular-nums tracking-tight text-white sm:text-4xl">

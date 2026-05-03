@@ -151,8 +151,16 @@ mediaPublicRoutes.get('/local/*', (c): Response => {
   if (!key) {
     return c.json({ error: 'Chave inválida.' }, 400);
   }
+  if (Array.from(key).some(ch => ch.charCodeAt(0) < 32)) {
+    return c.json({ error: 'Chave inválida.' }, 400);
+  }
   const normalizedKey = path.posix.normalize(key).replace(/^\/+/, '');
   if (normalizedKey === '.' || normalizedKey.startsWith('../') || path.isAbsolute(key)) {
+    return c.json({ error: 'Chave inválida.' }, 400);
+  }
+  const UPLOADS_BASE = path.resolve(process.cwd(), 'uploads');
+  const resolvedPath = path.resolve(UPLOADS_BASE, normalizedKey);
+  if (!resolvedPath.startsWith(UPLOADS_BASE + path.sep)) {
     return c.json({ error: 'Chave inválida.' }, 400);
   }
   const file = readLocalUpload(normalizedKey);
