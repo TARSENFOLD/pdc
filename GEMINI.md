@@ -115,10 +115,11 @@ Para o template completo do Sealed Envelope, ver `CLAUDE.md § 4`.
 | `specs/IMPORTANTE/03` | RBAC — os 7 roles canónicos e hierarquia de acesso. |
 | `docs/decisoes/` | ADRs — decisões arquiteturais com rastreabilidade. |
 | `AGENTS.md` | Orquestração de Agentes — protocolos de delegação, sub-agentes e Sealed Envelope. |
+| `apps/web/DESIGN.md` | Design System visual — tokens, primitivos, animações, padrões canónicos (incluindo §§ 10.1–10.7 de 2026-05-03). |
 
 ---
 
-## § 5 — Audit Status (2026-04-30)
+## § 5 — Audit Status (2026-05-03)
 
 **Saúde global: Typecheck verde nos 3 workspaces · Testes shared 68/71 (3 falhas pré-existentes simulacoes.spec)**
 
@@ -129,7 +130,22 @@ Para o template completo do Sealed Envelope, ver `CLAUDE.md § 4`.
 - 7 dashboards com RBAC guards. Home ≠ Dashboard (Opção B)
 - `bg-amber-*` é **permitido em landing pages** (identidade visual PDC Angola) — banido em dashboards/app
 
+### Sessão 2026-05-03 — Visual & Auth Polish
+
+- `NeuralConstellation` landing: glow eliminado, partículas ≤ 1.8px, zero cross flares (ADR-025)
+- `--card-border` token em `tokens.css`: dark=branco-creme, light=preto (ADR-026)
+- `DESIGN.md § 10` adicionado: 7 padrões canónicos (NeuralConstellation dual, glow policy, card-border, neuralState auth, PasswordInput, copy sem jargão)
+- Auth pages: `neuralState` reactivo a `onFocus`/`onBlur` por campo de formulário
+- Padrões de copy: "Oráculo" banido de copy visível; emojis banidos de badges/pills de produto
+
+### Padrões Visuais Canónicos (ver `CLAUDE.md § 6` e `DESIGN.md § 10`)
+
+- **Glow Policy**: `ctx.shadowBlur` com multiplicador é banido. Máximo fixo: `shadowBlur = 2` (só accent stars landing)
+- **NeuralConstellation Dual**: dois componentes distintos — não fundir, não cross-importar
+- **`--card-border`**: usar sempre `var(--card-border)` em vez de hex hardcoded
+- **`neuralState` pattern**: `pulse`/`align`/`encrypt`/`focus`/`flow`/`scatter` mapeados a campos de formulário
+
 ---
 
 *Este documento é parte da Wave 0 (Meta-Governação) do PDC v2 Integrity Hardening.*
-*Última atualização: 2026-04-30 · Evidência: auditoria Home vs Dashboard*
+*Última atualização: 2026-05-03 · Evidência: sessão visual/auth polish + `DESIGN.md § 10` + ADR-025/026*

@@ -50,6 +50,9 @@ knowledge_base:
     - "AGENTS.md"
     - "CLAUDE.md"
     - "GEMINI.md"
+    - "apps/web/DESIGN.md"
+    - "docs/decisoes/adr-025-neuralconstellation-dual.md"
+    - "docs/decisoes/adr-026-glow-policy-card-border-token.md"
 
 # Tools and linting
 # We rely on existing monorepo linting (ESLint). No Prettier in this project.

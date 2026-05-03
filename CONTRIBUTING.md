@@ -1,6 +1,6 @@
 # Guia de Contribuição
 
-Para garantir a integridade do **Oráculo de Capital Humano**, seguimos padrões rigorosos de engenharia.
+Para garantir a integridade do **PDC v2**, seguimos padrões rigorosos de engenharia.
 
 ## Fluxo de Trabalho (GSD)
 
@@ -25,6 +25,19 @@ Se os checks falharem, corrija os erros antes de commitar. A estabilidade da `de
 
 Utilizamos `axe-core` para auditorias automatizadas. Erros de acessibilidade são reportados como avisos no CI (Wave 0) e serão endurecidos para erros fatais na Wave 3.
 
-## Proteção de Ramos
+## Padrões Visuais & Design
+
+Antes de tocar qualquer componente visual, ler:
+- `apps/web/DESIGN.md` — fonte canónica de design (tokens, primitivos, padrões)
+- `apps/web/DESIGN.md § 10` — padrões estabelecidos em 2026-05-03 (NeuralConstellation dual, glow policy, `--card-border`, `neuralState` auth pattern, copy sem jargão)
+- ADR-025 e ADR-026 em `docs/decisoes/`
+
+**Regras rápidas:**
+- ❌ `ctx.shadowBlur = currentSize * N` — multiplicador de tamanho é banido
+- ❌ `borderColor: '#000000'` hardcoded — usar `var(--card-border)`
+- ❌ Jargão técnico em copy visível ("Oráculo", "heurísticas")
+- ❌ Emojis em badges/pills de produto
+
+## Protecção de Ramos
 
 Consulte [.github/branch-protection.md](.github/branch-protection.md) para detalhes sobre as regras de merge e aprovação.

@@ -1,6 +1,6 @@
 # pdc-v2 Development Guidelines
 
-Last updated: 2026-04-30
+Last updated: 2026-05-03
 
 ## Core Constraints (Constitution)
 
@@ -58,4 +58,34 @@ npm run dev     # Start development server
 - **Roles**: 7 canónicos em `@pdc/shared` — estudante, mentor, instituicao, moderador, comite_cientifico, super_admin, patrocinador.
 
 <!-- MANUAL ADDITIONS START -->
+
+## Visual Design Patterns (2026-05-03) — See `apps/web/DESIGN.md § 10`
+
+### Glow Policy (ADR-026)
+- ❌ `ctx.shadowBlur = currentSize * N` — banned (produces excessive halos)
+- ✅ Max fixed: `ctx.shadowBlur = 2` — only for accent stars in `src/features/landing/NeuralConstellation.tsx`
+- ✅ Default everywhere else: `ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'`
+
+### `--card-border` Token (ADR-026)
+- ❌ `borderColor: '#000000'` hardcoded — invisible in dark mode
+- ✅ Always use `style={{ borderColor: 'var(--card-border)' }}`
+- Defined in `apps/web/src/styles/tokens.css`: `#000000` (light) / `rgba(236,231,221,0.7)` (dark)
+
+### NeuralConstellation Dual (ADR-025)
+- `src/features/landing/NeuralConstellation.tsx` — landing only, `ChoreographyState`, theme-aware
+- `src/components/auth/NeuralConstellation.tsx` — auth only, `NeuralState`, black background fixed
+- ❌ Never merge or cross-import between the two
+
+### Auth `neuralState` Pattern
+- Form fields fire `NeuralState` via `onFocus`/`onBlur`
+- Canonical mapping: name→`pulse`, email/NIF→`align`, password→`encrypt`, confirm→`focus`, select→`flow`, error→`scatter`
+
+### `PasswordInput` Component
+- ❌ Never use raw `<input type="password">` in auth pages
+- ✅ Import `PasswordInput` from `@/components/ui/PasswordInput`
+
+### Copy Rules
+- ❌ "Oráculo" in user-visible copy → use "PDC" or "sistema"
+- ❌ Emojis in product badges/pills → text only, uppercase, `tracking-wider`
+
 <!-- MANUAL ADDITIONS END -->

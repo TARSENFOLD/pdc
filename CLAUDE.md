@@ -307,6 +307,38 @@ var(--radius-sm)   var(--radius-md)   var(--radius-lg)   var(--radius-xl)   var(
 7. Transições de rota com `AnimatePresence`
 8. `LayoutGroup` para animações de lista
 
+### Glow Policy (Canvas) — 2026-05-03
+
+- ❌ `ctx.shadowBlur = currentSize * N` — multiplicador de tamanho é **banido**
+- ✅ Accent stars landing: `ctx.shadowBlur = 2` (fixo), `shadowColor` com alpha ≤ 0.12
+- ✅ Cool stars e todos os componentes app: `ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'`
+- ❌ Cross flares e double-pass bright core em `NeuralConstellation` da landing — eliminados
+- Referência: `DESIGN.md § 10.2`, `ADR-026`
+
+### `--card-border` Token — 2026-05-03
+
+```css
+/* Definido em apps/web/src/styles/tokens.css */
+--card-border: #000000;          /* light mode */
+/* .dark { */
+--card-border: rgba(255, 255, 255, 0.08);  /* dark mode */
+```
+
+- ❌ Nunca `borderColor: '#000000'` hardcoded — usar sempre `var(--card-border)`
+- Referência: `DESIGN.md § 10.3`, `ADR-026`
+
+### NeuralConstellation Dual — 2026-05-03
+
+- `src/features/landing/NeuralConstellation.tsx` — landing pública, adapta ao tema, `ChoreographyState`
+- `src/components/auth/NeuralConstellation.tsx` — auth, fundo preto fixo, `NeuralState` reactivo a `onFocus`/`onBlur`
+- ❌ Nunca fundir nem cross-importar
+- Referência: `DESIGN.md § 10.1`, `ADR-025`
+
+### Copy sem Jargão — 2026-05-03
+
+- ❌ "Oráculo" em copy visível ao utilizador → usar "PDC" ou "sistema"
+- ❌ Emojis em badges/pills de produto → texto uppercase `tracking-wider` apenas
+
 ### Rotas Canónicas (Implementação Actual)
 
 ```
@@ -324,7 +356,7 @@ Todas as rotas de dashboard têm `RoleGuard` — só o role correcto + super_adm
 
 ---
 
-## § 7 — Audit Status (2026-04-30)
+## § 7 — Audit Status (2026-05-03)
 
 **Saúde global: Typecheck verde nos 3 workspaces · Testes shared 68/71 (3 falhas pré-existentes simulacoes.spec)**
 
@@ -334,7 +366,18 @@ Constituição actualizada: `specs/IMPORTANTE/01-05` (DC-01..DC-03 documentados)
 Zero `as any` em todo o monorepo.
 7 dashboards com RBAC guards. BFF `/experiencias/stats` criado. Home ≠ Dashboard (Opção B).
 
+### Sessão 2026-05-03 — Visual & Auth Polish
+
+- `NeuralConstellation` landing: glow eliminado, partículas ≤ 1.8px, zero cross flares
+- `--card-border` token criado em `tokens.css` — dark mode branco-creme, light mode preto
+- `DESIGN.md § 10` adicionado com 7 padrões canónicos desta sessão
+- Auth pages: `neuralState` por campo em `RegistoEstudantePage`, `RegistoMentorPage`, `RegistoInstituicaoPage`
+- Banner mobile neural `sticky top-0` em `AuthSplitLayout`
+- `PasswordInput` component reutilizável criado e exportado
+- Copy: "Oráculo" removido de copy visível; emojis removidos de badges de produto
+- ADR-025 (NeuralConstellation dual) e ADR-026 (glow policy + card-border) criados em 2026-05-03
+
 ---
 
 *Este documento é parte da Wave 0 (Meta-Governação) do PDC v2 Integrity Hardening.*
-*Última atualização: 2026-04-30 · Evidência: auditoria Home vs Dashboard + `docs/audit/divida-tecnica-dashboards-home.md`*
+*Última atualização: 2026-05-03 · Evidência: sessão visual/auth polish + `DESIGN.md § 10`*

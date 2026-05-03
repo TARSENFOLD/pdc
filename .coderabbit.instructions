@@ -56,5 +56,37 @@ Toda escrita de domínio deve disparar o fluxo via `eventBus.publishWithOutbox`:
 - **Tag-don't-drop**: Eventos de telemetria inválidos são tagados (`edgeInvalidated: true`), **nunca** eliminados silenciosamente.
 - Ver `docs/arquivo-fundacional/07-ux-specs/algoritmo-decisoes-design.md`.
 
-## 🐰 8. Estilo de Comentários
-- Começa cada comentário de review com o emoji 🐰.
+## 🎨 8. Padrões Visuais Canónicos (2026-05-03)
+
+### Glow Policy (ADR-026)
+- ❌ `ctx.shadowBlur = currentSize * N` — multiplicador de tamanho é **banido**. Rejeitar qualquer PR com este padrão.
+- ✅ Máximo fixo `shadowBlur = 2` apenas em accent stars da landing page (`src/features/landing/NeuralConstellation.tsx`).
+- ✅ `shadowBlur = 0; shadowColor = 'transparent'` é o correcto em todos os componentes app.
+- ❌ Cross flares e double-pass bright core em NeuralConstellation eliminados — não reintroduzir.
+
+### `--card-border` Token (ADR-026)
+- ❌ `borderColor: '#000000'` hardcoded em qualquer card temático — invisível em dark mode.
+- ✅ Usar sempre `style={{ borderColor: 'var(--card-border)' }}` ou equivalente via CSS vars.
+- Token definido em `apps/web/src/styles/tokens.css`.
+
+### NeuralConstellation Dual (ADR-025)
+- `src/features/landing/NeuralConstellation.tsx` — landing, `ChoreographyState`, adapta-se ao tema.
+- `src/components/auth/NeuralConstellation.tsx` — auth, `NeuralState`, fundo preto fixo.
+- ❌ Nunca fundir nem cross-importar os dois componentes.
+
+### `neuralState` Auth Pattern
+- Campos de formulário de registo disparam `NeuralState` via `onFocus`/`onBlur`.
+- Mapeamento canónico: nome→`pulse`, email/NIF→`align`, password→`encrypt`, confirmar→`focus`, select→`flow`, erro→`scatter`.
+- Estado gerido em `useState<NeuralState>('idle')` e passado ao `AuthSplitLayout` via prop.
+
+### `PasswordInput` Component
+- ❌ Nunca usar `<input type="password">` raw nas páginas de auth.
+- ✅ Usar `PasswordInput` de `@/components/ui/PasswordInput`.
+
+### Copy sem Jargão
+- ❌ "Oráculo" em copy visível ao utilizador → substituir por "PDC" ou "sistema".
+- ❌ Emojis em badges/pills de produto (ex: `⚡ Diagnóstico`→ remover emoji).
+- Referência: `DESIGN.md § 10.7`.
+
+## 🐰 9. Estilo de Comentários
+- Preferir o uso do emoji 🐰 para comentários informais/positivos; não obrigar em contextos formais, críticos ou de segurança.

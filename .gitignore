@@ -67,4 +67,6 @@ test-results/
 playwright-report/
 coverage/
 .wrangler/
-node_modules/
+lint_output.txt
+apps/web/lint-errors.txt
+tests/.auth/*.json

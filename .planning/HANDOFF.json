@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-03T12:38:16.621Z",
+  "timestamp": "2026-05-03T18:21:00.000Z",
   "phase": null,
   "phase_name": "feature-completeness — Fase D requirements closeout",
   "phase_dir": ".planning",
   "plan": null,
   "task": "remaining-requirements",
-  "status": "paused",
+  "status": "in_progress",
   "completed_tasks": [
     {
       "id": 1,
@@ -31,32 +31,34 @@
       "commit": "5d76c8f",
       "files": ["apps/api/src/routes/perfis.ts"],
       "detail": "GET /perfis/:id: was using senderId/receiverId/estado='connected' (invalid fields) → fixed to solicitante[userId]/destinatario[userId]/status='aprovado' bidirectional. estudantes-vinculados endpoint fixed too."
+    },
+    {
+      "id": 4,
+      "name": "E4-T3 — Conquistas naming mismatch (D4)",
+      "status": "done",
+      "commit": "c004672",
+      "files": ["apps/api/src/modules/conquistas/conquistas.engine.ts", "apps/api/src/modules/conquistas/conquistas.engine.spec.ts"],
+      "detail": "Fixed 3 trigger mismatches: programa-completo (PROGRAMA_APROVADO→CONCLUIDO), primeiro-endorsement (PROJETO_PUBLICADO→ENDORSEMENT_RECEBIDO + tipo fix), colaborador-projeto (PROJETO_PUBLICADO→ACESSO_CONCEDIDO + tipo fix). Added 6 regression tests. EVENT_TO_TRIGGER_MAP extended with 5 new events."
     }
   ],
   "remaining_tasks": [
     {
-      "id": 4,
+      "id": 5,
       "name": "N6 — Vocacional pesos por evento",
       "status": "not_started",
       "detail": "BFF loop is closed (persists to /perfil-vocacionals). Missing: event weights from spec 1a81656f, E2E validation with real Strapi. Check apps/api/src/routes/vocacional.ts and packages/shared/src/schemas/vocacional.ts"
     },
     {
-      "id": 5,
+      "id": 6,
       "name": "F6 — FOMO trigger notifications",
       "status": "not_started",
-      "detail": "notify.hook.ts (4.4KB) exists but FOMO-specific triggers not implemented: '3 instituições viram o teu perfil', 'Perfil visitado X vezes esta semana', etc. Check apps/api/src/modules/hooks/notify.hook.ts"
-    },
-    {
-      "id": 6,
-      "name": "T9 — Notification grouping + agrupamento",
-      "status": "not_started",
-      "detail": "Socket.IO funcional for basic notifications. Grouping and real Push pending. Check apps/api/src/routes/notificacoes.ts"
+      "detail": "notify.hook.ts exists but FOMO-specific triggers not implemented: '3 instituições viram o teu perfil', 'Perfil visitado X vezes esta semana', etc. Check apps/api/src/modules/hooks/notify.hook.ts"
     },
     {
       "id": 7,
-      "name": "E4-T3 — Conquistas naming mismatch (D4)",
+      "name": "T9 — Notification grouping + agrupamento",
       "status": "not_started",
-      "detail": "12 conquistas with naming mismatch don't fire. Check apps/api/src/modules/conquistas/conquistas.engine.ts + conquistas.handler.ts. E2E: completion of simulacao 1 → 'Primeiro Passo' conquista at /estudante/conquistas"
+      "detail": "Socket.IO funcional for basic notifications. Grouping and real Push pending. Check apps/api/src/routes/notificacoes.ts"
     }
   ],
   "blockers": [],
@@ -76,9 +78,14 @@
       "decision": "T12 (Discussions) skipped — requires creating Strapi content types for discussion+reply collections first",
       "rationale": "No discussion/reply content-types exist in infra/strapi/src/api/ — too invasive without dedicated planning",
       "phase": "feature-completeness"
+    },
+    {
+      "decision": "colaborador-projeto uses PROJETO_ACESSO_CONCEDIDO (not PROJETO_COLABORADOR_ACEITE) as trigger",
+      "rationale": "PROJETO_COLABORADOR_ACEITE is never published by any route; PROJETO_ACESSO_CONCEDIDO is the nearest published event for access grants",
+      "phase": "feature-completeness"
     }
   ],
   "uncommitted_files": [],
   "branch": "fix/pdcv2-integrity-hardening-v2",
-  "last_commit": "5d76c8f fix(T8): correct vinculos isConnected filter"
+  "last_commit": "c004672 fix(E4-T3): correct 3 conquista trigger mismatches — D4 naming drift"
 }

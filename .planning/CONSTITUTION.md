@@ -32,6 +32,9 @@ Se o código contradiz o markdown (Epics Canónicas), o código é defeituoso. O
 - **Herança Invisível:** Sofisticação global com raízes culturais subliminares.
 - **Não aos Extremos:** Nunca usar `#000000` (evitar smear OLED) nem `#FFFFFF` puro.
 - **Física Apple:** Animações via Motion com springs (`stiffness: 220, damping: 28`).
+- **Glow Policy (2026-05-03):** `ctx.shadowBlur` com multiplicador de tamanho é **banido**. Máximo fixo: `shadowBlur = 2` apenas em accent stars da landing. Cool stars e componentes app: `shadowBlur = 0`. Ver `DESIGN.md § 10.2` e ADR-026.
+- **`--card-border` Token (2026-05-03):** Usar sempre `var(--card-border)` para bordas de cards temáticos. Nunca hardcodar `#000000`. Ver `apps/web/src/styles/tokens.css` e ADR-026.
+- **Padrões de Copy:** "Oráculo" e jargão técnico banidos de copy visível ao utilizador. Emojis banidos em badges/pills de produto.
 
 ## 7. Ecosystem Hooks (Lei G15)
 Nenhuma escrita de domínio é considerada completa enquanto os hooks ecossistémicos canónicos (Ranking, Feed, Match, Achievement, Behavior, Notify) não correrem com sucesso ou forem marcados para retry no outbox.
@@ -73,13 +76,15 @@ O ficheiro `.env.example` é uma **fixture intencional**. Contém credenciais de
 O limite de 300 linhas é verificado em CI. Ficheiros que excedam o limite impedem o merge, excepto na whitelist explícita (ex: `packages/shared/src/index.ts`).
 
 ---
-## 11. Audit Status (2026-04-30)
+## 11. Audit Status (2026-05-03)
 
 **Saúde global: 66% Done/Done-Plus · 32% Partial · 3% Missing · 0 Vision-Failure**
 Zero `as any` em todo o monorepo (confirmado por grep 2026-04-29).
 Relatório: `docs/audit/MASTER--audit-report.md` · Epic: T-REM-1..6
 
 **Infra (30 Abril 2026):** Cold storage R2 real (`moveToColdStorage` não é mais stub) · Telemetry worker isolado (`/workers/telemetry-worker.ts`) · Distributed lock com fencing token (`/lib/distributed-lock.ts`) · CI doc validator (`scripts/validate-docs.ts`) · i18n 100% (10 componentes, 3 locales × auth + dashboard.home).
+
+**Visual & Auth Polish (3 Maio 2026):** NeuralConstellation dual (ADR-025) · Glow policy + `--card-border` token (ADR-026) · `neuralState` por campo de formulário · `PasswordInput` reutilizável · `DESIGN.md § 10` adicionado (7 padrões canónicos).
 
 > **Nota:** `bg-amber-*` é permitido em landing pages (identidade visual PDC Angola). Banido em dashboards e componentes app.
 
