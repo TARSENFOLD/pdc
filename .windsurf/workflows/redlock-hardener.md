@@ -41,7 +41,7 @@ Blacklist Nominal (AP-01 a AP-07): Aplicável na totalidade.
 
 Critério Done:
 [ ] ADR com decisão fundamentada (RedLock vs SET NX EX vs alternativa)
-[ ] Se RedLock: implementação com ioredis + redlock package
+[ ] Se RedLock (N/A para Upstash single-node — limitação documentada no ADR): documentar no ADR
 [ ] Se SET NX EX: documentar limitações aceites e monitoring
 [ ] Lock wrapper abstracto com interface `acquireLock(key, ttl) → { release() }`
 [ ] Fencing token para prevenir stale lock writes
@@ -100,7 +100,9 @@ Critério Done:
    - `INCR lock:fence:${key}` → obtém token N
    - `SET key N NX PX ${ttlMs}` → tenta adquirir lock
    - Se SET falhar, o token N fica gasto (gap na sequência) — **isto é correcto e inofensivo**.
-     Tokens com gaps ainda garantem ordenação; o receptor apenas rejeita tokens ≤ ao último visto.
+     Tokens com gaps ainda garantem **monotonicity** (ordem estritamente crescente); o receptor
+     apenas rejeita tokens ≤ ao último visto, prevenindo stale writes mesmo com gaps na sequência.
+     A propriedade chave é a monotonicidade, não a contiguidade.
      Não é necessário DECR compensatório (adiciona complexidade sem benefício de correcção).
    - Release atómico via Lua script (ver abaixo)
 
@@ -122,14 +124,28 @@ Critério Done:
    - Log structured (pino) em todas as aquisições, releases e expirações, com `correlationId`
 
 5. **Adicionar monitoring**
-   - Métricas: lock acquisition time, lock contention rate, TTL expirations
-   - Log structured com pino quando lock expira antes do release
-   - Alertas em staging: acquisition failures > threshold → alerta oncall
+   - **Plataforma:** Prometheus + Grafana (via pino-prometheus sink ou OpenTelemetry SDK)
+   - **Métricas a recolher:**
+     - `lock_acquisition_duration_ms` — histograma do tempo de aquisição
+     - `lock_contention_total` — contador de tentativas falhadas (lock já detido)
+     - `lock_ttl_expired_total` — contador de expiração de TTL antes do release
+   - **Recolha:** instrumentar `acquireLock` e `release` com OpenTelemetry spans; emitir métricas via pino structured log para Grafana Loki
+   - **Destinos de alerta:**
+     - Slack `#oncall-alertas` para acquisition failures > 5% em janela de 5 min
+     - PagerDuty para Redis unavailable > 30s
+   - Log structured com pino quando lock expira antes do release (incluir `correlationId` e `fencingToken`)
 
 6. **Integrar no outbox-worker.ts**
    - Substituir `redis.set(LOCK_KEY, 'locked', { ex, nx })` pelo novo `acquireLock`
-   - Usar fencing token para validar writes no Strapi
+   - Passar o `fencingToken` em cada write ao Strapi via header HTTP `X-Fencing-Token: <token>`
    - Tratar `LockUnavailableError`: log warn + skip iteration (não crash o worker)
+
+   **Validação do fencing token no Strapi:**
+   - Implementar middleware Strapi que extrai `X-Fencing-Token` do request
+   - Comparar com `lastSeenFencingToken` armazenado no modelo/recurso (campo dedicado ou tabela auxiliar)
+   - Se token recebido ≤ `lastSeenFencingToken`: rejeitar com `409 Conflict` e body `{ error: "stale_fencing_token" }`
+   - Se token válido: actualizar `lastSeenFencingToken` e prosseguir o write
+   - Este mecanismo é o ponto de aplicação do fencing — sem ele, stale writes de locks expirados não são bloqueados
 
 7. **Testes** (incluindo failure modes)
    - Lock acquisition/release (happy path)
@@ -156,3 +172,9 @@ Critério Done:
 **NTP / clock sync:**
 - Assumir NTP sync < 500ms entre instâncias (standard em cloud providers)
 - Documentar este assumption no ADR
+
+**Identificar o titular do lock:**
+- `GET lock:<key>` no Redis CLI devolve o fencing token actual (e.g., `42`)
+- Correlacionar o token com o processo via logs pino: cada `acquireLock` deve emitir `{ lockKey, fencingToken, correlationId, workerId }` a nível `debug`
+- Pesquisar `correlationId` nos logs para identificar a instância que detém (ou detinha) o lock
+- Exemplo de query Grafana Loki: `{app="outbox-worker"} |= "fencingToken=42"`

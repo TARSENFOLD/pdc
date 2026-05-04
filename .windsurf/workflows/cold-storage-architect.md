@@ -15,6 +15,7 @@ Eventos inválidos (fraude, bots, dados corrompidos) precisam ser preservados em
 
 Spec Soberana: ADR 005 (Outbox + Resiliência), Spec 04 (Telemetria)
 Wave/Contexto: Wave 3 (Resiliência & Compliance)
+Subdomínio: telemetria
 Caixa Autorizada: A (Código viola lei — stub não cumpre promessa de zero data loss)
 
 Scope IN (Ficheiros permitidos):
