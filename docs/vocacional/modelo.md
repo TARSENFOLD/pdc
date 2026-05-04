@@ -18,7 +18,7 @@ O sistema mede o "músculo comportamental" do estudante através de 4 heurístic
 > **Fontes Vivas:** 
 > - [Heurísticas (Interpretação)](../../packages/shared/src/heuristics.ts)
 > - [Cálculo de Performance](../../packages/shared/src/heuristics-calculator.ts)
-> - [Visão do Produto (§3)](../../specs/IMPORTANTE/01_—_Visão_do_Produto_(Canónica).md)
+> - [Visão do Produto (§3)](../../specs/IMPORTANTE/01_%E2%80%94_Vis%C3%A3o_do_Produto_%28Can%C3%B3nica%29.md)
 
 ---
 

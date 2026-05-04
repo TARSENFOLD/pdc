@@ -35,7 +35,7 @@ export function LandingProblema() {
                 {...fadeUp}
                 transition={{ type: 'spring', stiffness: 220, damping: 28, delay: i * 0.1 }}
                 className="rounded-2xl border-2 p-6"
-                style={{ borderColor: 'var(--card-border)', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}
+                style={{ borderColor: 'var(--card-border-landing)', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
               >
                 <div className="mb-4 text-amber"><Icon size={20} aria-hidden={true} /></div>
                 <h3 className="mb-2 font-semibold text-text-primary">{t(`problema.cards.${key}_title`)}</h3>

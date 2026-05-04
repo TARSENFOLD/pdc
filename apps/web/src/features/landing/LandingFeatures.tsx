@@ -33,7 +33,7 @@ export function LandingFeatures() {
                 {...fadeUp}
                 transition={{ type: 'spring', stiffness: 220, damping: 28, delay: i * 0.07 }}
                 className="rounded-2xl border-2 p-6"
-                style={{ borderColor: 'var(--card-border, #000000)', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}
+                style={{ borderColor: 'var(--card-border-landing)', boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}
               >
                 <div className="mb-4 text-amber"><Icon size={20} aria-hidden={true} /></div>
                 <h3 className="mb-2 font-semibold text-text-primary">{t(`features.items.${key}_title`)}</h3>

@@ -10,4 +10,4 @@ Se procura a definição técnica da infraestrutura, arquitetura e estado real d
 
 ## Manifesto e Pitch
 Os documentos que definem a "narrativa de patamar mundial", identidade visual e manifestos de visão foram movidos para a pasta de Pitch para evitar conflito com a fonte de verdade técnica:
-- **[Manifestos de Visão e Pitch](../pitch/):** visao.md, SISTEMA_MESTRE_FINAL.md, etc.
+- **Manifestos de Visão e Pitch:** visao.md, SISTEMA_MESTRE_FINAL.md, etc. (pasta `pitch/` não versionada)

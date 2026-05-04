@@ -1,7 +1,7 @@
 # ADR 006: Design de Herança Invisível e Otimização PWA (SUPERSEDED)
 
 > [!IMPORTANT]
-> Esta ADR foi superseded pela Spec Canónica 05 — Design System Soul & Elite ([spec:IMPORTANTE/05](../../specs/IMPORTANTE/05_—_Design_System_Soul_&_Elite_(Tokens,_Primitivos_e_Wireframes).md)). Mantida para rastreabilidade histórica.
+> Esta ADR foi superseded pela Spec Canónica 05 — Design System Soul & Elite ([spec:IMPORTANTE/05](../../specs/IMPORTANTE/05_%E2%80%94_Design_System_Soul_%26_Elite_%28Tokens%2C_Primitivos_e_Wireframes%29.md)). Mantida para rastreabilidade histórica.
 
 
 **Data:** Abril 2026

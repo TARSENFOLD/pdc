@@ -6,9 +6,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { glob } from 'glob';
 
-const ROOT = path.resolve(import.meta.dirname, '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const DOC_GLOBS = [
   'docs/**/*.md',
@@ -20,8 +21,13 @@ const DOC_GLOBS = [
   'audit/**/*.md',
 ];
 
+// Historical snapshots and future specs — paths may reference renamed/removed files intentionally
 const SKIP_PATHS = [
   'docs/_archive',
+  'docs/audit',
+  'docs/arquivo-fundacional',
+  'docs/a_implementar',
+  'audit/',
   'node_modules',
   'dist',
 ];
@@ -44,7 +50,30 @@ function resolveInternalLink(fromFile: string, link: string): string | null {
   const anchor = link.includes('#') ? link.split('#')[0] : link;
   if (!anchor) return null;
   const dir = path.dirname(fromFile);
-  return path.resolve(dir, anchor);
+  // Decode URL-encoded characters (e.g. %28 → '(') before resolving the path
+  const decoded = decodeURIComponent(anchor);
+  return path.resolve(dir, decoded);
+}
+
+function fileExistsWithFallbacks(ref: string): boolean {
+  if (fs.existsSync(path.resolve(ROOT, ref))) return true;
+  // src/... paths are relative to the web app root (apps/web/)
+  if (ref.startsWith('src/') && fs.existsSync(path.resolve(ROOT, 'apps/web', ref))) return true;
+  // Feature/component/page paths without prefix are in apps/web/src/
+  if (
+    (ref.startsWith('features/') ||
+      ref.startsWith('components/') ||
+      ref.startsWith('pages/') ||
+      ref.startsWith('lib/')) &&
+    fs.existsSync(path.resolve(ROOT, 'apps/web/src', ref))
+  ) return true;
+  // Schema paths without packages/shared/src/ prefix
+  if (ref.startsWith('schemas/') && fs.existsSync(path.resolve(ROOT, 'packages/shared/src', ref))) return true;
+  // API route paths without apps/api/src/ prefix
+  if (ref.startsWith('routes/') && fs.existsSync(path.resolve(ROOT, 'apps/api/src', ref))) return true;
+  // i18n locale files relative to apps/web/src/locales/
+  if ((ref.startsWith('pt-BR/') || ref.startsWith('en/')) && fs.existsSync(path.resolve(ROOT, 'apps/web/src/locales', ref))) return true;
+  return false;
 }
 
 function checkInternalLinks(filePath: string, content: string): Issue[] {
@@ -81,9 +110,10 @@ function checkCodeReferences(filePath: string, content: string): Issue[] {
     let match: RegExpExecArray | null;
     while ((match = fileRefRegex.exec(line)) !== null) {
       const ref = match[1] as string;
+      // Skip absolute paths (HTTP routes like /.well-known/jwks.json)
+      if (ref.startsWith('/')) continue;
       if (ref.includes('/') || ref.startsWith('apps/') || ref.startsWith('packages/') || ref.startsWith('scripts/')) {
-        const resolved = path.resolve(ROOT, ref);
-        if (!fs.existsSync(resolved)) {
+        if (!fileExistsWithFallbacks(ref)) {
           issues.push({
             file: path.relative(ROOT, filePath),
             line: idx + 1,
@@ -130,4 +160,4 @@ async function main(): Promise<void> {
   process.exit(1);
 }
 
-await main();
+main().catch((err) => { console.error(err); process.exit(1); });

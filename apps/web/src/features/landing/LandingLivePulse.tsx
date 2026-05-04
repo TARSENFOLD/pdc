@@ -90,9 +90,9 @@ export function LandingLivePulse(): React.JSX.Element {
                   exit={reduced ? { opacity: 0 } : { opacity: 0, x: 20 }}
                   transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1], delay: i * 0.05 }}
                   className="flex items-center gap-4 rounded-2xl bg-surface border-2 p-4 shadow-sm transition-colors group"
-                  style={{ borderColor: 'var(--card-border, #000000)', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
+                  style={{ borderColor: 'var(--card-border-landing)', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
                 >
-                  <div className="h-10 w-10 rounded-xl bg-surface-raised border-2 flex items-center justify-center text-lg shadow-inner group-hover:bg-amber/5 transition-colors" style={{ borderColor: 'var(--card-border, #000000)' }}>
+                  <div className="h-10 w-10 rounded-xl bg-surface-raised border-2 flex items-center justify-center text-lg shadow-inner group-hover:bg-amber/5 transition-colors" style={{ borderColor: 'var(--card-border-landing)' }}>
                     ✨
                   </div>
                   <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary transition-colors">

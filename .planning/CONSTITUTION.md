@@ -28,7 +28,7 @@ A telemetria é o coração do Oráculo. Perda de dados comportamentais é inace
 Se o código contradiz o markdown (Epics Canónicas), o código é defeituoso. O documento justifica o código, nunca o contrário.
 
 ## 6. Estética "Soul & Elite" (ADR-017)
-- **Referência:** [spec:IMPORTANTE/05](../specs/IMPORTANTE/05_%E2%80%94_Design_System_Soul_&_Elite_%28Tokens%2C_Primitivos_e_Wireframes%29.md) e [ADR-017](../docs/decisoes/adr-017-design-heranca-invisivel.md).
+- **Referência:** [spec:IMPORTANTE/05](../specs/IMPORTANTE/05_%E2%80%94_Design_System_Soul_%26_Elite_%28Tokens%2C_Primitivos_e_Wireframes%29.md) e [ADR-006/017](../docs/decisoes/006-design-heranca-invisivel.md).
 - **Herança Invisível:** Sofisticação global com raízes culturais subliminares.
 - **Não aos Extremos:** Nunca usar `#000000` (evitar smear OLED) nem `#FFFFFF` puro.
 - **Física Apple:** Animações via Motion com springs (`stiffness: 220, damping: 28`).

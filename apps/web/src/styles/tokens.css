@@ -74,6 +74,7 @@
 
   /* ─── 3.9 Card Borders ─── */
   --card-border: #000000;
+  --card-border-landing: rgba(255, 255, 255, 0.85);  /* Landing cards — borda branca visível */
 
   /* ─── 3.9 Glass ─── */
   --glass-bg-light:     rgba(250, 246, 238, 0.72);

@@ -9,7 +9,7 @@ context_wave: W2
 
 ## Contexto
 
-O ficheiro `packages/shared/src/infra.ts` agrupava dois domínios semanticamente distintos sob um nome técnico genérico:
+O ficheiro **packages/shared/src/infra.ts** (removido em W2) agrupava dois domínios semanticamente distintos sob um nome técnico genérico:
 
 1. **Schemas de subscrição** (`SubscricaoTipoSchema`, `SubscricaoLtiSchema`) — modelam entidades de negócio de acesso (LTI, individual, institucional).
 2. **Schema de resposta presigned** (`PresignedMediaResponseSchema`) — modela a resposta do endpoint BFF `/media/presigned`.
@@ -25,7 +25,7 @@ O nome `infra` não comunicava nenhum desses domínios. Qualquer consumidor exte
 | `infra.ts` → | `schemas/subscricoes.ts` | `SubscricaoTipoSchema`, `SubscricaoTipo`, `SubscricaoLtiSchema`, `SubscricaoLti` |
 | `infra.ts` → | `schemas/media.ts` | `PresignedMediaResponseSchema`, `PresignedMediaResponse` (adicionado ao ficheiro existente) |
 
-O `index.ts` substitui `export * from './infra.js'` por `export * from './schemas/subscricoes.js'` (o `schemas/media.js` já estava exportado).
+O `index.ts` substitui `export * from './infra.js'` por `export * from './schemas/subscricoes.js'` (o `schemas/media.ts` já estava exportado).
 
 ## Justificação
 
@@ -36,5 +36,5 @@ O `index.ts` substitui `export * from './infra.js'` por `export * from './schema
 ## Consequências
 
 - `infra.ts` deixa de existir no repositório.
-- Qualquer referência futura a `./infra.js` nos exports do `index.ts` será um erro de compilação imediato (ts2307).
+- Qualquer referência futura a ./infra.js nos exports do `index.ts` será um erro de compilação imediato (ts2307).
 - Novos schemas de subscrição devem ir para `schemas/subscricoes.ts`; novos schemas de media para `schemas/media.ts`.

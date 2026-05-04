@@ -38,6 +38,6 @@ Legacy UI-only fields (`raridade`, `icone`, `alcancadaEm`, `desbloqueada`, `data
 ## Consequences
 
 - Single source of truth for `Conquista` shape across the entire monorepo.
-- `user.ts` import path (`./schemas/dashboard.js`) continues to work without change.
+- `user.ts` import path (`packages/shared/src/schemas/dashboard.ts`) continues to work without change.
 - Web app code that accesses `desbloqueada`, `dataDesbloqueio` continues to compile.
 - Schema drift between BFF and Strapi is now visible and auditable.
