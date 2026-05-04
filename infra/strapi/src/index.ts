@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import type { Core } from '@strapi/strapi';
 
 const INITIAL_FLAGS = [
@@ -31,5 +32,32 @@ export default {
         strapi.log.info(`[seed] Feature flag "${flag.domain}" created (enabled: false)`);
       }
     }
+
+    if (process.env['NODE_ENV'] === 'test') {
+      await seedTestApiToken(strapi);
+    }
   },
 };
+
+async function seedTestApiToken(strapi: Core.Strapi) {
+  const tokenValue = process.env['STRAPI_API_TOKEN'] ?? 'test-strapi-token';
+  const salt = process.env['API_TOKEN_SALT'] ?? 'testTokenSalt';
+  const hashedKey = createHmac('sha512', salt).update(tokenValue).digest('hex');
+
+  const existing = await strapi.db.query('admin::api-token').findOne({
+    where: { name: 'ci-test-token' },
+  });
+
+  if (!existing) {
+    await strapi.db.query('admin::api-token').create({
+      data: {
+        name: 'ci-test-token',
+        description: 'Auto-created for CI/E2E testing',
+        type: 'full-access',
+        accessKey: hashedKey,
+        lifespan: null,
+      },
+    });
+    strapi.log.info('[bootstrap] CI test API token created (test-strapi-token)');
+  }
+}

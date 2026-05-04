@@ -79,20 +79,29 @@ function requireStrapiToken(): string {
   return STRAPI_API_TOKEN;
 }
 
-async function bffLogin(account: Pick<TestAccount, 'email' | 'password'>): Promise<BffUser | null> {
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: account.email, password: account.password }),
-  });
-
-  if (res.status === 401 || res.status === 400) return null;
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`BFF login failed for ${account.email} (HTTP ${res.status}): ${body}`);
+async function isBffReachable(): Promise<boolean> {
+  try {
+    await fetch(`${API_URL}/bootstrap`, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
+    return true;
+  } catch {
+    return false;
   }
+}
 
-  return (await res.json()) as BffUser;
+async function bffLogin(account: Pick<TestAccount, 'email' | 'password'>): Promise<BffUser | null> {
+  try {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: account.email, password: account.password }),
+    });
+
+    if (res.status === 401 || res.status === 400) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as BffUser;
+  } catch {
+    return null;
+  }
 }
 
 async function strapiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -109,6 +118,15 @@ async function strapiFetch<T>(path: string, init: RequestInit = {}): Promise<T> 
   return (await res.json()) as T;
 }
 
+async function findStrapiUserByEmail(email: string): Promise<StrapiUser | null> {
+  try {
+    const users = await strapiFetch<StrapiUser[]>(`/api/users?filters[email][$eq]=${encodeURIComponent(email)}&pagination[pageSize]=1`);
+    return Array.isArray(users) ? (users[0] ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function registerStrapiUser(account: TestAccount): Promise<StrapiUser> {
   const res = await fetch(`${STRAPI_URL}/api/auth/local/register`, {
     method: 'POST',
@@ -119,6 +137,11 @@ async function registerStrapiUser(account: TestAccount): Promise<StrapiUser> {
       password: account.password,
     }),
   });
+
+  if (res.status === 400) {
+    const existing = await findStrapiUserByEmail(account.email);
+    if (existing) return existing;
+  }
 
   if (!res.ok) {
     const body = await res.text();
@@ -200,27 +223,48 @@ async function upsertPerfil(account: TestAccount, userId: string): Promise<void>
   });
 }
 
-async function ensureAccount(account: TestAccount): Promise<void> {
-  let user = await bffLogin(account);
+async function ensureAccount(account: TestAccount, bffAvailable: boolean): Promise<void> {
+  let userId: string;
 
-  if (!user) {
-    const strapiUser = await registerStrapiUser(account);
-    user = { id: strapiUser.id, email: strapiUser.email, role: account.role };
+  if (bffAvailable) {
+    const user = await bffLogin(account);
+    if (user) {
+      userId = String(user.id);
+    } else {
+      const strapiUser = await registerStrapiUser(account);
+      userId = String(strapiUser.id);
+    }
+  } else {
+    const existing = await findStrapiUserByEmail(account.email);
+    if (existing) {
+      userId = String(existing.id);
+    } else {
+      const strapiUser = await registerStrapiUser(account);
+      userId = String(strapiUser.id);
+    }
   }
 
-  await upsertPerfil(account, String(user.id));
+  await upsertPerfil(account, userId);
 
-  const verified = await bffLogin(account);
-  if (!verified) {
-    throw new Error(`Login verification failed for ${account.email}`);
-  }
-  if (verified.role !== account.role) {
-    throw new Error(`Role mismatch for ${account.email}: expected ${account.role}, got ${verified.role}`);
+  if (bffAvailable) {
+    const verified = await bffLogin(account);
+    if (!verified) {
+      throw new Error(`Login verification failed for ${account.email}`);
+    }
+    if (verified.role !== account.role) {
+      throw new Error(`Role mismatch for ${account.email}: expected ${account.role}, got ${verified.role}`);
+    }
+  } else {
+    console.log(`[seed] BFF not available — skipping role verification for ${account.email}`);
   }
 }
 
 async function main() {
-  console.log(`[seed] Seeding ${TEST_ACCOUNTS.length} test accounts against ${API_URL}`);
+  const bffAvailable = await isBffReachable();
+  if (!bffAvailable) {
+    console.log(`[seed] BFF not reachable at ${API_URL} — Strapi-only mode (skipping role verification)`);
+  }
+  console.log(`[seed] Seeding ${TEST_ACCOUNTS.length} test accounts against ${STRAPI_URL}`);
 
   if (process.env['DEV_SKIP_OTP'] !== 'true') {
     console.warn('[seed] WARNING: DEV_SKIP_OTP is not set to "true" — OTP verification will be required during login');
@@ -230,7 +274,7 @@ async function main() {
 
   for (const account of TEST_ACCOUNTS) {
     try {
-      await ensureAccount(account);
+      await ensureAccount(account, bffAvailable);
       console.log(`[seed] OK ${account.email} (${account.role})`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
