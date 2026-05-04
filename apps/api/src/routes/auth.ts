@@ -19,12 +19,12 @@ authRoutes.route('/register', registerRoutes);
 authRoutes.route('/', oauthRoutes);
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().transform(e => e.toLowerCase().trim()),
   password: z.string().min(8),
 });
 
 const registerSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().transform(e => e.toLowerCase().trim()),
   password: z.string().min(8),
   nome: z.string().min(2).max(100),
 });

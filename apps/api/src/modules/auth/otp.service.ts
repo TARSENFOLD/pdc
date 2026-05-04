@@ -38,17 +38,6 @@ export const otpService = {
   },
 
   async verifyOtp(userId: string, otp: string, canal: 'email' | 'sms'): Promise<boolean> {
-    // 3 Camadas de Protecção para Dev
-    const canSkip =
-      env.NODE_ENV !== 'production' &&
-      env.DEV_SKIP_OTP === 'true' &&
-      !env.STRAPI_URL.includes('pdc-strapi.railway.app');
-
-    if (canSkip && otp === '000000') {
-      log.warn({ userId }, 'OTP verification bypassed in dev mode with 000000');
-      return true;
-    }
-
     if (!hasRedis) {
       throw new Error('OTP requer Redis (não configurado)');
     }

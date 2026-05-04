@@ -140,16 +140,25 @@ export const authService = {
   },
 
   async findOrCreateUser(email: string, nome: string): Promise<User> {
+    const normalizedEmail = email.toLowerCase().trim();
     const users = await strapiGetRaw<StrapiUser[]>('/users', {
-      'filters[email][$eq]': email,
+      'filters[email][$eq]': normalizedEmail,
       'populate': 'role',
     });
-    
-    if (users[0]) return this.getUserById(users[0].id.toString());
+
+    if (users[0]) {
+      if (users[0].confirmed === false) {
+        throw Object.assign(
+          new Error('Conta com este email existe mas não está verificada. Use email/password para iniciar sessão.'),
+          { status: 403 }
+        );
+      }
+      return this.getUserById(users[0].id.toString());
+    }
 
     const newUser = await strapiPostRaw<StrapiUser>('/users', {
-      email,
-      username: email,
+      email: normalizedEmail,
+      username: normalizedEmail,
       confirmed: true,
     });
     const userId = newUser.id.toString();
@@ -158,7 +167,7 @@ export const authService = {
       userId,
       nome,
       tipo: 'estudante',
-      email,
+      email: normalizedEmail,
       ativo: true,
     });
 

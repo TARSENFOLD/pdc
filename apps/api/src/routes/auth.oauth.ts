@@ -46,8 +46,9 @@ oauthRoutes.get('/google/callback', async (c) => {
     const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
-    const googleUser = await userRes.json() as { email: string; name: string };
-    const user = await authService.findOrCreateUser(googleUser.email, googleUser.name);
+    const googleUser = await userRes.json() as { email?: string; name?: string };
+    if (!googleUser.email) return c.json({ error: 'Email não disponível da conta Google' }, 400);
+    const user = await authService.findOrCreateUser(googleUser.email, googleUser.name ?? googleUser.email);
     const { accessToken, refreshToken } = await authService.generateTokens(user);
     await authService.saveRefreshToken(user.id, refreshToken);
     setAuthCookies(c, accessToken, refreshToken);
@@ -92,8 +93,9 @@ oauthRoutes.get('/linkedin/callback', async (c) => {
   const userRes = await fetch('https://api.linkedin.com/v2/userinfo', {
     headers: { Authorization: `Bearer ${tokens.access_token}` },
   });
-  const liUser = await userRes.json() as { email: string; name: string };
-  const user = await authService.findOrCreateUser(liUser.email, liUser.name);
+  const liUser = await userRes.json() as { email?: string; name?: string };
+  if (!liUser.email) return c.json({ error: 'Email não disponível da conta LinkedIn' }, 400);
+  const user = await authService.findOrCreateUser(liUser.email, liUser.name ?? liUser.email);
   const { accessToken, refreshToken } = await authService.generateTokens(user);
   await authService.saveRefreshToken(user.id, refreshToken);
   setAuthCookies(c, accessToken, refreshToken);

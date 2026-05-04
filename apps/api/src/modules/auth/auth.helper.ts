@@ -5,14 +5,6 @@ import { env } from '../../lib/env.js';
 
 const isProd = env.NODE_ENV === 'production';
 
-export function canSkipOtp(): boolean {
-  return (
-    env.NODE_ENV !== 'production' &&
-    env.DEV_SKIP_OTP === 'true' &&
-    !env.STRAPI_URL.includes('pdc-strapi.railway.app')
-  );
-}
-
 export function setAuthCookies(
   c: Context<{ Variables: AuthVariables }>,
   accessToken: string,

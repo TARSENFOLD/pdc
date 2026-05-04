@@ -30,7 +30,9 @@ export async function rateLimit(c: Context, next: Next) {
     return;
   }
 
-  const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
+  const xForwardedFor = c.req.header('x-forwarded-for') ?? '';
+  const firstForwardedIp = xForwardedFor.split(',')[0]?.trim() ?? '';
+  const ip = firstForwardedIp || c.req.header('x-real-ip') || '127.0.0.1';
   const { success, limit, reset, remaining } = await ratelimit.limit(ip);
 
   c.header('X-RateLimit-Limit', limit.toString());
@@ -65,7 +67,9 @@ export async function rateLimitRegisto(c: Context, next: Next) {
     return;
   }
 
-  const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
+  const xForwardedFor = c.req.header('x-forwarded-for') ?? '';
+  const firstForwardedIp = xForwardedFor.split(',')[0]?.trim() ?? '';
+  const ip = firstForwardedIp || c.req.header('x-real-ip') || '127.0.0.1';
   const { success, limit, reset, remaining } = await ratelimitRegisto.limit(ip);
 
   c.header('X-RateLimit-Limit', limit.toString());

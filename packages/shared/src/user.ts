@@ -104,8 +104,8 @@ export type User = z.infer<typeof UserSchema>;
 
 // Payloads de Registo (Integritade Hotspot 3)
 export const RegistoBaseSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().email().transform(e => e.toLowerCase().trim()),
+  password: z.string().min(8).max(128),
   nome: z.string().min(3),
   documentos: z.array(z.string()).optional(),
 });

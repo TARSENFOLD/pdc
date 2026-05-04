@@ -1,9 +1,3 @@
-/**
- * HTTP client base para comunicar com o BFF (apps/api).
- * Em dev, usa o proxy do Vite (/api → localhost:3001) para evitar CORS.
- * Em produção, VITE_API_URL aponta para o domínio real da API.
- */
-
 const BASE_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 
 export class ApiError extends Error {
@@ -17,7 +11,24 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+const SKIP_REFRESH_PATHS = new Set(['/auth/refresh', '/auth/login', '/auth/register']);
+
+let refreshPromise: Promise<boolean> | null = null;
+
+function tryRefresh(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+      .then(r => r.ok)
+      .catch(() => false)
+      .finally(() => { refreshPromise = null; });
+  }
+  return refreshPromise;
+}
+
+async function request<T>(path: string, init?: RequestInit, retried = false): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     credentials: 'include',
@@ -26,6 +37,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.headers as Record<string, string> | undefined),
     },
   });
+
+  if (response.status === 401 && !retried && !SKIP_REFRESH_PATHS.has(path)) {
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      return request<T>(path, init, true);
+    }
+  }
 
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
