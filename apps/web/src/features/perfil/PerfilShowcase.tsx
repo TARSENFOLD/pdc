@@ -546,12 +546,12 @@ export default function PerfilShowcase(): React.JSX.Element {
                                 </div>
                               )}
                               <div className="flex items-center gap-4 text-xs text-ink-tertiary">
-                                <span className="flex items-center gap-1.5 opacity-50 cursor-not-allowed" aria-label="Gosto indisponível">
+                                <button type="button" disabled className="flex items-center gap-1.5 opacity-50 cursor-not-allowed" aria-label="Gosto indisponível">
                                   <Heart size={14} aria-hidden={true} /> Gosto
-                                </span>
-                                <span className="flex items-center gap-1.5 opacity-50 cursor-not-allowed" aria-label="Comentário indisponível">
+                                </button>
+                                <button type="button" disabled className="flex items-center gap-1.5 opacity-50 cursor-not-allowed" aria-label="Comentário indisponível">
                                   <MessageCircle size={14} aria-hidden={true} /> Comentar
-                                </span>
+                                </button>
                               </div>
                             </div>
                           </article>
