@@ -1,7 +1,7 @@
 import { jwtVerify } from 'jose';
 import type { Context, Next } from 'hono';
 import { getCookie } from 'hono/cookie';
-import type { Role } from '@pdc/shared';
+import { RoleSchema, type Role } from '@pdc/shared';
 import { env } from '../../lib/env.js';
 
 
@@ -35,9 +35,14 @@ export async function verifyJwt(c: Context<{ Variables: AuthVariables }>, next: 
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
 
+    const roleResult = RoleSchema.safeParse(payload.role);
+    if (!roleResult.success) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
     const user: AuthVariables['user'] = {
       id: payload.sub as string,
-      role: payload.role as Role,
+      role: roleResult.data,
       perfilId: payload.perfilId as string | undefined,
       instituicaoId: payload.instituicaoId ? parseInt(payload.instituicaoId as string, 10) : undefined,
     };
@@ -54,12 +59,15 @@ export async function optionalJwt(c: Context<{ Variables: OptionalAuthVariables 
   if (token) {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
-      c.set('user', {
-        id: payload.sub as string,
-        role: payload.role as Role,
-        perfilId: payload.perfilId as string | undefined,
-        instituicaoId: payload.instituicaoId ? parseInt(payload.instituicaoId as string, 10) : undefined,
-      });
+      const roleResult = RoleSchema.safeParse(payload.role);
+      if (roleResult.success) {
+        c.set('user', {
+          id: payload.sub as string,
+          role: roleResult.data,
+          perfilId: payload.perfilId as string | undefined,
+          instituicaoId: payload.instituicaoId ? parseInt(payload.instituicaoId as string, 10) : undefined,
+        });
+      }
     } catch {
       // Invalid token — proceed as anonymous
     }
