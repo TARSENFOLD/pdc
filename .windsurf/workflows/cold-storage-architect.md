@@ -100,7 +100,11 @@ Critério Done:
      - **Tempo:** `elapsed >= PDC_COLD_FLUSH_INTERVAL_MS` desde o último flush bem-sucedido
      - Defaults: `PDC_COLD_BUFFER_SIZE=100` eventos / `PDC_COLD_FLUSH_INTERVAL_MS=60000` ms; configuráveis via env para ajustar a taxa de eventos inválidos esperada e overhead de memória
    - Flush do buffer via `uploadColdBatch`
-   - ⚠️ **Não usar fire-and-forget puro:** se o upload falhar e o catch apenas fizer log, os eventos perdem-se (viola Box A — zero data loss). Em vez disso: (1) tentar `uploadColdBatch`, (2) em caso de falha, persistir no fallback local E enfileirar evento outbox para retry garantido, (3) emitir métrica/alerta de falha. O consumer pode continuar sem bloquear, mas o destino dos eventos deve ser persistente.
+   - ⚠️ **Não usar fire-and-forget puro:** se o upload falhar e o catch apenas fizer log, os eventos perdem-se (viola Box A — zero data loss). Em vez disso: (1) tentar `uploadColdBatch`, (2) em caso de falha, persistir no fallback local E enfileirar evento outbox para retry garantido (schema `COLD_STORAGE_RETRY` — ver Passo 3), (3) emitir métrica/alerta de falha. O consumer pode continuar sem bloquear, mas o destino dos eventos deve ser persistente.
+   - ⚠️ **Cenário de falha dupla (R2 + fallback local):** se `uploadColdBatch` falhar E a escrita no fallback local também falhar (disco cheio, erro de I/O, permissões), aplicar a seguinte hierarquia de último recurso:
+     1. **Log crítico estruturado** com os payloads completos dos eventos para recuperação manual: `log.fatal({ events, r2Error, localError }, 'cold-storage double-failure')` — nunca template strings
+     2. **Alerta crítico imediato** para ops (métrica `cold_storage_double_failure_total` + notificação)
+     3. **Retenção em memória limitada** (opcional): manter os eventos no buffer até ao próximo flush bem-sucedido, com limite configurável via `PDC_COLD_MAX_MEMORY_MB` para evitar OOM. Se o limite for atingido, fazer log fatal dos eventos excedentes e descartá-los — é a única situação em que o drop é aceitável (melhor que crash do processo). Documentar esta decisão no ADR como limitação aceite.
 
 5. **Testes**
    - Mock de S3Client para R2

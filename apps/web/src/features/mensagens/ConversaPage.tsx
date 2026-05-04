@@ -48,7 +48,7 @@ export function ConversaPage() {
     refetchInterval: 30000,
   });
 
-  const conversas = conversasData?.data ?? [];
+  const conversas = useMemo(() => conversasData?.data ?? [], [conversasData?.data]);
   const filteredConversas = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     if (!query) return conversas;

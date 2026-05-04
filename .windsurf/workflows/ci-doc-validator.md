@@ -87,11 +87,88 @@ Critério Done:
    - Ficheiro `.markdown-link-check.json` com URLs externas ignoradas
    - Lista de referências legacy aceites (para migração gradual)
 
-6. **Validação de taxonomia** (opcional, fase 2)
-   - Script que lê `roadmap.md` e verifica que waves referenciadas existem em `STATE.md`
-   - Verifica que ADRs citados em docs existem em `docs/adr/`
-
-7. **Actualizar STATE.md**
+6. **Actualizar STATE.md**
    - Registar conclusão da integração CI de validação de docs
    - Marcar progresso Wave 0 (Meta-Governação)
    - Commit atómico: `audit(wave0-meta): integrate CI doc validator`
+
+---
+
+## Fase 2 — Validação de Nomes de Função/Classe via `@file:` Markers
+
+### Contexto
+
+A Fase 1 valida que **ficheiros existem**. A Fase 2 valida que **símbolos exportados existem** no ficheiro referenciado. Isto fecha o ciclo "Doc is Law": se um ADR cita `moveToColdStorage` em `r2.ts`, o CI confirma que o símbolo existe.
+
+### Convenção `@file:` Marker
+
+Nos documentos Markdown, citar símbolos com a sintaxe:
+
+```markdown
+<!-- @file:apps/api/src/lib/r2.ts::moveToColdStorage -->
+A função `moveToColdStorage` arquiva eventos inválidos em R2.
+
+<!-- @file:packages/shared/src/user.ts::RoleSchema -->
+O `RoleSchema` define os 7 roles canónicos.
+```
+
+**Regras da convenção:**
+- Formato: `<!-- @file:CAMINHO_RELATIVO_À_RAIZ::NOME_DO_SÍMBOLO -->`
+- O caminho é relativo à raiz do repositório (sem `./`).
+- O símbolo pode ser: nome de função exportada, nome de classe, nome de interface, nome de type alias, nome de variável exportada (`export const`).
+- Um marker por linha. Múltiplos markers num mesmo ficheiro são válidos.
+- O validator não resolve overloads — basta que o nome apareça numa declaração `export`.
+
+### Extensão de `scripts/validate-docs.ts`
+
+Adicionar ao script existente:
+
+```ts
+// Fase 2 — @file: marker validation
+const FILE_MARKER_RE = /<!--\s*@file:([^:]+)::(\S+)\s*-->/g;
+
+for (const mdFile of markdownFiles) {
+  const content = fs.readFileSync(mdFile, 'utf-8');
+  let match: RegExpExecArray | null;
+  while ((match = FILE_MARKER_RE.exec(content)) !== null) {
+    const [, filePath, symbolName] = match;
+    const absPath = path.resolve(repoRoot, filePath);
+    if (!fs.existsSync(absPath)) {
+      errors.push(`${mdFile}: @file marker references missing file: ${filePath}`);
+      continue;
+    }
+    const source = fs.readFileSync(absPath, 'utf-8');
+    // Symbol must appear in an export declaration
+    const exportPattern = new RegExp(`export[^;{]*\\b${symbolName}\\b`);
+    if (!exportPattern.test(source)) {
+      errors.push(`${mdFile}: symbol '${symbolName}' not found as export in ${filePath}`);
+    }
+  }
+}
+```
+
+### Critério Done (Fase 2)
+
+```
+[ ] Convenção @file: documentada em CONTRIBUTING.md (secção "Doc References")
+[ ] validate-docs.ts estendido com Fase 2 (marker parsing + export check)
+[ ] CI step actualizado: validação de markers incluída no mesmo job
+[ ] ADRs existentes anotados com markers onde citam funções canónicas
+[ ] npm run typecheck — verde
+[ ] npm run lint — sem novos eslint-disable
+[ ] Commit atómico: docs(wave0-meta): ci-doc-validator phase-2 @file markers
+```
+
+### Whitelist de Símbolos Excluídos
+
+Alguns símbolos são internos ou gerados; não devem gerar erro:
+
+```json
+// .ci-doc-validator.json (novo ficheiro de config)
+{
+  "phase2": {
+    "excludeSymbols": ["default", "handler", "plugin"],
+    "excludePaths": ["infra/strapi/src/**"]
+  }
+}
+```
