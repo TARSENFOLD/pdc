@@ -17,6 +17,16 @@ export const otpRoutes = new Hono<{ Variables: AuthVariables }>();
 
 export async function initiate2faChallenge(c: Context<{ Variables: AuthVariables }>, user: User) {
   const isProd = env.NODE_ENV === 'production';
+
+  // E2E / dev: skip OTP entirely when DEV_SKIP_OTP=true (never active in production)
+  if (!isProd && env.DEV_SKIP_OTP === 'true') {
+    log.warn({ userId: user.id }, '[DEV] OTP skipped via DEV_SKIP_OTP');
+    const { accessToken, refreshToken } = await authService.generateTokens(user);
+    await authService.saveRefreshToken(user.id, refreshToken);
+    setAuthCookies(c, accessToken, refreshToken);
+    return c.json(user);
+  }
+
   const challengeId = randomUUID();
   if (hasRedis) await redis.set(`auth_challenge:${challengeId}`, user.id, { ex: 600 });
   setCookie(c, 'auth_challenge', challengeId, { httpOnly: true, secure: isProd, sameSite: 'Strict', maxAge: 600, path: '/' });
