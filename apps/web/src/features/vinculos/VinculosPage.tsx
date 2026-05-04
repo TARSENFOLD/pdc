@@ -94,7 +94,8 @@ export default function VinculosPage(): React.JSX.Element {
       toast({ title: 'Pedido de vínculo enviado' });
       void queryClient.invalidateQueries({ queryKey: ['vinculos'] });
     },
-    onError: () => {
+    onError: (err) => {
+      console.error('pedirMutation error', err);
       toast({ title: 'Erro ao enviar pedido de vínculo', variant: 'error' });
     },
   });
@@ -106,7 +107,8 @@ export default function VinculosPage(): React.JSX.Element {
       toast({ title: variables.status === 'aprovado' ? 'Vínculo aceite' : 'Vínculo rejeitado' });
       void queryClient.invalidateQueries({ queryKey: ['vinculos'] });
     },
-    onError: () => {
+    onError: (err) => {
+      console.error('resolverMutation error', err);
       toast({ title: 'Erro ao processar pedido de vínculo', variant: 'error' });
     },
   });

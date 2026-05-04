@@ -5,8 +5,11 @@ import type { LucideProps } from 'lucide-react';
 import { useFadeUp } from './useFadeUp';
 import { useTranslation } from '@/hooks/useTranslation';
 
-const PROBLEMAS_ICONS: ComponentType<LucideProps>[] = [Compass, Clock, Shuffle];
-const PROBLEMAS_KEYS = ['sem_referencia', 'tempo_dinheiro', 'desalinhamento'] as const;
+const PROBLEMAS: { key: 'sem_referencia' | 'tempo_dinheiro' | 'desalinhamento'; icon: ComponentType<LucideProps> }[] = [
+  { key: 'sem_referencia', icon: Compass },
+  { key: 'tempo_dinheiro', icon: Clock },
+  { key: 'desalinhamento', icon: Shuffle },
+];
 
 export function LandingProblema() {
   const fadeUp = useFadeUp();
@@ -26,9 +29,7 @@ export function LandingProblema() {
         </motion.div>
 
         <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {PROBLEMAS_KEYS.map((key, i) => {
-            const Icon = PROBLEMAS_ICONS[i] as ComponentType<LucideProps>;
-            return (
+          {PROBLEMAS.map(({ key, icon: Icon }, i) => (
               <motion.div
                 key={key}
                 {...fadeUp}
@@ -40,8 +41,7 @@ export function LandingProblema() {
                 <h3 className="mb-2 font-semibold text-text-primary">{t(`problema.cards.${key}_title`)}</h3>
                 <p className="text-sm leading-relaxed text-text-secondary">{t(`problema.cards.${key}_body`)}</p>
               </motion.div>
-            );
-          })}
+          ))}
         </div>
       </div>
     </section>

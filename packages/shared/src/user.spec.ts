@@ -35,6 +35,34 @@ describe('perfil contracts', () => {
     expect(() => UpdatePerfilPayloadSchema.parse({ bio })).toThrow();
   });
 
+  it('rejects invalid visibility value', () => {
+    expect(() => UpdatePerfilPayloadSchema.parse({
+      visibilitySettings: { email: 'everyone' },
+    })).toThrow();
+  });
+
+  it('rejects non-URL avatarUrl', () => {
+    expect(() => UpdatePerfilPayloadSchema.parse({ avatarUrl: 'not-a-url' })).toThrow();
+  });
+
+  it('rejects PerfilCompleto with invalid role', () => {
+    expect(() => PerfilCompletoSchema.parse({
+      id: 'p1', email: 'a@b.com', nome: 'A', role: 'superuser',
+      avatarUrl: null, reputacaoTier: 'BRONZE', xp: 0, reputacao: 0,
+      createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+      areasInteresse: [], conquistas: [], socialLinks: [],
+    })).toThrow();
+  });
+
+  it('rejects PerfilCompleto with invalid email', () => {
+    expect(() => PerfilCompletoSchema.parse({
+      id: 'p1', email: 'not-an-email', nome: 'A', role: 'estudante',
+      avatarUrl: null, reputacaoTier: 'BRONZE', xp: 0, reputacao: 0,
+      createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+      areasInteresse: [], conquistas: [], socialLinks: [],
+    })).toThrow();
+  });
+
   it('returns private profile settings using the persisted key', () => {
     const result = PerfilCompletoSchema.parse({
       id: 'perfil-1',
