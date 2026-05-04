@@ -17,9 +17,10 @@ export const otpRoutes = new Hono<{ Variables: AuthVariables }>();
 
 export async function initiate2faChallenge(c: Context<{ Variables: AuthVariables }>, user: User) {
   const isProd = env.NODE_ENV === 'production';
+  const allowOtpBypass = env.NODE_ENV === 'development' || env.NODE_ENV === 'test';
 
-  // E2E / dev: skip OTP entirely when DEV_SKIP_OTP=true (never active in production)
-  if (!isProd && env.DEV_SKIP_OTP === 'true') {
+  // E2E / dev: skip OTP entirely when DEV_SKIP_OTP=true (only in development/test)
+  if (allowOtpBypass && env.DEV_SKIP_OTP === 'true') {
     log.warn({ userId: user.id }, '[DEV] OTP skipped via DEV_SKIP_OTP');
     const { accessToken, refreshToken } = await authService.generateTokens(user);
     await authService.saveRefreshToken(user.id, refreshToken);
