@@ -78,14 +78,14 @@ export function FeedActivitySidebar(): React.JSX.Element {
         <div className="space-y-3">
           {['Mentor TI', 'Instituto Superior', 'Empresa Parceira'].map((name, idx) => (
             <div key={idx} className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white text-sm font-bold">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#D2691E] to-[#A14E0F] flex items-center justify-center text-white text-sm font-bold">
                 {name.charAt(0)}
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-white">{name}</p>
                 <p className="text-xs text-gray-500">Área relacionada</p>
               </div>
-              <button className="text-xs font-semibold text-amber-500 hover:text-amber-400">
+              <button className="text-xs font-semibold text-[#D2691E] hover:text-[#E8945C]">
                 Seguir
               </button>
             </div>
