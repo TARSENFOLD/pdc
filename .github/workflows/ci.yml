@@ -191,6 +191,9 @@ jobs:
       - name: Build Web
         run: npm run build -w apps/web
 
+      - name: Build Docker images
+        run: docker compose -f docker-compose.test.yml build
+
       - name: Start test infrastructure (Strapi + PG + Redis)
         run: docker compose -f docker-compose.test.yml up -d --wait --wait-timeout 120
 
@@ -267,6 +270,9 @@ jobs:
 
       - name: Build Web
         run: npm run build -w apps/web
+
+      - name: Build Docker images
+        run: docker compose -f docker-compose.test.yml build
 
       - name: Start test infrastructure (Strapi + PG + Redis)
         run: docker compose -f docker-compose.test.yml up -d --wait --wait-timeout 120
