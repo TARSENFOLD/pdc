@@ -65,11 +65,11 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
   }
 
   const form = (
-    <Card className={isInline ? 'p-5 border border-white/10 bg-[#1E1E1E] shadow-lg rounded-2xl' : 'p-6'}>
+    <Card className={isInline ? 'p-5 border border-[var(--card-border)] bg-elevated shadow-lg rounded-2xl' : 'p-6'}>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#B65F2A] to-[#8F451F] flex items-center justify-center text-white font-bold text-sm">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-accent-terracotta-deep flex items-center justify-center text-ink-on-accent font-bold text-sm">
               Eu
             </div>
             <textarea
@@ -78,19 +78,19 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
               onChange={(event) => { setCorpo(event.target.value); }}
               rows={isInline ? 3 : 8}
               maxLength={2000}
-              className="flex-1 resize-y rounded-xl border border-white/10 bg-[#0D0D0D] p-3 text-sm text-white outline-none transition-colors placeholder:text-gray-500 focus:border-[#B65F2A]/50 focus:ring-2 focus:ring-[#B65F2A]/20"
+              className="flex-1 resize-y rounded-xl border border-[var(--card-border)] bg-recessed p-3 text-sm text-ink-primary outline-none transition-colors placeholder:text-ink-tertiary focus:border-accent/50 focus:ring-2 focus:ring-accent/20"
               placeholder="Partilha uma experiência, conquista ou reflexão..."
             />
           </div>
           <div className="flex items-center justify-between gap-4 text-xs">
-            <span className="text-red-400">{validationError}</span>
-            <span className="text-gray-500">{corpo.length.toLocaleString('pt-PT')} / 2 000</span>
+            <span className="text-accent-danger">{validationError}</span>
+            <span className="text-ink-tertiary">{corpo.length.toLocaleString('pt-PT')} / 2 000</span>
           </div>
         </div>
 
         <div className="flex justify-between items-center pt-2">
           <div className="flex items-center gap-4">
-            <button type="button" className="flex items-center gap-2 px-3 py-2 text-gray-500 hover:text-[#B65F2A] transition-colors rounded-lg hover:bg-white/5">
+            <button type="button" className="flex items-center gap-2 px-3 py-2 text-ink-tertiary hover:text-accent transition-colors rounded-lg hover:bg-ink-primary/5">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                 <circle cx="8.5" cy="8.5" r="1.5"/>
@@ -98,7 +98,7 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
               </svg>
               <span className="text-sm font-medium">imagem</span>
             </button>
-            <button type="button" className="flex items-center gap-2 px-3 py-2 text-gray-500 hover:text-[#B65F2A] transition-colors rounded-lg hover:bg-white/5">
+            <button type="button" className="flex items-center gap-2 px-3 py-2 text-ink-tertiary hover:text-accent transition-colors rounded-lg hover:bg-ink-primary/5">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polygon points="23 7 16 12 23 17 23 7"/>
                 <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
@@ -106,7 +106,7 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
               <span className="text-sm font-medium">video</span>
             </button>
           </div>
-          <Button type="submit" isLoading={mutation.isPending} disabled={corpo.trim().length === 0} className="bg-[#B65F2A] hover:bg-[#8F451F] text-white">
+          <Button type="submit" isLoading={mutation.isPending} disabled={corpo.trim().length === 0} className="bg-accent hover:bg-accent-terracotta-deep text-ink-on-accent">
             <Send size={16} className="mr-2" />
             Publicar
           </Button>
