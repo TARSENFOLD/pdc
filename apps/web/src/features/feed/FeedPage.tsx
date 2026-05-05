@@ -36,10 +36,10 @@ export function FeedPage() {
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              Feed de <span className="text-amber-600">Actividade</span>
+            <h1 className="text-2xl font-bold text-white">
+              Feed de <span className="text-amber-500">Actividade</span>
             </h1>
-            <p className="text-gray-500 mt-2 max-w-lg leading-relaxed text-sm">
+            <p className="text-gray-400 mt-2 max-w-lg leading-relaxed text-sm">
               Descobre o que a comunidade está a partilhar e conquistar.
             </p>
           </div>
@@ -53,9 +53,9 @@ export function FeedPage() {
         {/* Feed Items */}
         <div className="space-y-6">
         {items.length === 0 ? (
-          <Card className="p-20 text-center border-dashed border-white/10 bg-white/[0.01]">
-            <Zap size={48} className="mx-auto text-ink-tertiary mb-4 opacity-20" />
-            <p className="text-sm text-ink-tertiary uppercase font-black tracking-widest">O pulso social está silencioso...</p>
+          <Card className="p-20 text-center border-dashed border-white/10 bg-[#1E1E1E]/50">
+            <Zap size={48} className="mx-auto text-gray-500 mb-4 opacity-40" />
+            <p className="text-sm text-gray-500 uppercase font-black tracking-widest">O pulso social está silencioso...</p>
           </Card>
         ) : (
           items.map((item: FeedItem, idx: number) => (
@@ -65,7 +65,7 @@ export function FeedPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...APPLE_SPRING, delay: idx * 0.05 }}
             >
-              <Card className="group relative overflow-hidden bg-white border border-gray-200/60 hover:border-amber-200 transition-all p-0 shadow-sm rounded-2xl">
+              <Card className="group relative overflow-hidden bg-[#1E1E1E] border border-white/10 hover:border-amber-500/30 transition-all p-0 shadow-lg rounded-2xl">
                  
                  {/* Feed Header */}
                   <div className="p-5 flex items-center justify-between">
@@ -73,20 +73,20 @@ export function FeedPage() {
                        <Avatar 
                          src={item.avatar || undefined} 
                          fallback={(item.autorNome || 'U').substring(0, 2)} 
-                         className="h-10 w-10 border border-gray-200 rounded-full" 
+                         className="h-10 w-10 border border-white/20 rounded-full" 
                        />
                        <div>
-                          <h3 className="text-sm font-bold text-gray-800">{item.autorNome || 'Utilizador PDC'}</h3>
-                          <p className="text-xs text-gray-400 flex items-center gap-1">
+                          <h3 className="text-sm font-bold text-white">{item.autorNome || 'Utilizador PDC'}</h3>
+                          <p className="text-xs text-gray-500 flex items-center gap-1">
                              <Clock size={12} /> {new Date(item.createdAt).toLocaleDateString('pt-PT')}
                           </p>
                        </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {item.tipo === 'conquista' && (
-                         <Badge className="bg-green-50 text-green-600 border-green-200 text-xs font-semibold">Conquista</Badge>
+                         <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs font-semibold">Conquista</Badge>
                       )}
-                      <button className="p-1 text-gray-400 hover:text-gray-600">
+                      <button className="p-1 text-gray-500 hover:text-white transition-colors">
                         <MoreHorizontal size={18} />
                       </button>
                     </div>
@@ -95,42 +95,42 @@ export function FeedPage() {
                  {/* Feed Content */}
                  <div className="px-5 pb-5 space-y-4">
                     <div className="space-y-2">
-                        <h4 className="text-xl font-bold text-gray-800 leading-tight">
+                        <h4 className="text-xl font-bold text-white leading-tight">
                           {item.titulo}
                         </h4>
-                        <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
+                        <p className="text-gray-400 text-sm leading-relaxed whitespace-pre-wrap">
                           {item.corpo || item.descricao}
                         </p>
                      </div>
  
                      {item.imagem && (
-                        <div className="rounded-xl overflow-hidden border border-gray-200 aspect-video bg-gray-100">
+                        <div className="rounded-xl overflow-hidden border border-white/10 aspect-video bg-[#0D0D0D]">
                            <img src={item.imagem} alt="" className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500" />
                         </div>
                      )}
                  </div>
 
                  {/* Feed Footer Actions */}
-                 <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
+                 <div className="px-5 py-4 border-t border-white/10 flex items-center justify-between">
                     <div className="flex items-center gap-6">
-                       <button className="flex items-center gap-2 text-gray-500 hover:text-amber-600 transition-colors group/btn">
+                       <button className="flex items-center gap-2 text-gray-500 hover:text-amber-500 transition-colors group/btn">
                           <Heart size={18} className="group-hover/btn:scale-110 transition-transform" />
                           <span className="text-sm font-medium">Gostar</span>
                        </button>
-                       <button className="flex items-center gap-2 text-gray-500 hover:text-amber-600 transition-colors group/btn">
+                       <button className="flex items-center gap-2 text-gray-500 hover:text-amber-500 transition-colors group/btn">
                           <MessageSquare size={18} className="group-hover/btn:scale-110 transition-transform" />
                           <span className="text-sm font-medium">Comentar</span>
                        </button>
                     </div>
                     <div className="flex items-center gap-2">
-                       <button className="p-2 text-gray-400 hover:text-amber-600 transition-all"><Bookmark size={18} /></button>
-                       <button className="p-2 text-gray-400 hover:text-amber-600 transition-all"><Share2 size={18} /></button>
+                       <button className="p-2 text-gray-500 hover:text-amber-500 transition-all"><Bookmark size={18} /></button>
+                       <button className="p-2 text-gray-500 hover:text-amber-500 transition-all"><Share2 size={18} /></button>
                     </div>
                  </div>
 
                  {item.tipo === 'conquista' && (
                     <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
-                       <Award size={100} className="text-amber-500" />
+                       <Award size={100} className="text-amber-400" />
                     </div>
                  )}
               </Card>
@@ -141,7 +141,7 @@ export function FeedPage() {
 
       {/* End of feed */}
       <footer className="pt-6 flex justify-center">
-         <p className="text-xs font-medium text-gray-400 flex items-center gap-2">
+         <p className="text-xs font-medium text-gray-500 flex items-center gap-2">
            <Zap size={14} className="text-amber-500" />
            Fim do feed. Actualizado agora.
          </p>

@@ -65,11 +65,11 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
   }
 
   const form = (
-    <Card className={isInline ? 'p-5 border border-gray-200/60 bg-white shadow-sm rounded-2xl' : 'p-6'}>
+    <Card className={isInline ? 'p-5 border border-white/10 bg-[#1E1E1E] shadow-lg rounded-2xl' : 'p-6'}>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold text-sm">
               Eu
             </div>
             <textarea
@@ -78,19 +78,19 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
               onChange={(event) => { setCorpo(event.target.value); }}
               rows={isInline ? 3 : 8}
               maxLength={2000}
-              className="flex-1 resize-y rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700 outline-none transition-colors placeholder:text-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              className="flex-1 resize-y rounded-xl border border-white/10 bg-[#0D0D0D] p-3 text-sm text-white outline-none transition-colors placeholder:text-gray-500 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/20"
               placeholder="Partilha uma experiência, conquista ou reflexão..."
             />
           </div>
           <div className="flex items-center justify-between gap-4 text-xs">
-            <span className="text-red-500">{validationError}</span>
-            <span className="text-gray-400">{corpo.length.toLocaleString('pt-PT')} / 2 000</span>
+            <span className="text-red-400">{validationError}</span>
+            <span className="text-gray-500">{corpo.length.toLocaleString('pt-PT')} / 2 000</span>
           </div>
         </div>
 
         <div className="flex justify-between items-center pt-2">
           <div className="flex items-center gap-2">
-            <button type="button" className="p-2 text-gray-400 hover:text-amber-600 transition-colors rounded-lg hover:bg-gray-100">
+            <button type="button" className="p-2 text-gray-500 hover:text-amber-500 transition-colors rounded-lg hover:bg-white/5">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                 <circle cx="8.5" cy="8.5" r="1.5"/>
