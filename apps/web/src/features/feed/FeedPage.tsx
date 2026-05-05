@@ -33,20 +33,8 @@ export function FeedPage() {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-7xl mx-auto pb-20 animate-in fade-in duration-1000">
       {/* Left/Main Column - Feed */}
       <div className="lg:col-span-8 space-y-6">
-        {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <h1 className="text-2xl font-bold text-white">
-              Feed de <span className="text-[#B65F2A]">Actividade</span>
-            </h1>
-            <p className="text-gray-400 mt-2 max-w-lg leading-relaxed text-sm">
-              Descobre o que a comunidade está a partilhar e conquistar.
-            </p>
-          </div>
-        </header>
-
         {/* Composer */}
-        <section>
+        <section className="pt-2">
           <PostComposerForm variant="inline" />
         </section>
 
