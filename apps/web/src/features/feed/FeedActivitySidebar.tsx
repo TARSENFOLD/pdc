@@ -113,6 +113,29 @@ export function FeedActivitySidebar(): React.JSX.Element {
           </button>
         )}
       </Card>
+
+      {/* Pessoas que talvez conheças */}
+      <Card className="p-5 bg-[#1E1E1E] border border-white/10 shadow-lg rounded-2xl">
+        <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4">
+          Pessoas que talvez conheças
+        </h3>
+        <div className="space-y-3">
+          {['Mentor TI', 'Instituto Superior', 'Empresa Parceira'].map((name, idx) => (
+            <div key={idx} className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#B65F2A] to-[#8F451F] flex items-center justify-center text-white text-sm font-bold">
+                {name.charAt(0)}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-white">{name}</p>
+                <p className="text-xs text-gray-500">Área relacionada</p>
+              </div>
+              <button className="text-xs font-semibold text-[#B65F2A] hover:text-[#C97945]">
+                vincular
+              </button>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }
