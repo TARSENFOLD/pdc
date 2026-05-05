@@ -37,7 +37,7 @@ export function FeedPage() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <h1 className="text-2xl font-bold text-white">
-              Feed de <span className="text-[#D2691E]">Actividade</span>
+              Feed de <span className="text-[#B65F2A]">Actividade</span>
             </h1>
             <p className="text-gray-400 mt-2 max-w-lg leading-relaxed text-sm">
               Descobre o que a comunidade está a partilhar e conquistar.
@@ -65,7 +65,7 @@ export function FeedPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...APPLE_SPRING, delay: idx * 0.05 }}
             >
-              <Card className="group relative overflow-hidden bg-[#1E1E1E] border border-white/10 hover:border-[#D2691E]/30 transition-all p-0 shadow-lg rounded-2xl">
+              <Card className="group relative overflow-hidden bg-[#1E1E1E] border border-white/10 hover:border-[#B65F2A]/30 transition-all p-0 shadow-lg rounded-2xl">
                  
                  {/* Feed Header */}
                   <div className="p-5 flex items-center justify-between">
@@ -113,24 +113,24 @@ export function FeedPage() {
                  {/* Feed Footer Actions */}
                  <div className="px-5 py-4 border-t border-white/10 flex items-center justify-between">
                     <div className="flex items-center gap-6">
-                       <button className="flex items-center gap-2 text-gray-500 hover:text-[#D2691E] transition-colors group/btn">
+                       <button className="flex items-center gap-2 text-gray-500 hover:text-[#B65F2A] transition-colors group/btn">
                           <Heart size={18} className="group-hover/btn:scale-110 transition-transform" />
                           <span className="text-sm font-medium">Gostar</span>
                        </button>
-                       <button className="flex items-center gap-2 text-gray-500 hover:text-[#D2691E] transition-colors group/btn">
+                       <button className="flex items-center gap-2 text-gray-500 hover:text-[#B65F2A] transition-colors group/btn">
                           <MessageSquare size={18} className="group-hover/btn:scale-110 transition-transform" />
                           <span className="text-sm font-medium">Comentar</span>
                        </button>
                     </div>
                     <div className="flex items-center gap-2">
-                       <button className="p-2 text-gray-500 hover:text-[#D2691E] transition-all"><Bookmark size={18} /></button>
-                       <button className="p-2 text-gray-500 hover:text-[#D2691E] transition-all"><Share2 size={18} /></button>
+                       <button className="p-2 text-gray-500 hover:text-[#B65F2A] transition-all"><Bookmark size={18} /></button>
+                       <button className="p-2 text-gray-500 hover:text-[#B65F2A] transition-all"><Share2 size={18} /></button>
                     </div>
                  </div>
 
                  {item.tipo === 'conquista' && (
                     <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
-                       <Award size={100} className="text-[#D2691E]" />
+                       <Award size={100} className="text-[#B65F2A]" />
                     </div>
                  )}
               </Card>
@@ -142,7 +142,7 @@ export function FeedPage() {
       {/* End of feed */}
       <footer className="pt-6 flex justify-center">
          <p className="text-xs font-medium text-gray-500 flex items-center gap-2">
-           <Zap size={14} className="text-[#D2691E]" />
+           <Zap size={14} className="text-[#B65F2A]" />
            Fim do feed. Actualizado agora.
          </p>
       </footer>
