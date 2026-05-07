@@ -6,7 +6,7 @@ import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
 import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
 import ContentCard from '@/components/catalogo/ContentCard';
 import { Clock, GraduationCap, Users } from 'lucide-react';
-import { CursoItemSchema } from '@pdc/shared';
+import { CursoItemSchema, EstadoEditorialSchema } from '@pdc/shared';
 import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 
 const AREAS = [
@@ -17,7 +17,7 @@ const AREAS = [
 ];
 
 const CursoListItemSchema = CursoItemSchema.extend({
-  estado: z.string().optional(),
+  estado: EstadoEditorialSchema.optional(),
 });
 
 export function CursoListPage() {

@@ -1,15 +1,17 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { AreaVocacionalSchema } from '@pdc/shared';
+import pino from 'pino';
+import { AreaVocacionalSchema, EstadoEditorialSchema, ModalidadeSchema } from '@pdc/shared';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { withPublicCache } from '../middleware/cache.js';
-import type { CursoPublico, SimulacaoPublica, ExperienciaPublica, CatalogoMeta, AreaVocacional, Modalidade } from '@pdc/shared';
+import type { CursoPublico, SimulacaoPublica, ExperienciaPublica, CatalogoMeta } from '@pdc/shared';
 import { catalogoExplorarRoutes } from './catalogo-explorar.js';
 import { mentoresRoutes, instituicoesRoutes, perfilPublicoRoutes, pessoasRoutes } from './catalogo-pessoas.js';
 import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
 
 export const catalogoRoutes = new Hono();
+const log = pino({ name: 'catalogo' });
 
 // Public catalogue endpoints get stale-while-revalidate caching
 catalogoRoutes.use('*', withPublicCache(60, 300));
@@ -44,12 +46,14 @@ interface StrapiExperiencia {
 }
 
 const NivelSchema = z.enum(['basico', 'medio', 'avancado']);
+const SimulacaoTipoSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const pgQ = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(12),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 function sid(v: string | number): string { return typeof v === 'number' ? v.toString() : v; }
@@ -64,11 +68,16 @@ function addPg(p: Record<string, string>, page: number, limit: number): void {
   p['pagination[pageSize]'] = limit.toString();
 }
 
+function parseOptional<T>(schema: z.ZodType<T>, value: unknown): T | undefined {
+  const parsed = schema.optional().safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
+
 
 function mapCurso(d: StrapiCurso): CursoPublico {
   return {
     id: sid(d.id), slug: d.slug, titulo: d.titulo, descricao: d.descricao,
-    capaUrl: d.capaUrl, area: d.area as AreaVocacional, nivel: d.nivel as 'basico' | 'medio' | 'avancado' | undefined, idioma: d.idioma,
+    capaUrl: d.capaUrl, area: parseOptional(AreaVocacionalSchema, d.area), nivel: parseOptional(NivelSchema, d.nivel), idioma: d.idioma,
     gratuito: d.gratuito, totalHoras: d.totalHoras ?? 0, autorNome: d.autorNome,
   };
 }
@@ -79,10 +88,10 @@ function mapSim(d: StrapiSimulacao): SimulacaoPublica {
     titulo: d.titulo, 
     descricao: d.descricao,
     capaUrl: d.capaUrl, 
-    area: d.area as AreaVocacional, 
-    tipo: d.tipo as 1 | 2 | 3,
+    area: parseOptional(AreaVocacionalSchema, d.area) ?? 'OUTRA',
+    tipo: parseOptional(SimulacaoTipoSchema, d.tipo) ?? 1,
     validadoAcademicamente: d.validadoAcademicamente ?? false,
-    estado: d.estado ?? 'published',
+    estado: parseOptional(EstadoEditorialSchema, d.estado) ?? 'published',
     tipoSimulacao: d.tipoSimulacao || 'tipo1',
     autorId: d.autorId || '',
     criteriosAvaliacao: d.criteriosAvaliacao || { pesos: { fluidez: 40, resiliencia: 30, foco: 30 } },
@@ -97,14 +106,14 @@ function mapExp(d: StrapiExperiencia): ExperienciaPublica {
     titulo: d.titulo, 
     descricao: d.descricao,
     capaUrl: d.capaUrl, 
-    area: AreaVocacionalSchema.optional().safeParse(d.area).data, 
-    nivel: NivelSchema.optional().safeParse(d.nivel).data,
+    area: parseOptional(AreaVocacionalSchema, d.area),
+    nivel: parseOptional(NivelSchema, d.nivel),
     instituicao: d.instituicaoNome ? { id: '', nome: d.instituicaoNome } : undefined, 
     dataInicio: d.dataInicio,
     gratuito: true,
     validadoAcademicamente: d.validadoAcademicamente ?? false,
-    estado: d.estado ?? 'published',
-    modalidade: d.modalidade as Modalidade | undefined,
+    estado: parseOptional(EstadoEditorialSchema, d.estado) ?? 'published',
+    modalidade: parseOptional(ModalidadeSchema, d.modalidade),
   };
 }
 
@@ -118,14 +127,19 @@ const cursoQ = pgQ.extend({
 catalogoRoutes.get('/cursos', zValidator('query', cursoQ), async (c) => {
   const q = c.req.valid('query');
   const p: Record<string, string> = { 'filters[estado][$eq]': 'published' }; 
-  addPg(p, q.page, q.limit);
+  addPg(p, q.page, q.pageSize ?? q.limit);
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
   if (q.idioma) p['filters[idioma][$eq]'] = q.idioma;
   if (q.gratuito !== undefined) p['filters[gratuito][$eq]'] = String(q.gratuito);
   
-  const res = await strapiGet<StrapiCurso>('/cursos', p);
-  return c.json({ data: res.data.map(mapCurso), meta: toMeta(res.meta) });
+  try {
+    const res = await strapiGet<StrapiCurso>('/cursos', p);
+    return c.json({ data: res.data.map(mapCurso), meta: toMeta(res.meta) });
+  } catch (err) {
+    log.error({ err, params: p }, 'Failed to fetch cursos catalog');
+    return c.json({ error: 'Falha ao carregar catálogo de cursos' }, 502);
+  }
 });
 
 catalogoRoutes.get('/cursos/:slug', async (c) => {
@@ -134,10 +148,15 @@ catalogoRoutes.get('/cursos/:slug', async (c) => {
     'filters[slug][$eq]': slug,
     'filters[estado][$eq]': 'published'
   }; 
-  const res = await strapiGet<StrapiCurso>('/cursos', p);
-  const first = res.data[0];
-  if (!first) return c.json({ error: 'Curso não encontrado' }, 404);
-  return c.json({ data: mapCurso(first) });
+  try {
+    const res = await strapiGet<StrapiCurso>('/cursos', p);
+    const first = res.data[0];
+    if (!first) return c.json({ error: 'Curso não encontrado' }, 404);
+    return c.json({ data: mapCurso(first) });
+  } catch (err) {
+    log.error({ err, slug, params: p }, 'Failed to fetch curso detail');
+    return c.json({ error: 'Falha ao carregar curso' }, 502);
+  }
 });
 
 // ─── Simulações ───────────────────────────────────────────────────────────────
@@ -153,7 +172,7 @@ const SIM_ALLOWED_SORTS = new Set(['createdAt:desc', 'createdAt:asc', 'updatedAt
 catalogoRoutes.get('/simulacoes', zValidator('query', simQ), async (c) => {
   const q = c.req.valid('query');
   const p: Record<string, string> = { 'filters[estado][$eq]': 'published' }; 
-  addPg(p, q.page, q.limit);
+  addPg(p, q.page, q.pageSize ?? q.limit);
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.tipo !== undefined) p['filters[tipo][$eq]'] = q.tipo.toString();
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
@@ -163,8 +182,13 @@ catalogoRoutes.get('/simulacoes', zValidator('query', simQ), async (c) => {
     p['sort'] = 'createdAt:desc';
   }
   
-  const res = await strapiGet<StrapiSimulacao>('/simulacoes', p);
-  return c.json({ data: res.data.map(mapSim), meta: toMeta(res.meta) });
+  try {
+    const res = await strapiGet<StrapiSimulacao>('/simulacoes', p);
+    return c.json({ data: res.data.map(mapSim), meta: toMeta(res.meta) });
+  } catch (err) {
+    log.error({ err, params: p }, 'Failed to fetch simulacoes catalog');
+    return c.json({ error: 'Falha ao carregar catálogo de simulações' }, 502);
+  }
 });
 
 catalogoRoutes.get('/simulacoes/:slug', async (c) => {
@@ -173,10 +197,15 @@ catalogoRoutes.get('/simulacoes/:slug', async (c) => {
     'filters[slug][$eq]': slug,
     'filters[estado][$eq]': 'published'
   }; 
-  const res = await strapiGet<StrapiSimulacao>('/simulacoes', p);
-  const first = res.data[0];
-  if (!first) return c.json({ error: 'Simulação não encontrada' }, 404);
-  return c.json({ data: mapSim(first) });
+  try {
+    const res = await strapiGet<StrapiSimulacao>('/simulacoes', p);
+    const first = res.data[0];
+    if (!first) return c.json({ error: 'Simulação não encontrada' }, 404);
+    return c.json({ data: mapSim(first) });
+  } catch (err) {
+    log.error({ err, slug, params: p }, 'Failed to fetch simulacao detail');
+    return c.json({ error: 'Falha ao carregar simulação' }, 502);
+  }
 });
 
 // ─── Experiências ─────────────────────────────────────────────────────────────
@@ -186,12 +215,17 @@ const expQ = pgQ.extend({ area: AreaVocacionalSchema.optional(), nivel: z.string
 catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
   const q = c.req.valid('query');
   const p: Record<string, string> = { 'filters[estado][$eq]': 'published' }; 
-  addPg(p, q.page, q.limit);
+  addPg(p, q.page, q.pageSize ?? q.limit);
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
   
-  const res = await strapiGet<StrapiExperiencia>('/experiencias', p);
-  return c.json({ data: res.data.map(mapExp), meta: toMeta(res.meta) });
+  try {
+    const res = await strapiGet<StrapiExperiencia>('/experiencias', p);
+    return c.json({ data: res.data.map(mapExp), meta: toMeta(res.meta) });
+  } catch (err) {
+    log.error({ err, params: p }, 'Failed to fetch experiencias catalog');
+    return c.json({ error: 'Falha ao carregar catálogo de experiências' }, 502);
+  }
 });
 
 // ─── Sub-routers ──────────────────────────────────────────────────────────────

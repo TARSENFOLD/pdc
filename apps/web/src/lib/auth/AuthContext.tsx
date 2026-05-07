@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode, useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { authApi, type LoginPayload, type LoginResponse, type RegisterPayload } from '@/lib/api/auth';
+import { ApiError } from '@/lib/api/http';
 import type { User } from '@pdc/shared';
 import { telemetriaService } from '../telemetria/telemetria.service';
 
@@ -99,10 +100,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
-    await authApi.logout();
-    queryClient.setQueryData(['auth', 'me'], null);
-    await queryClient.resetQueries({ queryKey: ['auth'] });
-    queryClient.clear();
+    try {
+      await authApi.logout();
+    } catch (err) {
+      if (!(err instanceof ApiError) || err.status !== 401) {
+        throw err;
+      }
+    } finally {
+      queryClient.setQueryData(['auth', 'me'], null);
+      await queryClient.resetQueries({ queryKey: ['auth'] });
+      queryClient.clear();
+    }
   }
 
   return (

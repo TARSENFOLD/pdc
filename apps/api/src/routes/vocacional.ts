@@ -34,9 +34,9 @@ vocacionalRoutes.get('/perfil-premium', async (c) => {
     const realPerfil = await vocacionalService.calcularPerfil(user.id);
     const recomendacoes = await vocacionalService.gerarRecomendacoes(realPerfil);
 
-    // 4. Persistir resultado no Strapi (perfil-vocacionals) para feeds downstream
+    // 4. Persistir resultado no Strapi (perfil-vocacionais) para feeds downstream
     try {
-      await strapiPost('/perfil-vocacionals', {
+      await strapiPost('/perfil-vocacionais', {
         data: {
           perfil: perfil.id,
           scoreGlobal: realPerfil.scoreGlobal,

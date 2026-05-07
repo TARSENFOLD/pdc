@@ -30,6 +30,7 @@ import { landingRoutes } from './landing.js';
 // Mocks de serviços
 vi.mock('../modules/strapi/strapi.client.js', () => ({
   strapiGet: vi.fn().mockResolvedValue({ data: [], meta: { pagination: { total: 0 } } }),
+  strapiGetRaw: vi.fn(),
 }));
 
 vi.mock('../modules/landing/pulse.service.js', () => ({

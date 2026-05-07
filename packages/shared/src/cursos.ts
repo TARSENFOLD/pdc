@@ -117,10 +117,17 @@ export const CursoMeuSchema = z.object({
 
 export type CursoMeu = z.infer<typeof CursoMeuSchema>;
 
+const StrapiIdSchema = z.union([z.string(), z.number()]).transform(String);
+const StrapiRelationIdSchema = z.union([
+  StrapiIdSchema,
+  z.object({ id: StrapiIdSchema }).transform((value) => value.id),
+  z.object({ data: z.object({ id: StrapiIdSchema }) }).transform((value) => value.data.id),
+]);
+
 export const InscricaoSchema = z.object({
-  id: z.string(),
-  cursoId: z.string(),
-  estudanteId: z.string(),
+  id: StrapiIdSchema,
+  cursoId: StrapiRelationIdSchema,
+  estudanteId: StrapiRelationIdSchema,
   dataInscricao: z.string().datetime(),
   concluido: z.boolean(),
   dataConclusao: z.string().datetime().optional(),

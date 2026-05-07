@@ -5,8 +5,13 @@ import { createHash, randomUUID } from 'node:crypto';
 import { type User, type Role, type Conquista, RoleSchema, normalizeTipo } from '@pdc/shared';
 import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
+import { z } from 'zod';
 
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
+
+const RefreshPayloadSchema = z.object({
+  sub: z.string().min(1),
+});
 
 interface StrapiUser {
   id: number | string;
@@ -78,7 +83,9 @@ export const authService = {
   async verifyRefreshToken(token: string): Promise<{ userId: string } | null> {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
-      const userId = payload.sub as string;
+      const payloadResult = RefreshPayloadSchema.safeParse(payload);
+      if (!payloadResult.success) return null;
+      const userId = payloadResult.data.sub;
       const hash = hashToken(token);
       const exists = await redis.get(`refresh_token:${userId}:${hash}`);
       return exists ? { userId } : null;
@@ -88,8 +95,9 @@ export const authService = {
   },
 
   async login(email: string, password: string): Promise<User> {
+    const normalizedEmail = email.toLowerCase().trim();
     const data = await strapiPostRaw<{ user: StrapiUser }>('/auth/local', {
-      identifier: email,
+      identifier: normalizedEmail,
       password,
     });
     return this.getUserById(data.user.id.toString());

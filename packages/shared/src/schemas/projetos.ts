@@ -6,6 +6,7 @@ import { PerfilPublicoSchema } from '../user.js';
 export const ProjetoModoSchema = z.enum(['exposicao', 'colaboracao', 'mentoria', 'financiamento', 'feedbackComunitario']);
 export type ProjetoModo = z.infer<typeof ProjetoModoSchema>;
 export const ProjetoEstadoSchema = z.enum(['draft', 'review', 'approved', 'published', 'archived']);
+export type ProjetoEstado = z.infer<typeof ProjetoEstadoSchema>;
 export const ProjetoVisibilidadeSchema = z.enum(['publico', 'privado']);
 
 // ACL Entry

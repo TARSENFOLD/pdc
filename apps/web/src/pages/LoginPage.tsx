@@ -9,18 +9,6 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { AuthLeftPanel } from '@/components/auth/AuthLeftPanel';
 import type { NeuralState } from '@/components/auth/NeuralConstellation';
 
-function getErrorStatus(error: unknown): number | undefined {
-  if (typeof error !== 'object' || error === null) return undefined;
-  if ('status' in error && typeof error.status === 'number') return error.status;
-  if ('response' in error) {
-    const response = error.response;
-    if (typeof response === 'object' && response !== null && 'status' in response && typeof response.status === 'number') {
-      return response.status;
-    }
-  }
-  return undefined;
-}
-
 function getErrorBody(error: unknown): { error?: string } | undefined {
   if (typeof error !== 'object' || error === null || !('body' in error)) return undefined;
   const body = error.body;
@@ -41,7 +29,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const scatterTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { login, logout, user, isLoading: isAuthLoading } = useAuth();
+  const { login, user, isLoading: isAuthLoading } = useAuth();
   const { track } = useTelemetry();
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,7 +46,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await login({ email, password });
+      const result = await login({ email: email.trim().toLowerCase(), password });
       if ('requiresOtp' in result) {
         navigate('/verificar', { state: { canal: result.canal, from }, replace: true });
       } else {
@@ -67,8 +55,6 @@ export default function LoginPage() {
         // navigation happens via onWarpComplete
       }
     } catch (err: unknown) {
-      const status = getErrorStatus(err);
-      if (status === 401) void logout();
       const body = getErrorBody(err);
       setError(body?.error ?? t('auth.login_page.error_generic'));
       setNeuralState('scatter');

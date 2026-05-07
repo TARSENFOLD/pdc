@@ -11,7 +11,7 @@ export class ApiError extends Error {
   }
 }
 
-const SKIP_REFRESH_PATHS = new Set(['/auth/refresh', '/auth/login', '/auth/register']);
+const SKIP_REFRESH_PATHS = new Set(['/auth/me', '/auth/refresh', '/auth/login', '/auth/register', '/auth/logout']);
 
 let refreshPromise: Promise<boolean> | null = null;
 

@@ -2,10 +2,20 @@ import { jwtVerify } from 'jose';
 import type { Context, Next } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { RoleSchema, type Role } from '@pdc/shared';
+import { z } from 'zod';
 import { env } from '../../lib/env.js';
 
 
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
+
+export const JwtUserPayloadSchema = z.object({
+  sub: z.string().min(1),
+  role: RoleSchema,
+  perfilId: z.string().min(1).optional(),
+  instituicaoId: z.union([z.string().min(1), z.number().int()]).optional()
+    .transform((value) => (value === undefined ? undefined : Number(value)))
+    .pipe(z.number().int().positive().optional()),
+});
 
 export interface AuthVariables {
   user: {
@@ -34,17 +44,17 @@ export async function verifyJwt(c: Context<{ Variables: AuthVariables }>, next: 
 
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-
-    const roleResult = RoleSchema.safeParse(payload.role);
-    if (!roleResult.success) {
+    const payloadResult = JwtUserPayloadSchema.safeParse(payload);
+    if (!payloadResult.success) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
+    const parsedPayload = payloadResult.data;
 
     const user: AuthVariables['user'] = {
-      id: payload.sub as string,
-      role: roleResult.data,
-      perfilId: payload.perfilId as string | undefined,
-      instituicaoId: payload.instituicaoId ? parseInt(payload.instituicaoId as string, 10) : undefined,
+      id: parsedPayload.sub,
+      role: parsedPayload.role,
+      perfilId: parsedPayload.perfilId,
+      instituicaoId: parsedPayload.instituicaoId,
     };
 
     c.set('user', user);
@@ -59,13 +69,14 @@ export async function optionalJwt(c: Context<{ Variables: OptionalAuthVariables 
   if (token) {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
-      const roleResult = RoleSchema.safeParse(payload.role);
-      if (roleResult.success) {
+      const payloadResult = JwtUserPayloadSchema.safeParse(payload);
+      if (payloadResult.success) {
+        const parsedPayload = payloadResult.data;
         c.set('user', {
-          id: payload.sub as string,
-          role: roleResult.data,
-          perfilId: payload.perfilId as string | undefined,
-          instituicaoId: payload.instituicaoId ? parseInt(payload.instituicaoId as string, 10) : undefined,
+          id: parsedPayload.sub,
+          role: parsedPayload.role,
+          perfilId: parsedPayload.perfilId,
+          instituicaoId: parsedPayload.instituicaoId,
         });
       }
     } catch {
