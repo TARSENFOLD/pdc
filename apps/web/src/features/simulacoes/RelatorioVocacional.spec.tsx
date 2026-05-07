@@ -17,11 +17,11 @@ describe('RelatorioVocacional (R2.T6 Integration)', () => {
 
   it('deve mostrar estado "Reputação ainda não disponível" se API retornar 404', async () => {
     // Simular falha 404 no endpoint canónico (conforme Approach)
-    vi.mocked(http.get).mockImplementation(async (url: string) => {
+    vi.mocked(http.get).mockImplementation((url: string) => {
       if (url.includes('/reputacao/me')) {
-        throw { status: 404, message: 'Not Found' };
+        return Promise.reject(Object.assign(new Error('Not Found'), { status: 404 }));
       }
-      return { patterns: [], recomendacoes: [] };
+      return Promise.resolve({ patterns: [], recomendacoes: [] });
     });
 
     render(
@@ -37,9 +37,9 @@ describe('RelatorioVocacional (R2.T6 Integration)', () => {
   });
 
   it('deve mostrar dados reais se API retornar 200 (Breakdown path)', async () => {
-    vi.mocked(http.get).mockImplementation(async (url: string) => {
+    vi.mocked(http.get).mockImplementation((url: string) => {
       if (url.includes('/reputacao/me')) {
-        return {
+        return Promise.resolve({
           score: 85,
           tier: 'OURO',
           dimensions: {
@@ -50,10 +50,10 @@ describe('RelatorioVocacional (R2.T6 Integration)', () => {
             tempoPlataforma: 12,
             engagement: 300,
           }
-        };
+        });
       }
       // Outras chamadas (ex: behavior patterns)
-      return { patterns: [], recomendacoes: [] };
+      return Promise.resolve({ patterns: [], recomendacoes: [] });
     });
 
     render(

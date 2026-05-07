@@ -39,9 +39,9 @@ function WeightsSection({
   const isValid = Math.abs(total - 1.0) <= 0.05;
 
   return (
-    <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
+    <div className="bg-elevated border border-ink-tertiary/10 rounded-xl p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-text-primary">{title}</h2>
+        <h2 className="text-lg font-bold text-ink-primary">{title}</h2>
         <span className={`text-sm font-medium ${isValid ? 'text-green-500' : 'text-red-500'}`}>
           Soma: {total.toFixed(2)}
         </span>
@@ -50,7 +50,7 @@ function WeightsSection({
       <div className="space-y-3">
         {WEIGHT_KEYS.map(key => (
           <div key={key} className="flex items-center gap-4">
-            <label className="w-56 text-sm text-text-secondary shrink-0">
+            <label className="w-56 text-sm text-ink-secondary shrink-0">
               {WEIGHT_LABELS[key]}
             </label>
             <input
@@ -60,9 +60,9 @@ function WeightsSection({
               step="0.05"
               value={weights[key]}
               onChange={(e) => { onChange(tipo, key, parseFloat(e.target.value)); }}
-              className="flex-1 accent-amber"
+              className="flex-1 accent-accent"
             />
-            <span className="text-sm font-mono text-text-primary w-12 text-right">
+            <span className="text-sm font-mono text-ink-primary w-12 text-right">
               {weights[key].toFixed(2)}
             </span>
           </div>
@@ -120,7 +120,7 @@ export default function FeedWeightsPage() {
 
   const saveMutation = useMutation({
     mutationFn: ({ tipo, weights }: { tipo: 'geral' | 'trending'; weights: FeedWeights }) =>
-      feedApi.updateWeights(tipo, weights),
+      feedApi.updateWeights(tipo, { weights }),
     onSuccess: (_data, { tipo }) => {
       toast({ title: 'Pesos guardados', description: `Feed ${tipo} actualizado.`, variant: 'success' });
       void qc.invalidateQueries({ queryKey: ['feed-weights', tipo] });
@@ -154,8 +154,8 @@ export default function FeedWeightsPage() {
   return (
     <div className="flex flex-col gap-8 max-w-3xl mx-auto">
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-text-primary tracking-tight">Pesos do Feed</h1>
-        <p className="text-text-secondary text-sm">
+        <h1 className="text-2xl font-bold text-ink-primary tracking-tight">Pesos do Feed</h1>
+        <p className="text-ink-secondary text-sm">
           Ajusta os pesos da fórmula de scoring para cada tipo de feed.
         </p>
       </header>

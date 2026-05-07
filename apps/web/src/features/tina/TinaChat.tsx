@@ -31,24 +31,21 @@ export function TinaChat() {
       >
         <div className="relative">
           <div className="absolute -inset-2 bg-accent/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-          <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-raised border border-white/10 shadow-2xl text-accent transition-all group-hover:scale-110 group-hover:-translate-y-1">
+          <span className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-elevated border border-white/10 shadow-2xl text-accent transition-all group-hover:scale-110 group-hover:-translate-y-1">
             <Sparkles size={24} strokeWidth={2.5} className="animate-pulse-subtle" />
           </span>
         </div>
-        <span className="text-[10px] font-black tracking-[0.2em] text-accent uppercase opacity-60 group-hover:opacity-100 transition-opacity">Tina</span>
+        <span className="text-[10px] font-semibold tracking-widest text-accent uppercase opacity-60 group-hover:opacity-100 transition-opacity">Tina</span>
       </button>
     );
   }
 
   return (
     <div
-      className="fixed bottom-8 right-8 z-50 flex flex-col overflow-hidden shadow-2xl border border-white/5 animate-in fade-in slide-in-from-bottom-4 duration-300"
-      style={{ 
-        width: 380, 
-        height: 560, 
-        borderRadius: 24, 
-        background: 'rgba(10, 10, 10, 0.8)',
-        backdropFilter: 'blur(24px)'
+      className="fixed bottom-8 right-8 z-50 w-[380px] h-[560px] flex flex-col overflow-hidden shadow-2xl border border-white/5 rounded-[24px] animate-in fade-in slide-in-from-bottom-4 duration-300"
+      style={{
+        background: 'var(--glass-bg-dark)',
+        backdropFilter: `blur(var(--glass-blur)) saturate(var(--glass-saturate))`,
       }}
     >
       {/* Header (Glass) */}
@@ -57,18 +54,18 @@ export function TinaChat() {
           <Cpu size={18} strokeWidth={2.5} />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-black tracking-tight text-text-primary">Tina Intelligence</span>
+          <span className="text-sm font-semibold text-ink-primary">Tina Intelligence</span>
           <span className="text-[9px] font-bold uppercase tracking-widest text-accent/60">System Active • {AI_PROVIDER}</span>
         </div>
         <div className="ml-auto flex items-center gap-3">
           {remaining !== null && (
-            <div className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-mono text-text-muted">
+            <div className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-mono text-ink-tertiary">
               {remaining} OPS
             </div>
           )}
           <button
             onClick={() => { setOpen(false); }}
-            className="p-1 rounded-lg hover:bg-white/10 text-text-muted transition-colors"
+            className="p-1 rounded-lg hover:bg-white/10 text-ink-tertiary transition-colors"
             aria-label="Fechar Tina"
           >
             <X size={16} />
@@ -97,7 +94,7 @@ export function TinaChat() {
           inputAreaStyle={{ backgroundColor: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}
           messageStyles={{
             default: {
-              shared: { bubble: { backgroundColor: 'transparent', color: 'var(--text-primary)', fontSize: '0.85rem', lineHeight: '1.5' } },
+              shared: { bubble: { backgroundColor: 'transparent', color: 'var(--ink-primary)', fontSize: '0.85rem', lineHeight: '1.5' } },
               ai: { bubble: { backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '12px 16px' } },
               user: { bubble: { backgroundColor: 'var(--color-accent)', color: '#000', borderRadius: '16px', padding: '12px 16px', fontWeight: '600' } },
             },
@@ -108,7 +105,7 @@ export function TinaChat() {
               container: {
                 backgroundColor: 'rgba(0,0,0,0.2)',
                 borderRadius: '12px',
-                color: 'var(--text-primary)',
+                color: 'var(--ink-primary)',
                 border: '1px solid rgba(255,255,255,0.1)',
                 padding: '4px 8px'
               },
@@ -143,7 +140,7 @@ export function TinaChat() {
           <button
             key={text}
             onClick={() => { handleSuggestion(text); }}
-            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-bold text-text-secondary transition-all hover:bg-accent/10 hover:border-accent/30 hover:text-accent"
+            className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-bold text-ink-secondary transition-all hover:bg-accent/10 hover:border-accent/30 hover:text-accent"
           >
             <MessageSquareText size={10} />
             {text}

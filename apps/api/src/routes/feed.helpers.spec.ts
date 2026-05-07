@@ -1,0 +1,97 @@
+import { describe, expect, it, vi } from 'vitest';
+import { fetchCandidates, toFeedItem, type StrapiEntity, type ItemStats } from './feed.helpers.js';
+import { strapiGet } from '../modules/strapi/strapi.client.js';
+import type { FeedItemTipo, StrapiListResponse } from '@pdc/shared';
+
+vi.mock('../modules/strapi/strapi.client.js', () => ({
+  strapiGet: vi.fn(),
+}));
+
+vi.mock('../lib/redis.js', () => ({
+  redis: {
+    get: vi.fn(),
+    set: vi.fn(),
+  },
+}));
+
+function listResponse<T extends { id: string | number }>(data: T[]): StrapiListResponse<T> {
+  return {
+    data,
+    meta: { pagination: { page: 1, pageSize: data.length, pageCount: 1, total: data.length } },
+  };
+}
+
+describe('feed helpers', () => {
+  it('inclui apenas feed-posts aprovados como candidatos do feed', async () => {
+    vi.mocked(strapiGet).mockImplementation((path: string) => {
+      if (path === '/cursos' || path === '/simulacoes' || path === '/experiencias') {
+        return Promise.resolve(listResponse<StrapiEntity>([]));
+      }
+
+      if (path === '/feed-posts') {
+        return Promise.resolve(listResponse<StrapiEntity>([
+          {
+            id: 'post-1',
+            corpo: 'Publicação aprovada',
+            estado: 'aprovada',
+            createdAt: '2026-04-30T10:00:00.000Z',
+            autor: { id: 'perfil-1', userId: 'user-1', nome: 'Ana PDC' },
+          },
+          {
+            id: 'post-2',
+            corpo: 'Publicação pendente',
+            estado: 'pendente_moderacao',
+            createdAt: '2026-04-30T10:01:00.000Z',
+          },
+          {
+            id: 'post-3',
+            corpo: 'Publicação oculta',
+            estado: 'hidden',
+            createdAt: '2026-04-30T10:02:00.000Z',
+          },
+        ]));
+      }
+
+      return Promise.resolve(listResponse<StrapiEntity>([]));
+    });
+
+    const candidates = await fetchCandidates();
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({
+      id: 'post-1',
+      tipo: 'post',
+      estado: 'aprovada',
+    });
+  });
+
+  it('mapeia feed-post aprovado para FeedItem social', () => {
+    const stats: ItemStats = { likes: 3, ratingMedia: 0, ratingTotal: 0 };
+    const entity: StrapiEntity & { tipo: FeedItemTipo } = {
+      id: 'post-1',
+      tipo: 'post',
+      corpo: 'Texto social real',
+      mediaUrls: ['https://cdn.pdc.test/post.jpg'],
+      autor: {
+        id: 'perfil-1',
+        userId: 'user-1',
+        nome: 'Ana PDC',
+        foto: { url: 'https://cdn.pdc.test/avatar.jpg' },
+      },
+      estado: 'aprovada',
+      createdAt: '2026-04-30T10:00:00.000Z',
+    };
+
+    expect(toFeedItem(entity, stats, 0.8, 0.9)).toMatchObject({
+      id: 'post-1',
+      tipo: 'post',
+      userId: 'user-1',
+      titulo: 'Publicação',
+      corpo: 'Texto social real',
+      autorNome: 'Ana PDC',
+      avatar: 'https://cdn.pdc.test/avatar.jpg',
+      imagem: 'https://cdn.pdc.test/post.jpg',
+      stats: { likes: 3, ratingMedia: 0, ratingTotal: 0 },
+    });
+  });
+});

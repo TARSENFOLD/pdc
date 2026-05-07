@@ -5,8 +5,8 @@ import { Spinner, Card } from '@/components/ui';
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <Card className="p-6">
-      <p className="text-sm font-medium text-text-secondary">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-amber">{value.toLocaleString()}</p>
+      <p className="text-sm font-medium text-ink-secondary">{label}</p>
+      <p className="mt-2 text-3xl font-bold text-accent">{value.toLocaleString()}</p>
     </Card>
   );
 }
@@ -23,7 +23,7 @@ export function AdminStatsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-text-primary mb-8">Estatísticas Gerais</h1>
+      <h1 className="text-2xl font-bold text-ink-primary mb-8">Estatísticas Gerais</h1>
       
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total Utilizadores" value={stats.totalUtilizadores} />

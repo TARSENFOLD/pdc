@@ -22,11 +22,11 @@ export const mailService = {
 
       if (error) {
         log.error({ error, to }, 'Erro ao enviar email via Resend');
-        throw error;
+        throw new Error(error.message);
       }
 
       return data;
-    } catch (err) {
+    } catch (err: unknown) {
       log.error({ err, to }, 'Falha catastrófica no envio de email');
       throw err;
     }

@@ -1,6 +1,29 @@
 import { createStrapi } from '@strapi/strapi';
-// @ts-ignore: O script de Seed cruza workspaces e o tsx consegue interpretá-lo mas o tsc queixa-se de rootDir
-import { personas } from '../../../apps/api/src/modules/vocacional/__fixtures__/personas.js';
+import { createRequire } from 'node:module';
+
+interface PersonaFixture {
+  nome: string;
+  area: string;
+  arquétipo: string;
+}
+
+interface SeedDocument {
+  id?: string | number;
+  documentId?: string;
+  [key: string]: unknown;
+}
+
+interface StrapiDocumentService {
+  findFirst(args: { filters: Record<string, unknown> }): Promise<SeedDocument | null>;
+  create(args: { data: Record<string, unknown>; status: 'published' }): Promise<SeedDocument>;
+}
+
+interface SeedStrapi {
+  documents(uid: string): StrapiDocumentService;
+}
+
+const nodeRequire = createRequire(`${process.cwd()}/infra/strapi/scripts/seed-narrativo.ts`);
+const { personas: typedPersonas } = nodeRequire('../../../apps/api/src/modules/vocacional/__fixtures__/personas.js') as { personas: PersonaFixture[] };
 
 // ─── 1. ENV GUARD (CONSTITUTION V2 ZERO MOCKS IN PROD) ──────────────
 if (process.env.NODE_ENV === 'production' && !process.argv.includes('--force-seed')) {
@@ -12,28 +35,44 @@ if (process.env.NODE_ENV === 'production' && !process.argv.includes('--force-see
 // ─── 2. UTILS & STRAPI BOOT ──────────────────────────────────────────
 async function main() {
   console.log('🌱 Iniciando PDC Seed Narrativo (W1-T5) ...');
-  const app = await createStrapi({ appDir: process.cwd() + '/dist' }).load();
+  const app = await createStrapi({ appDir: process.cwd() + '/dist' }).load() as SeedStrapi;
 
-  const findOrCreate = async (uid: string, filters: any, data: any) => {
-    const existing = await app.documents(uid as any).findFirst({ filters });
+  const findOrCreate = async (uid: string, filters: Record<string, unknown>, data: Record<string, unknown>) => {
+    const existing = await app.documents(uid).findFirst({ filters });
     if (existing) return existing;
-    return await app.documents(uid as any).create({ data, status: 'published' });
+    return await app.documents(uid).create({ data, status: 'published' });
   };
 
   try {
     // ─── 3. ÁREAS VOCACIONAIS E INSTITUIÇÕES ────────────────────────
-    const areas = ['Engenharia', 'Saúde', 'Gestão', 'Artes', 'Tecnologia', 'Ciências Sociais'];
+    const areas: { label: string; enum: string; slug: string }[] = [
+      { label: 'Saúde',              enum: 'SAUDE',             slug: 'saude' },
+      { label: 'Engenharia',         enum: 'ENGENHARIA',        slug: 'engenharia' },
+      { label: 'Tecnologia',         enum: 'TECNOLOGIA',        slug: 'tecnologia' },
+      { label: 'Direito',            enum: 'DIREITO',           slug: 'direito' },
+      { label: 'Gestão',             enum: 'GESTAO',            slug: 'gestao' },
+      { label: 'Educação',           enum: 'EDUCACAO',          slug: 'educacao' },
+      { label: 'Artes',              enum: 'ARTES',             slug: 'artes' },
+      { label: 'Ciências Agrárias',  enum: 'CIENCIAS_AGRARIAS', slug: 'ciencias-agrarias' },
+      { label: 'Ciências Sociais',   enum: 'CIENCIAS_SOCIAIS',  slug: 'ciencias-sociais' },
+      { label: 'Comunicação',        enum: 'COMUNICACAO',       slug: 'comunicacao' },
+      { label: 'Ciências Naturais',  enum: 'CIENCIAS_NATURAIS', slug: 'ciencias-naturais' },
+      { label: 'Arquitetura',        enum: 'ARQUITETURA',       slug: 'arquitetura' },
+      { label: 'Turismo e Hotelaria',enum: 'TURISMO_HOTELARIA', slug: 'turismo-hotelaria' },
+      { label: 'Desporto',           enum: 'DESPORTO',          slug: 'desporto' },
+      { label: 'Outra',              enum: 'OUTRA',             slug: 'outra' },
+    ];
     
     // ─── 3.1 SIMULAÇÕES (R2.T5) ──────────────────────────────────────
     console.log('🧪 Criando Simulações (Diversidade de Tipos)...');
     for (let i = 0; i < areas.length; i++) {
       const area = areas[i];
-      const tipo = (i % 3) + 1; // Alternar entre Tipo 1, 2 e 3
-      await findOrCreate('api::simulacao.simulacao', { slug: `sim-${area.toLowerCase().replace(' ', '-')}` }, {
-        titulo: `Simulação Profissional: ${area}`,
-        slug: `sim-${area.toLowerCase().replace(' ', '-')}`,
-        descricao: `Teste as tuas habilidades práticas no domínio de ${area}. Fidelity Level ${tipo}.`,
-        area: area.toUpperCase(),
+      const tipo = (i % 3) + 1;
+      await findOrCreate('api::simulacao.simulacao', { slug: `sim-${area.slug}` }, {
+        titulo: `Simulação Profissional: ${area.label}`,
+        slug: `sim-${area.slug}`,
+        descricao: `Teste as tuas habilidades práticas no domínio de ${area.label}. Fidelity Level ${tipo}.`,
+        area: area.enum,
         tipo,
         estado: 'published',
       });
@@ -47,7 +86,7 @@ async function main() {
     ];
 
     console.log('🏢 Criando Instituições...');
-    const instituicoes = [];
+    const instituicoes: SeedDocument[] = [];
     for (const [index, nome] of instNomes.entries()) {
       const res = await findOrCreate('api::instituicao.instituicao', { nome }, {
         nome,
@@ -59,11 +98,11 @@ async function main() {
 
     // ─── 4. MENTORES (30 = 1 Elite por Área + Gerais) ───────────────
     console.log('🎓 Criando 30 Mentores de Autoridade...');
-    const mentorProfiles = [];
+    const mentorProfiles: SeedDocument[] = [];
     for (let i = 1; i <= 30; i++) {
       const area = areas[i % areas.length];
-      const nome = `Mentor(a) ${area} #${i}`;
-      
+      const nome = `Mentor(a) ${area.label} #${i}`;
+
       const user = await findOrCreate('plugin::users-permissions.user', { email: `mentor${i}@pdc.ao` }, {
         username: `mentor${i}`,
         email: `mentor${i}@pdc.ao`,
@@ -76,8 +115,8 @@ async function main() {
         nome,
         tipo: 'mentor',
         userId: user.documentId,
-        headline: i <= 6 ? `Mentor(a) Elite e Global de ${area}` : `Especialista em ${area}`,
-        areaFormacao: area,
+        headline: i <= 6 ? `Mentor(a) Elite e Global de ${area.label}` : `Especialista em ${area.label}`,
+        areaFormacao: area.label,
         reputacao: i <= 6 ? 98 : 70 + (i % 20),
       });
       mentorProfiles.push(perfil);
@@ -87,9 +126,9 @@ async function main() {
     console.log('🧑‍🎓 Criando 100 Alunos (Baseados nos Arquétipos W0-T5)...');
     
     // As fixtures "personas" já contém o core psicológico (Cirurgião, Hacker, Gestor, etc)
-    const alunos = [];
+    const alunos: { perfil: SeedDocument; archetype: PersonaFixture }[] = [];
     for (let i = 1; i <= 100; i++) {
-      const archetype = personas[i % personas.length];
+      const archetype = typedPersonas[i % typedPersonas.length];
       const email = `aluno${i}@pdc.ao`;
       
       const user = await findOrCreate('plugin::users-permissions.user', { email }, {
@@ -102,7 +141,7 @@ async function main() {
 
       const perfil = await findOrCreate('api::perfil.perfil', { userId: user.documentId }, {
         nome: `${archetype.nome} #${i}`,
-        tipo: 'aluno',
+        tipo: 'estudante',
         userId: user.documentId,
         areaInteresse: [archetype.area],
       });
@@ -114,7 +153,7 @@ async function main() {
     console.log('🧠 Injetando Matriz de Behavior Patterns (Telemetria Idempotente)...');
     for (const alunoData of alunos) {
       const { perfil, archetype } = alunoData;
-      const domainId = archetype.area.toLowerCase().replace(' ', '-');
+      const domainId = archetype.area.toLowerCase().replace(/ /g, '-');
 
       // Coerência Matemática (W1-T5): Phi e Resiliência mapeados aos arquétipos originais das fixtures
       let cognitiveFluidity = 5.0;
@@ -154,4 +193,4 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+void main().catch(console.error);

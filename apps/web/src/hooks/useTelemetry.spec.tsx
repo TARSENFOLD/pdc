@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useTelemetry } from './useTelemetry';
-import { telemetriaService } from '../lib/telemetria/telemetria.service';
+import { telemetriaService, type BatchResult } from '../lib/telemetria/telemetria.service';
 import { createTelemetryStub } from './__test-utils__/telemetry-stub';
 
 // Mock de Telemetria Service
@@ -34,7 +34,7 @@ describe('useTelemetry Characterization Tests (W0-T3)', () => {
     localStorage.clear();
     vi.useFakeTimers();
     // Mock do fetch global para a descarga BeforeUnload Edge-First
-    global.fetch = vi.fn().mockResolvedValue({ ok: true } as any);
+    global.fetch = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 200 }));
   });
 
   afterEach(() => {
@@ -48,6 +48,7 @@ describe('useTelemetry Characterization Tests (W0-T3)', () => {
       for (let i = 0; i < 10; i++) {
         result.current.track('simulacao.iniciada', { step: i });
       }
+      await Promise.resolve();
     });
 
     expect(telemetriaService.registarBatch).toHaveBeenCalledTimes(1);
@@ -76,9 +77,10 @@ describe('useTelemetry Characterization Tests (W0-T3)', () => {
       expect.objectContaining({
         method: 'POST',
         keepalive: true,
-        headers: expect.objectContaining({
+        headers: {
+          'Content-Type': 'application/json',
           'X-Telemetry-Token': 'teste-token-edge-seguro',
-        }),
+        },
       })
     );
   });
@@ -91,15 +93,18 @@ describe('useTelemetry Characterization Tests (W0-T3)', () => {
 
     await act(async () => {
       for (let i = 0; i < 10; i++) result.current.track('simulacao.iniciada');
+      await Promise.resolve();
     });
 
     expect(telemetriaService.registarBatch).toHaveBeenCalledTimes(1);
     
     // No próximo intervalo de 30s, deve tentar enviar os mesmos 10 novamente
-    vi.mocked(telemetriaService.registarBatch).mockResolvedValueOnce({ ok: true, results: [] } as any);
+    const successBatch: BatchResult = { ok: true, results: [] };
+    vi.mocked(telemetriaService.registarBatch).mockResolvedValueOnce(successBatch);
     
     await act(async () => {
       vi.advanceTimersByTime(30000);
+      await Promise.resolve();
     });
 
     expect(telemetriaService.registarBatch).toHaveBeenCalledTimes(2);
@@ -119,6 +124,7 @@ describe('useTelemetry Characterization Tests (W0-T3)', () => {
     // 1º Intervalo
     await act(async () => {
       vi.advanceTimersByTime(30000);
+      await Promise.resolve();
     });
     expect(telemetriaService.registarBatch).toHaveBeenCalledTimes(1);
 
@@ -128,6 +134,7 @@ describe('useTelemetry Characterization Tests (W0-T3)', () => {
     });
     await act(async () => {
       vi.advanceTimersByTime(30000);
+      await Promise.resolve();
     });
     expect(telemetriaService.registarBatch).toHaveBeenCalledTimes(2);
     

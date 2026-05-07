@@ -17,7 +17,7 @@ export interface RegisterPayload {
 }
 
 export const authApi = {
-  me: () => http.get<User>('/auth/me'),
+  me: () => http.get<User | null>('/auth/me'),
   login: (payload: LoginPayload) => http.post<LoginResponse>('/auth/login', payload),
   register: (payload: RegisterPayload) => http.post<LoginResponse>('/auth/register', payload),
   logout: () => http.post<undefined>('/auth/logout', {}),
@@ -31,5 +31,9 @@ export const authApi = {
   loginWithGoogle: () => {
     const baseUrl: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
     window.location.href = `${baseUrl}/auth/google`;
+  },
+  loginWithLinkedIn: () => {
+    const baseUrl: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+    window.location.href = `${baseUrl}/auth/linkedin`;
   },
 };

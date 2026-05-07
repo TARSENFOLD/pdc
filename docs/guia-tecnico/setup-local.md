@@ -148,21 +148,14 @@ Nunca registe utilizadores directamente no painel admin do Strapi. O PDC v2 exig
 
 ---
 
-## 8. Arrancar o BFF
+## 8. Arrancar o Ambiente de Desenvolvimento (Monorepo)
 
 ```bash
-npm run dev --workspace=apps/api
+npm run dev
+# Arranca concorrentemente o Frontend (Vite), a API (BFF) e a Edge (Wrangler).
 # API disponível em http://localhost:3001
 # GET http://localhost:3001/health → { status: 'ok' }
-```
-
----
-
-## 9. Arrancar o Frontend
-
-```bash
-npm run dev --workspace=apps/web
-# Frontend disponível em http://localhost:5173
+# Frontend disponível em http://localhost:5173 (ou 5174 se a porta estiver em uso)
 ```
 
 ---

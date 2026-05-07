@@ -1,83 +1,91 @@
 import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import { z } from 'zod';
-import { AreaVocacionalSchema } from '@pdc/shared';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
-import type { ExplorarResultado, AreaVocacional } from '@pdc/shared';
+import { 
+  type ExplorarResultado, 
+  type ExplorarItem, 
+  type ExplorarItemTipo 
+} from '@pdc/shared';
 
 export const catalogoExplorarRoutes = new Hono();
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface StrapiGenericItem {
+interface CatalogoExplorarEntity {
   id: string | number;
   slug?: string;
   titulo?: string;
-  nome?: string;
   descricao?: string;
-  bio?: string;
-  capaUrl?: string;
-  avatarUrl?: string;
-  logoUrl?: string;
   area?: string;
-  areaEspecialidade?: string;
-  tipo?: string;
+  capaUrl?: string;
+  nome?: string;
+  bio?: string;
+  areaInteresse?: string;
+  regiao?: string;
+  avatarUrl?: string;
 }
 
-// ─── Query ────────────────────────────────────────────────────────────────────
+type CatalogoField = keyof Omit<CatalogoExplorarEntity, 'id'>;
 
-const explorarQuery = z.object({
-  q: z.string().min(1).max(200),
-  tipo: z.enum(['curso', 'simulacao', 'experiencia', 'mentor', 'instituicao']).optional(),
-  area: AreaVocacionalSchema.optional(),
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(12),
-});
-
-type TipoRecurso = 'curso' | 'simulacao' | 'experiencia' | 'mentor' | 'instituicao';
-
-interface SearchConfig {
+interface ExplorarConfig {
   endpoint: string;
-  titleField: 'titulo' | 'nome';
-  descField: 'descricao' | 'bio';
-  capaField: 'capaUrl' | 'avatarUrl' | 'logoUrl';
-  areaField: 'area' | 'areaEspecialidade' | 'tipo';
+  titleField: CatalogoField;
+  descField: CatalogoField;
+  areaField: CatalogoField;
+  capaField: CatalogoField;
   isMentor?: boolean;
+  isInstituicao?: boolean;
 }
 
-const CONFIGS: Record<TipoRecurso, SearchConfig> = {
-  curso: { endpoint: '/cursos', titleField: 'titulo', descField: 'descricao', capaField: 'capaUrl', areaField: 'area' },
-  simulacao: { endpoint: '/simulacoes', titleField: 'titulo', descField: 'descricao', capaField: 'capaUrl', areaField: 'area' },
-  experiencia: { endpoint: '/experiencias', titleField: 'titulo', descField: 'descricao', capaField: 'capaUrl', areaField: 'area' },
-  mentor: { endpoint: '/users', titleField: 'nome', descField: 'bio', capaField: 'avatarUrl', areaField: 'areaEspecialidade', isMentor: true },
-  instituicao: { endpoint: '/instituicoes', titleField: 'nome', descField: 'descricao', capaField: 'logoUrl', areaField: 'tipo' },
+const CONFIGS: Record<ExplorarItemTipo, ExplorarConfig> = {
+  curso: { endpoint: '/cursos', titleField: 'titulo', descField: 'descricao', areaField: 'area', capaField: 'capaUrl' },
+  simulacao: { endpoint: '/simulacoes', titleField: 'titulo', descField: 'descricao', areaField: 'area', capaField: 'capaUrl' },
+  experiencia: { endpoint: '/experiencias', titleField: 'titulo', descField: 'descricao', areaField: 'area', capaField: 'capaUrl' },
+  mentor: { endpoint: '/perfis', titleField: 'nome', descField: 'bio', areaField: 'areaInteresse', capaField: 'avatarUrl', isMentor: true },
+  instituicao: { endpoint: '/perfis', titleField: 'nome', descField: 'bio', areaField: 'regiao', capaField: 'avatarUrl', isInstituicao: true },
+  perfil: { endpoint: '/perfis', titleField: 'nome', descField: 'bio', areaField: 'regiao', capaField: 'avatarUrl' },
 };
 
-function sid(val: string | number): string {
-  return typeof val === 'number' ? val.toString() : val;
+const EXPLORAR_TYPES: ExplorarItemTipo[] = ['curso', 'simulacao', 'experiencia', 'mentor', 'instituicao', 'perfil'];
+
+function isExplorarItemTipo(value: string | undefined): value is ExplorarItemTipo {
+  return value !== undefined && EXPLORAR_TYPES.includes(value as ExplorarItemTipo);
 }
 
-// ─── Route ────────────────────────────────────────────────────────────────────
+function sid(id: string | number): string {
+  return typeof id === 'number' ? id.toString() : id;
+}
 
-catalogoExplorarRoutes.get('/', zValidator('query', explorarQuery), async (c) => {
-  const { q, tipo, area, page, limit } = c.req.valid('query');
+function fieldValue(item: CatalogoExplorarEntity, field: CatalogoField): string {
+  return item[field] ?? '';
+}
 
-  const types: TipoRecurso[] = tipo
-    ? [tipo]
-    : ['curso', 'simulacao', 'experiencia', 'mentor', 'instituicao'];
+/**
+ * GET /catalogo/explorar
+ * Procura unificada por cursos, simulações, mentores e instituições.
+ */
+catalogoExplorarRoutes.get('/', async (c) => {
+  const q = c.req.query('search') || '';
+  const area = c.req.query('area');
+  const rawTipo = c.req.query('tipo');
+  const tipo = isExplorarItemTipo(rawTipo) ? rawTipo : undefined;
+  const page = Number(c.req.query('page') || '1');
+  const limit = Number(c.req.query('pageSize') || '20');
+
+  const types = tipo
+    ? [tipo] 
+    : (['curso', 'simulacao', 'experiencia', 'mentor', 'instituicao'] as ExplorarItemTipo[]);
 
   const perType = Math.max(1, Math.floor(limit / types.length));
 
-  const fetches = types.map(async (t): Promise<ExplorarResultado[]> => {
+  const fetches = types.map(async (t): Promise<ExplorarItem[]> => {
     const cfg = CONFIGS[t];
     const params: Record<string, string> = {};
 
     if (cfg.isMentor) {
       params['filters[role][name][$eq]'] = 'mentor';
       params['filters[aprovado][$eq]'] = 'true';
+    } else if (cfg.isInstituicao) {
+      params['filters[role][name][$eq]'] = 'instituicao';
     } else {
       params['filters[estado][$eq]'] = 'published';
-      params['filters[visibilidade][$eq]'] = 'publico';
     }
 
     params[`filters[${cfg.titleField}][$containsi]`] = q;
@@ -86,16 +94,15 @@ catalogoExplorarRoutes.get('/', zValidator('query', explorarQuery), async (c) =>
     params['pagination[pageSize]'] = perType.toString();
 
     try {
-      // Fix: Use direct item type. Client flattens into StrapiListResponse<T>.
-      const res = await strapiGet<StrapiGenericItem>(cfg.endpoint, params);
-      return res.data.map((d): ExplorarResultado => ({
+      const res = await strapiGet<CatalogoExplorarEntity>(cfg.endpoint, params);
+      return res.data.map((d): ExplorarItem => ({
         tipo: t,
         id: sid(d.id),
-        slug: d.slug,
-        titulo: d[cfg.titleField] ?? '',
-        descricao: d[cfg.descField],
-        capaUrl: d[cfg.capaField],
-        area: d[cfg.areaField] as AreaVocacional,
+        slug: d.slug ?? sid(d.id),
+        titulo: fieldValue(d, cfg.titleField),
+        descricao: fieldValue(d, cfg.descField),
+        capaUrl: fieldValue(d, cfg.capaField),
+        area: fieldValue(d, cfg.areaField),
       }));
     } catch {
       return [];
@@ -103,10 +110,12 @@ catalogoExplorarRoutes.get('/', zValidator('query', explorarQuery), async (c) =>
   });
 
   const allResults = await Promise.all(fetches);
-  const results: ExplorarResultado[] = allResults.flat();
+  const items = allResults.flat();
 
-  return c.json({
-    data: results,
-    meta: { page, pageSize: limit, total: results.length, pageCount: 1 },
-  });
+  const response: ExplorarResultado = {
+    data: items,
+    meta: { page, pageSize: limit, total: items.length, pageCount: 1 },
+  };
+
+  return c.json(response);
 });

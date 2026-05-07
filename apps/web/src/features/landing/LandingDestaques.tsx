@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { http } from '@/lib/api/http';
 import { Play, Building2, ChevronRight } from 'lucide-react';
 import type { SimulacaoPublica, InstituicaoPublica, CatalogoResponse } from '@pdc/shared';
+import { useTranslation } from '@/hooks/useTranslation';
 
 const PLACEHOLDER_COLORS: Record<string, { from: string; to: string }> = {
   tecnologia: { from: '#3b82f6', to: '#1d4ed8' },
@@ -26,11 +27,9 @@ function LandingDestaquesSkeleton() {
   return (
     <div className="mx-auto max-w-7xl animate-pulse">
       <div className="h-8 w-64 bg-surface-raised mb-12 rounded-lg" />
-      <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
-        <div className="lg:col-span-2 grid gap-6 sm:grid-cols-2">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-64 bg-surface-raised rounded-2xl" />)}
-        </div>
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12">
+        {[1, 2, 3, 4].map(i => <div key={i} className="h-64 bg-surface-raised rounded-2xl" />)}
+        <div className="space-y-4 sm:col-span-2 lg:col-span-1">
           {[1, 2, 3].map(i => <div key={i} className="h-20 bg-surface-raised rounded-xl" />)}
         </div>
       </div>
@@ -42,6 +41,7 @@ function LandingDestaquesSkeleton() {
 
 export function LandingDestaques() {
   const reduced = useReducedMotion();
+  const { t } = useTranslation('landing');
   const fadeUp = {
     initial: reduced ? { opacity: 0 } : { opacity: 0, y: 24 },
     whileInView: { opacity: 1, y: 0 },
@@ -78,15 +78,15 @@ export function LandingDestaques() {
     <section className="bg-background px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-7xl">
         <motion.div {...fadeUp} className="mb-16">
-          <h2 className="text-3xl font-bold text-text-primary sm:text-4xl font-display tracking-tight">
-            Explora por conta própria
+          <h2 className="text-2xl font-bold text-text-primary sm:text-3xl lg:text-4xl font-display tracking-tight">
+            {t('destaques.title')}
           </h2>
           <p className="mt-4 max-w-2xl text-text-secondary">
-            Simulações reais criadas por mentores e instituições para te ajudar a decidir o teu futuro.
+            {t('destaques.body')}
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
           {/* Simulações Col (2/3) */}
           <div className="lg:col-span-2">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -133,7 +133,7 @@ export function LandingDestaques() {
           {/* Instituições Col */}
           <div className="flex flex-col gap-6">
             <h3 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">
-              <Building2 size={12} className="text-accent" /> Instituições parceiras
+              <Building2 size={12} className="text-accent" /> {t('destaques.instituicoes_label')}
             </h3>
             <div className="flex flex-col gap-3">
               {instituicoes?.data.map((inst: InstituicaoPublica, i: number) => (
@@ -154,7 +154,7 @@ export function LandingDestaques() {
                     <h4 className="text-sm font-bold text-text-primary truncate group-hover:text-accent transition-colors">{inst.nome}</h4>
                     <p className="text-[10px] text-text-muted uppercase font-medium tracking-wider">{inst.regiao || 'Angola'}</p>
                   </div>
-                  <Link to={`/instituicoes/${inst.slug}`} className="text-text-muted group-hover:text-accent transition-colors">
+                  <Link to={`/instituicoes/${inst.slug || inst.id}`} className="text-text-muted group-hover:text-accent transition-colors">
                     <ChevronRight size={18} />
                   </Link>
                 </motion.div>
@@ -164,7 +164,7 @@ export function LandingDestaques() {
               to="/explorar?tab=instituicoes"
               className="mt-2 text-xs font-bold uppercase tracking-widest text-accent/60 hover:text-accent transition-colors inline-flex items-center gap-1"
             >
-              Ver todas <ChevronRight size={12} />
+              {t('destaques.ver_todas')} <ChevronRight size={12} />
             </Link>
           </div>
         </div>

@@ -29,7 +29,7 @@ discussionsRoutes.get('/:id/replies', async (c) => {
     
     // Os dados já vêm planos do strapiGet (normalize)
     return c.json({ data: res.data });
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Falha ao carregar respostas' }, 502);
   }
 });

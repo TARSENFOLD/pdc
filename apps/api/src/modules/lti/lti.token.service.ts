@@ -48,7 +48,7 @@ export const ltiTokenService = {
 
     if (!tokenRes.ok) {
       const errBody = await tokenRes.text();
-      throw new Error(`Falha ao obter access token LTI: ${tokenRes.status} ${errBody}`);
+      throw new Error(`Falha ao obter access token LTI: ${tokenRes.status.toString()} ${errBody}`);
     }
 
     const tokenData = await tokenRes.json() as { access_token: string; expires_in: number };
@@ -56,7 +56,7 @@ export const ltiTokenService = {
     // 4. Cachear com margem de segurança (5 min)
     const ttl = Math.max(0, tokenData.expires_in - 300);
     if (ttl > 0) {
-      await redis.set(cacheKey, tokenData.access_token, { ex: ttl }).catch(() => {});
+      await redis.set(cacheKey, tokenData.access_token, { ex: ttl }).catch((): void => {});
     }
 
     return tokenData.access_token;

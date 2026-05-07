@@ -1,0 +1,137 @@
+{
+  "estudante": {
+    "hero": {
+      "kicker": "Percurso Acadêmico",
+      "title": "O teu Painel",
+      "description": "Acompanhe o seu progresso, match vocacional e próximas ações."
+    },
+    "kpi": {
+      "xp": "XP Acumulado",
+      "reputacao": "Reputação",
+      "conquistas": "Conquistas",
+      "vinculos": "Vínculos",
+      "foco": "Foco"
+    },
+    "sections": {
+      "match_kicker": "Match Vocacional",
+      "match_title": "Afinidade por área",
+      "behavior_kicker": "Padrão DNA",
+      "behavior_title": "Assinatura comportamental",
+      "side_title": "Próxima ação",
+      "cursos_kicker": "Em progresso",
+      "cursos_title": "Cursos"
+    },
+    "empty": {
+      "match": "Complete o seu perfil vocacional para descobrir as suas áreas de maior afinidade.",
+      "behavior": "Complete simulações para revelar o seu perfil comportamental.",
+      "cursos": "Inscreva-se em um curso para começar a validar as suas aptidões."
+    },
+    "actions": {
+      "completar_perfil": "Completar Perfil",
+      "explorar_simulacoes": "Explorar Simulações",
+      "explorar_cursos": "Explorar Cursos",
+      "ver_relatorio": "Ver Relatório",
+      "ver_catalogo": "Ver Catálogo"
+    },
+    "behavior": {
+      "fluidez": "Fluidez φ",
+      "resiliencia": "Resiliência R",
+      "foco": "Foco"
+    },
+    "match": {
+      "authority_label": "de afinidade",
+      "insights_label": "Insights Tina"
+    },
+    "curso": {
+      "progresso": "Progresso",
+      "certificacao": "Certificação PDC"
+    },
+    "error": {
+      "title": "Erro ao sincronizar o painel.",
+      "retry": "Tentar novamente"
+    }
+  },
+  "home": {
+    "greetings": {
+      "estudante": "A sua jornada começa aqui",
+      "mentor": "Estúdio de Criação",
+      "instituicao": "Painel Institucional",
+      "moderador": "Centro de Operações",
+      "comite_cientifico": "Laboratório de Validação",
+      "super_admin": "Controle Soberano",
+      "patrocinador": "Painel do Patrocinador"
+    },
+    "cta_open": "Abrir",
+    "welcome_fallback": "Bem-vindo",
+    "greeting_prefix": "Olá",
+    "subtitle": "Escolha por onde quer começar.",
+    "oracle_kicker": "Infraestrutura de decisão educacional soberana",
+    "oracle_body": "O Oráculo observa a sua jornada e adapta recomendações em tempo real.",
+    "actions": {
+      "estudante": {
+        "simulacoes_label": "Simulações",
+        "simulacoes_desc": "Teste as suas competências em cenários reais",
+        "cursos_label": "Cursos",
+        "cursos_desc": "Aprenda com conteúdo validado por mentores",
+        "perfil_label": "Perfil Vocacional",
+        "perfil_desc": "Descubra a sua área de maior afinidade",
+        "ranking_label": "Ranking",
+        "ranking_desc": "Veja a sua posição no mérito global"
+      },
+      "mentor": {
+        "cursos_label": "Meus Cursos",
+        "cursos_desc": "Gerencie e crie conteúdo educativo",
+        "criar_label": "Criar Curso",
+        "criar_desc": "Inicie um novo curso no Course Builder",
+        "simulacoes_label": "Simulações",
+        "simulacoes_desc": "Crie e gerencie laboratórios práticos",
+        "mentorados_label": "Mentorados",
+        "mentorados_desc": "Acompanhe os seus estudantes"
+      },
+      "instituicao": {
+        "experiencias_label": "Experiências",
+        "experiencias_desc": "Gerencie as vitrines curriculares",
+        "programas_label": "Programas",
+        "programas_desc": "Crie roteiros educativos",
+        "estudantes_label": "Estudantes",
+        "estudantes_desc": "Veja estudantes vinculados",
+        "relatorios_label": "Relatórios",
+        "relatorios_desc": "Analise o impacto institucional"
+      },
+      "moderador": {
+        "aprovacoes_label": "Fila de Aprovações",
+        "aprovacoes_desc": "Revise conteúdo pendente de moderação",
+        "denuncias_label": "Denúncias",
+        "denuncias_desc": "Trate denúncias da comunidade",
+        "utilizadores_label": "Usuários",
+        "utilizadores_desc": "Gerencie usuários da plataforma",
+        "stats_label": "Estatísticas",
+        "stats_desc": "Painel de métricas do ecossistema"
+      },
+      "comite_cientifico": {
+        "validacao_label": "Validação Científica",
+        "validacao_desc": "Valide conteúdo por rigor acadêmico",
+        "dashboard_label": "Dashboard Comitê",
+        "dashboard_desc": "Visão geral do comitê",
+        "feed_label": "Feed",
+        "feed_desc": "Veja o que acontece na comunidade"
+      },
+      "super_admin": {
+        "stats_label": "Estatísticas",
+        "stats_desc": "Visão 360° do ecossistema",
+        "utilizadores_label": "Usuários",
+        "utilizadores_desc": "Gerencie todos os usuários",
+        "flags_label": "Feature Flags",
+        "flags_desc": "Controle features e rollouts",
+        "feed_weights_label": "Feed Weights",
+        "feed_weights_desc": "Ajuste o algoritmo de ranking"
+      },
+      "patrocinador": {
+        "feed_label": "Feed",
+        "feed_desc": "Veja o que acontece na comunidade",
+        "explorar_label": "Explorar",
+        "explorar_desc": "Descubra conteúdo e talentos"
+      }
+    }
+  }
+}

@@ -30,6 +30,7 @@ import { landingRoutes } from './landing.js';
 // Mocks de serviços
 vi.mock('../modules/strapi/strapi.client.js', () => ({
   strapiGet: vi.fn().mockResolvedValue({ data: [], meta: { pagination: { total: 0 } } }),
+  strapiGetRaw: vi.fn(),
 }));
 
 vi.mock('../modules/landing/pulse.service.js', () => ({
@@ -41,6 +42,15 @@ vi.mock('../modules/landing/pulse.service.js', () => ({
 vi.mock('../middleware/cache.js', () => ({
   withPublicCache: () => async (_c: unknown, next: () => Promise<void>) => { await next(); },
 }));
+
+const CANONICAL_AREAS = [
+  'SAUDE', 'ENGENHARIA', 'TECNOLOGIA', 'DIREITO', 'GESTAO',
+  'EDUCACAO', 'ARTES', 'CIENCIAS_AGRARIAS', 'CIENCIAS_SOCIAIS',
+  'COMUNICACAO', 'CIENCIAS_NATURAIS', 'ARQUITETURA',
+  'TURISMO_HOTELARIA', 'DESPORTO', 'OUTRA',
+] as const;
+
+const LEGACY_AREAS = ['AGRONOMIA', 'OUTRO'] as const;
 
 describe('AreaVocacional Enum Contract', () => {
   let app: Hono;
@@ -79,4 +89,32 @@ describe('AreaVocacional Enum Contract', () => {
     });
     expect(res.status).toBe(200);
   });
+
+  it.each(CANONICAL_AREAS)(
+    'GET /catalogo/cursos deve aceitar área canónica %s',
+    async (area) => {
+      const res = await app.request(`/catalogo/cursos?area=${area}`);
+      expect(res.status).toBe(200);
+    },
+  );
+
+  it.each(LEGACY_AREAS)(
+    'GET /catalogo/cursos deve rejeitar área legada %s (drift bloqueado)',
+    async (area) => {
+      const res = await app.request(`/catalogo/cursos?area=${area}`);
+      expect(res.status).toBe(400);
+    },
+  );
+
+  it.each(CANONICAL_AREAS)(
+    'POST /landing/pulse deve aceitar área canónica %s',
+    async (area) => {
+      const res = await app.request('/landing/pulse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: '123', area }),
+      });
+      expect(res.status).toBe(200);
+    },
+  );
 });

@@ -10,11 +10,26 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const THEME_KEY = 'pdc:theme';
+const LEGACY_THEME_KEY = 'pdc-theme';
+
+function isTheme(value: string | null): value is Theme {
+  return value === 'light' || value === 'dark' || value === 'system';
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    // Check localStorage, default to 'dark'
-    const stored = localStorage.getItem('pdc-theme');
-    return (stored as Theme) || 'dark';
+    // 1. Migração one-shot
+    const legacy = localStorage.getItem(LEGACY_THEME_KEY);
+    if (legacy) {
+      localStorage.setItem(THEME_KEY, legacy);
+      localStorage.removeItem(LEGACY_THEME_KEY);
+      return isTheme(legacy) ? legacy : 'dark';
+    }
+
+    // 2. Chave canónica
+    const stored = localStorage.getItem(THEME_KEY);
+    return isTheme(stored) ? stored : 'dark';
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
@@ -26,24 +41,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       let resolved: 'light' | 'dark' = 'dark';
 
       if (t === 'system') {
-        resolved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       } else {
         resolved = t;
       }
 
       setResolvedTheme(resolved);
 
-      if (resolved === 'light') {
-        root.classList.add('light');
-      } else {
-        root.classList.remove('light');
-      }
+      // Sincronização de classes (remove ambas primeiro para evitar duplicados)
+      root.classList.remove('light', 'dark');
+      root.classList.add(resolved);
     };
 
     applyTheme(theme);
 
     if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const listener = () => { applyTheme('system'); };
       mediaQuery.addEventListener('change', listener);
       return () => { mediaQuery.removeEventListener('change', listener); };
@@ -52,7 +65,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = (t: Theme) => {
     setThemeState(t);
-    localStorage.setItem('pdc-theme', t);
+    localStorage.setItem(THEME_KEY, t);
   };
 
   return (

@@ -58,7 +58,7 @@ export function MicroDesafioVeredito({ veredito, onReiniciar, reduced }: {
       <div className="mt-4 flex flex-col items-center gap-4 w-full">
         <Link
           to={`/register?area=${veredito.area.toUpperCase()}`}
-          className="w-full rounded-xl bg-accent px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.03] hover:bg-accent-hover active:scale-[0.98]"
+          className="w-full rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-accent px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.03] hover:bg-accent-hover active:scale-[0.98]"
         >
           Resgatar Perfil Completo
         </Link>

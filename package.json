@@ -11,6 +11,7 @@
     "apps/web",
     "apps/api",
     "apps/edge",
+    "apps/mobile",
     "packages/shared",
     "infra/strapi"
   ],
@@ -20,9 +21,10 @@
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "dev": "npm run dev --workspaces --if-present",
+    "dev": "concurrently -c \"blue,green,yellow\" \"npm run dev -w apps/web\" \"npm run dev -w apps/api\" \"npm run dev -w apps/edge\"",
     "test:load": "k6 run tests/k6/auth-flow.js",
     "test:load:auth": "k6 run tests/k6/auth-flow.js",
+    "test:load:edge": "k6 run tests/k6/edge-load.js",
     "test:load:feed": "k6 run tests/k6/feed-load.js",
     "test:load:catalogo": "k6 run tests/k6/catalogo-browse.js",
     "test:load:journey": "k6 run tests/k6/full-journey.js",
@@ -36,7 +38,9 @@
     "test:e2e:docker": "docker run --rm --network host -v $(pwd):/work -w /work -e CI=true mcr.microsoft.com/playwright:v1.52.0-noble npx playwright test",
     "docker:load": "docker compose -f docker-compose.test.yml run --rm k6 run",
     "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'dist' -type d -prune -exec rm -rf '{}' +",
-    "test:e2e:a11y": "playwright test tests/e2e/a11y.spec.ts"
+    "test:e2e:a11y": "playwright test tests/e2e/a11y.spec.ts",
+    "validate:docs": "npx tsx scripts/validate-docs.ts",
+    "lint:docs": "markdownlint-cli2 'docs/**/*.md' '.planning/**/*.md' 'specs/**/*.md' '*.md'"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
@@ -46,12 +50,15 @@
     "ajv-formats": "^3.0.1",
     "ajv-keywords": "^5.1.0",
     "axios": "^1.7.4",
+    "concurrently": "^9.2.1",
     "esbuild": "^0.25.0",
     "eslint": "^9.0.0",
-    "hono": "^4.12.13",
+    "hono": "^4.12.14",
     "husky": "^9.0.0",
     "lint-staged": "^15.0.0",
     "lodash": "^4.18.1",
+    "markdown-link-check": "^3.14.2",
+    "markdownlint-cli2": "^0.22.1",
     "prettier": "^3.3.0",
     "ts-morph": "^28.0.0",
     "typescript": "^5.5.0"
@@ -59,7 +66,7 @@
   "overrides": {
     "lodash": "^4.18.1",
     "esbuild": "^0.25.0",
-    "hono": "^4.12.13",
+    "hono": "^4.12.14",
     "@hono/node-server": "^1.19.13",
     "axios": "^1.7.4",
     "markdown-it": "^14.1.1"

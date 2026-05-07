@@ -1,10 +1,52 @@
 import { z } from 'zod';
 import { AreaVocacionalSchema } from './enums.js';
+import { PerfilPublicoSchema } from '../user.js';
+
+// Modos do projeto (5 modos canónicos)
+export const ProjetoModoSchema = z.enum(['exposicao', 'colaboracao', 'mentoria', 'financiamento', 'feedbackComunitario']);
+export type ProjetoModo = z.infer<typeof ProjetoModoSchema>;
+export const ProjetoEstadoSchema = z.enum(['draft', 'review', 'approved', 'published', 'archived']);
+export type ProjetoEstado = z.infer<typeof ProjetoEstadoSchema>;
+export const ProjetoVisibilidadeSchema = z.enum(['publico', 'privado']);
+
+// ACL Entry
+export const ACLEntrySchema = z.object({
+  perfilId: z.string(),
+  estado: z.enum(['pendente', 'aprovado', 'rejeitado']),
+  solicitadoEm: z.string().datetime(),
+  respondidoEm: z.string().datetime().optional(),
+});
+
+export type ACLEntry = z.infer<typeof ACLEntrySchema>;
+
+// Voto/Endorsement
+export const VotoSchema = z.object({
+  perfilId: z.string(),
+  tipo: z.enum(['endorsement', 'voto']),
+  comentario: z.string().optional(),
+  criadoEm: z.string().datetime(),
+});
+
+export type Voto = z.infer<typeof VotoSchema>;
+
+// Histórico de Estados
+export const HistoricoEstadoSchema = z.object({
+  estado: ProjetoEstadoSchema,
+  timestamp: z.string().datetime(),
+  autorId: z.string(),
+});
+
+export type HistoricoEstado = z.infer<typeof HistoricoEstadoSchema>;
+
+export const SeloSchema = z.enum(['aptidao_validada']).optional();
+export type Selo = z.infer<typeof SeloSchema>;
 
 export const ProjetoSchema = z.object({
   id: z.string(),
   titulo: z.string(),
-  descricao: z.string(),
+  descricao: z.string().optional(), // DEPRECATED
+  abstract: z.string().min(10).max(1000),
+  core: z.string().min(10).max(5000).optional(),
   area: AreaVocacionalSchema.optional(),
   estudanteId: z.string().optional(),
   capaUrl: z.string().url().optional(),
@@ -12,9 +54,17 @@ export const ProjetoSchema = z.object({
   repoUrl: z.string().url().optional(),
   demoUrl: z.string().url().optional(),
   tags: z.array(z.string()).default([]),
-  estado: z.enum(['draft', 'review', 'approved', 'published', 'archived']),
-  visibilidade: z.enum(['publico', 'privado']).optional(),
+  estado: ProjetoEstadoSchema,
+  visibilidade: ProjetoVisibilidadeSchema.optional(),
   buscandoParceiros: z.boolean().optional(),
+  modos: z.array(ProjetoModoSchema).min(1).max(5).refine(
+    arr => new Set(arr).size === arr.length,
+    { message: 'Modos devem ser únicos' }
+  ),
+  selo: SeloSchema,
+  acessoCoreACL: z.array(ACLEntrySchema).optional(),
+  votos: z.array(VotoSchema).optional(),
+  historicoEstados: z.array(HistoricoEstadoSchema).optional(),
   autor: z.object({
     id: z.string(),
     nome: z.string(),
@@ -28,14 +78,83 @@ export const ProjetoSchema = z.object({
 
 export type Projeto = z.infer<typeof ProjetoSchema>;
 
-export const CriarProjetoPayloadSchema = ProjetoSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  estudanteId: true,
+// Discriminated union por modo para validação especializada
+export const CriarProjetoPayloadBaseSchema = z.object({
+  titulo: z.string().min(3).max(120),
+  abstract: z.string().min(10).max(1000),
+  core: z.string().min(10).max(5000).optional(),
+  area: AreaVocacionalSchema.optional(),
+  capaUrl: z.string().url().optional(),
+  mediaUrls: z.array(z.string().url()).max(10).optional(),
+  repoUrl: z.string().url().optional(),
+  demoUrl: z.string().url().optional(),
+  tags: z.array(z.string()).max(10).default([]),
+  visibilidade: ProjetoVisibilidadeSchema.optional(),
+  buscandoParceiros: z.boolean().optional(),
+  modos: z.array(ProjetoModoSchema).min(1).max(5).refine(
+    arr => new Set(arr).size === arr.length,
+    { message: 'Modos devem ser únicos' }
+  ),
 });
 
+// Payload específico para modo exposição (pode ter core vazio)
+export const CriarProjetoExposicaoPayloadSchema = CriarProjetoPayloadBaseSchema.refine(
+  (data) => data.modos.includes('exposicao'),
+  { message: 'Modo exposição deve estar presente' }
+);
+
+// Payload específico para modo colaboração (obrigatório ter core)
+export const CriarProjetoColaboracaoPayloadSchema = CriarProjetoPayloadBaseSchema.extend({
+  core: z.string().min(10).max(5000), // obrigatório para colaboração
+}).refine(
+  (data) => data.modos.includes('colaboracao'),
+  { message: 'Modo colaboração deve estar presente' }
+);
+
+// Schema unificado para uso geral
+export const CriarProjetoPayloadSchema = CriarProjetoPayloadBaseSchema.refine(
+  (data) => {
+    // Se tem modo colaboração, core é obrigatório
+    if (data.modos.includes('colaboracao') && !data.core) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'Core é obrigatório quando modo colaboração está presente',
+    path: ['core'],
+  }
+);
+
 export type CriarProjetoPayload = z.infer<typeof CriarProjetoPayloadSchema>;
+
+// Schema para gerir ACL (aprovar/rejeitar/remover acesso ao core)
+export const GerirACLSchema = z.object({
+  perfilId: z.string(),
+  acao: z.enum(['aprovar', 'rejeitar', 'remover']),
+});
+
+export type GerirACLPayload = z.infer<typeof GerirACLSchema>;
+
+// Schema para votar/endorsar um projeto
+export const VotoProjetoPayloadSchema = z.object({
+  tipo: z.enum(['endorsement', 'voto']),
+  comentario: z.string().max(500).optional(),
+});
+
+export type VotoProjetoPayload = z.infer<typeof VotoProjetoPayloadSchema>;
+
+export const PedidoAcessoSchema = z.object({
+  id: z.string().or(z.number()),
+  projeto: z.string().or(z.number()).optional(),
+  perfilSolicitante: PerfilPublicoSchema.optional(),
+  motivo: z.string().optional(),
+  status: z.enum(['pendente', 'aprovado', 'rejeitado']),
+  dataResposta: z.string().datetime().optional(),
+  createdAt: z.string().datetime().optional(),
+});
+
+export type PedidoAcesso = z.infer<typeof PedidoAcessoSchema>;
 
 export const ProjetoFiltersSchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),

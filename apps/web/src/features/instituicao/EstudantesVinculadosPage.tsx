@@ -18,11 +18,15 @@ export function EstudantesVinculadosPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: () => propostasApi.criar({
-      estudanteId: selectedStudent?.id ?? '',
-      titulo: titulo || `Proposta de ${tipo}`,
-      descricao: mensagem,
-    }),
+    mutationFn: () => {
+      if (!selectedStudent?.id) return Promise.reject(new Error('Estudante não selecionado'));
+      return propostasApi.criar({
+        targetId: selectedStudent.id,
+        titulo: titulo || `Proposta de ${tipo}`,
+        tipo,
+        mensagem,
+      });
+    },
     onSuccess: () => {
       toast({ title: 'Proposta enviada!' });
       setSelectedStudent(null);
@@ -83,13 +87,13 @@ export function EstudantesVinculadosPage() {
         open={!!selectedStudent} 
         onOpenChange={(open: boolean) => { if (!open) setSelectedStudent(null); }}
       >
-        <div className="space-y-4 pt-4 text-text-primary">
+        <div className="space-y-4 pt-4 text-ink-primary">
           <h2 className="text-xl font-bold">Nova Proposta para {selectedStudent?.nome}</h2>
           
           <div className="space-y-1">
             <label className="text-sm font-medium">Título da Proposta</label>
             <input 
-              className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               placeholder="Ex: Convite para Estágio de Verão"
               value={titulo}
               onChange={(e) => { setTitulo(e.target.value); }}
@@ -99,9 +103,14 @@ export function EstudantesVinculadosPage() {
           <div className="space-y-1">
             <label className="text-sm font-medium">Tipo de Proposta</label>
             <select 
-              className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background focus:ring-accent"
+              className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary ring-offset-background focus:ring-accent"
               value={tipo}
-              onChange={(e) => { setTipo(e.target.value as PropostaTipo); }}
+              onChange={(e) => { 
+                const val = e.target.value;
+                if (['estagio', 'emprego', 'bolsa', 'parceria'].includes(val)) {
+                  setTipo(val as PropostaTipo); 
+                }
+              }}
             >
               <option value="estagio">Estágio</option>
               <option value="emprego">Emprego</option>
@@ -113,7 +122,7 @@ export function EstudantesVinculadosPage() {
           <div className="space-y-1">
             <label className="text-sm font-medium">Mensagem Personalizada</label>
             <textarea 
-              className="flex min-h-[120px] w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="flex min-h-[120px] w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               placeholder="Explique por que este estudante é um bom match..."
               value={mensagem}
               onChange={(e) => { setMensagem(e.target.value); }}

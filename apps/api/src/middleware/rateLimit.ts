@@ -5,6 +5,10 @@ import pino from 'pino';
 
 const log = pino({ name: 'rate-limit' });
 
+function shouldBypassDevAuthLimits(): boolean {
+  return process.env['NODE_ENV'] !== 'production' && process.env['DEV_SKIP_OTP'] === 'true';
+}
+
 const ratelimit = hasRedis
   ? new Ratelimit({
       redis,
@@ -15,13 +19,20 @@ const ratelimit = hasRedis
   : null;
 
 export async function rateLimit(c: Context, next: Next) {
+  if (shouldBypassDevAuthLimits()) {
+    await next();
+    return;
+  }
+
   if (!ratelimit) {
     log.warn('Redis not configured, rate limiting skipped');
     await next();
     return;
   }
 
-  const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
+  const xForwardedFor = c.req.header('x-forwarded-for') ?? '';
+  const firstForwardedIp = xForwardedFor.split(',')[0]?.trim() ?? '';
+  const ip = firstForwardedIp || c.req.header('x-real-ip') || '127.0.0.1';
   const { success, limit, reset, remaining } = await ratelimit.limit(ip);
 
   c.header('X-RateLimit-Limit', limit.toString());
@@ -45,13 +56,20 @@ const ratelimitRegisto = hasRedis
   : null;
 
 export async function rateLimitRegisto(c: Context, next: Next) {
+  if (shouldBypassDevAuthLimits()) {
+    await next();
+    return;
+  }
+
   if (!ratelimitRegisto) {
     log.warn('Redis not configured, rate limiting skipped');
     await next();
     return;
   }
 
-  const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
+  const xForwardedFor = c.req.header('x-forwarded-for') ?? '';
+  const firstForwardedIp = xForwardedFor.split(',')[0]?.trim() ?? '';
+  const ip = firstForwardedIp || c.req.header('x-real-ip') || '127.0.0.1';
   const { success, limit, reset, remaining } = await ratelimitRegisto.limit(ip);
 
   c.header('X-RateLimit-Limit', limit.toString());

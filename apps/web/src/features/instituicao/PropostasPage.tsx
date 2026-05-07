@@ -72,7 +72,7 @@ export function PropostasPage() {
     { 
       header: 'Estado', 
       accessor: (prop: Proposta) => (
-        <Badge variant={prop.status === 'aceita' ? 'success' : prop.status === 'recusada' ? 'error' : 'warning'}>
+        <Badge variant={prop.status === 'aceite' ? 'success' : prop.status === 'recusada' ? 'error' : 'warning'}>
           {(prop.status ?? 'PENDENTE').toUpperCase()}
         </Badge>
       )
@@ -102,7 +102,7 @@ export function PropostasPage() {
           <div className="space-y-1">
             <label className="text-sm font-medium">Título da Proposta</label>
             <input 
-              className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
+              className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               placeholder="Ex: Convite para Estágio de Verão"
               value={titulo}
               onChange={(e) => { setTitulo(e.target.value); }}
@@ -111,7 +111,7 @@ export function PropostasPage() {
           <div className="space-y-1">
             <label className="text-sm font-medium">Estudante</label>
             <select 
-              className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
+              className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               value={selectedStudentId}
               onChange={(e) => { setSelectedStudentId(e.target.value); }}
             >
@@ -122,7 +122,7 @@ export function PropostasPage() {
           <div className="space-y-1">
             <label className="text-sm font-medium">Tipo de Proposta</label>
             <select 
-              className="flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
+              className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               value={tipo}
               onChange={(e) => { setTipo(e.target.value as PropostaTipo); }}
             >
@@ -135,7 +135,7 @@ export function PropostasPage() {
           <div className="space-y-1">
             <label className="text-sm font-medium">Mensagem / Descrição</label>
             <textarea 
-              className="flex min-h-[100px] w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
+              className="flex min-h-[100px] w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               placeholder="Mensagem..."
               value={mensagem}
               onChange={(e) => { setMensagem(e.target.value); }}

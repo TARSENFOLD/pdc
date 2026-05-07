@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/http';
-import { Button, Input } from '@/components/ui';
-import { AuthSplitLayout } from './AuthSplitLayout';
-import { CheckCircle, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Button, Input, PasswordInput } from '@/components/ui';
+import AuthSplitLayout from './AuthSplitLayout';
+import { CheckCircle, AlertTriangle } from 'lucide-react';
+import type { NeuralState } from '@/components/auth/NeuralConstellation';
 import type { RegistoInstituicaoPayload } from '@pdc/shared';
 
 const TIPOS = [
@@ -15,11 +16,19 @@ const TIPOS = [
   { value: 'outro', label: 'Outro' }
 ] as const;
 
+function isValidTipo(value: string): value is RegistoInstituicaoPayload['tipo'] {
+  return (TIPOS as readonly { value: string; label: string }[]).some((t) => t.value === value);
+}
+
 const REGIOES = [
-  'Bengo', 'Benguela', 'Bié', 'Cabinda', 'Cuando Cubango', 'Cuanza Norte', 
-  'Cuanza Sul', 'Cunene', 'Huambo', 'Huíla', 'Luanda', 'Lunda Norte', 
-  'Lunda Sul', 'Malanje', 'Moxico', 'Namibe', 'Uíge', 'Zaire'
+  'Bengo', 'Benguela', 'Bié', 'Cabinda', 'Cuando Cubango', 'Cuanza Norte',
+  'Cuanza Sul', 'Cunene', 'Huambo', 'Huíla', 'Luanda', 'Lunda Norte',
+  'Lunda Sul', 'Malanje', 'Moxico', 'Namibe', 'Uíge', 'Zaire',
 ] as const;
+type Regiao = typeof REGIOES[number];
+function isValidRegiao(value: string): value is Regiao {
+  return (REGIOES as readonly string[]).includes(value);
+}
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -35,6 +44,9 @@ export function RegistoInstituicaoPage() {
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docError, setDocError] = useState('');
   const [error, setError] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [neuralState, setNeuralState] = useState<NeuralState>('idle');
   const [success, setSuccess] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -69,7 +81,11 @@ export function RegistoInstituicaoPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    
+    if (form.password !== confirmPassword) {
+      setPasswordError('As palavras-passe não coincidem.');
+      return;
+    }
+    setPasswordError('');
     mutation.mutate({
       ...form,
       nomeInstituicao: form.nome,
@@ -80,10 +96,10 @@ export function RegistoInstituicaoPage() {
   if (success) {
     return (
       <AuthSplitLayout role="instituicao">
-        <div className="max-w-md rounded-2xl border border-border bg-surface p-8 text-center shadow-xl">
+        <div className="max-w-md rounded-2xl border border-ink-tertiary/10 bg-elevated p-8 text-center shadow-xl">
           <CheckCircle size={48} aria-hidden={true} className="text-emerald-500 mx-auto" />
-          <h1 className="mt-6 text-2xl font-bold text-text-primary">Registo submetido</h1>
-          <p className="mt-3 text-text-secondary">
+          <h1 className="mt-6 text-2xl font-bold text-ink-primary">Registo submetido</h1>
+          <p className="mt-3 text-ink-secondary">
             A vossa conta institucional será validada rigorosamente pela nossa equipa de conformidade. Receberão um email quando o acesso for libertado.
           </p>
           <Link to="/login" className="mt-8 inline-block rounded-xl bg-emerald-500 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.03] hover:bg-emerald-600">
@@ -95,10 +111,10 @@ export function RegistoInstituicaoPage() {
   }
 
   return (
-    <AuthSplitLayout role="instituicao">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8 shadow-sm">
-        <h1 className="text-2xl font-bold text-text-primary">Conta Institucional</h1>
-        <p className="mt-1 text-sm text-text-secondary">Publica experiências e atrai os melhores talentos para a tua instituição.</p>
+    <AuthSplitLayout role="instituicao" neuralState={neuralState}>
+      <div className="w-full max-w-md rounded-2xl border border-ink-tertiary/10 bg-elevated p-8 shadow-sm">
+        <h1 className="text-2xl font-bold text-ink-primary">Conta Institucional</h1>
+        <p className="mt-1 text-sm text-ink-secondary">Publica experiências e atrai os melhores talentos para a tua instituição.</p>
 
         <div className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-xs text-emerald-400 leading-relaxed">
           <AlertTriangle size={14} aria-hidden={true} className="inline-block mr-1.5 align-text-bottom" /> 
@@ -108,24 +124,47 @@ export function RegistoInstituicaoPage() {
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {error ? <div className="rounded-lg border border-error/20 bg-error/10 p-3 text-sm text-error">{error}</div> : null}
 
-          <Input label="Nome da instituição" required value={form.nome} onChange={(e) => { handleChange('nome', e.target.value); }} />
-          <Input label="NIF" required value={form.nif} placeholder="Ex: 5000123456" onChange={(e) => { handleChange('nif', e.target.value); }} />
-          <Input label="Email institucional" type="email" required value={form.email} onChange={(e) => { handleChange('email', e.target.value); }} />
-          <Input label="Palavra-passe" type="password" required minLength={8} placeholder="Mínimo 8 caracteres" value={form.password} onChange={(e) => { handleChange('password', e.target.value); }} />
+          <Input label="Nome da instituição" required value={form.nome}
+            onFocus={() => { setNeuralState('pulse'); }}
+            onBlur={() => { setNeuralState('idle'); }}
+            onChange={(e) => { handleChange('nome', e.target.value); }} />
+          <Input label="NIF" required value={form.nif} placeholder="Ex: 5000123456"
+            onFocus={() => { setNeuralState('align'); }}
+            onBlur={() => { setNeuralState('idle'); }}
+            onChange={(e) => { handleChange('nif', e.target.value); }} />
+          <Input label="Email institucional" type="email" required value={form.email}
+            onFocus={() => { setNeuralState('align'); }}
+            onBlur={() => { setNeuralState('idle'); }}
+            onChange={(e) => { handleChange('email', e.target.value); }} />
+          <PasswordInput id="inst-password" label="Palavra-passe" required minLength={8} placeholder="Mínimo 8 caracteres" value={form.password}
+            onFocus={() => { setNeuralState('encrypt'); }}
+            onBlur={() => { setNeuralState('idle'); }}
+            onChange={(e) => { handleChange('password', e.target.value); setPasswordError(''); }} />
+          <PasswordInput id="inst-password-confirm" label="Confirmar palavra-passe" required minLength={8} placeholder="Repete a palavra-passe" value={confirmPassword}
+            onFocus={() => { setNeuralState('focus'); }}
+            onBlur={() => { setNeuralState('idle'); }}
+            onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }} />
+          {passwordError && <p className="text-xs text-error font-medium">{passwordError}</p>}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-secondary">Tipo</label>
-              <select required value={form.tipo} onChange={(e) => { handleChange('tipo', e.target.value as RegistoInstituicaoPayload['tipo']); }}
-                className="flex h-10 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+              <label className="text-sm font-medium text-ink-secondary">Tipo</label>
+              <select required value={form.tipo}
+                onFocus={() => { setNeuralState('flow'); }}
+                onBlur={() => { setNeuralState('idle'); }}
+                onChange={(e) => { if (isValidTipo(e.target.value)) handleChange('tipo', e.target.value); }}
+                className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
                 {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-secondary">Região</label>
-              <select required value={form.regiao} onChange={(e) => { handleChange('regiao', e.target.value); }}
-                className="flex h-10 w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+              <label className="text-sm font-medium text-ink-secondary">Região</label>
+              <select required value={form.regiao}
+                onFocus={() => { setNeuralState('flow'); }}
+                onBlur={() => { setNeuralState('idle'); }}
+                onChange={(e) => { if (isValidRegiao(e.target.value)) handleChange('regiao', e.target.value); }}
+                className="flex h-10 w-full rounded-md border border-ink-tertiary/10 bg-elevated px-3 py-2 text-sm text-ink-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
                 <option value="">Seleciona…</option>
                 {REGIOES.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
@@ -133,9 +172,9 @@ export function RegistoInstituicaoPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-secondary">Documento de acreditação (PDF, máx 10 MB)</label>
+            <label className="text-sm font-medium text-ink-secondary">Documento de acreditação (PDF, máx 10 MB)</label>
             <input ref={fileRef} type="file" accept=".pdf" onChange={handleFileChange}
-              className="block w-full text-sm text-text-secondary file:mr-4 file:rounded-md file:border-0 file:bg-emerald-500/10 file:text-emerald-400 file:px-3 file:py-2 file:text-xs file:font-bold hover:file:bg-emerald-500/20 cursor-pointer" />
+              className="block w-full text-sm text-ink-secondary file:mr-4 file:rounded-md file:border-0 file:bg-emerald-500/10 file:text-emerald-400 file:px-3 file:py-2 file:text-xs file:font-bold hover:file:bg-emerald-500/20 cursor-pointer" />
             {docFile ? <p className="text-xs font-medium text-emerald-500 mt-1">✓ {docFile.name}</p> : null}
             {docError ? <p className="text-xs text-error mt-1">{docError}</p> : null}
           </div>
@@ -143,11 +182,11 @@ export function RegistoInstituicaoPage() {
           <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600" isLoading={mutation.isPending}>Registar Instituição →</Button>
         </form>
 
-        <p className="mt-8 text-center text-sm text-text-muted">
-          <Link to="/criar-conta" className="inline-flex items-center gap-1 text-emerald-400 hover:underline">
-            <ArrowLeft size={16} aria-hidden={true} />
-            Voltar para escolha de perfil
-          </Link>
+        <p className="mt-6 text-center text-sm text-ink-tertiary">
+          Não é uma instituição?{' '}
+          <Link to="/criar-conta/estudante" className="text-accent font-semibold hover:underline">Estudante</Link>
+          {' '}|{' '}
+          <Link to="/criar-conta/mentor" className="text-accent font-semibold hover:underline">Mentor</Link>
         </p>
       </div>
     </AuthSplitLayout>

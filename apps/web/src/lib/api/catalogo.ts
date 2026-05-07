@@ -1,8 +1,8 @@
 import { http } from './http';
 import {
-  CursoPublico, SimulacaoPublica,
-  MentorPublico, InstituicaoPublica, PerfilPublicoBasico, PerfilCompleto,
-  ExplorarResultado, CatalogoMeta,
+  CursoPublico, SimulacaoPublica, ExperienciaPublica,
+  MentorPublico, InstituicaoPublica, PerfilCompleto,
+  ExplorarResultado, CatalogoMeta, ExplorarItemTipo, AreaVocacional, PerfilPublicoBasico, Role,
 } from '@pdc/shared';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -24,8 +24,10 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
 interface BaseFilters { page?: number; pageSize?: number; search?: string; area?: string }
 interface CursoFiltersPublic extends BaseFilters { nivel?: string; gratuito?: boolean }
 interface SimulacaoFiltersPublic extends BaseFilters { tipo?: string; nivel?: string }
+interface ExperienciaFiltersPublic extends BaseFilters { nivel?: string }
 interface InstituicaoFiltersPublic extends BaseFilters { tipo?: string; regiao?: string }
-interface ExplorarParams extends BaseFilters { tipo?: string }
+interface ExplorarParams extends Omit<BaseFilters, 'area'> { tipo?: ExplorarItemTipo; area?: AreaVocacional }
+interface PessoaFiltersPublic extends BaseFilters { role?: Extract<Role, 'estudante' | 'mentor'> }
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 
@@ -38,6 +40,11 @@ export const catalogoApi = {
 
   getSimulacoes: (f?: SimulacaoFiltersPublic) =>
     http.get<CatalogoResponse<SimulacaoPublica>>(`/catalogo/simulacoes${qs({ ...f })}`),
+
+  getExperiencias: (f?: ExperienciaFiltersPublic) => {
+    const { pageSize, ...rest } = f ?? {};
+    return http.get<CatalogoResponse<ExperienciaPublica>>(`/catalogo/experiencias${qs({ ...rest, limit: pageSize })}`);
+  },
 
   getSimulacao: (slug: string) =>
     http.get<DetailResponse<SimulacaoPublica>>(`/catalogo/simulacoes/${slug}`).then((r) => r.data),
@@ -54,9 +61,14 @@ export const catalogoApi = {
   getInstituicao: (slug: string) =>
     http.get<DetailResponse<InstituicaoPublica>>(`/catalogo/instituicoes/${slug}`).then((r) => r.data),
 
+  getPessoas: (f?: PessoaFiltersPublic) => {
+    const { pageSize, ...rest } = f ?? {};
+    return http.get<CatalogoResponse<PerfilPublicoBasico & { area?: string }>>(`/catalogo/pessoas${qs({ ...rest, limit: pageSize })}`);
+  },
+
   getPerfilPublico: (id: string) =>
     http.get<DetailResponse<PerfilCompleto>>(`/catalogo/perfil/${id}`).then((r) => r.data),
 
   explorar: (p?: ExplorarParams) =>
-    http.get<CatalogoResponse<ExplorarResultado>>(`/catalogo/explorar${qs({ ...p })}`),
+    http.get<ExplorarResultado>(`/catalogo/explorar${qs({ ...p })}`),
 };

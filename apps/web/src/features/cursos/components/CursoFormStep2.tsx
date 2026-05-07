@@ -28,19 +28,19 @@ export const CursoFormStep2 = ({ modulos, setModulos }: Props) => {
       className="space-y-6"
     >
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-[12px] font-black text-text-primary uppercase tracking-[0.2em]">Estrutura de Módulos</h3>
+        <h3 className="text-[12px] font-black text-ink-primary uppercase tracking-[0.2em]">Estrutura de Módulos</h3>
         <Button onClick={() => { setModulos([...modulos, { titulo: '', itens: [] }]); }} variant="secondary" className="rounded-full">
           <Plus size={16} className="mr-2" /> Adicionar Módulo
         </Button>
       </div>
       
       {modulos.length === 0 ? (
-        <Card className="p-12 flex flex-col items-center justify-center text-center bg-surface-raised/50 border-dashed border-2 border-border rounded-[40px]">
-          <FileText size={48} className="text-text-muted opacity-20 mb-4" />
-          <p className="text-text-secondary font-medium">A tua trilha está vazia. Começa a adicionar módulos de aprendizagem.</p>
+        <Card className="p-12 flex flex-col items-center justify-center text-center bg-elevated/50 border-dashed border-2 border-ink-tertiary/10 rounded-[40px]">
+          <FileText size={48} className="text-ink-tertiary opacity-20 mb-4" />
+          <p className="text-ink-secondary font-medium">A tua trilha está vazia. Começa a adicionar módulos de aprendizagem.</p>
         </Card>
       ) : modulos.map((m, i) => (
-        <Card key={i} className="p-6 bg-surface border-border rounded-3xl space-y-4">
+        <Card key={i} className="p-6 bg-elevated border-ink-tertiary/10 rounded-3xl space-y-4">
           <div className="flex gap-4">
             <div className="h-10 w-10 rounded-xl bg-accent text-white flex items-center justify-center font-black">
               {i + 1}
@@ -66,8 +66,8 @@ export const CursoFormStep2 = ({ modulos, setModulos }: Props) => {
           {/* Itens do Módulo */}
           <div className="pl-14 space-y-3">
             {modulos[i]?.itens.map((item, itemIdx) => (
-              <div key={itemIdx} className="flex gap-3 items-center bg-surface-raised/30 p-3 rounded-xl border border-border">
-                <FileText size={14} className="text-text-muted" />
+              <div key={itemIdx} className="flex gap-3 items-center bg-elevated/30 p-3 rounded-xl border border-ink-tertiary/10">
+                <FileText size={14} className="text-ink-tertiary" />
                 <Input 
                   placeholder="Título da Lição" 
                   value={item.titulo} 
@@ -82,7 +82,7 @@ export const CursoFormStep2 = ({ modulos, setModulos }: Props) => {
                   }}
                 />
                 <select 
-                  className="bg-transparent text-[10px] font-bold uppercase text-text-muted outline-none"
+                  className="bg-transparent text-[10px] font-bold uppercase text-ink-tertiary outline-none"
                   value={item.tipo}
                   onChange={e => {
                     const newM = [...modulos];

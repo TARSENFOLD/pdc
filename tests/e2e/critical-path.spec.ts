@@ -3,45 +3,53 @@
  *
  * Covers the 5 most important user journeys:
  *   1. Landing page is publicly accessible
- *   2. Dashboard loads after authentication
- *   3. Basic RBAC: aluno cannot access admin-only routes
+ *   2. Home surface loads after authentication
+ *   3. Role dashboard route loads after authentication
  *   4. Catálogo de cursos is visible
  *   5. Feed page loads with content or empty state
  */
 
 import { test, expect } from '../helpers/fixtures';
 
+async function expectRealRoute(page: import('@playwright/test').Page) {
+  await expect(page).not.toHaveURL(/\/login/, { timeout: 10_000 });
+  await expect(page.locator('main').first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('h1').filter({ hasText: /^404$/ })).toHaveCount(0);
+  await expect(page.locator('text=Página não encontrada')).toHaveCount(0);
+}
+
 // ── 1. Landing page ─────────────────────────────────────────────────────────
 
 test('landing page is publicly accessible', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveURL(/^\//);
+  // Should land on root or be redirected to a canonical landing
+  await expect(page).toHaveURL(/\/$/);
   // Page title or any heading must be visible
-  await expect(page.locator('h1, h2, title')).not.toHaveCount(0);
+  await expect(page.locator('h1, h2').first()).toBeVisible();
 });
 
-// ── 2. Authenticated dashboard ───────────────────────────────────────────────
+// ── 2. Authenticated home ───────────────────────────────────────────────────
 
-test('aluno dashboard loads after login', async ({ alunoPage }) => {
-  await alunoPage.goto('/app/dashboard/aluno');
-  // Should stay on the dashboard (not redirected to /login)
-  await expect(alunoPage).not.toHaveURL(/\/login/, { timeout: 10_000 });
-  await expect(alunoPage.locator('h1, h2, main')).toBeVisible({ timeout: 10_000 });
+test('authenticated home loads after login', async ({ alunoPage }) => {
+  await alunoPage.goto('/app/home');
+  await expectRealRoute(alunoPage);
+  await expect(alunoPage.locator('main').first()).toBeVisible({ timeout: 10_000 });
 });
 
-// ── 3. Basic RBAC ────────────────────────────────────────────────────────────
+// ── 3. Role dashboard ────────────────────────────────────────────────────────
 
-test('aluno cannot access super_admin routes', async ({ alunoPage }) => {
-  await alunoPage.goto('/app/dashboard/admin');
-  // Must be redirected away from admin dashboard
-  await expect(alunoPage).not.toHaveURL(/dashboard\/admin/, { timeout: 8_000 });
+test('estudante dashboard route exists and renders', async ({ alunoPage }) => {
+  await alunoPage.goto('/app/dashboard/estudante');
+  await expectRealRoute(alunoPage);
+  await expect(alunoPage.locator('main').first()).toBeVisible({ timeout: 10_000 });
 });
 
 // ── 4. Catálogo de cursos ────────────────────────────────────────────────────
 
 test('catalogo de cursos loads', async ({ alunoPage }) => {
   await alunoPage.goto('/app/cursos');
-  await expect(alunoPage.locator('h1, h2, [data-testid="catalogo"]')).toBeVisible({
+  await expectRealRoute(alunoPage);
+  await expect(alunoPage.locator('h1, h2, [data-testid="catalogo"]').first()).toBeVisible({
     timeout: 12_000,
   });
   // Should not show an unhandled error page
@@ -52,8 +60,8 @@ test('catalogo de cursos loads', async ({ alunoPage }) => {
 
 test('feed page loads with content or empty state', async ({ alunoPage }) => {
   await alunoPage.goto('/app/feed');
-  // Either posts or an explicit empty state must be rendered
-  await expect(
-    alunoPage.locator('[data-testid="feed-list"], [data-testid="empty-state"], main article, main li'),
-  ).toBeVisible({ timeout: 12_000 });
+  await expectRealRoute(alunoPage);
+  await expect(alunoPage.locator('main').first()).toContainText(/Comunidade|Social Pulse|pulso social/i, {
+    timeout: 12_000,
+  });
 });

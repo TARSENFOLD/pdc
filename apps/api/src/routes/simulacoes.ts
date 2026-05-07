@@ -58,8 +58,8 @@ simulacaoRoutes.get('/', zValidator('query', simQuerySchema), async (c) => {
   }
 });
 
-// GET /simulacoes/minhas — simulações do mentor
-simulacaoRoutes.get('/minhas', checkRole(['mentor', 'super_admin']), async (c) => {
+// GET /simulacoes/minhas — simulações do mentor/instituicao
+simulacaoRoutes.get('/minhas', checkRole(['mentor', 'instituicao', 'super_admin']), async (c) => {
   const { id } = c.get('user');
   try {
     const res = await strapiGet<StrapiSimulacao>('/simulacoes', {
@@ -111,7 +111,7 @@ simulacaoRoutes.get('/:id', async (c) => {
 });
 
 // POST /simulacoes — criar simulação
-simulacaoRoutes.post('/', checkRole(['mentor', 'super_admin']), zValidator('json', CriarSimulacaoPayloadSchema), async (c) => {
+simulacaoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zValidator('json', CriarSimulacaoPayloadSchema), async (c) => {
   const payload = c.req.valid('json');
   const { id: autorId } = c.get('user');
   
@@ -124,14 +124,17 @@ simulacaoRoutes.post('/', checkRole(['mentor', 'super_admin']), zValidator('json
     });
 
     // G15: Impacto no Ecossistema
-    await eventBus.publishWithOutbox(DomainEventName.SIMULACAO_CRIADA, {
+    const event = await eventBus.publishWithOutbox(DomainEventName.SIMULACAO_CRIADA, {
       simulacaoId: res.data.id,
       autorId,
       titulo: payload.titulo,
       area: payload.area
     });
 
-    return c.json(res, 201);
+    return c.json({
+      ...res.data,
+      eventId: event.id
+    }, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -139,7 +142,7 @@ simulacaoRoutes.post('/', checkRole(['mentor', 'super_admin']), zValidator('json
 });
 
 // PUT /simulacoes/:id — editar simulação
-simulacaoRoutes.put('/:id', checkRole(['mentor', 'super_admin']), zValidator('json', CriarSimulacaoPayloadSchema.partial()), async (c) => {
+simulacaoRoutes.put('/:id', checkRole(['mentor', 'instituicao', 'super_admin']), zValidator('json', CriarSimulacaoPayloadSchema.partial()), async (c) => {
   const id = c.req.param('id');
   const payload = c.req.valid('json');
   const user = c.get('user');
@@ -163,7 +166,7 @@ simulacaoRoutes.put('/:id', checkRole(['mentor', 'super_admin']), zValidator('js
 });
 
 // PATCH /simulacoes/:id/estado — transição de estado editorial
-simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'moderador', 'super_admin']), zValidator('json', z.object({
+simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'moderador', 'super_admin']), zValidator('json', z.object({
   estado: z.enum(['review', 'published', 'archived']),
 })), async (c) => {
   const id = c.req.param('id');
@@ -180,13 +183,14 @@ simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'moderador', 'super_ad
 
     const estadoActual = sim.estado;
 
-    // Validar transições permitidas (similar a cursos)
-    const transicaoPermitida = (actual: string, novo: string, role: string): boolean => {
+    // Validar transições permitidas
+    const transicaoPermitida = (atual: string, novo: string, role: string): boolean => {
       if (role === 'super_admin') return true;
-      if (role === 'moderador') return novo === 'archived' && actual === 'published';
-      if (role === 'mentor') {
-        if (actual === 'draft' && novo === 'review') return true;
-        if (actual === 'approved' && novo === 'published') return true;
+      if (role === 'moderador') return novo === 'archived' && atual === 'published';
+      if (role === 'mentor' || role === 'instituicao') {
+        if (atual === 'draft' && novo === 'review') return true;
+        if (atual === 'approved' && novo === 'published') return true;
+        if (atual === 'draft' && novo === 'archived') return true;
       }
       return false;
     };
@@ -248,7 +252,7 @@ simulacaoRoutes.post('/tentativas', checkRole(['estudante']), zValidator('json',
       'filters[perfil][id][$eq]': perfilId,
       'filters[simulacao][id][$eq]': simulacaoId,
     });
-    const tentativaNum = (prevTentativas.meta?.pagination?.total ?? 0) + 1;
+    const tentativaNum = prevTentativas.meta.pagination.total + 1;
 
     // D22: Usamos dataInicio (PT) para alinhar com o domínio canónico (ADR-012).
     // Strapi tem aliases startedAt/finishedAt, mas BFF prefere PT.
@@ -257,14 +261,14 @@ simulacaoRoutes.post('/tentativas', checkRole(['estudante']), zValidator('json',
       perfil: perfilId,
       dataInicio: new Date().toISOString(),
       tentativaNum,
-      executorTipo: `tipo${tipo}`,
+      executorTipo: `tipo${tipo.toString()}`,
       status: 'em_progresso',
     });
 
     // G15: Impacto no Ecossistema
     await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_INICIADA, {
       tentativaId: resPost.data.id,
-      perfilId: String(perfilId),
+      perfilId,
       simulacaoId
     });
 
@@ -287,12 +291,14 @@ simulacaoRoutes.put('/tentativas/:id', checkRole(['estudante']), zValidator('jso
 
   // G2-T3 Anti-Fraude: Derivação de score no BFF SEMPRE.
   // Qualquer score cliente-side é ignorado. O Oráculo é soberano.
-  const phi = (Number(metadata?.focusStability) || 50) / 100;
+  const parsedFocus = Number(metadata?.focusStability);
+  const rawFocus = Number.isNaN(parsedFocus) ? 50 : parsedFocus;
+  const phi = Math.max(0, Math.min(100, rawFocus)) / 100;
   const resFluidity = analyzeFluidity(phi);
   const resFocus = analyzeFocus(phi);
 
-  // Média ponderada (DNA Biomecânico)
-  const finalScore = (resFluidity.score * 0.4) + (resFocus.score * 0.6);
+  // Média simples (spec: (analyzeFluidity + analyzeFocus) / 2)
+  const finalScore = (resFluidity.score + resFocus.score) / 2;
   log.info({ tentativaId, finalScore, phi }, 'Score Soberano derivado no BFF');
 
   try {
@@ -325,7 +331,7 @@ simulacaoRoutes.put('/tentativas/:id', checkRole(['estudante']), zValidator('jso
       await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_CONCLUIDA, {
         tentativaId,
         score: finalScore || 0,
-        perfilId: String(perfilIdReal),
+        perfilId: perfilIdReal,
         area
       });
     }

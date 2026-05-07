@@ -18,10 +18,8 @@ const NOMES = [
 export const SEED_DEFAULT: readonly string[] = [
   'Elisa completou Diagnostico Clinico e entrou no Squad Saude.',
   'Nelson finalizou Mini-Bridge e recebeu convite para mentoraria.',
-  'Sara subiu 12% em afinidade com Telecom apos simulacao de redes.',
   'Tomas validou rota em Energia e recebeu recomendacao de curso tecnico.',
   'Marta concluiu desafio de Gestao e abriu trilha para estagio local.',
-  'Nuno ajustou objetivo para Ciencia de Dados apos feedback IA.',
 ];
 
 // ─── Pool por área vocacional ────────────────────────────────────────────────
@@ -77,7 +75,7 @@ const POOL_BY_AREA: Record<string, readonly string[]> = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-export const PULSE_LIMIT = 6;
+export const PULSE_LIMIT = 4;
 
 function pickRandom<T>(arr: readonly T[]): T {
   const item = arr[Math.floor(Math.random() * arr.length)];

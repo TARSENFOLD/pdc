@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - develop
     paths:
       - 'apps/edge/**'
       - 'packages/shared/**'
@@ -28,10 +29,23 @@ jobs:
       - name: Typecheck Edge Worker
         run: npm run typecheck -w @pdc/edge
 
-      - name: Deploy to Cloudflare
+      - name: Test Edge Worker
+        run: npm run test -w @pdc/edge
+
+      - name: Deploy to Cloudflare (staging)
+        if: github.ref == 'refs/heads/develop'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           workingDirectory: 'apps/edge'
-          command: deploy
+          command: deploy --env staging
+
+      - name: Deploy to Cloudflare (production)
+        if: github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          workingDirectory: 'apps/edge'
+          command: deploy --env production

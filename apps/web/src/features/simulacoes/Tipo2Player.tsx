@@ -87,35 +87,36 @@ export const Tipo2Player = ({ simulacao }: Props) => {
       
       {/* ── Top HUD: Operational Control ── */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-         <Card className="p-4 bg-surface-alt border-white/5 flex items-center gap-4">
+         <Card className="p-4 bg-recessed border-white/5 flex items-center gap-4">
             <div className="h-10 w-10 rounded-xl bg-accent/5 flex items-center justify-center text-accent">
                <Zap size={20} className="animate-pulse" />
             </div>
             <div>
-               <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">Tempo de Missão</p>
-               <p className="font-mono text-xl font-black text-text-primary">{formatTime(seconds)}</p>
+               <p className="text-[9px] font-black uppercase tracking-widest text-ink-tertiary">Tempo de Missão</p>
+               <p className="font-mono text-xl font-black text-ink-primary">{formatTime(seconds)}</p>
             </div>
          </Card>
 
-         <Card className="p-4 bg-surface-alt border-white/5 flex items-center gap-4">
+         <Card className="p-4 bg-recessed border-white/5 flex items-center gap-4">
             <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${focusLost > 70 ? 'bg-success/5 text-success' : 'bg-error/5 text-error'}`}>
                <Brain size={20} />
             </div>
             <div>
-               <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">Estabilidade de Foco</p>
-               <p className="font-mono text-xl font-black text-text-primary">{focusLost}%</p>
+               <p className="text-[9px] font-black uppercase tracking-widest text-ink-tertiary">Estabilidade de Foco</p>
+               <p className="font-mono text-xl font-black text-ink-primary">{focusLost}%</p>
             </div>
          </Card>
 
          <div className="md:col-span-2 flex items-center justify-end gap-4">
             <div className="text-right hidden sm:block">
-               <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">Estado da Ligação</p>
+               <p className="text-[9px] font-black uppercase tracking-widest text-ink-tertiary">Estado da Ligação</p>
                <p className="text-xs font-bold text-success flex items-center justify-end gap-1">
                  <ShieldAlert size={12} /> Criptografia de Elite Ativa
                </p>
             </div>
             <Button 
-              onClick={() => { void handleConcluir(); }} 
+              onClick={() => { void handleConcluir(); }}
+              data-testid="concluir-missao-btn"
               className="h-14 px-8 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs hover:scale-[1.02] shadow-xl shadow-accent/20"
             >
               Finalizar Missão <ChevronRight size={16} className="ml-2" />
@@ -149,7 +150,7 @@ export const Tipo2Player = ({ simulacao }: Props) => {
                   initial={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={APPLE_SPRING}
-                  className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background"
+                  className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-canvas"
                 >
                   <Spinner size="lg" />
                   <p className="mt-6 text-[10px] font-black text-accent uppercase tracking-[0.3em] animate-pulse">
@@ -167,8 +168,8 @@ export const Tipo2Player = ({ simulacao }: Props) => {
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full space-y-4">
-            <Monitor size={48} className="text-text-muted opacity-20" />
-            <p className="text-[10px] font-black text-text-muted uppercase tracking-widest">Aguardando sinal do laboratório...</p>
+            <Monitor size={48} className="text-ink-tertiary opacity-20" />
+            <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Aguardando sinal do laboratório...</p>
           </div>
         )}
       </Card>
@@ -176,14 +177,14 @@ export const Tipo2Player = ({ simulacao }: Props) => {
       {/* ── Footer Stats ── */}
       <footer className="flex items-center justify-between px-2">
          <div className="flex gap-6">
-            <div className="flex items-center gap-2 text-[9px] font-bold text-text-muted uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-[9px] font-bold text-ink-tertiary uppercase tracking-widest">
                <Lock size={12} className="text-accent" /> Canal SSL/TLS 1.3
             </div>
-            <div className="flex items-center gap-2 text-[9px] font-bold text-text-muted uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-[9px] font-bold text-ink-tertiary uppercase tracking-widest">
                <Zap size={12} className="text-accent" /> Latência: 18ms (Edge)
             </div>
          </div>
-         <p className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
+         <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-[0.2em]">
            Sistema v2.2 :: Autoridade de Diagnóstico de Mérito
          </p>
       </footer>

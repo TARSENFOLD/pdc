@@ -2,11 +2,16 @@ import { SignJWT, jwtVerify } from 'jose';
 import { redis } from '../../lib/redis.js';
 import { env } from '../../lib/env.js';
 import { createHash, randomUUID } from 'node:crypto';
-import type { User, Role } from '@pdc/shared';
+import { type User, type Role, type Conquista, RoleSchema, normalizeTipo } from '@pdc/shared';
 import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
+import { z } from 'zod';
 
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
+
+const RefreshPayloadSchema = z.object({
+  sub: z.string().min(1),
+});
 
 interface StrapiUser {
   id: number | string;
@@ -28,23 +33,19 @@ interface StrapiPerfilData {
   bio?: string;
   reputacao?: number;
   foto?: { url?: string } | null;
+  areasInteresse?: string[];
+  conquistas?: Conquista[];
 }
 
-const VALID_ROLES: Set<string> = new Set([
-  'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin', 'patrocinador',
-]);
-
 function resolveRole(strapiRoleName: string | undefined, perfilTipo: string | undefined): Role {
-  if (perfilTipo && VALID_ROLES.has(perfilTipo)) {
-    return perfilTipo as Role;
+  if (perfilTipo) {
+    const parsed = RoleSchema.safeParse(perfilTipo);
+    if (parsed.success) return parsed.data;
   }
-  const normalized = strapiRoleName?.toLowerCase();
-  
-  // Mapeamento de legado/apelidos para canónico
-  if (normalized === 'estudante') return 'estudante';
-
-  if (normalized && VALID_ROLES.has(normalized)) {
-    return normalized as Role;
+  if (strapiRoleName) {
+    const lower = strapiRoleName.toLowerCase();
+    if (lower === 'admin' || lower === 'super admin') return 'super_admin';
+    return normalizeTipo(lower);
   }
   return 'estudante';
 }
@@ -82,7 +83,9 @@ export const authService = {
   async verifyRefreshToken(token: string): Promise<{ userId: string } | null> {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
-      const userId = payload.sub as string;
+      const payloadResult = RefreshPayloadSchema.safeParse(payload);
+      if (!payloadResult.success) return null;
+      const userId = payloadResult.data.sub;
       const hash = hashToken(token);
       const exists = await redis.get(`refresh_token:${userId}:${hash}`);
       return exists ? { userId } : null;
@@ -92,8 +95,9 @@ export const authService = {
   },
 
   async login(email: string, password: string): Promise<User> {
+    const normalizedEmail = email.toLowerCase().trim();
     const data = await strapiPostRaw<{ user: StrapiUser }>('/auth/local', {
-      identifier: email,
+      identifier: normalizedEmail,
       password,
     });
     return this.getUserById(data.user.id.toString());
@@ -134,26 +138,35 @@ export const authService = {
 
     const resPerfil = await strapiGet<StrapiPerfilData>('/perfis', {
       'filters[userId][$eq]': id,
-      'populate': 'foto',
+      'populate': ['foto', 'conquistas'],
     });
 
-    const perfilData = resPerfil.data?.[0] ?? null;
-    const reputationScore = perfilData?.id ? await getReputacao(String(perfilData.id)) : 0;
+    const perfilData = resPerfil.data[0] ?? null;
+    const reputationScore = perfilData === null ? 0 : await getReputacao(perfilData.id);
 
     return this.mapStrapiUser(user, perfilData, reputationScore);
   },
 
   async findOrCreateUser(email: string, nome: string): Promise<User> {
+    const normalizedEmail = email.toLowerCase().trim();
     const users = await strapiGetRaw<StrapiUser[]>('/users', {
-      'filters[email][$eq]': email,
+      'filters[email][$eq]': normalizedEmail,
       'populate': 'role',
     });
-    
-    if (users[0]) return this.getUserById(users[0].id.toString());
+
+    if (users[0]) {
+      if (users[0].confirmed === false) {
+        throw Object.assign(
+          new Error('Conta com este email existe mas não está verificada. Use email/password para iniciar sessão.'),
+          { status: 403 }
+        );
+      }
+      return this.getUserById(users[0].id.toString());
+    }
 
     const newUser = await strapiPostRaw<StrapiUser>('/users', {
-      email,
-      username: email,
+      email: normalizedEmail,
+      username: normalizedEmail,
       confirmed: true,
     });
     const userId = newUser.id.toString();
@@ -162,7 +175,7 @@ export const authService = {
       userId,
       nome,
       tipo: 'estudante',
-      email,
+      email: normalizedEmail,
       ativo: true,
     });
 
@@ -175,12 +188,16 @@ export const authService = {
       email: u.email,
       nome: perfil?.nome ?? u.nome ?? u.username,
       role: resolveRole(u.role?.name, perfil?.tipo),
-      perfilId: perfil?.id ? String(perfil.id) : undefined,
+      perfilId: perfil?.id,
       avatarUrl: perfil?.foto?.url ?? u.avatar?.url,
       reputacaoTier: getTier(reputationScore),
+      xp: 0,
+      reputacao: reputationScore,
       createdAt: u.createdAt ?? new Date().toISOString(),
       updatedAt: u.updatedAt ?? new Date().toISOString(),
       bio: perfil?.bio,
+      areasInteresse: perfil?.areasInteresse ?? [],
+      conquistas: perfil?.conquistas ?? [],
     };
   },
 };

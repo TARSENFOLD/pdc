@@ -38,9 +38,7 @@ export function ProfilePhotoUpload({ currentUrl, onSuccess }: Props) {
       // 1. Upload para R2/Strapi
       const uploadRes = await mediaApi.upload(file);
       
-      // 2. Atualizar perfil com a nova URL
-      // Nota: o mediaApi.upload deve retornar a URL ou o ID do ficheiro.
-      // O Strapi v5 prefere o ID do ficheiro no campo 'foto'.
+      // 2. Atualizar perfil com a URL pública do R2.
       await perfisApi.update({ avatarUrl: uploadRes.url });
 
       // 3. Invalidar caches globais para sincronização (The Nervous System)
@@ -61,7 +59,7 @@ export function ProfilePhotoUpload({ currentUrl, onSuccess }: Props) {
     
     setIsUploading(true);
     try {
-      await perfisApi.update({ avatarUrl: '' });
+      await perfisApi.update({ avatarUrl: null });
       await qc.invalidateQueries({ queryKey: ['auth', 'me'] });
       await qc.invalidateQueries({ queryKey: ['perfis', 'me'] });
       toast({ title: 'Foto removida' });
@@ -126,12 +124,12 @@ export function ProfilePhotoUpload({ currentUrl, onSuccess }: Props) {
       <input
         type="file"
         ref={fileInputRef}
-        onChange={handleUpload}
+        onChange={(event) => { void handleUpload(event); }}
         accept="image/*"
         className="hidden"
       />
       
-      <p className="text-[10px] text-text-muted font-medium max-w-[200px] text-center leading-relaxed">
+      <p className="text-[10px] text-ink-tertiary font-medium max-w-[200px] text-center leading-relaxed">
         Usa uma foto clara. O Oráculo utiliza a tua identidade visual para gerar autoridade no Feed.
       </p>
     </div>

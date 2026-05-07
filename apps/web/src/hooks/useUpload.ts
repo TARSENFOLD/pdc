@@ -1,11 +1,16 @@
 import { useState } from 'react';
-import { http } from '../api/http.js';
+import { UploadResultSchema, type UploadResult } from '@pdc/shared';
 
-interface UploadResult {
-  url: string;
-  key: string;
-  tamanhoBytes: number;
-  mimeType: string;
+function parseJson(text: string): unknown {
+  return JSON.parse(text) as unknown;
+}
+
+function getUploadErrorMessage(value: unknown): string {
+  if (typeof value === 'object' && value !== null && 'error' in value) {
+    const err = value as { error?: unknown };
+    if (typeof err.error === 'string') return err.error;
+  }
+  return 'Falha no upload';
 }
 
 export function useUpload() {
@@ -22,16 +27,10 @@ export function useUpload() {
       const formData = new FormData();
       formData.append('file', file);
 
-      // Usando fetch nativo para capturar progresso se necessário, 
-      // ou apenas o http helper se preferirmos simplicidade E2E.
-      // Para o Patamar Mundial, implementamos com XHR para progresso real.
-
-      return new Promise((resolve, reject) => {
+      return await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${import.meta.env.VITE_API_URL || '/api'}/media/upload`);
-
-        // Autenticação (buscamos o token do cookie ou localStorage se necessário, 
-        // mas o middleware verifyJwt espera o token nos cookies por padrão no nosso boilerplate)
+        const apiUrl = typeof import.meta.env.VITE_API_URL === 'string' ? import.meta.env.VITE_API_URL : '/api';
+        xhr.open('POST', `${apiUrl}/media/upload`);
         xhr.withCredentials = true;
 
         xhr.upload.onprogress = (event) => {
@@ -43,12 +42,17 @@ export function useUpload() {
 
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            const response = JSON.parse(xhr.responseText);
-            resolve(response);
+            const parsed = UploadResultSchema.safeParse(parseJson(xhr.responseText));
+            if (parsed.success) {
+              resolve(parsed.data);
+              return;
+            }
+            reject(new Error('Resposta inválida do servidor de upload'));
           } else {
-            const err = JSON.parse(xhr.responseText);
-            setError(err.error || 'Falha no upload');
-            reject(new Error(err.error));
+            const err = parseJson(xhr.responseText);
+            const message = getUploadErrorMessage(err);
+            setError(message);
+            reject(new Error(message));
           }
         };
 
@@ -59,8 +63,8 @@ export function useUpload() {
 
         xhr.send(formData);
       });
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro desconhecido');
       return null;
     } finally {
       setIsUploading(false);

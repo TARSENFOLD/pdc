@@ -1,0 +1,105 @@
+{
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "confirm": "Confirm",
+    "search": "Search",
+    "filter": "Filter",
+    "loading": "Loading…",
+    "retry": "Try again"
+  },
+  "nav": {
+    "inicio": "Home",
+    "aprender": "Learn",
+    "explorar": "Explore",
+    "meu_futuro": "My Future",
+    "comunidade": "Community",
+    "estudio_mentor": "Mentor Studio",
+    "gestao_institucional": "Institutional Management",
+    "autoridade": "Authority"
+  },
+  "sidebar": {
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar"
+  },
+  "errors": {
+    "generic": "An error occurred. Please try again.",
+    "not_found": "Page not found.",
+    "unauthorized": "You don't have permission to access this page.",
+    "network": "Network error. Please check your connection."
+  },
+  "auth": {
+    "onboarding": {
+      "badge": "PDC — Onboarding",
+      "title": "How do you want to use PDC?",
+      "subtitle": "Choose your profile to personalise your decision infrastructure."
+    },
+    "roles": {
+      "student": {
+        "title": "Student",
+        "desc": "Discover your vocation and explore careers with AI.",
+        "features": [
+          "Vocational simulations",
+          "AI vocational profile",
+          "Personalised mentorships",
+          "Courses and certificates"
+        ]
+      },
+      "mentor": {
+        "title": "Mentor",
+        "desc": "Guide students and share your knowledge.",
+        "features": [
+          "Create courses and simulations",
+          "Manage mentees",
+          "Impact analytics",
+          "Professional reputation"
+        ]
+      },
+      "institution": {
+        "title": "Institution",
+        "desc": "Attract talent and showcase your courses.",
+        "features": [
+          "Institutional page",
+          "Publish experiences",
+          "Proposals to students",
+          "Drop-out reports"
+        ]
+      }
+    },
+    "common": {
+      "start": "Get started",
+      "login_link_prefix": "Already have an account?",
+      "login_link_action": "Sign in now"
+    },
+    "login": "Sign in",
+    "logout": "Sign out",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "forgot_password": "Forgot your password?",
+    "login_page": {
+      "title": "Login.",
+      "subtitle": "Welcome back to your future.",
+      "email_label": "Academic Identification",
+      "password_label": "Access Key",
+      "submit_loading": "Processing...",
+      "submit": "Access Platform",
+      "divider": "or",
+      "google_cta": "Continue with Google",
+      "linkedin_cta": "Continue with LinkedIn",
+      "recover_password_link": "Recover password",
+      "panel_headline": "Inside the Course",
+      "panel_subline": "The whole academic universe, tailored to you.",
+      "register_link": "Create academic account",
+      "error_generic": "Error signing in. Please check your credentials."
+    }
+  }
+}

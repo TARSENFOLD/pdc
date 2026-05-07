@@ -7,6 +7,7 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
   const accessToken = 'fake-jwt-token';
   const mockScore: LtiScore = {
     userId: 'user-456',
+    activityId: 'activity-123',
     scoreGiven: 8.5,
     scoreMaximum: 10,
     comment: 'Excelente desempenho no Oráculo.',
@@ -60,7 +61,11 @@ describe('ltiAgs Characterization Tests (W0-T8)', () => {
     await ltiAgsService.sendScore(lineitemUrl, mockScore, accessToken);
 
     const callArgs = fetchSpy.mock.calls[0];
-    const body = JSON.parse(callArgs?.[1]?.body as string);
+    const bodyText = callArgs?.[1]?.body;
+    if (typeof bodyText !== 'string') {
+      throw new Error('Corpo do request LTI AGS não capturado');
+    }
+    const body: unknown = JSON.parse(bodyText);
 
     expect(body).toEqual({
       userId: mockScore.userId,

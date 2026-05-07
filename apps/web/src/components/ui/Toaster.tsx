@@ -14,9 +14,9 @@ export function Toaster() {
         <Toast 
           key={id} 
           {...props} 
-          title={title} 
-          description={description} 
-          action={action} 
+          {...(title ? { title } : {})}
+          {...(description ? { description } : {})}
+          {...(action ? { action } : {})}
         />
       ))}
       <ToastViewport />

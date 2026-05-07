@@ -142,6 +142,9 @@ O PDC tem de parecer um **instrumento científico de elite global** — onde a a
 --radius-asym-b: 6px 18px 6px 18px
 ```
 
+> [!WARNING]
+> **ANTI-PADRÃO (Estilo Minecraft):** É ESTRITAMENTE PROIBIDO o uso de `rounded-2xl` ou `rounded-3xl` conjugado com fundos rígidos (`bg-elevated`). A UI deve ser fluída, respirar com `bg-canvas` e usar dividers (`border-t`) ou pílulas subtis. Manter sempre `rounded-md` ou `rounded-lg` no máximo para cartões estruturais. O excesso de caixas estilo "bloco" mata o visual Soul & Elite.
+
 <user_quoted_section>Regra das Bordas Assimétricas (subliminar Kente/Adinkra): apenas em momentos de autoridade — CTA primário do hero, badge de conquista milestone, card de score do Perfil Vocacional, selo "Aptidão Validada". Misturar A e B numa página dá assimetria deliberada sem parecer aleatório.</user_quoted_section>
 
 ### 3.8 Sombras (elevação suave, sem dramatismo)
@@ -1021,4 +1024,24 @@ flowchart TD
 | Hub de Match Terminal | Terminal de Oportunidades |
 | Threaded Insights | Notas da Tina |
 
-*Última validação: 20 de Abril de 2026.*
+## 9. Dívida de Implementação Soul & Elite (identificada em auditoria)
+
+> **Origem:** T-AUD-MASTER · T-AUD-2/W2.2 · T-AUD-8/W6.1 · 2026-04-29
+
+Os seguintes componentes foram auto-declarados `FIXME: STUB AGENT-GENERATED` no código e **não implementam** os primitivos Soul & Elite desta spec (GlassCard, BentoGrid, Spring physics, AspirationalEmpty):
+
+| Ficheiro | Primitivo Soul & Elite em falta | Consumidores |
+| --- | --- | --- |
+| `components/dashboard/ContentTypeCTAGrid.tsx` | `GlassCard` + CTAs com `AsymmetricButton` | 4 dashboards |
+| `components/catalogo/CatalogoGridShell.tsx` | `AnimatePresence` skeleton + `AspirationalEmpty` | 8 catálogos |
+| `components/catalogo/ContentCard.tsx` | `GlassCard` interactivo com Spring hover | 8 catálogos |
+| `components/catalogo/CatalogoFilterBar.tsx` | `aria-label` + tokens canónicos | 8 catálogos |
+| `components/layout/BootstrapErrorScreen.tsx` | `GlassCard` + retry progress + Spring | BootstrapContext |
+| `features/feed/PostComposer.tsx` | `BuilderShell` + `EcosystemImpactPanel` | feed |
+| `features/conquistas/ConquistaManualComposer.tsx` | `BuilderShell` + `EcosystemImpactPanel` | conquistas |
+| `features/home/HomePage.tsx` | `BentoGrid` home tiles | `/app/home` |
+
+**Prioridade de substituição:** `ContentTypeCTAGrid` (R-01) > `ContentCard`/`CatalogoGridShell` (W6.1) > `BootstrapErrorScreen` (W0.2) > `PostComposer`/`ConquistaComposer` (W4.8).
+
+*Última validação: 29 de Abril de 2026.*
+*Revisão T-DOC-05 (audit-report-master 2026-04-29): secção §9 adicionada com 8 STUBs que violam Soul & Elite. Anti-patterns intactos. Nenhum token legacy reabilitado.*

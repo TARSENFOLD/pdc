@@ -18,7 +18,7 @@ export function CourseMeritGuard({ register, watch }: Props) {
         <h2 className="text-xl font-bold">Gardião de Mérito</h2>
       </div>
 
-      <p className="text-xs text-text-secondary mb-8 leading-relaxed">
+      <p className="text-xs text-ink-secondary mb-8 leading-relaxed">
         Define os requisitos biomecânicos mínimos. O **Match Terminal** apenas sugerirá este curso a estudantes que provem este nível de performance.
       </p>
 
@@ -48,7 +48,7 @@ export function CourseMeritGuard({ register, watch }: Props) {
         </div>
       </div>
 
-      <div className="mt-8 p-4 rounded-xl bg-white/5 border border-white/5 text-[10px] text-text-muted italic">
+      <div className="mt-8 p-4 rounded-xl bg-white/5 border border-white/5 text-[10px] text-ink-tertiary italic">
         Rigor ADR-017: A validação é soberana e automática.
       </div>
     </Card>

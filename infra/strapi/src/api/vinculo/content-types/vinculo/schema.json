@@ -20,10 +20,10 @@
     "senderId": { "type": "string", "required": true },
     "receiverId": { "type": "string", "required": true },
     "connectionType": { "type": "string" },
-    "estado": {
+    "status": {
       "type": "enumeration",
-      "enum": ["pending", "connected", "declined"],
-      "default": "pending"
+      "enum": ["pendente", "aprovado", "rejeitado", "concluido"],
+      "default": "pendente"
     },
     "solicitante": {
       "type": "relation",
@@ -40,9 +40,10 @@
       "enum": ["aluno-mentor", "mentor-instituicao", "aluno-instituicao"]
     },
     "mensagem": { "type": "text", "maxLength": 300 },
-    "visibleOnProfile": { "type": "boolean", "default": true },
-    "documentos": { "type": "json" },
+    "documentoUrl": { "type": "string" },
+    "visibleOnProfile": { "type": "boolean", "default": false },
     "criadoEm": { "type": "datetime" },
-    "resolvidoEm": { "type": "datetime" }
+    "resolvidoEm": { "type": "datetime" },
+    "dataTerminacao": { "type": "datetime" }
   }
 }

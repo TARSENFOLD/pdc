@@ -17,10 +17,16 @@ Foco total em Estética "Soul & Elite", Acessibilidade e Performance.
 - **Performance**: Lighthouse score target ≥ 90.
 
 ## 🏃 Animações e Física
-- ** GSAP/Motion**: Use springs com `stiffness: 220, damping: 28` (Física Apple).
+- **motion/react**: Use springs com `stiffness: 220, damping: 28` (Física Apple).
+- **AnimatePresence**: Transições de rota e listas com `LayoutGroup`.
 - **Choreography**: Animações devem ser fluidas e narrativas, não bruscas.
+- **prefers-reduced-motion**: Sempre respeitado.
 
 ## 🛠️ Práticas de Código
 - **React Components**: Utilize `export function ComponentName()`.
 - **Hooks**: Documentação JSDoc obrigatória para novos hooks.
 - **Zod**: Toda entrada de formulário deve ser validada com schemas de `@pdc/shared`.
+- **Routing**: Dashboards em `/app/dashboard/:role` com `RoleGuard`. Home em `/app/home`.
+- **Imports**: Roles e tipos canónicos vindo de `@pdc/shared`, nunca definidos localmente.
+- **Perfil ≠ Dashboard**: Componentes de identidade pública (Perfil) nunca misturam com métricas privadas (Dashboard).
+- **Scores φ/R**: Nunca derivar no cliente — sempre consumir do BFF. Qualquer cálculo client-side é violação anti-fraude (D20-D22).

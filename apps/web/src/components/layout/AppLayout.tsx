@@ -1,46 +1,71 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { SidebarContent } from './Sidebar';
-import { TopBar } from './TopBar';
+import SidebarContent from './Sidebar';
+import TopBar from './TopBar';
 import { AppErrorBoundary } from '../ui/AppErrorBoundary';
 import { TinaChat } from '@/features/tina/TinaChat';
 import { useNotificacoes } from '@/lib/realtime/useNotificacoes';
 
 const SIDEBAR_WIDTH = 260;
+const SIDEBAR_COLLAPSED_WIDTH = 64;
+const SIDEBAR_STORAGE_KEY = 'sidebar:collapsed';
 
-export function AppLayout() {
+function loadCollapsed(): boolean {
+  try { return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'; } catch { return false; }
+}
+function saveCollapsed(v: boolean): void {
+  try { localStorage.setItem(SIDEBAR_STORAGE_KEY, String(v)); } catch { /* ignore */ }
+}
+
+/**
+ * AppLayout - Estrutura principal da aplicação.
+ * Unificada para usar tokens via Tailwind e suporte a acessibilidade (Reduced Motion).
+ */
+export default function AppLayout(): React.JSX.Element {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(loadCollapsed);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      saveCollapsed(next);
+      return next;
+    });
+  }, []);
   const location = useLocation();
   const reduced = useReducedMotion();
 
   useNotificacoes();
 
-  // Close drawer on route change
+  // Fecha o drawer em mudanças de rota
   useEffect(() => {
     setDrawerOpen(false);
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* ── Desktop sidebar (fixed) ── */}
-      <aside
-        className="hidden lg:flex"
-        style={{ width: SIDEBAR_WIDTH, minWidth: SIDEBAR_WIDTH }}
+    <div className="flex min-h-screen bg-[var(--surface-canvas)] text-[var(--ink-primary)] antialiased">
+      {/* ── Desktop sidebar (fixed, collapsible) ── */}
+      <motion.aside
+        className="hidden lg:flex shrink-0"
+        animate={{ width: sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
+        transition={reduced ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 280 }}
       >
-        <div
-          className="fixed top-0 bottom-0 flex flex-col border-r border-border bg-surface-alt shadow-2xl"
-          style={{ width: SIDEBAR_WIDTH }}
+        <motion.div
+          className="fixed top-0 bottom-0 flex flex-col border-r border-[var(--chrome-border)] bg-[var(--chrome-surface)] overflow-hidden"
+          animate={{ width: sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
+          transition={reduced ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 280 }}
         >
-          <SidebarContent />
-        </div>
-      </aside>
+          <SidebarContent collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
+        </motion.div>
+      </motion.aside>
 
       {/* ── Main content area ── */}
       <div className="flex flex-1 flex-col min-w-0">
         <TopBar onOpenMobileMenu={() => { setDrawerOpen(true); }} />
 
-        <main className="flex-1">
+        <main className="flex-1 relative">
           <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
             <AppErrorBoundary>
               <Outlet />
@@ -61,7 +86,7 @@ export function AppLayout() {
               exit={{ opacity: 0 }}
               transition={{ duration: reduced ? 0 : 0.2 }}
               onClick={() => { setDrawerOpen(false); }}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-40 bg-[var(--glass-bg-dark)] backdrop-blur-[var(--glass-blur)] lg:hidden"
             />
 
             {/* Drawer panel */}
@@ -71,8 +96,7 @@ export function AppLayout() {
               animate={reduced ? { opacity: 1 } : { x: 0 }}
               exit={reduced ? { opacity: 0 } : { x: -SIDEBAR_WIDTH }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface-alt lg:hidden"
-              style={{ width: SIDEBAR_WIDTH }}
+              className="fixed inset-y-0 left-0 z-50 flex flex-col border-r border-[var(--chrome-border)] bg-[var(--chrome-surface)] lg:hidden w-[260px]"
             >
               <SidebarContent onNavigate={() => { setDrawerOpen(false); }} />
             </motion.div>

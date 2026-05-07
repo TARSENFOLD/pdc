@@ -1,0 +1,105 @@
+{
+  "actions": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "create": "Criar",
+    "submit": "Enviar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "close": "Fechar",
+    "confirm": "Confirmar",
+    "search": "Pesquisar",
+    "filter": "Filtrar",
+    "loading": "Carregando…",
+    "retry": "Tentar novamente"
+  },
+  "nav": {
+    "inicio": "Início",
+    "aprender": "Aprender",
+    "explorar": "Explorar",
+    "meu_futuro": "Meu Futuro",
+    "comunidade": "Comunidade",
+    "estudio_mentor": "Estúdio Mentor",
+    "gestao_institucional": "Gestão Institucional",
+    "autoridade": "Autoridade"
+  },
+  "sidebar": {
+    "expand": "Expandir sidebar",
+    "collapse": "Recolher sidebar"
+  },
+  "errors": {
+    "generic": "Ocorreu um erro. Por favor tente novamente.",
+    "not_found": "Página não encontrada.",
+    "unauthorized": "Você não tem permissão para acessar esta página.",
+    "network": "Erro de rede. Verifique sua conexão."
+  },
+  "auth": {
+    "onboarding": {
+      "badge": "PDC — Onboarding",
+      "title": "Como você quer usar o PDC?",
+      "subtitle": "Escolha o seu perfil para personalizar a sua infraestrutura de decisão."
+    },
+    "roles": {
+      "student": {
+        "title": "Estudante",
+        "desc": "Descubra a sua vocação e explore carreiras com IA.",
+        "features": [
+          "Simulações vocacionais",
+          "Perfil vocacional IA",
+          "Mentorias personalizadas",
+          "Cursos e certificados"
+        ]
+      },
+      "mentor": {
+        "title": "Mentor",
+        "desc": "Oriente estudantes e compartilhe o seu conhecimento.",
+        "features": [
+          "Criar cursos e simulações",
+          "Gerenciar mentorados",
+          "Analytics de impacto",
+          "Reputação profissional"
+        ]
+      },
+      "institution": {
+        "title": "Instituição",
+        "desc": "Atraia talentos e apresente os seus cursos.",
+        "features": [
+          "Página institucional",
+          "Publicar experiências",
+          "Propostas a estudantes",
+          "Relatórios de evasão"
+        ]
+      }
+    },
+    "common": {
+      "start": "Começar",
+      "login_link_prefix": "Já tem uma conta ativa?",
+      "login_link_action": "Entrar agora"
+    },
+    "login": "Entrar",
+    "logout": "Sair",
+    "register": "Registrar",
+    "email": "Email",
+    "password": "Senha",
+    "forgot_password": "Esqueceu a senha?",
+    "login_page": {
+      "title": "Login.",
+      "subtitle": "Bem-vindo de volta ao seu futuro.",
+      "email_label": "Identificação Acadêmica",
+      "password_label": "Chave de Acesso",
+      "submit_loading": "Processando...",
+      "submit": "Acessar Plataforma",
+      "divider": "ou",
+      "google_cta": "Continuar com Google",
+      "linkedin_cta": "Continuar com LinkedIn",
+      "recover_password_link": "Recuperar senha",
+      "panel_headline": "Por Dentro do Curso",
+      "panel_subline": "O universo acadêmico inteiro, à sua medida.",
+      "register_link": "Criar conta acadêmica",
+      "error_generic": "Erro ao fazer login. Verifique suas credenciais."
+    }
+  }
+}

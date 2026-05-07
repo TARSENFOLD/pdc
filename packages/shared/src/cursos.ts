@@ -38,6 +38,8 @@ export const CursoSchema = z.object({
   totalHoras: z.number(),
   estado: EstadoEditorialSchema.optional().default('draft'),
   rating: z.number().min(0).max(5).optional().default(0),
+  inscritosCount: z.number().int().min(0).optional().default(0),
+  autorNome: z.string().optional(),
   // Regras de Match Soberano
   regrasAcesso: z.object({
     minFluidez: z.number().min(0).max(10).optional(),
@@ -64,9 +66,16 @@ export const CriarCursoPayloadSchema = z.object({
   nivel: z.enum(['basico', 'medio', 'avancado']),
   thumbnailUrl: z.string().url().optional(),
   capaUrl: z.string().url().optional(),
-  preco: z.number().min(0).optional(),
   visibilidade: z.enum(['publico', 'privado', 'institucional']).optional().default('publico'),
-  
+
+  // Pricing (Passo 4 do Wizard)
+  gratuito: z.boolean().optional().default(true),
+  preco: z.number().min(0).optional().default(0),
+  comissao: z.number().min(0).max(100).optional().default(0),
+
+  // Comité Científico (opt-in)
+  requerValidacaoComite: z.boolean().optional().default(false),
+
   // Regras de Match Soberano (Mandatário para E2E)
   regrasAcesso: z.object({
     minFluidez: z.number().min(0).max(10).optional().default(0),
@@ -108,10 +117,17 @@ export const CursoMeuSchema = z.object({
 
 export type CursoMeu = z.infer<typeof CursoMeuSchema>;
 
+const StrapiIdSchema = z.union([z.string(), z.number()]).transform(String);
+const StrapiRelationIdSchema = z.union([
+  StrapiIdSchema,
+  z.object({ id: StrapiIdSchema }).transform((value) => value.id),
+  z.object({ data: z.object({ id: StrapiIdSchema }) }).transform((value) => value.data.id),
+]);
+
 export const InscricaoSchema = z.object({
-  id: z.string(),
-  cursoId: z.string(),
-  estudanteId: z.string(),
+  id: StrapiIdSchema,
+  cursoId: StrapiRelationIdSchema,
+  estudanteId: StrapiRelationIdSchema,
   dataInscricao: z.string().datetime(),
   concluido: z.boolean(),
   dataConclusao: z.string().datetime().optional(),
@@ -138,8 +154,17 @@ export const CursoPublicoSchema = z.object({
   gratuito: z.boolean().optional(),
   totalHoras: z.number().optional(),
   autorNome: z.string().optional(),
+  inscritosCount: z.number().optional(),
 });
 export type CursoPublico = z.infer<typeof CursoPublicoSchema>;
+
+export const CursoItemSchema = CursoPublicoSchema.extend({
+  instituicaoNome: z.string().optional(),
+  instituicao: z.object({ nome: z.string() }).optional(),
+  inscritosCount: z.number().optional(),
+}).passthrough();
+
+export type CursoItem = z.infer<typeof CursoItemSchema>;
 
 export interface CursoFilters {
   search?: string;
@@ -159,3 +184,14 @@ export const ProgressoItemSchema = z.object({
 });
 
 export type ProgressoItem = z.infer<typeof ProgressoItemSchema>;
+
+export const TelemetriaCursoItemSchema = z.object({
+  cursoId: z.string(),
+  moduloId: z.string(),
+  itemId: z.string(),
+  estudanteId: z.string(),
+  acao: z.enum(['visualizado', 'concluido']),
+  timestamp: z.string().datetime(),
+});
+
+export type TelemetriaCursoItem = z.infer<typeof TelemetriaCursoItemSchema>;

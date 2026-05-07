@@ -1,0 +1,105 @@
+{
+  "actions": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Criar",
+    "submit": "Submeter",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "close": "Fechar",
+    "confirm": "Confirmar",
+    "search": "Pesquisar",
+    "filter": "Filtrar",
+    "loading": "A carregar…",
+    "retry": "Tentar novamente"
+  },
+  "nav": {
+    "inicio": "Início",
+    "aprender": "Aprender",
+    "explorar": "Explorar",
+    "meu_futuro": "Meu Futuro",
+    "comunidade": "Comunidade",
+    "estudio_mentor": "Estúdio Mentor",
+    "gestao_institucional": "Gestão Institucional",
+    "autoridade": "Autoridade"
+  },
+  "sidebar": {
+    "expand": "Expandir sidebar",
+    "collapse": "Recolher sidebar"
+  },
+  "errors": {
+    "generic": "Ocorreu um erro. Por favor tenta novamente.",
+    "not_found": "Página não encontrada.",
+    "unauthorized": "Não tens permissão para aceder a esta página.",
+    "network": "Erro de rede. Verifica a tua ligação."
+  },
+  "auth": {
+    "onboarding": {
+      "badge": "PDC - Onboarding",
+      "title": "Como queres usar o PDC?",
+      "subtitle": "Escolhe o teu perfil."
+    },
+    "roles": {
+      "student": {
+        "title": "Estudante",
+        "desc": "Descobre a tua vocação e explora carreiras com reais.",
+        "features": [
+          "Simulações vocacionais",
+          "Perfil vocacional",
+          "Mentorias personalizadas",
+          "Cursos e certificados"
+        ]
+      },
+      "mentor": {
+        "title": "Mentor",
+        "desc": "Orienta estudantes e partilha o teu conhecimento.",
+        "features": [
+          "Criar cursos e simulações",
+          "Gerir mentorados",
+          "Analytics de impacto",
+          "Reputação profissional"
+        ]
+      },
+      "institution": {
+        "title": "Instituição",
+        "desc": "Atraí talentos e apresenta os teus cursos.",
+        "features": [
+          "Página institucional",
+          "Publicar experiências",
+          "Propostas a estudantes",
+          "Relatórios de evasão"
+        ]
+      }
+    },
+    "common": {
+      "start": "Começar",
+      "login_link_prefix": "Já tens uma conta ativa?",
+      "login_link_action": "Entrar agora"
+    },
+    "login": "Entrar",
+    "logout": "Sair",
+    "register": "Registar",
+    "email": "Email",
+    "password": "Palavra-passe",
+    "forgot_password": "Esqueceste a palavra-passe?",
+    "login_page": {
+      "title": "Entrar.",
+      "subtitle": "Bem-vindo de volta.",
+      "email_label": "Email",
+      "password_label": "Palavra-passe",
+      "submit_loading": "A entrar…",
+      "submit": "Entrar",
+      "divider": "ou",
+      "google_cta": "Entrar com Google",
+      "linkedin_cta": "Entrar com LinkedIn",
+      "recover_password_link": "Recuperar palavra-passe",
+      "panel_headline": "Por Dentro do Curso",
+      "panel_subline": "Descobre um universo acadêmico inteiro a tua medidaS.",
+      "register_link": "Criar conta",
+      "error_generic": "Credenciais inválidas. Tenta novamente."
+    }
+  }
+}

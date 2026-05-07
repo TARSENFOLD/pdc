@@ -40,6 +40,28 @@ async function findOrCreate(path, filters, data) {
   }
 }
 
+async function findOrCreateUser(email, nome) {
+  try {
+    const existing = await api.get(`/users?filters[email][$eq]=${email}`);
+    if (existing.data && existing.data.length > 0) {
+      return existing.data[0];
+    }
+    
+    // Criar utilizador no Strapi com password padrão
+    const res = await api.post('/users', {
+      username: email,
+      email,
+      password: 'PdcPassword123!',
+      confirmed: true,
+      role: 1 // Public/Authenticated dependendo do setup
+    });
+    return res.data;
+  } catch (err) {
+    console.error(`[Seed Error] User ${email}:`, err.response?.data || err.message);
+    return null;
+  }
+}
+
 async function main() {
   console.log('🚀 Injetando Ecossistema Monumental v5.2...');
 
@@ -66,11 +88,15 @@ async function main() {
     for (let i = 0; i < 5; i++) {
       const area = areas[i % areas.length];
       const email = `mentor_${area.toLowerCase()}@pdc.ao`;
+      
+      const user = await findOrCreateUser(email, `Mentor Expert ${area}`);
+      if (!user) continue;
+
       const res = await findOrCreate('/perfis', { email }, {
         nome: `Mentor Expert ${area}`,
         email,
         tipo: 'mentor',
-        userId: `mentor-uid-${i}`,
+        userId: user.id.toString(),
         areaFormacao: area,
         headline: `Líder em ${area}`,
         reputacao: 95
@@ -96,11 +122,15 @@ async function main() {
     for (let i = 0; i < 50; i++) {
       const area = areas[i % areas.length];
       const email = `aluno_${i}@pdc.ao`;
+      
+      const user = await findOrCreateUser(email, `Estudante Talento ${i}`);
+      if (!user) continue;
+
       const aluno = await findOrCreate('/perfis', { email }, {
         nome: `Estudante Talento ${i}`,
         email,
-        tipo: 'aluno',
-        userId: `aluno-uid-${i}`,
+        tipo: 'estudante',
+        userId: user.id.toString(),
         areasInteresse: [area]
       });
 
@@ -117,6 +147,7 @@ async function main() {
     }
 
     console.log('✅ Ecossistema Monumental v5.2 ONLINE.');
+    console.log('🔑 Credenciais padrão: email / PdcPassword123!');
   } catch (err) {
     console.error('❌ Falha na Sementeira:', err.message);
   }

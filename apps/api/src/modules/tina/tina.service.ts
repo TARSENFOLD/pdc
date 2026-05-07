@@ -20,6 +20,15 @@ interface AiChatResponse {
   message?: { content: string };
 }
 
+function isPerguntasResponse(value: unknown): value is { perguntas: unknown[] } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'perguntas' in value &&
+    Array.isArray(value.perguntas)
+  );
+}
+
 export const tinaService = {
   buildSystemPrompt(userContext: string, chunks: string): string {
     return `És a Tina, a assistente virtual inteligente do PDC (Por Dentro do Curso).
@@ -112,8 +121,8 @@ Retorna APENAS um JSON no formato:
     }
 
     try {
-      const parsed = JSON.parse(content.replace(/```json|```/g, ''));
-      return parsed.perguntas || [];
+      const parsed: unknown = JSON.parse(content.replace(/```json|```/g, ''));
+      return isPerguntasResponse(parsed) ? parsed.perguntas : [];
     } catch {
       return [];
     }
@@ -126,7 +135,7 @@ Retorna APENAS um JSON no formato:
     domainId: string;
   }): Promise<string> {
     const prompt = `Analisa os seguintes índices psicométricos de um estudante na área de ${metrics.domainId}:
-- Fluidez Cognitiva ($\phi$): ${metrics.phi.toFixed(2)}/10
+- Fluidez Cognitiva (phi): ${metrics.phi.toFixed(2)}/10
 - Resiliência ao Erro ($R$): ${metrics.resilience.toFixed(2)}/10
 - Estabilidade de Foco: ${metrics.focus.toFixed(2)}/10
 

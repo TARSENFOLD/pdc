@@ -31,27 +31,27 @@ export function AdminTelemetriaPage() {
 
   const columns = [
     { header: 'Tipo', accessor: (e: EventoTelemetria) => <Badge variant="outline">{e.tipo}</Badge> },
-    { header: 'Utilizador', accessor: (e: EventoTelemetria) => <span className="text-xs font-mono text-text-secondary">{e.user ?? '-'}</span> },
-    { header: 'Data/Hora', accessor: (e: EventoTelemetria) => <span className="text-xs text-text-secondary">{new Date(e.timestamp).toLocaleString()}</span> },
+    { header: 'Utilizador', accessor: (e: EventoTelemetria) => <span className="text-xs font-mono text-ink-secondary">{e.user ?? '-'}</span> },
+    { header: 'Data/Hora', accessor: (e: EventoTelemetria) => <span className="text-xs text-ink-secondary">{new Date(e.timestamp).toLocaleString()}</span> },
   ];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-text-primary">Telemetria</h1>
+      <h1 className="text-2xl font-bold text-ink-primary">Telemetria</h1>
       <div className="flex gap-3">
         <input
           type="text"
           placeholder="Filtrar por tipo (ex: simulacao.completed)"
           value={tipo}
           onChange={(e) => { setTipo(e.target.value); setPage(1); }}
-          className="rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber w-80"
+          className="rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus:outline-none focus:ring-2 focus:ring-accent w-80"
         />
       </div>
       {isLoading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : (data?.data ?? []).length === 0 ? (
-        <div className="rounded-2xl border border-border bg-surface-raised p-8 text-center">
-          <p className="text-text-secondary">Ainda não há eventos de telemetria registados.</p>
+        <div className="rounded-2xl border border-ink-tertiary/10 bg-elevated p-8 text-center">
+          <p className="text-ink-secondary">Ainda não há eventos de telemetria registados.</p>
         </div>
       ) : (
         <div className="space-y-6">

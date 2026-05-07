@@ -5,42 +5,36 @@
 
 :root {
   /* ─── 3.1 Superfícies — Tema Claro (canónico base) ─── */
-  --surface-canvas: #F8F9FA;
-  /* OS chrome */
-  --surface-elevated: #FAF6EE;
-  /* Cards, painéis (warm sand layer) */
-  --surface-recessed: #F2EFE8;
-  /* Inputs, áreas de leitura */
-  --surface-overlay: rgba(250, 246, 238, 0.72);
-  /* Glass background light */
+  --surface-canvas:    #F8F8F8;
+  --surface-elevated:  #FAF6EE;   /* Cards, painéis (warm sand layer) */
+  --surface-recessed:  #F2EFE8;   /* Inputs, áreas de leitura */
+  --surface-overlay:   rgba(250, 246, 238, 0.72);  /* Glass background light */
 
   /* ─── 3.3 Tinta (texto e ícones) ─── */
-  --ink-primary: #2A2724;
-  /* Cinzento-castanho — substitui o preto */
-  --ink-secondary: #5A5751;
-  --ink-tertiary: #8A867F;
-  --ink-disabled: #C4C0B8;
-  --ink-on-accent: #FFFCF7;
-  /* Texto sobre terracota */
+  --ink-primary:    #1A1614;   /* Cinzento-castanho escuro */
+  --ink-secondary:  #3A3632;
+  --ink-tertiary:   #6A6660;
+  --ink-disabled:   #C4C0B8;
+  --ink-on-accent:  #FFFCF7;   /* Texto sobre acentos escuros */
 
   /* ─── 3.4 Acentos ─── */
-  --accent-terracotta: #D2691E;
-  /* Canónico — momentos de autoridade */
-  --accent-terracotta-soft: #E8945C;
-  /* Hover / fundos suaves */
-  --accent-terracotta-deep: #A14E0F;
-  /* Pressed state */
-  --accent-terracotta-glow: rgba(210, 105, 30, 0.18);
-  /* Halo, glass border */
+  --accent-terracotta:        #B65F2A;   /* Compat legacy: autoridade rara */
+  --accent-terracotta-soft:   #C97945;   /* Compat legacy: hover autoridade */
+  --accent-terracotta-deep:   #8F451F;   /* Compat legacy: pressed autoridade */
+  --accent-terracotta-glow:   rgba(182, 95, 42, 0.16);  /* Compat legacy */
 
-  --institutional-cobalt: #004AAD;
-  /* Canónico — links institucionais */
-  --accent-success: #2F7A4F;
-  /* Verde quente */
-  --accent-warning: #C68A2E;
-  /* Amarelo terra */
-  --accent-danger: #B23B2E;
-  /* Vermelho de barro queimado */
+  --institutional-cobalt:     #1F5FA8;   /* Links institucionais */
+  --accent-trust:             #0F766E;   /* CTAs e ações recorrentes no app */
+  --accent-trust-soft:        #12857C;
+  --chrome-surface:           #E8EEF3;   /* Internal app chrome */
+  --chrome-surface-strong:    #D9E4EC;   /* Sidebar/topbar hover layer */
+  --chrome-active:            #12304A;   /* Internal active navigation */
+  --chrome-active-soft:       rgba(18, 48, 74, 0.10);
+  --chrome-border:            rgba(18, 48, 74, 0.14);
+  --brand-authority:          #B65F2A;   /* Tina/landing/authority signature only */
+  --accent-success:           #2F7A4F;   /* Verde quente */
+  --accent-warning:           #C68A2E;   /* Amarelo terra */
+  --accent-danger:            #B23B2E;   /* Vermelho de barro queimado */
 
   /* ─── 3.5 Tipografia ─── */
   --font-ui: 'Inter', system-ui, sans-serif;
@@ -48,22 +42,22 @@
   --font-mono: 'JetBrains Mono', ui-monospace;
 
   /* ─── 3.6 Espaçamento (escala 4-based) ─── */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
   --space-10: 40px;
   --space-12: 48px;
   --space-16: 64px;
 
   /* ─── 3.7 Radii — A Regra das 3 Famílias ─── */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-xl:  20px;
   --radius-full: 9999px;
 
   /* Família B — Assimétricos par TL+BR (≤ 1.5%) */
@@ -76,34 +70,57 @@
   --elevation-1: 0 1px 2px rgba(42, 39, 36, 0.04), 0 1px 3px rgba(42, 39, 36, 0.06);
   --elevation-2: 0 4px 12px rgba(42, 39, 36, 0.06), 0 2px 4px rgba(42, 39, 36, 0.04);
   --elevation-3: 0 12px 32px rgba(42, 39, 36, 0.10), 0 4px 8px rgba(42, 39, 36, 0.05);
-  --elevation-glow: 0 0 0 1px rgba(210, 105, 30, 0.20), 0 8px 24px rgba(210, 105, 30, 0.12);
+  --elevation-glow: 0 0 0 1px rgba(182, 95, 42, 0.20), 0 8px 24px rgba(182, 95, 42, 0.12);
+
+  /* ─── 3.9 Card Borders ─── */
+  --card-border: #000000;
+  --card-border-landing: rgba(255, 255, 255, 0.85);  /* Landing cards — borda branca visível */
 
   /* ─── 3.9 Glass ─── */
-  --glass-bg-light: rgba(250, 246, 238, 0.72);
-  --glass-bg-dark: rgba(24, 23, 26, 0.78);
+  --glass-bg-light:     rgba(250, 246, 238, 0.72);
+  --glass-bg-dark:      rgba(24, 23, 26, 0.78);
   --glass-border-light: rgba(42, 39, 36, 0.08);
-  --glass-border-dark: rgba(236, 231, 221, 0.12);
-  --glass-blur: 18px;
-  --glass-saturate: 140%;
+  --glass-border-dark:  rgba(236, 231, 221, 0.12);
+  --glass-blur:         18px;
+  --glass-saturate:     140%;
 
   /* ─── 3.10 Motion ─── */
-  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
-  --duration-fast: 150ms;
-  --duration-base: 250ms;
-  --duration-slow: 400ms;
-  --duration-page: 320ms;
+  --ease-out-expo:   cubic-bezier(0.19, 1, 0.22, 1);
+  --duration-fast:   150ms;
+  --duration-base:   250ms;
+  --duration-slow:   400ms;
+  --duration-page:   320ms;
 }
 
 .dark {
-  /* ─── 3.2 Superfícies — Tema Escuro (deep, nunca preto puro) ─── */
-  --surface-canvas: #0E0D0C;
-  /* OS chrome */
-  --surface-elevated: #18171A;
-  --surface-recessed: #0A0908;
-  --surface-overlay: rgba(24, 23, 26, 0.78);
+  /* ─── 3.2 Superfícies — Paleta exacta da imagem (2026-05-03) ─── */
+  --surface-canvas:    #151515;   /* Fundo principal */
+  --surface-elevated:  #1E1E1E;   /* Cards, painéis */
+  --surface-recessed:  #0D0D0D;   /* Inputs, áreas de leitura */
+  --surface-overlay:   rgba(21, 21, 21, 0.92);
+
+  --chrome-surface:        #0D0D0D;   /* Sidebar + TopBar — preto quase puro */
+  --chrome-surface-strong: #1A1A1A;   /* Hover rows */
+  --chrome-active:         #FAFAFA;   /* Texto activo — branco */
+  --chrome-active-soft:    rgba(250, 250, 250, 0.08);
+  --chrome-border:         rgba(255, 255, 255, 0.07);   /* Divisores muito subtis */
 
   /* ─── Tinta Dark ─── */
-  --ink-primary: #ECE7DD;
-  --ink-secondary: #B5AFA3;
-  --ink-tertiary: #807A6F;
+  --ink-primary:    #FAFAFA;   /* Branco — texto principal */
+  --ink-secondary:  #A0A0A0;   /* Cinzento médio */
+  --ink-tertiary:   #666666;   /* Cinzento muted */
+  --ink-disabled:   #333333;
+
+  /* ─── Elevação ─── */
+  --elevation-1: 0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4);
+  --elevation-2: 0 4px 16px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.4);
+  --elevation-3: 0 12px 40px rgba(0,0,0,0.7), 0 4px 12px rgba(0,0,0,0.5);
+
+  /* ─── Glass Dark ─── */
+  --glass-bg-dark:      rgba(13, 13, 13, 0.95);
+  --glass-border-light: rgba(255, 255, 255, 0.07);
+  --glass-border-dark:  rgba(255, 255, 255, 0.05);
+
+  /* ─── Borders Dark ─── */
+  --card-border: rgba(255, 255, 255, 0.08);
 }

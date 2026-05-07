@@ -26,7 +26,7 @@ matchRoutes.get('/sugestoes', async (c) => {
     // 2. Buscar sugestões não expiradas e não vistas
     const now = new Date().toISOString();
     const resSugestoes = await strapiGet<unknown>('/match-suggestions', {
-      'filters[estudante][id][$eq]': String(perfilId),
+      'filters[estudante][id][$eq]': perfilId,
       'filters[expiraEm][$gt]': now,
       'sort': 'score:desc',
       'pagination[limit]': '50',

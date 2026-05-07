@@ -15,16 +15,18 @@ export const CursoFormSidebar = ({ payload, setPayload, step, setStep, loading, 
   const minFluidez = payload.regrasAcesso?.minFluidez ?? 4;
   const minResiliencia = payload.regrasAcesso?.minResiliencia ?? 5;
 
+  const minFoco = payload.regrasAcesso?.minFoco ?? 0;
+
   return (
     <div className="lg:col-span-4 space-y-8">
-      <Card className="p-8 bg-surface-alt border-border rounded-[40px] shadow-xl">
-        <h3 className="text-[11px] font-black text-text-muted uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
+      <Card className="p-8 bg-recessed border-ink-tertiary/10 rounded-[40px] shadow-xl">
+        <h3 className="text-[11px] font-black text-ink-tertiary uppercase tracking-[0.3em] mb-8 flex items-center gap-2">
           <ShieldCheck size={14} className="text-accent" /> Regras de Mérito (Match)
         </h3>
         
         <div className="space-y-6">
           <div>
-            <div className="flex justify-between text-[10px] font-black uppercase text-text-secondary mb-3">
+            <div className="flex justify-between text-[10px] font-black uppercase text-ink-secondary mb-3">
               <span>Fluidez Mínima (ϕ)</span>
               <span className="text-accent">{minFluidez}</span>
             </div>
@@ -36,17 +38,18 @@ export const CursoFormSidebar = ({ payload, setPayload, step, setStep, loading, 
                 setPayload({
                   ...payload, 
                   regrasAcesso: {
-                    minResiliencia,
-                    minFluidez: Number(e.target.value)
+                    minFluidez,
+                    minResiliencia: Number(e.target.value),
+                    minFoco,
                   }
                 }); 
               }}
             />
-            <p className="text-[9px] text-text-muted mt-2">Só estudantes com este nível de ritmo biomecânico verão o curso.</p>
+            <p className="text-[9px] text-ink-tertiary mt-2">Só estudantes com este nível de ritmo biomecânico verão o curso.</p>
           </div>
 
           <div>
-            <div className="flex justify-between text-[10px] font-black uppercase text-text-secondary mb-3">
+            <div className="flex justify-between text-[10px] font-black uppercase text-ink-secondary mb-3">
               <span>Resiliência Mínima (R)</span>
               <span className="text-emerald-500">{minResiliencia}</span>
             </div>
@@ -59,7 +62,8 @@ export const CursoFormSidebar = ({ payload, setPayload, step, setStep, loading, 
                   ...payload, 
                   regrasAcesso: {
                     minFluidez,
-                    minResiliencia: Number(e.target.value)
+                    minResiliencia: Number(e.target.value),
+                    minFoco: 0
                   }
                 }); 
               }}
@@ -67,7 +71,7 @@ export const CursoFormSidebar = ({ payload, setPayload, step, setStep, loading, 
           </div>
         </div>
 
-        <div className="mt-10 pt-8 border-t border-border">
+        <div className="mt-10 pt-8 border-t border-ink-tertiary/10">
           <Button 
             onClick={() => {
               if (step < 2) {
@@ -89,7 +93,7 @@ export const CursoFormSidebar = ({ payload, setPayload, step, setStep, loading, 
           <Brain size={20} />
           <span className="text-[10px] font-black uppercase tracking-widest">IA Co-Piloto (TINA)</span>
         </div>
-        <p className="text-xs text-text-primary leading-relaxed font-medium">
+        <p className="text-xs text-ink-primary leading-relaxed font-medium">
           "Estou pronta para gerar o resumo do syllabus e sugerir o match vocacional assim que publicares o conteúdo."
         </p>
       </Card>

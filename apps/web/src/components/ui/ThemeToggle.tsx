@@ -1,40 +1,57 @@
-import { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/lib/theme/ThemeContext';
 import { Button } from './Button';
 
+/**
+ * ThemeToggle - Componente de UI para alternar entre temas.
+ * Agora é puramente passivo, consumindo o ThemeContext.
+ */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    // 1. Check local storage
-    const saved = localStorage.getItem('pdc:theme');
-    if (saved === 'light' || saved === 'dark') return saved;
+  const { resolvedTheme, setTheme } = useTheme();
 
-    // 2. Check system preference
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+  const toggle = () => {
+    setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
+  };
 
-    return 'light';
-  });
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={`Alternar para tema ${resolvedTheme === 'light' ? 'escuro' : 'claro'}`}
+      className="flex h-11 w-11 items-center justify-center rounded-lg opacity-40 transition-opacity hover:opacity-80"
+    >
+      {resolvedTheme === 'light' ? (
+        <Moon size={15} style={{ color: 'var(--ink-primary)' }} />
+      ) : (
+        <Sun size={15} style={{ color: 'var(--ink-primary)' }} />
+      )}
+    </button>
+  );
+}
 
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-    localStorage.setItem('pdc:theme', theme);
-  }, [theme]);
+/**
+ * Versão simples (ícone único) para menus compactos.
+ */
+export function ThemeToggleSimple() {
+  const { resolvedTheme, setTheme } = useTheme();
 
-  const toggleTheme = () => {
-    setTheme(t => t === 'light' ? 'dark' : 'light');
+  const toggle = () => {
+    setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
   };
 
   return (
     <Button
       variant="ghost"
       size="sm"
-      className="w-9 h-9 px-0"
-      onClick={() => { toggleTheme(); }}
-      aria-label="Alternar tema"
+      className="h-11 w-11 px-0 rounded-xl"
+      onClick={toggle}
+      aria-label={`Alternar para tema ${resolvedTheme === 'light' ? 'escuro' : 'claro'}`}
     >
-      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      {resolvedTheme === 'light' ? (
+        <Sun size={20} className="text-ink-secondary" />
+      ) : (
+        <Moon size={20} className="text-ink-secondary" />
+      )}
     </Button>
   );
 }

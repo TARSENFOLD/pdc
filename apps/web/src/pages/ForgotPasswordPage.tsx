@@ -1,60 +1,95 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AuthLeftPanel } from '@/components/auth/AuthLeftPanel';
+import { AsymmetricButton } from '@/components/ui';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent): void {
     e.preventDefault();
+    setError('');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Email inválido');
+      return;
+    }
     setIsSubmitted(true);
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-2xl bg-surface p-8 shadow-2xl border border-border">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-text-primary mb-2">Recuperar acesso</h1>
-          <p className="text-gray-400">Enviaremos um link para o seu email</p>
-        </div>
+    <div className="relative min-h-screen bg-canvas font-sans">
+      {/* Left: fixed neural panel */}
+      <div className="hidden lg:block">
+        <AuthLeftPanel
+          headline="Recuperar o Acesso"
+          subline="Vamos repor a tua ligação ao universo académico."
+        />
+      </div>
 
-        {isSubmitted ? (
-          <div className="text-center">
-            <div className="mb-6 rounded-lg bg-[#f59e0b]/10 p-4 text-[#f59e0b] border border-[#f59e0b]/20">
-              Se existir uma conta associada a este email, receberá instruções em breve.
-            </div>
-            <Link to="/login" replace className="text-[#f59e0b] font-semibold hover:underline">
-              Voltar ao login
-            </Link>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-              <input
-                type="email"
-                required
-                className="w-full rounded-lg bg-surface-raised border border-border p-3 text-text-primary focus:border-[#f59e0b] focus:outline-none transition-colors"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); }}
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-[#f59e0b] p-3 font-semibold text-black hover:bg-[#d97706] transition-colors"
-            >
-              Enviar link
-            </button>
-
-            <p className="text-center text-sm text-gray-400">
-              <Link to="/login" replace className="hover:underline">
-                Voltar ao login
-              </Link>
+      {/* Right: form — offset by 50% to clear the fixed left panel */}
+      <div className="flex items-center justify-center p-8 lg:p-12 min-h-screen lg:ml-[50%]">
+        <div className="w-full max-w-sm">
+          <header className="mb-12">
+            <h1 className="text-5xl font-black text-ink-primary tracking-tight mb-2 font-display">
+              Recuperar acesso
+            </h1>
+            <p className="text-ink-secondary font-medium">
+              Enviaremos um link para o teu email.
             </p>
-          </form>
-        )}
+          </header>
+
+          {isSubmitted ? (
+            <div className="space-y-6">
+              <div role="status" className="rounded-xl bg-accent/10 p-5 font-medium text-sm text-accent border border-accent/20">
+                Sucesso: email enviado. Se existir uma conta associada a este email, receberás instruções em breve.
+              </div>
+              <Link
+                to="/login"
+                replace
+                className="block text-center text-sm font-bold text-ink-tertiary hover:text-ink-primary transition-colors"
+              >
+                ← Voltar ao login
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} noValidate className="space-y-6">
+              {error && (
+                <div role="alert" className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm font-medium text-red-500">
+                  {error}
+                </div>
+              )}
+              <div>
+                <label htmlFor="recovery-email" className="block text-xs font-bold text-ink-tertiary uppercase tracking-widest mb-2">
+                  Email
+                </label>
+                <input
+                  id="recovery-email"
+                  name="email"
+                  type="email"
+                  placeholder="nome@exemplo.com"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); }}
+                  className="w-full p-4 bg-recessed border border-ink-tertiary/10 rounded-xl text-base text-ink-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all placeholder:text-ink-tertiary touch-target"
+                />
+              </div>
+
+              <AsymmetricButton
+                type="submit"
+                className="w-full h-14 bg-ink-primary text-canvas font-black uppercase tracking-widest text-[11px] hover:bg-accent hover:text-ink-on-accent transition-all shadow-xl"
+              >
+                Enviar link
+              </AsymmetricButton>
+
+              <p className="text-center text-sm text-ink-tertiary font-medium">
+                <Link to="/login" replace className="hover:text-ink-primary transition-colors">
+                  ← Voltar ao login
+                </Link>
+              </p>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

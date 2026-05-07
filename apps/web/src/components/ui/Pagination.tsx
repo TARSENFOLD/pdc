@@ -37,7 +37,7 @@ const Pagination = ({ page, pageCount, onPageChange, className }: PaginationProp
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
       </Button>
-      <div className="flex items-center text-sm font-medium text-text-secondary">
+      <div className="flex items-center text-sm font-medium text-ink-secondary">
         Página {page} de {pageCount}
       </div>
       <Button

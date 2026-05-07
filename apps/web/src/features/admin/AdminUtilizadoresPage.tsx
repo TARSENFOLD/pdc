@@ -1,9 +1,23 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin';
-import { Spinner, Table, Badge, Pagination, Avatar, Button, Modal, ModalHeader, ModalTitle, ModalFooter } from '@/components/ui';
+import { Spinner, Table, Badge, type BadgeVariant, Pagination, Avatar, Button, Modal, ModalHeader, ModalTitle, ModalFooter } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
 import type { Role, User } from '@pdc/shared';
+
+function getBadgeVariant(role: string): BadgeVariant {
+  const map: Record<string, BadgeVariant> = {
+    estudante: 'info',
+    aluno: 'info',
+    mentor: 'success',
+    instituicao: 'warning',
+    moderador: 'error',
+    comite_cientifico: 'default',
+    super_admin: 'super_admin',
+    patrocinador: 'default',
+  };
+  return map[role] || 'default';
+}
 
 export function AdminUtilizadoresPage() {
   const [page, setPage] = useState(1);
@@ -63,8 +77,8 @@ export function AdminUtilizadoresPage() {
             size="sm" 
           />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-text-primary truncate">{u.nome}</p>
-            <p className="text-xs text-text-secondary truncate">{u.email}</p>
+            <p className="text-sm font-medium text-ink-primary truncate">{u.nome}</p>
+            <p className="text-xs text-ink-secondary truncate">{u.email}</p>
           </div>
         </div>
       )
@@ -72,7 +86,7 @@ export function AdminUtilizadoresPage() {
     { 
       header: 'Role', 
       accessor: (u: User) => (
-        <Badge variant={u.role}>{u.role.replace('_', ' ')}</Badge>
+        <Badge variant={getBadgeVariant(u.role)}>{u.role.replace('_', ' ')}</Badge>
       )
     },
     {
@@ -114,7 +128,7 @@ export function AdminUtilizadoresPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-text-primary">Gestão de Utilizadores</h1>
+      <h1 className="text-2xl font-bold text-ink-primary">Gestão de Utilizadores</h1>
 
       {isLoading ? (
         <div className="flex justify-center py-20">
@@ -145,7 +159,7 @@ export function AdminUtilizadoresPage() {
         </ModalHeader>
         
         <div className="py-6">
-          <label className="text-sm font-medium text-text-secondary block mb-2">Selecione a nova função</label>
+          <label className="text-sm font-medium text-ink-secondary block mb-2">Selecione a nova função</label>
           <select
             defaultValue={selectedUser?.role}
             onChange={(e) => {
@@ -153,7 +167,7 @@ export function AdminUtilizadoresPage() {
                 roleMutation.mutate({ id: selectedUser.id, role: e.target.value as Role });
               }
             }}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-amber"
+            className="w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="estudante">Estudante</option>
             <option value="mentor">Mentor</option>

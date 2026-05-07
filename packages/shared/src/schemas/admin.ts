@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RoleSchema } from '../user.js';
+import { RoleSchema } from './enums.js';
 
 export const AdminStatsSchema = z.object({
   totalUtilizadores: z.number().int(),

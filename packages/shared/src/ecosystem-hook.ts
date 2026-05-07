@@ -13,11 +13,13 @@ export interface EcosystemHookContext {
   results: Record<EcosystemHookName, EcosystemHookResult>;
 }
 
-export interface EcosystemHookResult {
+export interface EcosystemHookResult<T = unknown> {
   status: 'sent' | 'skipped' | 'retryable_error' | 'fatal_error';
   reason?: string;
-  data?: unknown;
+  data?: T;
 }
+
+export type LtiScoreResult = EcosystemHookResult;
 
 export interface EcosystemHook<TPayload = unknown> {
   name: EcosystemHookName;

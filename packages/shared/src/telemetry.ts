@@ -59,7 +59,10 @@ export const TelemetriaTipoSchema = z.enum([
   // Novas Tipagens Mandatárias (Biomecânica e Foco)
   'simulacao.biomechanics',
   'focus_lost',
-  'focus_gained'
+  'focus_gained',
+  'simulacao.pos_error',
+  'feed.scrolled',
+  'feed.entry_clicked'
 ]);
 export type TelemetriaTipo = z.infer<typeof TelemetriaTipoSchema>;
 

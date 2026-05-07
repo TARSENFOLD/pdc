@@ -1,0 +1,71 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-04T04:54:00.000Z",
+  "phase": null,
+  "phase_name": "integrity-hardening-v2 — feature closeout + session commit dump",
+  "phase_dir": ".planning",
+  "plan": null,
+  "task": "complete",
+  "status": "paused",
+  "completed_tasks": [
+    { "id": 1, "name": "T4 — Rating eligibility gate", "status": "done", "commit": "25d4cff" },
+    { "id": 2, "name": "T8 — Vinculos isConnected filter bug", "status": "done", "commit": "5d76c8f" },
+    { "id": 3, "name": "T10/T11 — Project votes + endorsements", "status": "done", "commit": "0aad8e4" },
+    { "id": 4, "name": "E4-T3 — Conquista trigger mismatches", "status": "done", "commit": "c004672" },
+    { "id": 5, "name": "N6 — Vocacional event-weights (11-event weighted score)", "status": "done", "commit": "a8fb4bb" },
+    { "id": 6, "name": "F6 — FOMO notification triggers", "status": "done", "commit": "a8fb4bb" },
+    { "id": 7, "name": "T9 — Notification grouping /agrupadas + push register/unregister", "status": "done", "commit": "59cef31" },
+    { "id": 8, "name": "Visual & Auth Polish — NeuralConstellation glow, --card-border, PasswordInput, auth neural state", "status": "done", "commit": "26f61cc" },
+    { "id": 9, "name": "API/shared fixes — N6+F6 refinements, shared schemas, perfil infra", "status": "done", "commit": "e9884c5" },
+    { "id": 10, "name": "Web features — layout, catalogo, perfil, mensagens, i18n", "status": "done", "commit": "de59364" },
+    { "id": 11, "name": "Governance — docs, config, e2e, gitignore", "status": "done", "commit": "68f41b4" },
+    { "id": 12, "name": "Cleanup — ADR-025/026, audit script, media.ts regex fix", "status": "done", "commit": "1da05ca" },
+    { "id": 13, "name": "Polish — prefersReducedMotion + token fixes, resolvePerfilId dedup", "status": "done", "commit": "25bb03b" },
+    { "id": 14, "name": "Skipped items — PerfilShowcase a11y, VinculosPage error logging, LandingProblema parallel-array, user.spec negative tests", "status": "done", "commit": "27255a2" },
+    { "id": 15, "name": "a11y fix — PerfilShowcase span→button disabled", "status": "done", "commit": "663c1f3" }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 16,
+      "name": "CONSTITUTION.md → DESIGN.md migration of implementation details",
+      "status": "not_started",
+      "detail": "Move any implementation-specific sections from .planning/CONSTITUTION.md into apps/web/DESIGN.md. CONSTITUTION.md should contain only law/governance; DESIGN.md should contain implementation patterns. Check what's in CONSTITUTION.md that belongs in DESIGN.md."
+    },
+    {
+      "id": 17,
+      "name": "ci-doc-validator.md scope expansion",
+      "status": "not_started",
+      "detail": "Expand .windsurf/workflows/ci-doc-validator.md scope. Current scope checks links and file-path backtick references. Expansion: Phase 2 function/class name validation via @file: marker convention."
+    },
+    {
+      "id": 18,
+      "name": "ConversaPage.tsx useMemo warning",
+      "status": "not_started",
+      "detail": "apps/web/src/features/mensagens/ConversaPage.tsx line 51: 'conversas' logical expression could make useMemo dependencies change on every render. Wrap initialization in its own useMemo(). Pre-existing warning, not blocking."
+    }
+  ],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {
+      "decision": "PerfilShowcase Gosto/Comentar: span→button type=button disabled for a11y",
+      "rationale": "Disabled buttons are announced by screen readers; spans with cursor-not-allowed are not semantic",
+      "phase": "integrity-hardening-v2"
+    },
+    {
+      "decision": "media.ts /[\\x00-\\x1f]/ replaced with Array.from().charCodeAt()<32",
+      "rationale": "ESLint no-control-regex bans control char ranges regardless of escape form (\\x, \\u, literals)",
+      "phase": "integrity-hardening-v2"
+    },
+    {
+      "decision": "T12 (Discussions) skipped — requires creating Strapi content types for discussion+reply collections first",
+      "rationale": "No discussion/reply content-types exist in infra/strapi/src/api/ — too invasive without dedicated planning",
+      "phase": "integrity-hardening-v2"
+    }
+  ],
+  "uncommitted_files": [],
+  "branch": "fix/pdcv2-integrity-hardening-v2",
+  "last_commit": "663c1f3 fix(a11y+docs): PerfilShowcase span→button disabled, cold-storage blacklist expanded",
+  "next_action": "Review .planning/CONSTITUTION.md for implementation details to move to DESIGN.md. Then expand ci-doc-validator.md scope with @file: marker convention for Phase 2 function validation.",
+  "context_notes": "Branch is clean. All feature tickets (T4/T8/T9/T10/T11/N6/F6/E4-T3) done. Visual & Auth Polish session fully committed. Pre-existing lint warnings in ConversaPage/AuthContext/BootstrapContext/ThemeContext/router are from fast-refresh and context file structure — intentional architecture decisions, not new issues. Seed-copy.ts has 2 pre-existing any warnings. Session accumulated 663c1f3 as HEAD."
+}

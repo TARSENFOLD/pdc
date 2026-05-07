@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processTelemetryQueue } from './consumer.js';
 import { redis } from '../../lib/redis.js';
 import { strapiPost } from '../strapi/strapi.client.js';
+import type { StrapiSingleResponse } from '@pdc/shared';
+
+function singleResponse<T>(data: T & { id: string | number }): StrapiSingleResponse<T> {
+  return { data, meta: {} };
+}
 
 vi.mock('../../lib/redis.js', () => ({
   redis: {
@@ -31,7 +36,7 @@ describe('Telemetry Consumer', () => {
 
   it.skip('deve processar um evento da fila e persistir no Strapi', async () => {
     vi.mocked(redis.rpoplpush).mockResolvedValueOnce(JSON.stringify(mockEvent)).mockResolvedValueOnce(null);
-    vi.mocked(strapiPost).mockResolvedValue({ data: { id: 1 } } as any);
+    vi.mocked(strapiPost).mockResolvedValue(singleResponse({ id: 1 }));
 
     // Chamar em um contexto que não executa o while(true) para sempre
     await processTelemetryQueue();

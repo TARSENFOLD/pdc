@@ -110,33 +110,33 @@ export const Tipo3Player = ({ simulacao }: Props) => {
       
       {/* HUD Superior */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-         <Card className="p-4 bg-surface-alt border-white/5 flex items-center gap-4">
+         <Card className="p-4 bg-recessed border-white/5 flex items-center gap-4">
             <div className="h-10 w-10 rounded-xl bg-accent/5 flex items-center justify-center text-accent">
                <Zap size={20} className="animate-pulse" />
             </div>
             <div>
-               <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">Tempo Decorrido</p>
-               <p className="font-mono text-xl font-black text-text-primary">{formatTime(seconds)}</p>
+               <p className="text-[9px] font-black uppercase tracking-widest text-ink-tertiary">Tempo Decorrido</p>
+               <p className="font-mono text-xl font-black text-ink-primary">{formatTime(seconds)}</p>
             </div>
          </Card>
 
-         <Card className="p-4 bg-surface-alt border-white/5 flex items-center gap-4">
+         <Card className="p-4 bg-recessed border-white/5 flex items-center gap-4">
             <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${focusStability > 70 ? 'bg-success/5 text-success' : 'bg-error/5 text-error'}`}>
                <Brain size={20} />
             </div>
             <div>
-               <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">Estabilidade</p>
-               <p className="font-mono text-xl font-black text-text-primary">{focusStability}%</p>
+               <p className="text-[9px] font-black uppercase tracking-widest text-ink-tertiary">Estabilidade</p>
+               <p className="font-mono text-xl font-black text-ink-primary">{focusStability}%</p>
             </div>
          </Card>
 
-         <Card className="p-4 bg-surface-alt border-white/5 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary">
+         <Card className="p-4 bg-recessed border-white/5 flex items-center gap-4">
+            <div className="h-10 w-10 rounded-xl bg-ink-primary/5 flex items-center justify-center text-ink-primary">
                <MousePointer2 size={20} />
             </div>
             <div>
-               <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">Ações Realizadas</p>
-               <p className="font-mono text-xl font-black text-text-primary">{acoesRealizadas}</p>
+               <p className="text-[9px] font-black uppercase tracking-widest text-ink-tertiary">Ações Realizadas</p>
+               <p className="font-mono text-xl font-black text-ink-primary">{acoesRealizadas}</p>
             </div>
          </Card>
 
@@ -174,13 +174,13 @@ export const Tipo3Player = ({ simulacao }: Props) => {
                <Brain size={40} className="text-accent animate-pulse" />
             </div>
             <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Processando Padrões</h2>
-            <p className="text-text-muted text-sm mb-8">A calcular o teu desempenho biométrico e a enviar para a Engine de Reputação...</p>
+            <p className="text-ink-tertiary text-sm mb-8">A calcular o teu desempenho biométrico e a enviar para a Engine de Reputação...</p>
           </motion.div>
         ) : (
           <div className="z-10 max-w-md">
             <Activity size={48} className="text-accent mx-auto mb-6 animate-pulse" />
             <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">{simulacao.titulo}</h2>
-            <p className="text-text-muted text-sm mb-8">{simulacao.descricao}</p>
+            <p className="text-ink-tertiary text-sm mb-8">{simulacao.descricao}</p>
             
             <div className="grid grid-cols-2 gap-4">
               <Button variant="ghost" onClick={() => { registrarAcao('analise'); }} className="border-white/10 text-white hover:bg-white/5 uppercase text-[10px] font-bold">
@@ -205,14 +205,14 @@ export const Tipo3Player = ({ simulacao }: Props) => {
       {/* Footer */}
       <footer className="flex items-center justify-between px-2">
          <div className="flex gap-6">
-            <div className="flex items-center gap-2 text-[9px] font-bold text-text-muted uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-[9px] font-bold text-ink-tertiary uppercase tracking-widest">
                <Lock size={12} className="text-accent" /> Secure Link
             </div>
-            <div className="flex items-center gap-2 text-[9px] font-bold text-text-muted uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-[9px] font-bold text-ink-tertiary uppercase tracking-widest">
                <ShieldAlert size={12} className="text-accent" /> Autoridade L3
             </div>
          </div>
-         <p className="text-[9px] font-black text-text-muted uppercase tracking-[0.2em]">
+         <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-[0.2em]">
            Módulo de Simulação Alta Fidelidade :: v2.2
          </p>
       </footer>

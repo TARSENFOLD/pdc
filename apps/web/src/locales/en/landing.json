@@ -1,0 +1,94 @@
+{
+  "navbar": {
+    "logo_tagline": "Inside the Course",
+    "links": {
+      "problema": "Problem",
+      "como_funciona": "How it works",
+      "funcionalidades": "Features"
+    },
+    "cta_primary": "Get started free",
+    "cta_login": "Sign in",
+    "menu": {
+      "open": "Open menu",
+      "close": "Close menu"
+    }
+  },
+  "hero": {
+    "badge": "Your educational community",
+    "headline": "Try a profession before you",
+    "headline_emphasis": "choose.",
+    "body": "Discover what it's really like to be a student in the course you want by doing practical virtual activities. Join us and decide your future with confidence.",
+    "cta_primary": "Let's discover your vocation",
+    "cta_secondary": "See how it works"
+  },
+  "destaques": {
+    "title": "Explore on your own terms",
+    "body": "Real simulations created by mentors and institutions to help you decide your future.",
+    "instituicoes_label": "Partner institutions",
+    "ver_todas": "See all"
+  },
+  "problema": {
+    "kicker": "The challenge",
+    "title": "Choosing a course shouldn't be a leap in the dark",
+    "body": "Every year, thousands of students enter courses they know nothing about. The result? Frustration, late changes, and wasted potential.",
+    "cards": {
+      "sem_referencia_title": "Choice without reference",
+      "sem_referencia_body": "Most students choose their course without ever experiencing the profession. They decide based on others' opinions.",
+      "tempo_dinheiro_title": "Time and money wasted",
+      "tempo_dinheiro_body": "Those who discover late that the course isn't right lose entire semesters and resources that could have been better invested.",
+      "desalinhamento_title": "Misalignment with the market",
+      "desalinhamento_body": "Students graduate in saturated fields while the market needs profiles that remain unfilled."
+    }
+  },
+  "como_funciona": {
+    "kicker": "How it works",
+    "title": "Three steps. One confident decision.",
+    "steps": {
+      "step1_title": "Simulate a profession",
+      "step1_body": "Choose an area and enter a practical simulation that replicates real day-to-day professional situations.",
+      "step2_title": "The platform analyses",
+      "step2_body": "Your actions, time, and decisions generate a unique vocational profile — based on behaviour, not questionnaire answers.",
+      "step3_title": "Decide with clarity",
+      "step3_body": "You receive recommendations for courses and areas aligned with your real profile. No guesswork."
+    }
+  },
+  "features": {
+    "kicker": "Features",
+    "title": "Everything you need, in one place",
+    "items": {
+      "simulacoes_title": "Practical simulations",
+      "simulacoes_body": "Guided video, external lab or interactive environment — experience the real day-to-day of each profession.",
+      "perfil_title": "Vocational profile",
+      "perfil_body": "Generated from your behaviour in simulations. No generic questionnaires.",
+      "cursos_title": "Certified courses",
+      "cursos_body": "Modules, tasks and certificates issued by partner institutions.",
+      "experiencias_title": "Institutional experiences",
+      "experiencias_body": "Programmes published by partner universities and schools — open and free.",
+      "mentoria_title": "Real mentorship",
+      "mentoria_body": "Industry professionals available for personalised guidance.",
+      "ia_title": "AI tutor",
+      "ia_body": "Answers your questions with context from your profile and the platform's content."
+    }
+  },
+  "mentores": {
+    "title": "Learn from those who are already there",
+    "body": "Connect with industry professionals for personalised guidance.",
+    "cta": "Meet the mentors"
+  },
+  "cta_final": {
+    "title": "Ready to try it?",
+    "body": "Create your account in seconds and start exploring real simulations. Free. No commitment.",
+    "cta_primary": "Create free account",
+    "cta_secondary": "I already have an account"
+  },
+  "footer": {
+    "tagline": "Inside the Course — Angola",
+    "links": {
+      "entrar": "Sign in",
+      "registar": "Register",
+      "problema": "Problem",
+      "como_funciona": "How it works"
+    },
+    "copyright": "© {{year}} Inside the Course. All rights reserved."
+  }
+}

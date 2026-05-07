@@ -1,6 +1,6 @@
 # Catálogo de Eventos de Telemetria
 
-⚠️ **Nota:** Este documento apresenta um snapshot operacional simplificado. Para a autoridade completa sobre o catálogo de 30+ eventos, payloads detalhados e lógica de enriquecimento, consulte a **Spec Canónica: [1a81656f — Modelo de Telemetria e Perfil Vocacional](../../.planning/1a81656f-712a-4767-9de9-b0b34113f791-PDC_—_Modelo_de_Telemetria_e_Perfil_Vocacional.md)**.
+⚠️ **Nota:** Este documento apresenta um snapshot operacional simplificado. Para a autoridade completa sobre o catálogo de 30+ eventos, payloads detalhados e lógica de enriquecimento, consulte a Spec Canónica **1a81656f — Modelo de Telemetria e Perfil Vocacional** (ficheiro arquivado, consulte o gestor de projeto).
 
 ## Snapshot Operacional (W1)
 

@@ -12,6 +12,10 @@ const VARIANT_MAP: Record<NotificacaoRealtime['tipo'], ToastVariant> = {
   erro: 'error',
   vinculo_pedido: 'info',
   vinculo_aprovado: 'success',
+  vinculo_rejeitado: 'warning',
+  vinculo_terminado: 'default',
+  conquista: 'success',
+  sistema: 'default',
 };
 
 export function useNotificacoes() {
@@ -23,7 +27,7 @@ export function useNotificacoes() {
     const cleanup = on<NotificacaoRealtime>('notificacao', (notif) => {
       toast({
         title: notif.titulo,
-        description: notif.corpo,
+        description: notif.mensagem,
         variant: VARIANT_MAP[notif.tipo],
       });
     });

@@ -2,9 +2,24 @@
 import { createStrapi } from '@strapi/strapi';
 import { randomUUID } from 'crypto';
 
+interface SeedDocument {
+  id?: string | number;
+  nome?: string;
+  [key: string]: unknown;
+}
+
+interface StrapiDocumentService {
+  findFirst(args: { filters: Record<string, unknown> }): Promise<SeedDocument | null>;
+  create(args: { data: Record<string, unknown>; status: 'published' }): Promise<SeedDocument>;
+}
+
+interface SeedStrapi {
+  documents(uid: string): StrapiDocumentService;
+}
+
 async function main() {
   console.log('🚀 Iniciando Seed Narrativo Monumental v4.0 (World Class Infrastructure)');
-  const app = await createStrapi().load();
+  const app = await createStrapi().load() as SeedStrapi;
 
   try {
     const areas = ['ENGENHARIA', 'SAUDE', 'TECNOLOGIA', 'GESTAO', 'ARTES', 'DIREITO'];
@@ -16,10 +31,10 @@ async function main() {
       return date.toISOString();
     };
 
-    const findOrCreate = async (uid: string, filters: any, data: any) => {
-      const existing = await app.documents(uid as any).findFirst({ filters });
+    const findOrCreate = async (uid: string, filters: Record<string, unknown>, data: Record<string, unknown>) => {
+      const existing = await app.documents(uid).findFirst({ filters });
       if (existing) return existing;
-      return await app.documents(uid as any).create({ data, status: 'published' });
+      return await app.documents(uid).create({ data, status: 'published' });
     };
 
     // 1. Instituições de Prestígio
@@ -31,7 +46,7 @@ async function main() {
       { nome: 'Academia de Elite de Luanda', slug: 'ael', tipo: 'Centro de Formação', regiao: 'Luanda' }
     ];
 
-    const instituicoes: any[] = [];
+    const instituicoes: SeedDocument[] = [];
     for (const inst of instData) {
       const res = await findOrCreate('api::instituicao.instituicao', { slug: inst.slug }, {
         ...inst,
@@ -44,7 +59,7 @@ async function main() {
 
     // 2. Mentores de Elite
     console.log('👨‍🏫 Criando Mentores...');
-    const mentorProfiles: any[] = [];
+    const mentorProfiles: SeedDocument[] = [];
     for (let i = 0; i < 30; i++) {
       const area = areas[i % areas.length];
       const res = await findOrCreate('api::perfil.perfil', { email: `mentor${i}@pdc.ao` }, {
@@ -63,7 +78,7 @@ async function main() {
 
     // 3. Simulações e Experiências
     console.log('🧪 Criando Simulações e Experiências...');
-    const simulacoes: any[] = [];
+    const simulacoes: SeedDocument[] = [];
     for (const area of areas) {
       const s = await findOrCreate('api::simulacao.simulacao', { slug: `sim-${area.toLowerCase()}` }, {
         titulo: `Simulação Profissional: ${area}`,
@@ -145,4 +160,4 @@ async function main() {
   }
 }
 
-main();
+void main();

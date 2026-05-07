@@ -1,0 +1,94 @@
+{
+  "navbar": {
+    "logo_tagline": "Por Dentro do Curso",
+    "links": {
+      "problema": "Problema",
+      "como_funciona": "Como funciona",
+      "funcionalidades": "Funcionalidades"
+    },
+    "cta_primary": "Começar grátis",
+    "cta_login": "Entrar",
+    "menu": {
+      "open": "Abrir menu",
+      "close": "Fechar menu"
+    }
+  },
+  "hero": {
+    "badge": "A tua comunidade educacional",
+    "headline": "Experimenta uma profissão antes de",
+    "headline_emphasis": "escolher.",
+    "body": "Descobre como é o dia a dia de um estudante do curso que queres fazendo actividades práticas virtuais. Junta-te a nós e decide o teu futuro com segurança.",
+    "cta_primary": "Vamos descobrir a tua vocação",
+    "cta_secondary": "Entende como funciona"
+  },
+  "destaques": {
+    "title": "Explora por conta própria",
+    "body": "Simulações reais criadas por mentores e instituições para te ajudar a decidir o teu futuro.",
+    "instituicoes_label": "Instituições parceiras",
+    "ver_todas": "Ver todas"
+  },
+  "problema": {
+    "kicker": "O desafio",
+    "title": "Escolher um curso não devia ser um salto no escuro",
+    "body": "Todos os anos, milhares de estudantes angolanos entram em cursos que não conhecem. O resultado? Frustração, mudanças tardias e potencial desperdiçado.",
+    "cards": {
+      "sem_referencia_title": "Escolha sem referência",
+      "sem_referencia_body": "A maioria dos estudantes escolhe o curso sem nunca ter experimentado a profissão. Decidem com base em opinião de terceiros.",
+      "tempo_dinheiro_title": "Tempo e dinheiro perdidos",
+      "tempo_dinheiro_body": "Quem descobre tarde que o curso não é o certo perde semestres inteiros e recursos que podiam ser investidos melhor.",
+      "desalinhamento_title": "Desalinhamento com o mercado",
+      "desalinhamento_body": "Estudantes formam-se em áreas saturadas enquanto o mercado angolano precisa de perfis que ficam por preencher."
+    }
+  },
+  "como_funciona": {
+    "kicker": "Como funciona",
+    "title": "Três passos. Uma decisão segura.",
+    "steps": {
+      "step1_title": "Simula uma profissão",
+      "step1_body": "Escolhe uma área e entra numa simulação prática que replica situações reais do dia a dia profissional.",
+      "step2_title": "A plataforma analisa",
+      "step2_body": "As tuas acções, tempo e decisões geram um perfil vocacional único — baseado em comportamento, não em respostas a questionários.",
+      "step3_title": "Decides com clareza",
+      "step3_body": "Recebes recomendações de cursos e áreas alinhadas ao teu perfil real. Sem adivinhação."
+    }
+  },
+  "features": {
+    "kicker": "Funcionalidades",
+    "title": "Tudo o que precisas, num só lugar",
+    "items": {
+      "simulacoes_title": "Simulações práticas",
+      "simulacoes_body": "Vídeo guiado, laboratório externo ou ambiente interactivo — experimenta o dia a dia real de cada profissão.",
+      "perfil_title": "Perfil vocacional",
+      "perfil_body": "Gerado a partir do teu comportamento nas simulações. Sem questionários genéricos.",
+      "cursos_title": "Cursos com certificado",
+      "cursos_body": "Módulos, tarefas e certificados emitidos por instituições parceiras.",
+      "experiencias_title": "Experiências institucionais",
+      "experiencias_body": "Programas publicados por universidades e escolas angolanas — abertos e gratuitos.",
+      "mentoria_title": "Mentoria real",
+      "mentoria_body": "Profissionais da indústria angolana disponíveis para orientação personalizada.",
+      "ia_title": "Tutor IA",
+      "ia_body": "Responde às tuas dúvidas com contexto do teu perfil e do conteúdo da plataforma."
+    }
+  },
+  "mentores": {
+    "title": "Aprende com quem já está lá",
+    "body": "Conecta-te com profissionais da indústria angolana para orientação personalizada.",
+    "cta": "Conhecer mentores"
+  },
+  "cta_final": {
+    "title": "Pronto para experimentar?",
+    "body": "Cria a tua conta em segundos e começa a explorar simulações reais. Gratuito. Sem compromisso.",
+    "cta_primary": "Criar conta grátis",
+    "cta_secondary": "Já tenho conta"
+  },
+  "footer": {
+    "tagline": "Por Dentro do Curso — Angola",
+    "links": {
+      "entrar": "Entrar",
+      "registar": "Registar",
+      "problema": "Problema",
+      "como_funciona": "Como funciona"
+    },
+    "copyright": "© {{year}} Por Dentro do Curso. Todos os direitos reservados."
+  }
+}

@@ -16,12 +16,14 @@ aiRoutes.use('*', verifyJwt);
 // POST /ai/chat
 aiRoutes.post('/chat', zValidator('json', ChatPayloadSchema), async (c) => {
   const { id: estudanteId } = c.get('user');
-  const { message, stream } = c.req.valid('json');
+  const { message, messages, stream } = c.req.valid('json');
+  const prompt = message ?? messages?.at(-1)?.content;
+  if (!prompt) return c.json({ error: 'message is required' }, 400);
 
   const contexto = await aiService.buildContexto(estudanteId);
-  const ragContext = await aiRag.buscarContextoRelevante(message);
+  const ragContext = await aiRag.buscarContextoRelevante(prompt);
   
-  const res = await aiService.chat([{ role: 'user', content: message }], `${contexto} ${ragContext}`, !!stream);
+  const res = await aiService.chat(messages ?? [{ role: 'user', content: prompt }], `${contexto} ${ragContext}`, stream);
 
   if (stream) {
     return streamSSE(c, async (sseStream) => {

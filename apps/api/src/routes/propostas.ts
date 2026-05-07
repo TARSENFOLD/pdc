@@ -26,14 +26,14 @@ propostaRoutes.post('/', zValidator('json', CriarPropostaPayloadSchema), async (
     });
 
     // G15: Impacto no Ecossistema
-    await eventBus.publishWithOutbox(DomainEventName.PROPOSTA_CRIADA as any, {
+    await eventBus.publishWithOutbox(DomainEventName.PROPOSTA_CRIADA, {
       propostaId: res.data.id,
       estudanteId: payload.targetId,
       instituicaoId
     });
 
     return c.json(res.data, 201);
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao criar proposta' }, 502);
   }
 });
@@ -54,7 +54,7 @@ propostaRoutes.get('/recebidas', async (c) => {
       populate: 'instituicao',
     });
     return c.json(res);
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao carregar propostas' }, 502);
   }
 });
@@ -80,7 +80,7 @@ propostaRoutes.post('/:id/responder', zValidator('json', z.object({ acao: z.enum
     if (acao === 'aceitar') {
       const instId = proposta.instituicaoId;
       // Criar vínculo automático
-      const vinculoRes = await strapiPost('/vinculos', {
+      const vinculoRes = await strapiPost<{ id: string | number }>('/vinculos', {
         solicitante: userId,
         destinatario: instId,
         connectionType: 'student-institution',
@@ -92,12 +92,12 @@ propostaRoutes.post('/:id/responder', zValidator('json', z.object({ acao: z.enum
       await eventBus.publishWithOutbox(DomainEventName.VINCULO_APROVADO, {
         vinculoId: vinculoRes.data.id,
         solicitanteId: userId,
-        destinatarioId: String(instId)
+        destinatarioId: instId
       });
     }
 
     return c.json({ success: true, estado: novoEstado });
-  } catch (_err) {
+  } catch {
     return c.json({ error: 'Erro ao responder proposta' }, 502);
   }
 });

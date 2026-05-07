@@ -1,5 +1,6 @@
 export * from './Button';
 export * from './Input';
+export * from './PasswordInput';
 export * from './Card';
 export * from './Badge';
 export * from './Avatar';
@@ -17,9 +18,13 @@ export * from './Toaster';
 export * from './Skeleton';
 export * from './EmptyState';
 export * from './AppErrorBoundary';
+export * from './Select';
+export * from './EditorialStateBadge';
 
 /* Soul & Elite Primitives */
 export * from './BentoGrid';
 export * from './GlassCard';
 export * from './AsymmetricButton';
 export * from './AspirationalEmpty';
+export * from './InstallPrompt';
+export * from './HUDPanel';

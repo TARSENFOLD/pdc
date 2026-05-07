@@ -53,7 +53,7 @@ featureFlagsRoutes.put(
     const { enabled } = c.req.valid('json');
 
     const user = c.get('user');
-    if (user.role === 'instituicao' && user.instituicaoId !== instituicaoIdParam) {
+    if (user.role === 'instituicao' && user.id !== instituicaoIdParam) {
       return c.json({ error: 'Sem permissão' }, 403);
     }
 
@@ -81,7 +81,7 @@ featureFlagsRoutes.delete(
     const instituicaoId = parseInt(instituicaoIdParam, 10);
 
     const user = c.get('user');
-    if (user.role === 'instituicao' && user.instituicaoId !== instituicaoIdParam) {
+    if (user.role === 'instituicao' && user.id !== instituicaoIdParam) {
       return c.json({ error: 'Sem permissão' }, 403);
     }
 

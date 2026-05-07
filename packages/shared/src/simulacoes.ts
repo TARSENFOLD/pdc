@@ -1,76 +1,94 @@
 import { z } from 'zod';
-import { EstadoEditorialSchema } from './schemas/enums.js';
-import { AreaVocacionalSchema } from './schemas/enums.js';
+import { EstadoEditorialSchema, AreaVocacionalSchema } from './schemas/enums.js';
+
+// ─── Configuração do Lab (Spec 04 §3.2) ───────────────────────────────────────
+
+export const TipoSimulacaoSchema = z.enum(['tipo1', 'tipo2', 'tipo3']);
+export type TipoSimulacao = z.infer<typeof TipoSimulacaoSchema>;
+
+export const CriteriosAvaliacaoSchema = z.object({
+  pesos: z.object({
+    fluidez: z.number().min(0).max(100),
+    resiliencia: z.number().min(0).max(100),
+    foco: z.number().min(0).max(100),
+  }),
+}).refine(
+  (data) => Math.round((data.pesos.fluidez + data.pesos.resiliencia + data.pesos.foco) * 100) === 10000,
+  { message: 'A soma dos pesos deve ser exatamente 100%' }
+);
 
 export const SimulacaoSchema = z.object({
   id: z.string(),
+  slug: z.string(),
   titulo: z.string(),
   descricao: z.string(),
+  capaUrl: z.string().url().optional().nullable(),
   area: AreaVocacionalSchema,
-  tipo: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  capaUrl: z.string().url().optional(),
+  tipo: z.number().min(1).max(3), // Alias para tipoSimulacao (compatibilidade UI)
+  tipoSimulacao: TipoSimulacaoSchema,
+  autorId: z.string(),
+  estado: EstadoEditorialSchema.optional().default('draft'),
+  validadoAcademicamente: z.boolean().default(false),
+  tentativasMaximas: z.number().int().optional(), // 0 = sem limite
   conteudoUrl: z.string().url().optional(),
-  createdAt: z.string().datetime(),
   iframeUrl: z.string().url().optional(),
+  executorConfig: z.record(z.unknown()).optional(),
+  criteriosAvaliacao: CriteriosAvaliacaoSchema,
+  materiaisLab: z.array(z.object({
+    id: z.string(),
+    label: z.string(),
+    url: z.string().url(),
+  })).optional(),
+  rating: z.number().min(0).max(5).optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
 });
 
 export type Simulacao = z.infer<typeof SimulacaoSchema>;
 
-export const SimulacaoPublicaSchema = z.object({
-  id: z.string(),
-  slug: z.string().optional(),
-  titulo: z.string(),
-  descricao: z.string(),
-  area: AreaVocacionalSchema,
-  tipo: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  nivel: z.string().optional().nullable(),
-  capaUrl: z.string().url().optional().nullable(),
-});
-export type SimulacaoPublica = z.infer<typeof SimulacaoPublicaSchema>;
+export type SimulacaoPublica = Simulacao; // Alias Spec 04
+export type SimulacaoMinha = Simulacao & {
+  inscricoesCount?: number;
+};
 
-export const CriarSimulacaoPayloadSchema = z.object({
-  titulo: z.string().min(3).max(120),
-  descricao: z.string().min(10).max(2000),
-  area: AreaVocacionalSchema,
-  tipo: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  capaUrl: z.string().url().optional(),
-  iframeUrl: z.string().url().optional(),
-});
+export interface SimulacaoFilters {
+  area?: string;
+  tipo?: number;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
 
-export type CriarSimulacaoPayload = z.infer<typeof CriarSimulacaoPayloadSchema>;
-
-export const SimulacaoMinhaSchema = z.object({
-  id: z.string(),
-  slug: z.string().optional(),
-  titulo: z.string(),
-  descricao: z.string(),
-  capaUrl: z.string().url().optional(),
-  area: AreaVocacionalSchema.optional(),
-  tipo: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  nivel: z.string().optional(),
-  estado: EstadoEditorialSchema,
-  autorId: z.string(),
-});
-
-export type SimulacaoMinha = z.infer<typeof SimulacaoMinhaSchema>;
+// ─── Tentativas (Spec 04 §3.2) ────────────────────────────────────────────────
 
 export const IniciarTentativaPayloadSchema = z.object({
   simulacaoId: z.string(),
 });
 
-export type IniciarTentativaPayload = z.infer<typeof IniciarTentativaPayloadSchema>;
-
-export interface SimulacaoFilters {
-  search?: string;
-  area?: string;
-  tipo?: 1 | 2 | 3;
-  page?: number;
-  pageSize?: number;
-}
-
 export const ConcluirTentativaPayloadSchema = z.object({
   tentativaId: z.string(),
+  telemetria: z.array(z.record(z.unknown())).optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 
+export type IniciarTentativaPayload = z.infer<typeof IniciarTentativaPayloadSchema>;
 export type ConcluirTentativaPayload = z.infer<typeof ConcluirTentativaPayloadSchema>;
+
+export const CriarSimulacaoPayloadSchema = z.object({
+  titulo: z.string().min(3).max(120),
+  descricao: z.string().min(10),
+  area: AreaVocacionalSchema,
+  tipo: z.number().min(1).max(3),
+  tipoLab: z.enum(['sandbox', 'prova', 'desafio', 'experimento']),
+  tentativasMaximas: z.number().int().min(0).default(0),
+  criteriosAvaliacao: CriteriosAvaliacaoSchema,
+  capaUrl: z.string().url().optional(),
+  iframeUrl: z.string().url().optional(),
+  materiaisLab: z.array(z.object({
+    id: z.string(),
+    label: z.string(),
+    url: z.string().url(),
+  })).optional(),
+});
+
+export type CriarSimulacaoPayload = z.infer<typeof CriarSimulacaoPayloadSchema>;

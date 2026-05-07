@@ -43,6 +43,45 @@ jobs:
       - name: Build (apps/web)
         run: npm run build -w apps/web
 
+  # ─── Lighthouse CI — NF7 (performance ≥75 · a11y ≥85) ──────────────────────
+  lighthouse:
+    name: "lighthouse — mobile perf + a11y"
+    runs-on: ubuntu-latest
+    needs: [web]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build -w packages/shared
+
+      - name: Build web app
+        run: npm run build -w apps/web
+
+      - name: Install Lighthouse CI + serve
+        run: npm install -g @lhci/cli@0.14.x serve
+
+      - name: Run Lighthouse CI
+        run: lhci autorun
+        continue-on-error: true  # warning level until NF7 threshold is met
+
+      - name: Upload LHCI report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lhci-report
+          path: .lighthouseci/
+          retention-days: 14
+
   # ─── BFF — apps/api ─────────────────────────────────────────────────────────
   api:
     name: "api — lint + typecheck + build"
@@ -98,6 +137,30 @@ jobs:
       - name: Build (packages/shared)
         run: npm run build -w packages/shared
 
+  # ─── Docs Validator — "Doc is Law" gate ────────────────────────────────────
+  docs:
+    name: "docs — link check + code references"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate internal links and code references
+        run: npm run validate:docs
+
+      - name: Lint Markdown
+        run: npm run lint:docs
+        continue-on-error: true
+
   # ─── E2E Smoke — Playwright (PRs + push) ────────────────────────────────────
   e2e-smoke:
     name: "e2e — Playwright smoke (Chromium)"
@@ -128,8 +191,16 @@ jobs:
       - name: Build Web
         run: npm run build -w apps/web
 
+      - name: Build Docker images
+        run: docker compose -f docker-compose.test.yml build
+
       - name: Start test infrastructure (Strapi + PG + Redis)
-        run: docker compose -f docker-compose.test.yml up -d --wait --wait-timeout 120
+        run: |
+          docker compose -f docker-compose.test.yml up -d --wait --wait-timeout 120 || {
+            docker compose -f docker-compose.test.yml ps -a
+            docker compose -f docker-compose.test.yml logs --no-color postgres redis strapi
+            exit 1
+          }
 
       - name: Seed test accounts
         run: npx tsx tests/helpers/seed.ts
@@ -137,6 +208,7 @@ jobs:
           DEV_SKIP_OTP: "true"
           API_URL: http://localhost:3001
           STRAPI_URL: http://localhost:1337
+          STRAPI_API_TOKEN: test-strapi-token
           REDIS_URL: redis://localhost:6379
 
       - name: Run Playwright smoke tests
@@ -144,9 +216,12 @@ jobs:
         env:
           DEV_SKIP_OTP: "true"
           NODE_ENV: test
-          STRAPI_URL: http://localhost:1337
-          REDIS_URL: redis://localhost:6379
+          API_URL: http://localhost:3001
           FRONTEND_URL: http://localhost:5173
+          STRAPI_URL: http://localhost:1337
+          STRAPI_API_TOKEN: test-strapi-token
+          JWT_SECRET: test-jwt-secret-for-ci-minimum-32-chars
+          REDIS_URL: redis://localhost:6379
 
       - name: Run A11y Audit (Axe-Core)
         continue-on-error: true # Warning level for W0; will be hardened in W3
@@ -157,6 +232,12 @@ jobs:
           STRAPI_URL: http://localhost:1337
           REDIS_URL: redis://localhost:6379
           FRONTEND_URL: http://localhost:5173
+
+      - name: Dump test infrastructure logs
+        if: failure()
+        run: |
+          docker compose -f docker-compose.test.yml ps -a
+          docker compose -f docker-compose.test.yml logs --no-color postgres redis strapi
 
       - name: Stop test infrastructure
         if: always()
@@ -200,6 +281,9 @@ jobs:
 
       - name: Build Web
         run: npm run build -w apps/web
+
+      - name: Build Docker images
+        run: docker compose -f docker-compose.test.yml build
 
       - name: Start test infrastructure (Strapi + PG + Redis)
         run: docker compose -f docker-compose.test.yml up -d --wait --wait-timeout 120

@@ -1,5 +1,5 @@
 /**
- * Roles da plataforma PDC v2.
+ * Roles da plataforma PDC.
  * Cada role tem um conjunto de permissões definido no BFF.
  */
 export const ROLES = [

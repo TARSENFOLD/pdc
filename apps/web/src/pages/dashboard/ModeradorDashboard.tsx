@@ -1,74 +1,123 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { denunciasApi } from '@/lib/api/denuncias';
-import { Card, Badge, Spinner } from '@/components/ui';
+import { dashboardApi } from '@/lib/api/dashboard';
+import { Badge, Spinner, BentoGrid, BentoTile, GlassCard } from '@/components/ui';
+import ContentTypeCTAGrid from '@/components/dashboard/ContentTypeCTAGrid';
+import { 
+  ShieldAlert, 
+  CheckCircle, 
+  Users, 
+  Clock, 
+  AlertTriangle,
+  ClipboardList,
+  UserCheck
+} from 'lucide-react';
+import { motion } from 'motion/react';
 
 export function ModeradorDashboard() {
   const { data, isLoading } = useQuery({
-    queryKey: ['denuncias', 'pendentes'],
-    queryFn: () => denunciasApi.list({ estado: 'pendente', pageSize: 5 }),
+    queryKey: ['dashboard', 'moderador'],
+    queryFn: () => dashboardApi.getModerador(),
   });
 
-  const denuncias = data?.data ?? [];
+  const denuncias = data?.denunciasCriticas ?? [];
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+  if (isLoading) return <div className="flex h-screen items-center justify-center bg-canvas"><Spinner size="lg" /></div>;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-text-primary">Painel de Moderação</h1>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="p-6 md:p-10 space-y-10 max-w-7xl mx-auto"
+    >
+      <header>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-widest mb-4">
+          <ShieldAlert size={12} /> Painel de Moderação
+        </div>
+        <h1 className="text-4xl font-black text-ink-primary tracking-tighter sm:text-5xl font-display">
+          Controlo de <span className="text-accent">Qualidade.</span>
+        </h1>
+        <p className="text-ink-secondary mt-2 text-lg">
+          Fila de denúncias, aprovações pendentes e auditoria da plataforma.
+        </p>
+      </header>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2 p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold text-text-primary">Denúncias Pendentes</h2>
-            <Link to="/app/moderacao/denuncias" className="text-sm text-amber hover:underline">
-              Ver todas
-            </Link>
+      <BentoGrid>
+        {/* Stat: Pendentes */}
+        <BentoTile size="1x1" className="flex flex-col justify-between p-6 bg-accent/5 border-accent/10">
+          <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
+            <AlertTriangle size={20} />
           </div>
+          <div>
+            <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Denúncias Pendentes</p>
+            <p className="text-3xl font-black font-mono text-accent">{data?.stats.denunciasPendentes ?? 0}</p>
+          </div>
+        </BentoTile>
 
-          {denuncias.length === 0 ? (
-            <p className="py-8 text-center text-sm text-text-muted">Nenhuma denúncia pendente.</p>
-          ) : (
-            <div className="space-y-4">
-              {denuncias.map((d) => (
-                <Link
-                  key={d.id}
-                  to={`/app/moderacao/denuncias/${d.id}`}
-                  className="block rounded-lg border border-border bg-background p-4 transition-colors hover:border-amber/50"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs text-text-muted mb-1">{d.conteudoTipo} • {new Date(d.criadaEm).toLocaleDateString()}</p>
-                      <p className="text-sm text-text-primary line-clamp-1">{d.motivo}</p>
-                    </div>
-                    <Badge variant="warning">Pendente</Badge>
+        {/* Stat: Resolvidas hoje */}
+        <BentoTile size="1x1" className="flex flex-col justify-between p-6">
+          <div className="h-10 w-10 rounded-xl bg-accent-success/10 flex items-center justify-center text-accent-success">
+            <CheckCircle size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Resolvidas Hoje</p>
+            <p className="text-3xl font-black font-mono text-ink-primary">{data?.stats.resolvidasHoje ?? 0}</p>
+          </div>
+        </BentoTile>
+
+        {/* ContentTypeCTAGrid para Acções */}
+        <BentoTile size="2x1" className="p-0 border-none bg-transparent shadow-none">
+          <ContentTypeCTAGrid
+            title="Operações de Integridade"
+            gridCols={2}
+            ctas={[
+              { label: 'Fila de Aprovações', to: '/app/moderacao/aprovacoes', icon: UserCheck, variant: 'primary' },
+              { label: 'Todas as Denúncias', to: '/app/moderacao/denuncias', icon: ShieldAlert },
+              { label: 'Gestão de Utilizadores', to: '/app/moderador/utilizadores', icon: Users },
+              { label: 'Audit Trail', to: '/app/admin/audit', icon: ClipboardList },
+            ]}
+          />
+        </BentoTile>
+      </BentoGrid>
+
+      {/* Fila de denúncias */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="font-black text-ink-primary flex items-center gap-2 uppercase text-[12px] tracking-[0.2em]">
+            <Clock size={16} className="text-accent" /> Denúncias Críticas
+          </h2>
+          <Link to="/app/moderacao/denuncias" className="text-[10px] font-black text-accent hover:underline uppercase tracking-widest">
+            Ver todas →
+          </Link>
+        </div>
+
+        {denuncias.length === 0 ? (
+          <GlassCard className="py-12 text-center">
+            <p className="text-sm text-ink-tertiary">Nenhuma denúncia pendente. A plataforma está estável.</p>
+          </GlassCard>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {denuncias.map((d) => (
+              <Link
+                key={d.id}
+                to={`/app/moderacao/denuncias/${d.id}`}
+                className="group"
+              >
+                <GlassCard className="flex items-start justify-between gap-4 p-4 hover:border-accent/20 transition-all">
+                  <div className="min-w-0">
+                    <p className="text-[9px] text-ink-tertiary mb-1 font-bold uppercase tracking-widest">
+                      {d.conteudoTipo} · {new Date(d.criadaEm).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-ink-primary line-clamp-1 font-medium group-hover:text-accent transition-colors">{d.motivo}</p>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <Card className="p-6">
-          <h2 className="font-semibold text-text-primary mb-4">Métricas Rápidas</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between border-b border-border pb-2">
-              <span className="text-sm text-text-secondary">Pendentes</span>
-              <span className="font-bold text-error">{data?.pagination.total ?? 0}</span>
-            </div>
-            <div className="flex justify-between border-b border-border pb-2">
-              <span className="text-sm text-text-secondary">Resolvidas (hoje)</span>
-              <span className="font-bold text-success">0</span>
-            </div>
+                  <Badge variant="warning">Pendente</Badge>
+                </GlassCard>
+              </Link>
+            ))}
           </div>
-        </Card>
-      </div>
-    </div>
+        )}
+      </section>
+    </motion.div>
   );
 }

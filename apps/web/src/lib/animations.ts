@@ -1,5 +1,5 @@
 /**
- * PDC v2 — "Soul & Elite" Animation System
+ * PDC — "Soul & Elite" Animation System
  * Enforced by Constitution Rule 28: "Apple Physics"
  * stiffness: 220, damping: 28
  */

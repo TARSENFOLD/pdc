@@ -116,7 +116,7 @@ cursoRoutes.put('/:id', checkRole(['mentor', 'instituicao', 'super_admin']), zVa
       return c.json({ error: 'Não tem permissão' }, 403);
     }
 
-    const resPut = await cursosService.atualizarCurso(c.req.param('id') as string, c.req.valid('json') as Partial<CriarCursoPayload>, c.get('user').id);
+    const resPut = await cursosService.atualizarCurso(c.req.param('id'), c.req.valid('json') as Partial<CriarCursoPayload>, c.get('user').id);
     return c.json(resPut);
   } catch (err: unknown) {
     return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);

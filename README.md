@@ -10,10 +10,11 @@
 
 Se encontrar informações contraditórias, a ordem de precedência é:
 1. **Epics Canónicas ([spec:IMPORTANTE/01–05](specs/IMPORTANTE/))** — A Constituição Soberana.
-2. **[Manual de Prosperidade](.planning/PROSPERITY.md)** — Governação de integridade técnica e documental.
-3. **Diretoria `.planning/`** — Estado real, requisitos e roadmap atualizado.
-4. **Diretoria `docs/decisoes/`** — Registos de Arquitetura (ADRs).
-4. **Diretoria `docs/`** — Guias e manuais secundários.
+2. **[Constituição](.planning/CONSTITUTION.md)** — Leis inegociáveis de engenharia.
+3. **[Manual de Prosperidade](.planning/PROSPERITY.md)** — Governação de integridade técnica e documental.
+4. **Diretoria `.planning/`** — Estado real, requisitos e roadmap atualizado.
+5. **Diretoria `docs/decisoes/`** — Registos de Arquitetura (ADRs).
+6. **Diretoria `docs/`** — Guias e manuais secundários.
 
 ---
 
@@ -30,7 +31,7 @@ Se encontrar informações contraditórias, a ordem de precedência é:
 
 | Camada | Tecnologia |
 |--------|-----------|
-| **Frontend** | React 18, Vite 5, TailwindCSS v4, **Motion v11+**, Radix UI, Lucide |
+| **Frontend** | React 18, Vite 6, TailwindCSS v4, **Motion v11+**, Radix UI, Lucide |
 | **Edge (L1)** | **Cloudflare Workers**, Wrangler, Hono |
 | **BFF (L2/L3)** | Node.js 24 LTS, Hono, **Jose**, Socket.IO (Realtime) |
 | **Persistência** | PostgreSQL 16, **Upstash Redis**, **Cloudflare R2** (S3) |
@@ -68,8 +69,8 @@ O projeto é executado em **Waves** (spec:IMPORTANTE/02 §10), não em fases lin
 | **W0** | Fundação & Estabilidade | ✅ Concluído |
 | **W1** | Autenticação & Pipeline Soberano | ✅ Concluído |
 | **W2** | Motor Vocacional & LTI | ✅ Concluído |
-| **W3** | Design System de Autoridade | 🚧 Em Progresso (Primitivos + Tokens ✅) |
-| **W4** | Dashboards Bento Grid | 🚧 Em Progresso (UI ~70% ✅) |
+| **W3** | Design System de Autoridade | ✅ Concluído (Tokens + Primitivos + Bento Grid) |
+| **W4** | Dashboards & Home | 🚧 Em Progresso (7 dashboards + RBAC ✅, BFF parcial) |
 | **W5** | Gamificação & Produção | ⏳ Planeado |
 | **W6** | Mobile Nativo (Capacitor/TWA) | ⏳ Planeado |
 
@@ -81,7 +82,7 @@ O projeto é executado em **Waves** (spec:IMPORTANTE/02 §10), não em fases lin
 
 ### 1. Preparação
 ```bash
-nvm use          # Garante Node.js 24.13.0
+nvm use          # Garante Node.js >=24.0.0
 npm install      # Instala dependências de todo o monorepo
 ```
 
@@ -90,14 +91,8 @@ npm install      # Instala dependências de todo o monorepo
 # Terminal 1: Infraestrutura (DB, Redis, CMS)
 docker compose up -d
 
-# Terminal 2: Edge (Wrangler dev)
-npm run dev -w apps/edge
-
-# Terminal 3: BFF (Hono)
-npm run dev -w apps/api
-
-# Terminal 4: Frontend (Vite)
-npm run dev -w apps/web
+# Terminal 2: Monorepo (Frontend, BFF, Edge)
+npm run dev
 ```
 
 ### 3. Processamento de Fundo
@@ -109,12 +104,14 @@ npm run start:consumer -w apps/api
 npm run replay-outbox -w apps/api
 ```
 
-### 4. Qualidade e Testes (k6 scripts em tests/k6/*)
+### 4. Qualidade e Testes (Playwright & k6) <a id="playwright-e2e-section"></a>
 ```bash
 npm run typecheck       # Verificação de tipos global
 npm run lint            # Linting de autoridade
-npm run test:e2e:smoke  # Testes de fumo Playwright
-npm run test:load:auth  # k6: tests/k6/auth-flow.js
+npm run test:e2e:smoke  # Testes de fumo Playwright (Suite "Bravura", o path feliz principal)
+npm run test:load:auth  # k6: Fluxo de Auth (tests/k6/auth-flow.js)
+npm run test:load:edge  # k6: Ingestão de Telemetria (tests/k6/edge-load.js)
+# Ver tests/k6/README.md para catálogo completo de testes de stress/spike.
 ```
 
 ---

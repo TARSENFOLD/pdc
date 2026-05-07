@@ -3,6 +3,7 @@ import { UploadCloud } from 'lucide-react';
 import { Card, Input } from '@/components/ui';
 import { motion } from 'motion/react';
 import type { CriarCursoPayload, AreaVocacional } from '@pdc/shared';
+import { AreaVocacionalSchema } from '@pdc/shared';
 
 interface Props {
   payload: Partial<CriarCursoPayload>;
@@ -10,6 +11,10 @@ interface Props {
   upload: (file: File) => Promise<{ url: string } | null>;
   isUploading: boolean;
   progress: number;
+}
+
+function isAreaVocacional(val: unknown): val is AreaVocacional {
+  return AreaVocacionalSchema.safeParse(val).success;
 }
 
 export const CursoFormStep1 = ({ payload, setPayload, upload, isUploading, progress }: Props) => {
@@ -37,11 +42,11 @@ export const CursoFormStep1 = ({ payload, setPayload, upload, isUploading, progr
       exit={{ opacity: 0, x: -20 }}
       className="space-y-8"
     >
-      <Card className="p-10 bg-surface border-border shadow-2xl rounded-[40px]">
+      <Card className="p-10 bg-elevated border-ink-tertiary/10 shadow-2xl rounded-[40px]">
         <div className="space-y-6">
           {/* Upload de Capa */}
           <div 
-            className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-[32px] bg-surface-raised/30 group hover:border-accent/50 transition-all cursor-pointer relative overflow-hidden"
+            className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-ink-tertiary/10 rounded-[32px] bg-elevated/30 group hover:border-accent/50 transition-all cursor-pointer relative overflow-hidden"
             onClick={() => fileInputRef.current?.click()}
           >
             {payload.thumbnailUrl ? (
@@ -61,25 +66,25 @@ export const CursoFormStep1 = ({ payload, setPayload, upload, isUploading, progr
                   <div className="h-16 w-16 rounded-2xl bg-accent/10 flex items-center justify-center text-accent mb-4 group-hover:scale-110 transition-transform">
                     <UploadCloud size={32} />
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Capa do Curso (1280x720)</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-ink-tertiary">Capa do Curso (1280x720)</span>
                 </>
               )}
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-3 block">Título do Curso</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-ink-tertiary mb-3 block">Título do Curso</label>
             <Input 
               value={payload.titulo} 
               onChange={e => { setPayload({...payload, titulo: e.target.value}); }}
               placeholder="Ex: Engenharia de Prompt para Decisores"
-              className="text-2xl font-bold h-16 bg-surface-raised/50 border-border"
+              className="text-2xl font-bold h-16 bg-elevated/50 border-ink-tertiary/10"
             />
           </div>
           <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-3 block">Descrição Provocativa</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-ink-tertiary mb-3 block">Descrição Provocativa</label>
             <textarea 
-              className="w-full bg-surface-raised/50 border border-border rounded-2xl p-4 text-text-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none min-h-[160px] transition-all"
+              className="w-full bg-elevated/50 border border-ink-tertiary/10 rounded-2xl p-4 text-ink-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none min-h-[160px] transition-all"
               placeholder="O que o estudante será capaz de fazer após este curso?"
               value={payload.descricao}
               onChange={e => { setPayload({...payload, descricao: e.target.value}); }}
@@ -87,11 +92,16 @@ export const CursoFormStep1 = ({ payload, setPayload, upload, isUploading, progr
           </div>
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-3 block">Área Vocacional</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-ink-tertiary mb-3 block">Área Vocacional</label>
               <select 
-                className="w-full bg-surface-raised/50 border border-border rounded-xl p-4 text-text-primary"
+                className="w-full bg-elevated/50 border border-ink-tertiary/10 rounded-xl p-4 text-ink-primary"
                 value={payload.area}
-                onChange={e => { setPayload({...payload, area: e.target.value as AreaVocacional}); }}
+                onChange={e => { 
+                  const val = e.target.value;
+                  if (isAreaVocacional(val)) {
+                    setPayload({...payload, area: val}); 
+                  }
+                }}
               >
                 <option value="TECNOLOGIA">Tecnologia</option>
                 <option value="ENGENHARIA">Engenharia</option>
@@ -100,9 +110,9 @@ export const CursoFormStep1 = ({ payload, setPayload, upload, isUploading, progr
               </select>
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-text-muted mb-3 block">Nível de Rigor</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-ink-tertiary mb-3 block">Nível de Rigor</label>
               <select 
-                className="w-full bg-surface-raised/50 border border-border rounded-xl p-4 text-text-primary"
+                className="w-full bg-elevated/50 border border-ink-tertiary/10 rounded-xl p-4 text-ink-primary"
                 value={payload.nivel}
                 onChange={e => { setPayload({...payload, nivel: e.target.value as "basico" | "medio" | "avancado"}); }}
               >

@@ -42,26 +42,26 @@ export function DiscussionThread({ discussion, isMentorOrAdmin, onBack, onPin, o
         )}
       </div>
 
-      <div className="rounded-lg border border-border p-4">
+      <div className="rounded-lg border border-ink-tertiary/10 p-4">
         <div className="flex items-center gap-2 mb-2">
           {discussion.pinned && <Badge variant="warning">Fixado</Badge>}
           {discussion.resolved && <Badge variant="success">Resolvido</Badge>}
         </div>
-        <h2 className="text-xl font-bold text-text-primary">{discussion.titulo}</h2>
-        <p className="mt-2 text-text-secondary whitespace-pre-wrap">{discussion.corpo}</p>
-        <p className="mt-3 text-xs text-text-muted">
+        <h2 className="text-xl font-bold text-ink-primary">{discussion.titulo}</h2>
+        <p className="mt-2 text-ink-secondary whitespace-pre-wrap">{discussion.corpo}</p>
+        <p className="mt-3 text-xs text-ink-tertiary">
           {new Date(discussion.createdAt).toLocaleDateString('pt-PT')}
         </p>
       </div>
 
-      <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider">
+      <h3 className="text-sm font-semibold text-ink-tertiary uppercase tracking-wider">
         Respostas {replies.length > 0 && `(${replies.length.toString()})`}
       </h3>
 
       {isLoading ? (
-        <p className="py-4 text-center text-text-muted">A carregar respostas...</p>
+        <p className="py-4 text-center text-ink-tertiary">A carregar respostas...</p>
       ) : replies.length === 0 ? (
-        <p className="py-4 text-center text-text-muted">Ainda não há respostas.</p>
+        <p className="py-4 text-center text-ink-tertiary">Ainda não há respostas.</p>
       ) : (
         <ReplyTree replies={replies} discussionId={discussionId} />
       )}
@@ -118,11 +118,11 @@ function ReplyNode({
   const canReply = depth < 2;
 
   return (
-    <div className={depth > 0 ? 'ml-6 border-l-2 border-border pl-4' : ''}>
-      <div className="rounded-lg border border-border p-3">
-        <p className="text-sm text-text-primary whitespace-pre-wrap">{reply.texto}</p>
+    <div className={depth > 0 ? 'ml-6 border-l-2 border-ink-tertiary/10 pl-4' : ''}>
+      <div className="rounded-lg border border-ink-tertiary/10 p-3">
+        <p className="text-sm text-ink-primary whitespace-pre-wrap">{reply.texto}</p>
         <div className="mt-2 flex items-center gap-3">
-          <span className="text-xs text-text-muted">
+          <span className="text-xs text-ink-tertiary">
             {new Date(reply.createdAt).toLocaleDateString('pt-PT')}
           </span>
           {user && canReply && (
@@ -199,7 +199,7 @@ function ReplyForm({
   return (
     <form onSubmit={handleSubmit} className="mt-4 space-y-3">
       <textarea
-        className="w-full rounded-lg border border-border bg-surface p-3 text-sm"
+        className="w-full rounded-lg border border-ink-tertiary/10 bg-canvas p-3 text-sm"
         placeholder="Escreve a tua resposta..."
         rows={3}
         value={texto}

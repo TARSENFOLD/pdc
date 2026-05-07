@@ -1,6 +1,8 @@
 import pino from 'pino';
+import { z } from 'zod';
 import { strapiGet, strapiPut } from '../strapi/strapi.client.js';
 import { eventBus } from './event-bus.js';
+import { DomainEventName } from '@pdc/shared';
 
 const log = pino({ name: 'outbox-replay' });
 
@@ -23,7 +25,7 @@ export async function replayUnprocessedEvents() {
     });
     
     const events = res.data;
-    if (!events || events.length === 0) {
+    if (events.length === 0) {
       log.info('Nenhum evento pendente encontrado no Outbox.');
       return;
     }
@@ -41,14 +43,20 @@ export async function replayUnprocessedEvents() {
       log.info({ eventId: evt.correlationId, name: evt.name, attempts }, 'A processar evento...');
       
       try {
+        const nameResult = z.nativeEnum(DomainEventName).safeParse(evt.name);
+        if (!nameResult.success) {
+          log.warn({ eventId: evt.correlationId, name: evt.name }, 'Nome de evento desconhecido no Outbox. A ignorar.');
+          continue;
+        }
+
         // AWAIT IMPORTANTE: Aguarda a conclusão dos handlers (RedLock, external calls, etc)
         await eventBus.publish({
-          id: crypto.randomUUID(), // Gerar ID de execução única para o replay
-          name: evt.name as any,
-          payload: evt.payload as any,
+          id: evt.correlationId, // Reutiliza identidade canónica para garantir idempotência
+          name: nameResult.data,
+          payload: evt.payload as Record<string, unknown>,
           timestamp: evt.createdAt,
           correlationId: evt.correlationId
-        });
+        }, evt.documentId);
 
         // Sucesso Total
         await strapiPut(`/domain-events/${evt.documentId}`, {
@@ -66,14 +74,15 @@ export async function replayUnprocessedEvents() {
         });
       }
     }
-  } catch (err) {
+  } catch (err: unknown) {
     log.error({ err }, 'Erro fatal no script de replay do Outbox.');
   }
 }
 
 // Se foi invocado diretamente pela CLI
-if (import.meta.url === `file://${process.argv[1]}`) {
-  replayUnprocessedEvents().catch(err => {
+const entrypoint = process.argv[1];
+if (entrypoint && import.meta.url === `file://${entrypoint}`) {
+  replayUnprocessedEvents().catch((err: unknown) => {
     log.fatal({ err }, 'Falha fatal no Replay Worker');
     process.exit(1);
   });

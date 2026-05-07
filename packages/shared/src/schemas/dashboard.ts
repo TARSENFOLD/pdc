@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export { DenunciaSchema, type Denuncia } from './moderacao.js';
+import { DenunciaSchema } from './moderacao.js';
+
 export const EstudanteStatsSchema = z.object({
   simulacoesConcluidas: z.number(),
   cursosEmProgresso: z.number(),
@@ -27,20 +30,6 @@ export const InstituicaoStatsSchema = z.object({
 
 export type InstituicaoStats = z.infer<typeof InstituicaoStatsSchema>;
 
-export const ConquistaSchema = z.object({
-  id: z.string(),
-  slug: z.string(),
-  titulo: z.string(),
-  descricao: z.string(),
-  icone: z.string().optional(),
-  raridade: z.enum(['comum', 'raro', 'epico', 'lendario']),
-  alcancadaEm: z.string(),
-  desbloqueada: z.boolean().optional(),
-  dataDesbloqueio: z.string().optional(),
-});
-
-export type Conquista = z.infer<typeof ConquistaSchema>;
-
 export const TelemetriaSummarySchema = z.object({
   totalEventos: z.number(),
   porTipo: z.record(z.number()),
@@ -48,3 +37,39 @@ export const TelemetriaSummarySchema = z.object({
 });
 
 export type TelemetriaSummary = z.infer<typeof TelemetriaSummarySchema>;
+
+export const MentorDashboardPatternSchema = z.object({
+  perfil: z.object({
+    id: z.string(),
+    nome: z.string(),
+    avatarUrl: z.string().optional(),
+  }),
+  cognitiveFluidity: z.number(),
+  resilienceIndex: z.number(),
+  hesitationIndex: z.number(),
+  technicalScore: z.number(),
+  lastUpdatedAt: z.string(),
+});
+
+export const MentorDashboardSchema = z.object({
+  stats: z.object({
+    totalTalentos: z.number(),
+    meritoMedio: z.number(),
+    fluidezMedia: z.number(),
+  }),
+  patterns: z.array(MentorDashboardPatternSchema),
+});
+
+export type MentorDashboardPattern = z.infer<typeof MentorDashboardPatternSchema>;
+export type MentorDashboard = z.infer<typeof MentorDashboardSchema>;
+
+export const ModeradorDashboardSchema = z.object({
+  stats: z.object({
+    denunciasPendentes: z.number(),
+    resolvidasHoje: z.number(),
+    taxaResolucao: z.number(),
+  }),
+  denunciasCriticas: z.array(DenunciaSchema),
+});
+
+export type ModeradorDashboard = z.infer<typeof ModeradorDashboardSchema>;

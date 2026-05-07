@@ -1,5 +1,7 @@
 # 03 — Tipos de Perfis (Roles, Permissões e Privacidade)
 
+> **Fonte canónica de slugs e labels:** `packages/shared/src/glossary.ts` — editar lá, não aqui.
+
 # PDC v2 — Tipos de Perfis (Canónico)
 
 <user_quoted_section>Status: Canónico · Substitui: as definições dispersas em ,  Perfis V2 com Privacidade.md,  de Moderação Strapi.md e a matriz parcial em .</user_quoted_section>
@@ -257,4 +259,17 @@ Todas as ações sensíveis (moderação, suspensão, alteração de role, acess
 
 <user_quoted_section>Visível apenas a: super_admin (full) e moderador (read-only sobre as próprias ações).</user_quoted_section>
 
-*Última validação: 20 de Abril de 2026.*
+## 10. Gap de RBAC Identificado em Auditoria (DC-03)
+
+> **Origem:** T-AUD-7 CCF-W5-1 · T-AUD-MASTER DC-03 · 2026-04-29
+
+A rota `GET /domain-events/:id` (BFF impact route) está actualmente restrita a `checkRole(['moderador', 'super_admin'])`. Isto cria uma **inconsistência com a UX declarada** — o `EcosystemImpactPanel` é apresentado a criadores de conteúdo (mentor, instituição) após submit de curso/simulação/programa/experiência/projecto, mas esses roles não têm acesso aos dados reais de impacto (hookResults).
+
+**Decisão pendente para próxima wave:**
+- Opção A: Criar rota `GET /domain-events/:id/my-impact` acessível a todos os roles autenticados (retorna apenas `{ success, skipped, totalHooks }` sem `hookResults` completos).
+- Opção B: Documentar que o painel de impacto é decorativo no MVP e só fornece dados reais a moderadores.
+
+> **Nota D10:** Nenhuma das opções relaxa permissões existentes. A opção A é aditiva (nova rota mais restrita) — não é `Vision-Failure`.
+
+*Última validação: 29 de Abril de 2026.*
+*Revisão T-DOC-03 (audit-report-master 2026-04-29): DC-03 aplicado — gap RBAC domain-events documentado. Nenhuma permissão existente relaxada.*

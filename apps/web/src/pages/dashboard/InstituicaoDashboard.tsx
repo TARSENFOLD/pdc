@@ -1,34 +1,31 @@
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { experienciasApi } from '@/lib/api/experiencias';
-import { Spinner } from '@/components/ui';
-import { Building2, ClipboardList, MapPin } from 'lucide-react';
-import type { ComponentType } from 'react';
-import type { LucideProps } from 'lucide-react';
+import { Spinner, BentoGrid, BentoTile, GlassCard, AsymmetricButton } from '@/components/ui';
+import ContentTypeCTAGrid from '@/components/dashboard/ContentTypeCTAGrid';
+import {
+  Building2,
+  ClipboardList,
+  MapPin,
+  Briefcase,
+  MessageSquare,
+  Trophy,
+  Palette,
+  Search,
+  ShieldCheck
+} from 'lucide-react';
+import { motion } from 'motion/react';
 
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  icon: ComponentType<LucideProps>;
-  description?: string;
-}
-
-function StatCard({ label, value, icon: Icon, description }: StatCardProps) {
-  return (
-    <div className="rounded-2xl border border-border bg-surface-raised p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-          {label}
-        </span>
-        <Icon size={20} aria-hidden={true} className="text-amber" />
-      </div>
-      <p className="text-3xl font-bold text-text-primary">{value}</p>
-      {description && (
-        <p className="mt-1 text-xs text-text-muted">{description}</p>
-      )}
-    </div>
-  );
-}
+const CTAS = [
+  { label: 'Criar Experiência', to: '/app/instituicao/criar-experiencia', icon: Building2, variant: 'primary' as const },
+  { label: 'Criar Programa', to: '/app/instituicao/criar-programa', icon: Briefcase },
+  { label: 'Criar Curso', to: '/app/instituicao/cursos/criar', icon: ShieldCheck },
+  { label: 'Criar Post', to: '/app/feed/criar', icon: MessageSquare },
+  { label: 'Registar Marco', to: '/app/conquistas/criar', icon: Trophy },
+  { label: 'Branding', to: '/app/instituicao/branding', icon: Palette },
+  { label: 'Match Terminal', to: '/app/instituicao/propostas', icon: Search },
+];
 
 export function InstituicaoDashboard() {
   const { user } = useAuth();
@@ -40,46 +37,97 @@ export function InstituicaoDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-canvas">
         <Spinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-text-primary">{user?.nome ?? 'Instituição'}</h1>
-        <p className="mt-1 text-sm text-text-secondary">Painel da instituição</p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          label="Experiências publicadas"
-          value={stats?.experienciasPublicadas ?? '-'}
-          icon={Building2}
-          description="Experiências visíveis na plataforma"
-        />
-        <StatCard
-          label="Inscrições totais"
-          value={stats?.inscricoesTotais ?? '-'}
-          icon={ClipboardList}
-          description="Estudantes inscritos nos vossos programas"
-        />
-        <StatCard
-          label="Programas activos"
-          value={stats?.programasActivos ?? '-'}
-          icon={MapPin}
-          description="Programas em curso"
-        />
-      </div>
-
-      <div className="mt-8 rounded-2xl border border-border bg-surface-raised p-6">
-        <h2 className="mb-2 font-semibold text-text-primary">Acções rápidas</h2>
-        <p className="text-sm text-text-muted">
-          Publica uma experiência ou cria um programa para começar a atrair estudantes.
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="p-6 md:p-10 space-y-10 max-w-7xl mx-auto"
+    >
+      <header>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-institutional-cobalt/10 border border-institutional-cobalt/20 text-institutional-cobalt text-[10px] font-black uppercase tracking-widest mb-4">
+          <ShieldCheck size={12} /> Painel Institucional
+        </div>
+        <h1 className="text-4xl font-black text-ink-primary tracking-tighter sm:text-5xl font-display">
+          {user?.nome ?? 'Instituição'}<span className="text-accent">.</span>
+        </h1>
+        <p className="text-ink-secondary mt-2 text-lg">
+          Gere o vosso ecossistema de oportunidades e talentos.
         </p>
-      </div>
-    </div>
+      </header>
+
+      <BentoGrid>
+        {/* Tile KPIs 2×2 */}
+        <BentoTile size="2x2" asymmetric className="relative overflow-hidden">
+          <div className="absolute -top-20 -right-20 h-60 w-60 rounded-full bg-accent/5 blur-[80px] pointer-events-none" />
+          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-ink-tertiary mb-4 flex items-center gap-2 relative z-10">
+            <Building2 size={14} className="text-accent" /> Métricas de Impacto
+          </h2>
+          <div className="grid grid-cols-2 gap-4 flex-1 relative z-10">
+            <GlassCard className="flex flex-col justify-between p-4">
+              <ClipboardList size={18} className="text-accent mb-2" />
+              <div>
+                <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Experiências</p>
+                <p className="text-3xl font-black font-mono text-ink-primary">
+                  {stats?.experienciasPublicadas ?? 0}
+                </p>
+              </div>
+            </GlassCard>
+            <GlassCard className="flex flex-col justify-between p-4">
+              <MapPin size={18} className="text-accent mb-2" />
+              <div>
+                <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Programas Activos</p>
+                <p className="text-3xl font-black font-mono text-ink-primary">
+                  {stats?.programasActivos ?? 0}
+                </p>
+              </div>
+            </GlassCard>
+            <GlassCard className="col-span-2 flex items-center justify-between p-4">
+              <div>
+                <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Inscrições Totais</p>
+                <p className="text-3xl font-black font-mono text-ink-primary">
+                  {stats?.inscricoesTotais ?? 0}
+                </p>
+              </div>
+              <Building2 size={32} className="text-accent/20" />
+            </GlassCard>
+          </div>
+          <Link to="/app/instituicao/criar-experiencia" className="mt-4 block relative z-10">
+            <AsymmetricButton className="w-full h-12 font-black uppercase tracking-widest text-[10px]">
+              Criar Experiência
+            </AsymmetricButton>
+          </Link>
+        </BentoTile>
+
+        {/* Tile CTAs 2×2 */}
+        <BentoTile size="2x2" className="flex flex-col">
+          <ContentTypeCTAGrid
+            title="Criar Conteúdo"
+            ctas={CTAS}
+            gridCols={2}
+            className="flex-1"
+          />
+        </BentoTile>
+      </BentoGrid>
+
+      {/* Match Terminal destaque */}
+      <GlassCard className="border-accent/10 flex items-center gap-4 p-5">
+        <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent shrink-0">
+          <Search size={20} />
+        </div>
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-ink-tertiary">Match Terminal</p>
+          <p className="text-sm text-ink-secondary">
+            Consulta os estudantes que melhor se adequam ao vosso perfil institucional.
+          </p>
+        </div>
+      </GlassCard>
+    </motion.div>
   );
 }

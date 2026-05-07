@@ -24,24 +24,44 @@ interface PatternData {
   resilienceIndex: number;
   focusStability: number;
   technicalScore: number;
-  tinaSummary: {
-    fluidity: string;
-    resilience: string;
-    focus: string;
+  tinaSummary?: {
+    fluidity?: string;
+    resilience?: string;
+    focus?: string;
     verdict?: string;
     lastHeuristicUpdate?: string;
-  };
+  } | undefined;
 }
 
 interface RelatorioElite {
   patterns: PatternData[];
   scoreGlobal: number;
   recomendacoes: Array<{
-    cursoId: string;
+    id: string;
     titulo: string;
     matchPercentagem: number;
     motivo: string;
   }>;
+}
+
+interface PerfilPremiumResponse {
+  scoreGlobal: number;
+  patterns: Array<{
+    id?: string;
+    domainId: string;
+    cognitiveFluidity: number;
+    resilienceIndex: number;
+    focusStability: number;
+    technicalScore: number;
+    tinaSummary?: Record<string, unknown>;
+  }>;
+  recomendacoes: Array<{
+    id: string;
+    titulo: string;
+    matchPercentagem: number;
+    motivo: string;
+  }>;
+  lastUpdate?: string;
 }
 
 // ─── Sub-component: Sovereign Gauge ───────────────────────────────────────
@@ -80,10 +100,10 @@ const CircularCerteza = ({ value, tier, label }: { value: number; tier?: Reputac
         </defs>
       </svg>
       <div className="absolute flex flex-col items-center justify-center text-center z-20">
-        <span className="font-mono text-5xl font-black tracking-tighter text-text-primary">
+        <span className="font-mono text-5xl font-black tracking-tighter text-ink-primary">
           {String(value)}<span className="text-accent text-2xl">%</span>
         </span>
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-text-muted mt-1">{label}</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-ink-tertiary mt-1">{label}</span>
       </div>
       {tier && (
         <div className="absolute -bottom-2 bg-accent text-white text-[10px] font-black px-4 py-1 rounded-full shadow-xl uppercase tracking-[0.2em] animate-in zoom-in duration-1000 delay-500 z-30">
@@ -103,21 +123,38 @@ export const RelatorioVocacional = () => {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        // R2.T6: Consumo do breakdown canónico (Gated por Flag)
-        const repRes = await http.get<ReputacaoBreakdown>('/reputacao/me');
-        setReputacao(repRes);
-        
-        // Placeholder para patterns e recomendações (Approach §1.3)
-        // Nesta wave, usamos dados vazios ou placeholders se o endpoint elite não for chamado
-        setData({
-          patterns: [],
-          scoreGlobal: repRes.score,
-          recomendacoes: []
-        });
-      } catch (err: unknown) {
-        if (err && typeof err === 'object' && 'status' in err && err.status === 404) {
-          setReputationDisabled(true);
+        const [repRes, premiumRes] = await Promise.allSettled([
+          http.get<ReputacaoBreakdown>('/reputacao/me'),
+          http.get<PerfilPremiumResponse>('/vocacional/perfil-premium'),
+        ]);
+
+        if (repRes.status === 'fulfilled') {
+          setReputacao(repRes.value);
+        } else {
+          const err = repRes.reason as { status?: number } | undefined;
+          if (err?.status === 404) setReputationDisabled(true);
         }
+
+        const rep = repRes.status === 'fulfilled' ? repRes.value : null;
+
+        if (premiumRes.status === 'fulfilled') {
+          const p = premiumRes.value;
+          setData({
+            scoreGlobal: p.scoreGlobal,
+            patterns: p.patterns.map((pt) => ({
+              domainId: pt.domainId,
+              cognitiveFluidity: pt.cognitiveFluidity,
+              resilienceIndex: pt.resilienceIndex,
+              focusStability: pt.focusStability,
+              technicalScore: pt.technicalScore,
+              tinaSummary: pt.tinaSummary as PatternData['tinaSummary'],
+            })),
+            recomendacoes: p.recomendacoes,
+          });
+        } else {
+          setData({ patterns: [], scoreGlobal: rep?.score ?? 0, recomendacoes: [] });
+        }
+      } catch (err: unknown) {
         console.error('Falha ao sincronizar Oráculo:', err);
       } finally {
         setLoading(false);
@@ -139,11 +176,11 @@ export const RelatorioVocacional = () => {
   if (reputationDisabled) {
     return (
       <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center gap-6">
-        <div className="h-20 w-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-text-muted mb-4">
+        <div className="h-20 w-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-ink-tertiary mb-4">
           <ShieldCheck size={40} className="opacity-20" />
         </div>
-        <h2 className="text-3xl font-black text-text-primary tracking-tighter uppercase font-display">Reputação ainda não disponível</h2>
-        <p className="text-text-secondary max-w-md leading-relaxed">
+        <h2 className="text-3xl font-black text-ink-primary tracking-tighter uppercase font-display">Reputação ainda não disponível</h2>
+        <p className="text-ink-secondary max-w-md leading-relaxed">
           O motor de reputação soberano está a processar os teus dados de mérito. 
           Continua a realizar simulações para gerares a tua primeira assinatura de autoridade.
         </p>
@@ -168,14 +205,14 @@ export const RelatorioVocacional = () => {
         
         {/* Nav Soberana */}
         <nav className="flex items-center justify-between pt-12">
-          <Link to="/app" className="group flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-text-muted hover:text-accent transition-all">
+          <Link to="/app" className="group flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-ink-tertiary hover:text-accent transition-all">
             <div className="h-8 w-8 rounded-full border border-white/5 flex items-center justify-center group-hover:border-accent/30 transition-colors">
               <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> 
             </div>
             Painel de Decisão
           </Link>
           <div className="flex items-center gap-4">
-            <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono font-bold text-text-secondary uppercase tracking-widest">
+            <div className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono font-bold text-ink-secondary uppercase tracking-widest">
               DOC: ANALYTICS_V2_ELITE
             </div>
             <button className="h-10 w-10 rounded-2xl bg-accent text-background flex items-center justify-center hover:scale-105 transition-all shadow-xl shadow-accent/20">
@@ -195,11 +232,11 @@ export const RelatorioVocacional = () => {
               <ShieldCheck size={16} /> Certificação de Autoridade Cognitiva
             </motion.div>
             
-            <h1 className="text-5xl font-black tracking-tighter text-text-primary sm:text-8xl font-display leading-[0.9]">
+            <h1 className="text-5xl font-black tracking-tighter text-ink-primary sm:text-8xl font-display leading-[0.9]">
               Espelho da <br /> <span className="text-accent italic">Aptidão.</span>
             </h1>
             
-            <p className="text-text-secondary text-xl font-medium max-w-xl leading-relaxed opacity-80">
+            <p className="text-ink-secondary text-xl font-medium max-w-xl leading-relaxed opacity-80">
               A tua assinatura comportamental foi processada pelo Oráculo. Estes dados são a evidência do teu potencial real.
             </p>
           </div>
@@ -217,7 +254,7 @@ export const RelatorioVocacional = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Main Analytics Card */}
-          <Card className="lg:col-span-2 p-10 bg-surface-raised/40 backdrop-blur-2xl border-white/5 shadow-2xl relative overflow-hidden rounded-[40px]">
+          <Card className="lg:col-span-2 p-10 bg-elevated/40 backdrop-blur-2xl border-white/5 shadow-2xl relative overflow-hidden rounded-[40px]">
              <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 blur-[80px] -translate-y-1/2 translate-x-1/2" />
              
              <div className="flex items-center justify-between mb-16 relative z-10">
@@ -226,10 +263,10 @@ export const RelatorioVocacional = () => {
                     <Activity size={24} strokeWidth={2.5} />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black font-display tracking-tight text-text-primary">
+                    <h3 className="text-2xl font-black font-display tracking-tight text-ink-primary">
                       Motor \u03D5 & R
                     </h3>
-                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Padrões Behaviorais de Alta Precisão</p>
+                    <p className="text-[10px] font-bold text-ink-tertiary uppercase tracking-widest">Padrões Behaviorais de Alta Precisão</p>
                   </div>
                 </div>
                 {mainPattern && (
@@ -244,23 +281,23 @@ export const RelatorioVocacional = () => {
                 <div className="space-y-8 p-8 rounded-[32px] bg-black/40 border border-white/5 hover:border-accent/20 transition-colors group">
                   <div className="flex justify-between items-end">
                     <div>
-                      <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-2">Fluidez Cognitiva (\u03D5)</p>
-                      <h4 className="text-6xl font-mono font-black text-text-primary tracking-tighter group-hover:text-accent transition-colors">
+                      <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-[0.2em] mb-2">Fluidez Cognitiva (\u03D5)</p>
+                      <h4 className="text-6xl font-mono font-black text-ink-primary tracking-tighter group-hover:text-accent transition-colors">
                         {mainPattern?.cognitiveFluidity.toFixed(2)}
                       </h4>
                     </div>
-                    <Brain className="text-text-muted/20 group-hover:text-accent/20 transition-colors" size={40} />
+                    <Brain className="text-ink-tertiary/20 group-hover:text-accent/20 transition-colors" size={40} />
                   </div>
                   <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${(mainPattern?.cognitiveFluidity ?? 0) * 10}%` }}
+                      animate={{ width: `${String((mainPattern?.cognitiveFluidity ?? 0) * 10)}%` }}
                       transition={{ duration: 2, ease: [0.23, 1, 0.32, 1] }}
                       className="h-full bg-accent shadow-[0_0_20px_rgba(210,105,30,0.5)]" 
                     />
                   </div>
-                  <p className="text-sm font-medium text-text-secondary leading-relaxed opacity-80">
-                    {mainPattern?.tinaSummary.fluidity}
+                  <p className="text-sm font-medium text-ink-secondary leading-relaxed opacity-80">
+                    {mainPattern?.tinaSummary?.fluidity}
                   </p>
                 </div>
 
@@ -268,30 +305,30 @@ export const RelatorioVocacional = () => {
                 <div className="space-y-8 p-8 rounded-[32px] bg-black/40 border border-white/5 hover:border-emerald-500/20 transition-colors group">
                   <div className="flex justify-between items-end">
                     <div>
-                      <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] mb-2">Resiliência ao Erro (R)</p>
-                      <h4 className="text-6xl font-mono font-black text-text-primary tracking-tighter group-hover:text-emerald-500 transition-colors">
+                      <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-[0.2em] mb-2">Resiliência ao Erro (R)</p>
+                      <h4 className="text-6xl font-mono font-black text-ink-primary tracking-tighter group-hover:text-emerald-500 transition-colors">
                         {mainPattern?.resilienceIndex.toFixed(2)}
                       </h4>
                     </div>
-                    <Target className="text-text-muted/20 group-hover:text-emerald-500/20 transition-colors" size={40} />
+                    <Target className="text-ink-tertiary/20 group-hover:text-emerald-500/20 transition-colors" size={40} />
                   </div>
                   <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${(mainPattern?.resilienceIndex ?? 0) * 10}%` }}
+                      animate={{ width: `${String((mainPattern?.resilienceIndex ?? 0) * 10)}%` }}
                       transition={{ duration: 2, ease: [0.23, 1, 0.32, 1], delay: 0.2 }}
                       className="h-full bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]" 
                     />
                   </div>
-                  <p className="text-sm font-medium text-text-secondary leading-relaxed opacity-80">
-                    {mainPattern?.tinaSummary.resilience}
+                  <p className="text-sm font-medium text-ink-secondary leading-relaxed opacity-80">
+                    {mainPattern?.tinaSummary?.resilience}
                   </p>
                 </div>
              </div>
 
              {/* Tina's Dynamic Verdict */}
              <AnimatePresence>
-               {mainPattern?.tinaSummary.verdict && (
+	               {mainPattern?.tinaSummary?.verdict && (
                  <motion.div 
                    initial={{ opacity: 0, y: 20 }}
                    animate={{ opacity: 1, y: 0 }}
@@ -303,8 +340,8 @@ export const RelatorioVocacional = () => {
                     <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-4 flex items-center gap-2">
                        <Brain size={14} /> Veredito do Oráculo
                     </h5>
-                    <p className="text-lg font-black text-text-primary leading-tight font-display tracking-tight">
-                      "{mainPattern.tinaSummary.verdict}"
+                    <p className="text-lg font-black text-ink-primary leading-tight font-display tracking-tight">
+	                      "{mainPattern.tinaSummary.verdict}"
                     </p>
                  </motion.div>
                )}
@@ -313,8 +350,8 @@ export const RelatorioVocacional = () => {
 
           {/* Siderbar Bento Stats */}
           <div className="space-y-8">
-            <Card className="p-8 bg-surface-raised/40 backdrop-blur-xl border-white/5 rounded-[40px] shadow-2xl flex flex-col justify-between h-full">
-               <h3 className="text-[11px] font-black text-text-muted uppercase tracking-[0.3em] mb-10 flex items-center gap-2">
+            <Card className="p-8 bg-elevated/40 backdrop-blur-xl border-white/5 rounded-[40px] shadow-2xl flex flex-col justify-between h-full">
+               <h3 className="text-[11px] font-black text-ink-tertiary uppercase tracking-[0.3em] mb-10 flex items-center gap-2">
                  <Trophy size={14} className="text-accent" /> Matriz de Mérito
                </h3>
                
@@ -328,25 +365,25 @@ export const RelatorioVocacional = () => {
                    <div key={dim.label} className="p-5 rounded-3xl bg-white/5 border border-white/5 flex flex-col items-center justify-center gap-3 hover:bg-white/10 transition-colors">
                       <dim.icon size={20} className="text-accent" />
                       <div className="text-center">
-                        <p className="text-[9px] font-black text-text-muted uppercase tracking-widest">{dim.label}</p>
-                        <p className="text-xl font-black font-mono tracking-tighter text-text-primary">{dim.val}</p>
+                        <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">{dim.label}</p>
+                        <p className="text-xl font-black font-mono tracking-tighter text-ink-primary">{dim.val}</p>
                       </div>
                    </div>
                  ))}
                </div>
 
-               <div className="mt-10 space-y-4 pt-8 border-t border-border">
-                 <h4 className="text-[10px] font-black uppercase tracking-widest text-text-muted">Sugestões de Rota</h4>
+               <div className="mt-10 space-y-4 pt-8 border-t border-ink-tertiary/10">
+                 <h4 className="text-[10px] font-black uppercase tracking-widest text-ink-tertiary">Sugestões de Rota</h4>
                  <div className="space-y-3">
                    {data?.recomendacoes.length === 0 ? (
-                      <p className="text-xs text-text-muted italic">A Tina está a processar cursos compatíveis com a tua biomecânica...</p>
+                      <p className="text-xs text-ink-tertiary italic">A Tina está a processar cursos compatíveis com a tua biomecânica...</p>
                    ) : data?.recomendacoes.map(rec => (
-                     <div key={rec.cursoId} className="group p-4 rounded-2xl bg-surface-alt border border-border hover:border-accent/30 transition-all flex items-center justify-between">
+                     <div key={rec.id} className="group p-4 rounded-2xl bg-recessed border border-ink-tertiary/10 hover:border-accent/30 transition-all flex items-center justify-between">
                         <div className="min-w-0">
-                          <h4 className="font-bold text-sm text-text-primary truncate">{rec.titulo}</h4>
-                          <p className="text-[9px] text-text-muted font-bold uppercase tracking-tight mt-0.5">{rec.matchPercentagem}% Match</p>
+                          <h4 className="font-bold text-sm text-ink-primary truncate">{rec.titulo}</h4>
+                          <p className="text-[9px] text-ink-tertiary font-bold uppercase tracking-tight mt-0.5">{rec.matchPercentagem}% Match</p>
                         </div>
-                        <ChevronRight size={16} className="text-text-muted group-hover:text-accent transition-colors" />
+                        <ChevronRight size={16} className="text-ink-tertiary group-hover:text-accent transition-colors" />
                      </div>
                    ))}
                  </div>
@@ -358,7 +395,7 @@ export const RelatorioVocacional = () => {
         {/* Call to Action Soberana */}
         <footer className="pt-20 text-center flex flex-col items-center gap-8">
            <div className="h-px w-32 bg-gradient-to-r from-transparent via-border to-transparent" />
-           <p className="text-[10px] font-black text-text-muted uppercase tracking-[0.4em]">
+           <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-[0.4em]">
              Validado pelo Comitê Científico PDC | Angola 2026
            </p>
         </footer>
@@ -372,4 +409,3 @@ const Star = ({ size, className }: { size: number; className?: string }) => (
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
   </svg>
 );
-

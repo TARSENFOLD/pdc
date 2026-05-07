@@ -79,10 +79,10 @@ export const Tipo1Player = ({ simulacao }: Props) => {
               >
                 <span className="text-3xl ml-1">▶</span>
               </Button>
-              <p className="mt-4 text-text-primary font-medium">Assistir Introdução do Caso</p>
+              <p className="mt-4 text-ink-primary font-medium">Assistir Introdução do Caso</p>
             </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-text-primary bg-slate-900">
+            <div className="w-full h-full flex items-center justify-center text-ink-primary bg-slate-900">
               {simulacao.conteudoUrl ? (
                 <video 
                   src={simulacao.conteudoUrl} 
@@ -92,7 +92,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
                 />
               ) : (
                 <div className="text-center space-y-4">
-                  <Clapperboard size={48} aria-hidden={true} className="animate-pulse text-text-primary" />
+                  <Clapperboard size={48} aria-hidden={true} className="animate-pulse text-ink-primary" />
                   <p className="text-lg text-slate-400">A reproduzir conteúdo da simulação...</p>
                   <Button variant="secondary" size="sm" onClick={() => { setVideoStarted(false); }}>Reiniciar</Button>
                 </div>

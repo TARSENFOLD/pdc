@@ -18,12 +18,13 @@
     "tipo": {
       "type": "enumeration",
       "enum": [
-        "aluno",
+        "estudante",
         "mentor",
         "instituicao",
         "moderador",
+        "comite_cientifico",
         "super_admin",
-        "comite_cientifico"
+        "patrocinador"
       ],
       "required": true
     },
@@ -53,6 +54,12 @@
       "multiple": false,
       "allowedTypes": ["images"]
     },
+    "avatarUrl": {
+      "type": "string"
+    },
+    "bannerUrl": {
+      "type": "string"
+    },
     "capa": {
       "type": "media",
       "multiple": false,
@@ -71,6 +78,12 @@
       "type": "json"
     },
     "competencias": {
+      "type": "json"
+    },
+    "historicoProfissional": {
+      "type": "json"
+    },
+    "formacaoAcademica": {
       "type": "json"
     },
     "areaFormacao": {
@@ -153,6 +166,18 @@
       "relation": "oneToMany",
       "target": "api::behavior-pattern.behavior-pattern",
       "mappedBy": "perfil"
+    },
+    "inscricoes": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::inscricao.inscricao",
+      "mappedBy": "perfil"
+    },
+    "feedPosts": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::feed-post.feed-post",
+      "mappedBy": "autor"
     }
   }
 }

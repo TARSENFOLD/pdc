@@ -3,6 +3,7 @@ import { getCookie } from 'hono/cookie';
 import { jwtVerify } from 'jose';
 import { env } from '../lib/env.js';
 import { authService } from '../modules/auth/auth.service.js';
+import { JwtUserPayloadSchema } from '../modules/auth/auth.middleware.js';
 import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 import { signTelemetryToken } from '../modules/auth/telemetry-token.js';
 import { Features, type BootstrapResponse } from '@pdc/shared';
@@ -22,8 +23,13 @@ bootstrapRoutes.get('/', async (c) => {
   if (token) {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
-      const dbUser = await authService.getUserById(payload.sub as string);
-      
+      const payloadResult = JwtUserPayloadSchema.safeParse(payload);
+      if (!payloadResult.success) {
+        throw new Error('Invalid bootstrap JWT payload');
+      }
+      const parsedPayload = payloadResult.data;
+      const dbUser = await authService.getUserById(parsedPayload.sub);
+
       // Injectamos a Role real e Perfil (que está guardado no Strapi)
       userPayload = {
         id: dbUser.id,
@@ -31,9 +37,9 @@ bootstrapRoutes.get('/', async (c) => {
         role: dbUser.role,
         perfilId: dbUser.perfilId || undefined,
       };
-      
+
       // Instituição ID para extração de Flags override se existir no token
-      instituicaoId = payload.instituicaoId ? parseInt(payload.instituicaoId as string, 10) : undefined;
+      instituicaoId = parsedPayload.instituicaoId;
 
       // 2. Emissão Soberana do Telemetry Token assinado por RS256 (W1-T2)
       telemetryToken = await signTelemetryToken(

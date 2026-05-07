@@ -20,19 +20,31 @@ describe('Tipo3Player (R2.T5)', () => {
   const mockFlush = vi.fn();
   const mockSimulacao = {
     id: 'sim-3',
+    slug: 'sim-3-slug',
     titulo: 'Simulação Tipo 3',
-    descricao: 'Teste de Alta Fidelidade',
+    descricao: 'Teste Imersivo',
     area: 'TECNOLOGIA' as const,
     tipo: 3 as const,
+    tipoSimulacao: 'tipo3' as const,
+    autorId: 'author-123',
+    estado: 'published' as const,
+    validadoAcademicamente: true,
+    criteriosAvaliacao: { pesos: { fluidez: 40, resiliencia: 30, foco: 30 } },
     createdAt: new Date().toISOString(),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useTelemetry).mockReturnValue({
-      track: mockTrack,
-      flush: mockFlush,
-    } as any);
+    const telemetryMock: ReturnType<typeof useTelemetry> = {
+      track: (tipo, payload) => {
+        mockTrack(tipo, payload);
+      },
+      flush: () => {
+        mockFlush();
+        return Promise.resolve();
+      },
+    };
+    vi.mocked(useTelemetry).mockReturnValue(telemetryMock);
   });
 
   it('deve renderizar o shell funcional', () => {
@@ -74,13 +86,9 @@ describe('Tipo3Player (R2.T5)', () => {
       expect(mockTrack).toHaveBeenCalledWith('simulacao.tipo3.concluida', expect.objectContaining({
         tentativaId: 'tent-3'
       }));
-      expect(simulacoesApi.concluirTentativa).toHaveBeenCalledWith(expect.objectContaining({
-        tentativaId: 'tent-3',
-        metadata: expect.objectContaining({
-          tipo: 3,
-          acoesCount: 1
-        })
-      }));
+      const payload = vi.mocked(simulacoesApi.concluirTentativa).mock.calls[0]?.[0];
+      expect(payload?.tentativaId).toBe('tent-3');
+      expect(payload?.metadata).toMatchObject({ tipo: 3, acoesCount: 1 });
     });
   });
 });

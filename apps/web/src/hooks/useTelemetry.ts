@@ -18,7 +18,7 @@ export function useTelemetry() {
   
   // W1-T3/W1-T4: O Token é assinado e trazido de forma segura durante a carga da aplicação
   const { data } = useBootstrap();
-  const token = data?.security?.telemetryToken;
+  const token = data?.security.telemetryToken;
 
   const flush = useCallback(async () => {
     if (buffer.current.length === 0) return;
@@ -114,7 +114,8 @@ export function useTelemetry() {
             },
             keepalive: true,
           }).catch(() => {
-            fetch(`${import.meta.env.VITE_API_URL || '/api'}/telemetria/batch`, {
+            const apiUrl = typeof import.meta.env.VITE_API_URL === 'string' ? import.meta.env.VITE_API_URL : '/api';
+            fetch(`${apiUrl}/telemetria/batch`, {
               method: 'POST',
               body: payload,
               headers: { 'Content-Type': 'application/json' },

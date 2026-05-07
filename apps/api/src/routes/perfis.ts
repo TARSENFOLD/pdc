@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { UpdatePerfilPayloadSchema, DomainEventName } from '@pdc/shared';
+import { UpdatePerfilPayloadSchema, DomainEventName, type UpdatePerfilPayload } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPut, strapiPutRaw } from '../modules/strapi/strapi.client.js';
@@ -13,8 +13,8 @@ type Vars = { Variables: AuthVariables };
 
 interface StrapiVinculo {
   id: string | number;
-  senderId?: string;
-  receiverId?: string;
+  status?: string;
+  solicitante?: { userId?: string; id?: string };
 }
 
 interface StrapiPerfilRaw {
@@ -35,6 +35,39 @@ interface StrapiPerfilRaw {
   [key: string]: unknown;
 }
 
+const STRAPI_PAYLOAD_FIELDS = [
+  'nome',
+  'bio',
+  'headline',
+  'regiao',
+  'telefone',
+  'website',
+  'areasInteresse',
+  'competencias',
+  'socialLinks',
+  'historicoProfissional',
+  'formacaoAcademica',
+  'notificationPreferences',
+  'visibilitySettings',
+  'avatarUrl',
+  'bannerUrl',
+] as const satisfies readonly (keyof UpdatePerfilPayload)[];
+
+export type PerfilStrapiPayload = Partial<Pick<UpdatePerfilPayload, (typeof STRAPI_PAYLOAD_FIELDS)[number]>>;
+
+export function buildPerfilStrapiPayload(body: UpdatePerfilPayload): PerfilStrapiPayload {
+  const payload: PerfilStrapiPayload = {};
+
+  for (const key of STRAPI_PAYLOAD_FIELDS) {
+    const value = body[key];
+    if (value !== undefined) {
+      (payload as Record<string, unknown>)[key] = value;
+    }
+  }
+
+  return payload;
+}
+
 export const perfilRoutes = new Hono<Vars>();
 
 perfilRoutes.use('*', verifyJwt);
@@ -47,7 +80,7 @@ perfilRoutes.get('/me', async (c) => {
     // Buscar perfil real do Strapi v5 (coleção perfis)
     const res = await strapiGet<StrapiPerfil>('/perfis', {
       'filters[userId][$eq]': id,
-      populate: 'foto,conquistas',
+      populate: 'foto,capa,conquistas',
     });
     
     if (res.data.length > 0) {
@@ -74,6 +107,7 @@ perfilRoutes.put('/me', zValidator('json', UpdatePerfilPayloadSchema), async (c)
   const user = c.get('user');
   const id = user.id;
   const body = c.req.valid('json');
+  const strapiPayload = buildPerfilStrapiPayload(body);
   try {
     // 1. Tentar encontrar perfil na coleção 'perfis'
     const resGet = await strapiGet<StrapiPerfilRaw>('/perfis', {
@@ -85,19 +119,19 @@ perfilRoutes.put('/me', zValidator('json', UpdatePerfilPayloadSchema), async (c)
     if (resGet.data.length > 0) {
       const perfil = resGet.data[0];
       const docId = perfil?.documentId || String(perfil?.id);
-      const resPut = await strapiPut<StrapiPerfilRaw>(`/perfis/${docId}`, body);
+      const resPut = await strapiPut<StrapiPerfilRaw>(`/perfis/${docId}`, strapiPayload);
       
       // G15: Impacto no Ecossistema
       void eventBus.publishWithOutbox(DomainEventName.PERFIL_ATUALIZADO, {
         perfilId: String(perfil?.id),
-        ...body
+        ...strapiPayload
       });
 
       return c.json(resPut.data);
     }
 
     // 2. Se não existe na coleção perfis, atualizar em users-permissions (legado/fallback)
-    const data = await strapiPutRaw<unknown>(`/users/${id}`, body);
+    const data = await strapiPutRaw<unknown>(`/users/${id}`, strapiPayload);
     return c.json(data);
   } catch (err) {
     const message = (err as Error).message || 'Erro interno';
@@ -143,13 +177,14 @@ perfilRoutes.get('/estudantes-vinculados', checkRole(['instituicao', 'super_admi
   const { id: userId } = c.get('user');
   try {
     const resVinculos = await strapiGet<StrapiVinculo>('/vinculos', {
-      'filters[receiverId][$eq]': userId,
+      'filters[destinatario][userId][$eq]': userId,
       'filters[connectionType][$eq]': 'student-institution',
-      'filters[estado][$eq]': 'connected',
+      'filters[status][$eq]': 'aprovado',
       'pagination[pageSize]': '100',
+      populate: 'solicitante',
     });
 
-    const studentIds = resVinculos.data.map((v) => v.senderId).filter(Boolean) as string[];
+    const studentIds = resVinculos.data.map((v) => v.solicitante?.userId).filter(Boolean) as string[];
     if (studentIds.length === 0) {
       return c.json({ data: [] });
     }
@@ -168,11 +203,12 @@ perfilRoutes.get('/estudantes-vinculados', checkRole(['instituicao', 'super_admi
 // GET /perfis/:id — perfil público (respeita PROFILE_V2_PUBLIC + visibilitySettings)
 perfilRoutes.get('/:id', async (c) => {
   const userId = c.req.param('id');
-  const requesterId = c.get('user').id;
+  const requester = c.get('user');
+  const requesterId = requester.id;
 
   let useV2 = false;
   try {
-    const flags = await featureFlagService.getEffectiveFlags();
+    const flags = await featureFlagService.getEffectiveFlags(requester.instituicaoId);
     useV2 = flags['PROFILE_V2_PUBLIC'] === true;
   } catch { /* ignore */ }
 
@@ -181,7 +217,7 @@ perfilRoutes.get('/:id', async (c) => {
       const resRaw = await strapiGet<StrapiPerfilRaw>('/perfis', {
         'filters[userId][$eq]': userId,
         'pagination[pageSize]': '1',
-        populate: 'foto',
+        populate: 'foto,capa,conquistas',
       });
       const first = resRaw.data[0];
       if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);
@@ -189,13 +225,21 @@ perfilRoutes.get('/:id', async (c) => {
       let isConnected = false;
       if (requesterId && requesterId !== userId) {
         try {
-          const resVinculos = await strapiGet<StrapiVinculo>('/vinculos', {
-            'filters[senderId][$eq]': requesterId,
-            'filters[receiverId][$eq]': userId,
-            'filters[estado][$eq]': 'connected',
-            'pagination[pageSize]': '1',
-          });
-          isConnected = resVinculos.data.length > 0;
+          const [r1, r2] = await Promise.all([
+            strapiGet<StrapiVinculo>('/vinculos', {
+              'filters[solicitante][userId][$eq]': requesterId,
+              'filters[destinatario][userId][$eq]': userId,
+              'filters[status][$eq]': 'aprovado',
+              'pagination[limit]': '1',
+            }),
+            strapiGet<StrapiVinculo>('/vinculos', {
+              'filters[solicitante][userId][$eq]': userId,
+              'filters[destinatario][userId][$eq]': requesterId,
+              'filters[status][$eq]': 'aprovado',
+              'pagination[limit]': '1',
+            }),
+          ]);
+          isConnected = r1.data.length > 0 || r2.data.length > 0;
         } catch { /* ignore vinculos fail */ }
       }
 

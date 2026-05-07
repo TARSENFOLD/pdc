@@ -13,6 +13,8 @@ const envSchema = z.object({
   // Strapi
   STRAPI_URL: z.string().url(),
   STRAPI_API_TOKEN: z.string().min(1),
+  STRAPI_TIMEOUT: z.string().optional(),
+  STRAPI_WRITE_TIMEOUT: z.string().optional(),
   JWT_SECRET: z.string().min(32),
   
   // Redis
@@ -76,12 +78,9 @@ function validateEnv(): Env {
   } catch (err) {
     if (err instanceof z.ZodError) {
       const missing = err.issues.map((i) => i.path.join('.')).join(', ');
-      log.error(`Variáveis de ambiente em falta ou inválidas: ${missing}`);
-      if (process.env['NODE_ENV'] === 'production') {
-        process.exit(1);
-      }
+      log.error({ issues: err.issues }, `Variáveis de ambiente em falta ou inválidas: ${missing}`);
     }
-    return process.env as unknown as Env;
+    throw err;
   }
 }
 
@@ -89,6 +88,9 @@ export const env = validateEnv();
 
 if (env.NODE_ENV === 'production') {
   if (!env.SENTRY_DSN) log.warn('SENTRY_DSN ausente em produção.');
+  if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN || !env.TWILIO_PHONE_NUMBER) {
+    log.error('Credenciais Twilio ausentes em produção — OTP SMS não funcionará. Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_PHONE_NUMBER no Railway.');
+  }
 } else {
   if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
     log.warn('Redis não configurado. Performance limitada.');

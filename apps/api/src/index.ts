@@ -19,6 +19,7 @@ import { noStoreCache } from './middleware/cache.js';
 import { authRoutes } from './routes/auth.js';
 import { aiRoutes } from './routes/ai.js';
 import { feedRoutes } from './routes/feed.js';
+import { feedPostRoutes } from './routes/feed-posts.js';
 import { cursoRoutes } from './routes/cursos.js';
 import { ltiRoutes } from './routes/lti.js';
 import { catalogoRoutes } from './routes/catalogo.js';
@@ -42,27 +43,35 @@ import { conquistaRoutes } from './routes/conquistas.js';
 import { mentoriaRoutes } from './routes/mentorias.js';
 import { projetoRoutes } from './routes/projetos.js';
 import { vocacionalRoutes } from './routes/vocacional.js';
-import { mediaRoutes } from './routes/media.js';
+import { mediaRoutes, mediaPublicRoutes } from './routes/media.js';
 import { notificacaoRoutes } from './routes/notificacoes.js';
 import { perfilRoutes } from './routes/perfis.js';
 import { denunciaRoutes } from './routes/denuncias.js';
 import { featureFlagsRoutes } from './routes/feature-flags.js';
+import { domainEventRoutes } from './routes/domain-events.js';
 import { matchRoutes } from './routes/match.js';
+import { reputationRoutes } from './routes/reputation.js';
+import { rankingRoutes } from './routes/ranking.js';
 import { bootstrapRoutes } from './routes/bootstrap.js';
+import { dashboardRoutes } from './routes/dashboard/index.js';
 import { landingRoutes } from './routes/landing.js';
 import { healthRoutes } from './routes/health.js';
 
 import { socketService } from './modules/realtime/socket.service.js';
 import { tinaService } from './modules/tina/tina.service.js';
+import { strapiGet } from './modules/strapi/strapi.client.js';
 import { getPublicJwks } from './modules/lti/lti.jwks.js';
 
 const app = new Hono();
 
 // ─── MIDDLEWARES ───
+// Capacitor iOS (server.hostname = 'usepdc.com') and Android TWA share the same
+// production origin as the web PWA — no extra entry needed in prod. The
+// capacitor://localhost entry covers local Capacitor dev builds.
 app.use('*', cors({
-  origin: env.NODE_ENV === 'production' 
-    ? ['https://usepdc.com', 'https://www.usepdc.com'] 
-    : [env.FRONTEND_URL, 'http://localhost:5173'],
+  origin: env.NODE_ENV === 'production'
+    ? ['https://usepdc.com', 'https://www.usepdc.com']
+    : [env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:5174', 'capacitor://localhost', 'ionic://localhost'],
   credentials: true,
 }));
 app.use('*', logger());
@@ -77,12 +86,39 @@ app.route('/health', healthRoutes);
 app.route('/auth', authRoutes);
 app.route('/ai', aiRoutes);
 app.route('/feed', feedRoutes);
+app.route('/feed-posts', feedPostRoutes);
 app.route('/cursos', cursoRoutes);
 app.route('/lti', ltiRoutes);
 app.route('/catalogo', catalogoRoutes);
 app.route('/simulacoes', simulacaoRoutes);
 app.route('/telemetria', telemetriaRoutes);
 app.route('/tina', tinaRoutes);
+interface UiString { key: string; value: string }
+const VALID_CONTEXTS = ['landing', 'auth', 'dashboard', 'cursos', 'simulacoes', 'global'];
+
+app.get('/app/copy/:contexto', async (c) => {
+  const contexto = c.req.param('contexto');
+  
+  if (!VALID_CONTEXTS.includes(contexto)) {
+    return c.json({ error: 'Contexto inválido' }, 400);
+  }
+
+  try {
+    const res = await strapiGet<UiString>('/ui-strings', { 
+      'filters[contexto][$eq]': contexto,
+      'pagination[pageSize]': '1000'
+    });
+    
+    const map: Record<string, string> = {};
+    res.data.forEach((s) => { 
+      if (s.key && s.value) map[s.key] = s.value; 
+    });
+    return c.json(map);
+  } catch (err) {
+    log.error({ err, contexto }, 'Falha ao recuperar UI Strings');
+    return c.json({ error: 'Falha ao sincronizar copy' }, 502);
+  }
+});
 app.route('/experiencias', experienciaRoutes);
 app.route('/programas', programaRoutes);
 app.route('/propostas', propostaRoutes);
@@ -100,12 +136,20 @@ app.route('/conquistas', conquistaRoutes);
 app.route('/mentorias', mentoriaRoutes);
 app.route('/projetos', projetoRoutes);
 app.route('/vocacional', vocacionalRoutes);
+// Public media endpoints (local dev files, no auth) must be registered before protected routes.
+app.route('/media', mediaPublicRoutes);
+// Protected media endpoints require authenticated users.
 app.route('/media', mediaRoutes);
 app.route('/notificacoes', notificacaoRoutes);
 app.route('/perfis', perfilRoutes);
 app.route('/denuncias', denunciaRoutes);
 app.route('/feature-flags', featureFlagsRoutes);
+app.route('/domain-events', domainEventRoutes);
+app.route('/dashboard', dashboardRoutes);
 app.route('/match', matchRoutes);
+app.route('/reputacao', reputationRoutes);
+app.route('/reputation', reputationRoutes);
+app.route('/ranking', rankingRoutes);
 
 // ─── WELL-KNOWN ───
 app.get('/.well-known/jwks.json', async (c) => {

@@ -12,11 +12,44 @@
   "attributes": {
     "titulo": { "type": "string", "required": true },
     "slug": { "type": "uid", "targetField": "titulo", "unique": true },
-    "descricao": { "type": "text" },
+    "descricao": { "type": "text", "description": "⚠️ DEPRECATED — usar proposito. Mantido por retrocompatibilidade." },
+    "proposito": { "type": "text", "description": "Propósito pedagógico e valor diferenciador do programa" },
+    "metodologia": { "type": "text", "description": "Descrição da metodologia de ensino/learning" },
+    "recursos": { "type": "json", "description": "Recursos didáticos, materiais e infraestrutura" },
+    "responsavel": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "description": "Perfil responsável pedagógico pelo programa"
+    },
     "instituicao": {
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::instituicao.instituicao"
+    },
+    "cursos": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::curso.curso",
+      "description": "Cursos incluídos no programa"
+    },
+    "experiencias": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::experiencia.experiencia",
+      "description": "Experiências práticas do programa"
+    },
+    "simulacoes": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::simulacao.simulacao",
+      "description": "Simulações do programa"
+    },
+    "projetos": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::projeto.projeto",
+      "description": "Projetos integrados no programa"
     },
     "area": {
       "type": "enumeration",
@@ -27,7 +60,7 @@
     },
     "estado": {
       "type": "enumeration",
-      "enum": ["draft", "published", "archived"],
+      "enum": ["draft", "review", "approved", "published", "archived"],
       "default": "draft"
     },
     "modalidade": {
@@ -45,6 +78,15 @@
     },
     "dataInicio": { "type": "datetime" },
     "dataFim": { "type": "datetime" },
-    "metadata": { "type": "json" }
+    "regrasMatricula": { "type": "json", "description": "Regras de inscrição e pré-requisitos" },
+    "precoPolicy": { "type": "json", "description": "Política de preços: gratuito, pago, bolsas" },
+    "criadorTipo": {
+      "type": "enumeration",
+      "enum": ["mentor", "instituicao", "super_admin"],
+      "description": "Tipo de entidade que criou o programa"
+    },
+    "historicoEstados": { "type": "json", "description": "Audit trail de transições de estado editorial" },
+    "motivoRejeicao": { "type": "text", "description": "Motivo da rejeição pelo Comité ou Moderador" },
+    "metadata": { "type": "json", "description": "⚠️ DEPRECATED — usar campos estruturados. Mantido por retrocompatibilidade." }
   }
 }

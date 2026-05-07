@@ -1,10 +1,20 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import type React from 'react';
 import { catalogoApi } from '@/lib/api/catalogo';
-import { Spinner, Card, Pagination, Avatar } from '@/components/ui';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
+import { programasApi } from '@/lib/api/programas';
+import { Avatar } from '@/components/ui';
+import { CardGridSkeleton } from '@/components/ui/Skeleton';
 import { SEOHead } from '@/components/layout/SEOHead';
-import type { ExplorarResultado, MentorPublico, AreaVocacional } from '@pdc/shared';
+import ContentCard from '@/components/catalogo/ContentCard';
+import { resolveCatalogHref } from '@/components/catalogo/catalogoLinks';
+import { AspirationalEmpty } from '@/components/ui/AspirationalEmpty';
+import {
+  BookOpen, FlaskConical, MapPin, UserCheck,
+  GraduationCap, ArrowRight, AlertCircle,
+} from 'lucide-react';
+import type { AreaVocacional, CursoPublico, SimulacaoPublica, ExperienciaPublica, MentorPublico, Programa } from '@pdc/shared';
 
 const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'SAUDE', label: 'Saúde' },
@@ -21,200 +31,305 @@ const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'ARQUITETURA', label: 'Arquitetura' },
   { value: 'TURISMO_HOTELARIA', label: 'Turismo e Hotelaria' },
   { value: 'DESPORTO', label: 'Desporto' },
+  { value: 'OUTRA', label: 'Outra' },
 ];
 
-const CTA_LABELS: Record<string, string> = {
-  curso: 'Ver curso',
-  simulacao: 'Experimentar',
-  experiencia: 'Ver experiência',
-  mentor: 'Conectar',
-  instituicao: 'Ver instituição',
-};
-
-function ResultCard({ item }: { item: ExplorarResultado }) {
-  const slug = item.slug ?? item.id;
-  const linkMap: Record<string, string> = {
-    curso: `/cursos/${slug}`,
-    simulacao: `/simulacoes/${slug}`,
-    experiencia: `/experiencias/${item.id}`,
-    mentor: `/mentores/${item.id}`,
-    instituicao: `/instituicoes/${slug}`,
-  };
+function SectionHeader({ title, description, verTodosHref }: { title: string; description: string; verTodosHref: string }): React.JSX.Element {
   return (
-    <Link to={linkMap[item.tipo] ?? '#'}>
-      <Card interactive className="p-5 border-border bg-surface hover:border-amber/30 transition-all">
-        {item.capaUrl ? (
-          <img src={item.capaUrl} alt={item.titulo} className="mb-4 h-40 w-full rounded-xl object-cover shadow-sm" />
-        ) : (
-          <div className="mb-4 h-40 w-full rounded-xl bg-surface-raised flex items-center justify-center text-text-muted">
-            Sem capa
-          </div>
-        )}
-        <span className="text-[10px] font-bold uppercase tracking-widest text-amber">{item.tipo}</span>
-        <h3 className="mt-1 font-bold text-text-primary line-clamp-1 text-lg">{item.titulo}</h3>
-        {item.descricao ? <p className="mt-2 text-sm text-text-muted line-clamp-2 leading-relaxed">{item.descricao}</p> : null}
-        <div className="mt-4 flex items-center justify-between">
-          {item.area ? (
-            <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-text-secondary border border-border">
-              {item.area}
-            </span>
-          ) : <span />}
-          <span className="text-xs font-bold text-amber group-hover:translate-x-1 transition-transform">
-            {CTA_LABELS[item.tipo] ?? 'Ver'} →
-          </span>
-        </div>
-      </Card>
-    </Link>
-  );
-}
-
-function PessoasSugeridas({ mentores }: { mentores: MentorPublico[] }) {
-  if (mentores.length === 0) return null;
-  return (
-    <div className="mt-16 rounded-3xl border border-border bg-surface p-8 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-text-primary">Talentos em destaque</h2>
-          <p className="text-sm text-text-muted">Mentores e profissionais de elite prontos para te guiar.</p>
-        </div>
-        <Link to="/explorar?tipo=mentor" className="text-sm font-bold text-amber hover:underline">Ver todos</Link>
+    <div className="flex items-end justify-between mb-6">
+      <div>
+        <h2 className="text-lg font-bold text-ink-primary">{title}</h2>
+        <p className="mt-0.5 text-xs text-ink-tertiary">{description}</p>
       </div>
-      <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
-        {mentores.slice(0, 8).map((m) => (
-          <Link key={m.id} to={`/mentores/${m.id}`} className="group flex w-44 flex-none flex-col items-center rounded-2xl border border-border bg-surface-raised p-6 text-center transition-all hover:border-amber/40 hover:shadow-lg hover:shadow-amber/5">
-            <Avatar size="xl" {...(m.avatarUrl ? { src: m.avatarUrl } : {})} alt={m.nome} fallback={m.nome.substring(0, 2)} className="ring-2 ring-transparent group-hover:ring-amber/20 transition-all" />
-            <p className="mt-4 text-sm font-bold text-text-primary line-clamp-1 group-hover:text-amber transition-colors">{m.nome}</p>
-            {m.areaEspecialidade ? <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-text-muted line-clamp-1">{m.areaEspecialidade}</p> : null}
-            <div className="mt-4 rounded-full bg-amber/10 px-3 py-1 text-[10px] font-bold text-amber">Conectar</div>
-          </Link>
-        ))}
-      </div>
+      <Link
+        to={verTodosHref}
+        className="flex items-center gap-1 text-xs font-bold text-[var(--chrome-active)] hover:underline shrink-0"
+      >
+        Ver todos <ArrowRight size={13} />
+      </Link>
     </div>
   );
 }
 
-export function ExplorarPage() {
-  const [sp, setSp] = useSearchParams();
-  const tab = sp.get('tipo') ?? 'tudo';
-  const search = sp.get('search') ?? '';
+function isAreaVocacional(value: string): value is AreaVocacional {
+  return AREAS.some((area) => area.value === value);
+}
+
+function QueryError({ label }: { label: string }): React.JSX.Element {
+  return (
+    <AspirationalEmpty
+      icon={AlertCircle}
+      title="Erro ao carregar"
+      description={`Não foi possível carregar ${label}. Tenta novamente.`}
+    />
+  );
+}
+
+const LEGACY_TIPO_ROUTES: Record<string, string> = {
+  curso: 'cursos',
+  experiencia: 'experiencias',
+  simulacao: 'simulacoes',
+  programa: 'programas',
+};
+
+export default function ExplorarPage(): React.JSX.Element {
+  const [sp, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const area = sp.get('area') ?? '';
-  const page = Number(sp.get('page') ?? '1');
+  const tipo = sp.get('tipo') ?? '';
+  const inApp = location.pathname.startsWith('/app');
+  const base = inApp ? '/app' : '';
+  const shouldRedirect = ['curso', 'experiencia', 'simulacao', 'programa'].includes(tipo);
 
-  const { data, isLoading } = useQuery<{ data: ExplorarResultado[]; meta: { pageCount: number } }>({
-    queryKey: ['explorar', tab, search, area, page],
-    queryFn: () => catalogoApi.explorar({
-      ...(tab !== 'tudo' ? { tipo: tab } : {}),
-      ...(search ? { search } : {}),
-      ...(area ? { area } : {}),
-      page,
-      pageSize: 12,
-    }),
+  // Legacy tipo redirects — anyone with old bookmarks lands in the right place
+  useEffect(() => {
+    const route = LEGACY_TIPO_ROUTES[tipo];
+    if (route) navigate(`${base}/${route}`, { replace: true });
+  }, [tipo, base, navigate]);
+
+  const areaParam = isAreaVocacional(area) ? { area } : {};
+
+  const cursosQ = useQuery({
+    queryKey: ['explorar-cursos', area],
+    queryFn: () => catalogoApi.getCursos({ ...areaParam, pageSize: 4 }),
+    enabled: !shouldRedirect,
   });
 
-  const { data: mentoresData } = useQuery<{ data: MentorPublico[] }>({
-    queryKey: ['explorar-pessoas'],
+  const simsQ = useQuery({
+    queryKey: ['explorar-sims', area],
+    queryFn: () => catalogoApi.getSimulacoes({ ...areaParam, pageSize: 4 }),
+    enabled: !shouldRedirect,
+  });
+
+  const expQ = useQuery({
+    queryKey: ['explorar-exp', area],
+    queryFn: () => catalogoApi.getExperiencias({ ...areaParam, pageSize: 4 }),
+    enabled: !shouldRedirect,
+  });
+
+  const progQ = useQuery({
+    queryKey: ['explorar-prog', area],
+    queryFn: () => programasApi.list({ pageSize: 4 }),
+    enabled: !shouldRedirect,
+  });
+
+  const mentoresQ = useQuery({
+    queryKey: ['explorar-mentores'],
     queryFn: () => catalogoApi.getMentores({ pageSize: 8 }),
+    enabled: !shouldRedirect,
   });
 
-  const items = data?.data ?? [];
-  const pageCount = data?.meta.pageCount ?? 1;
-
-  const set = (k: string, v: string) => {
+  const setArea = (v: string) => {
     const next = new URLSearchParams(sp);
-    if (v) next.set(k, v); else next.delete(k);
-    if (k !== 'page') next.delete('page');
-    setSp(next, { replace: true });
+    if (v) next.set('area', v); else next.delete('area');
+    setSearchParams(next, { replace: true });
   };
 
+  const cursos = cursosQ.data?.data ?? [];
+  const sims = simsQ.data?.data ?? [];
+  const exps = expQ.data?.data ?? [];
+  const progs = progQ.data?.data ?? [];
+  const mentores = mentoresQ.data?.data ?? [];
+
   return (
-    <div className="min-h-screen bg-background px-4 py-20 sm:px-8">
-      <SEOHead 
-        title="Explorar Catálogo" 
-        description="Descobre cursos, simulações e mentores na infraestrutura de decisão PDC." 
-        url="https://usepdc.com/explorar" 
+    <div className="min-h-screen bg-canvas">
+      <SEOHead
+        title="Explorar"
+        description="Destaques de cursos, simulações, experiências e programas da rede PDC."
+        url="https://usepdc.com/explorar"
       />
-      
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-12">
-          <div className="inline-flex items-center rounded-full bg-surface-raised px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber border border-border mb-4">
-            🔍 Inteligência Coletiva
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-text-primary sm:text-5xl">Explorar <span className="text-amber">PDC.</span></h1>
-          <p className="mt-4 text-lg text-text-secondary max-w-2xl">
-            Acede a simulações de alto impacto, cursos certificados e mentoria de elite. O teu futuro começa aqui.
+
+      <div className="mx-auto max-w-7xl space-y-16 pb-20">
+        <header className="mb-2">
+          <h1 className="text-2xl font-bold text-ink-primary">Explorar</h1>
+          <p className="mt-1 text-sm text-ink-secondary">
+            Destaques de cada catálogo da rede PDC.
           </p>
         </header>
 
-        <div className="sticky top-20 z-10 bg-background/80 backdrop-blur-xl pt-2 pb-6 border-b border-border/50">
-          <div className="flex flex-col gap-4">
-            <div className="relative group">
-              <input
-                type="text" 
-                value={search} 
-                placeholder="Pesquisar carreiras, simulações ou mentores..."
-                onChange={(e) => { set('search', e.target.value); }}
-                className="w-full rounded-2xl border border-border bg-surface p-4 pl-12 text-sm text-text-primary placeholder:text-text-muted focus:border-amber/40 focus:ring-4 focus:ring-amber/5 outline-none transition-all"
-              />
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-amber transition-colors">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <span className="text-[10px] font-black uppercase tracking-tighter text-text-muted mr-2">Filtros:</span>
-              {AREAS.map((a) => (
-                <button 
-                  key={a.value} 
-                  onClick={() => { set('area', area === a.value ? '' : a.value); }}
-                  className={`flex-none rounded-full border px-4 py-1.5 text-xs font-bold transition-all ${area === a.value ? 'bg-amber border-amber text-white shadow-lg shadow-amber/20' : 'bg-surface-raised border-border text-text-secondary hover:border-amber/30'}`}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
+        {/* Filtro de área — aplica-se a todas as secções */}
+        <div className="sticky top-16 md:top-20 z-10 bg-canvas/90 backdrop-blur-md pt-2 pb-3 border-b border-ink-tertiary/10 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-tertiary mr-1 shrink-0">Área:</span>
+            {AREAS.map((a) => (
+              <button
+                key={a.value}
+                type="button"
+                aria-pressed={area === a.value}
+                onClick={() => { setArea(area === a.value ? '' : a.value); }}
+                className={`flex-none rounded-full px-3.5 py-1.5 text-xs font-bold transition-all ${area === a.value ? 'bg-[var(--chrome-active)] text-[var(--ink-on-accent)] shadow-sm' : 'text-ink-secondary hover:bg-recessed'}`}
+              >
+                {a.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        <Tabs value={tab} onValueChange={(v) => { set('tipo', v === 'tudo' ? '' : v); }} className="mt-8">
-          <TabsList className="bg-surface p-1 rounded-2xl border border-border">
-            {['tudo', 'curso', 'simulacao', 'experiencia', 'mentor', 'instituicao'].map((t) => (
-              <TabsTrigger key={t} value={t} className="rounded-xl px-6 py-2 text-xs font-bold uppercase tracking-widest transition-all data-[state=active]:bg-amber data-[state=active]:text-white">
-                {t === 'tudo' ? 'Tudo' : `${t}s`}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        {/* ─── Cursos ─────────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Cursos certificados"
+            description="Percursos validados por especialistas e instituições de prestígio."
+            verTodosHref={`${base}/cursos${area ? `?area=${area}` : ''}`}
+          />
+          {cursosQ.isLoading ? (
+            <CardGridSkeleton />
+          ) : cursosQ.isError ? (
+            <QueryError label="cursos" />
+          ) : cursos.length === 0 ? (
+            <p className="text-sm text-ink-tertiary py-6">Nenhum curso disponível nesta área.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {cursos.map((c: CursoPublico) => (
+                <ContentCard
+                  key={c.id}
+                  title={c.titulo}
+                  subtitle={c.autorNome}
+                  image={c.capaUrl || undefined}
+                  href={resolveCatalogHref('curso', c.slug, inApp)}
+                  type="curso"
+                  ctaLabel="Ver curso"
+                  icon={BookOpen}
+                  badges={[{ label: c.area || 'Geral', variant: 'info' }]}
+                />
+              ))}
+            </div>
+          )}
+        </section>
 
-          <TabsContent value={tab} className="mt-8">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-32 gap-4">
-                <Spinner size="lg" />
-                <p className="text-sm font-mono uppercase tracking-widest text-amber animate-pulse">Sincronizando Catálogos...</p>
-              </div>
-            ) : items.length === 0 ? (
-              <div className="py-24 text-center rounded-3xl border border-dashed border-border bg-surface-alt">
-                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/5 text-text-muted">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 9.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 7 0 11-18 0 9 9 0 0118 0z" /></svg>
-                </div>
-                <h3 className="text-lg font-bold text-text-primary">Nenhum resultado encontrado</h3>
-                <p className="mt-2 text-sm text-text-secondary">Tenta ajustar os teus filtros ou pesquisa.</p>
-                <Link to="/explorar" onClick={() => { setSp(new URLSearchParams()); }} className="mt-6 inline-block text-xs font-bold uppercase tracking-widest text-amber hover:underline">Limpar tudo</Link>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {items.map((item) => <ResultCard key={`${item.tipo}-${item.id}`} item={item} />)}
-                </div>
-                {pageCount > 1 && (
-                  <div className="mt-16 flex justify-center border-t border-border pt-10">
-                    <Pagination page={page} pageCount={pageCount} onPageChange={(p) => { set('page', String(p)); }} />
+        {/* ─── Simulações ─────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Simulações"
+            description="Vive o dilema real da profissão e mede a tua aptidão."
+            verTodosHref={`${base}/simulacoes${area ? `?area=${area}` : ''}`}
+          />
+          {simsQ.isLoading ? (
+            <CardGridSkeleton />
+          ) : simsQ.isError ? (
+            <QueryError label="simulações" />
+          ) : sims.length === 0 ? (
+            <p className="text-sm text-ink-tertiary py-6">Nenhuma simulação disponível nesta área.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {sims.map((s: SimulacaoPublica) => (
+                <ContentCard
+                  key={s.id}
+                  title={s.titulo}
+                  subtitle={s.area}
+                  image={s.capaUrl || undefined}
+                  href={resolveCatalogHref('simulacao', s.slug || s.id, inApp)}
+                  type="simulacao"
+                  ctaLabel="Experimentar"
+                  icon={FlaskConical}
+                  badges={[{ label: s.area, variant: 'info' }]}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ─── Experiências ───────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Experiências imersivas"
+            description="Roteiros em instituições de elite para validar o teu interesse real."
+            verTodosHref={`${base}/experiencias${area ? `?area=${area}` : ''}`}
+          />
+          {expQ.isLoading ? (
+            <CardGridSkeleton />
+          ) : expQ.isError ? (
+            <QueryError label="experiências" />
+          ) : exps.length === 0 ? (
+            <p className="text-sm text-ink-tertiary py-6">Nenhuma experiência disponível nesta área.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {exps.map((e: ExperienciaPublica) => (
+                <ContentCard
+                  key={e.id}
+                  title={e.titulo}
+                  subtitle={e.instituicao?.nome || 'Instituição PDC'}
+                  image={e.capaUrl || undefined}
+                  href={resolveCatalogHref('experiencia', e.slug || e.id, inApp)}
+                  type="experiencia"
+                  ctaLabel="Ver experiência"
+                  icon={MapPin}
+                  badges={[{ label: e.area || 'Geral', variant: 'info' }]}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ─── Programas ──────────────────────────────────────────────────── */}
+        <section>
+          <SectionHeader
+            title="Programas de acesso"
+            description="Percursos integrados que ligam o conhecimento teórico à prática."
+            verTodosHref={`${base}/programas`}
+          />
+          {progQ.isLoading ? (
+            <CardGridSkeleton />
+          ) : progQ.isError ? (
+            <QueryError label="programas" />
+          ) : progs.length === 0 ? (
+            <p className="text-sm text-ink-tertiary py-6">Nenhum programa disponível de momento.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {progs.map((p: Programa) => (
+                <ContentCard
+                  key={p.id}
+                  title={p.titulo}
+                  subtitle={p.instituicaoNome || 'Instituição PDC'}
+                  image={p.capaUrl || undefined}
+                  href={resolveCatalogHref('programa', p.slug || p.id, inApp)}
+                  type="programa"
+                  ctaLabel="Ver programa"
+                  icon={GraduationCap}
+                  badges={[{ label: p.area, variant: 'outline' }]}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ─── Mentores em destaque ────────────────────────────────────────── */}
+        {mentoresQ.isError ? (
+          <QueryError label="mentores" />
+        ) : mentores.length > 0 && (
+          <section className="pt-4 border-t border-ink-tertiary/10">
+            <SectionHeader
+              title="Mentores em destaque"
+              description="Profissionais de elite prontos para te guiar."
+              verTodosHref={`${base}/mentores`}
+            />
+            <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
+              {mentores.slice(0, 8).map((m: MentorPublico) => (
+                <Link
+                  key={m.id}
+                  to={resolveCatalogHref('mentor', m.id, inApp)}
+                  className="group flex w-36 flex-none flex-col items-center rounded-lg border border-transparent hover:bg-recessed p-4 text-center transition-all"
+                >
+                  <Avatar
+                    size="xl"
+                    {...(m.avatarUrl ? { src: m.avatarUrl } : {})}
+                    alt={m.nome}
+                    fallback={m.nome.substring(0, 2)}
+                    className="ring-2 ring-transparent group-hover:ring-[var(--chrome-active-soft)] transition-all"
+                  />
+                  <p className="mt-4 text-sm font-bold text-ink-primary line-clamp-1 group-hover:text-[var(--chrome-active)] transition-colors">{m.nome}</p>
+                  {m.areaEspecialidade ? (
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-ink-tertiary line-clamp-1">{m.areaEspecialidade}</p>
+                  ) : null}
+                  <div className="mt-4 rounded-full bg-[var(--chrome-active-soft)] px-3 py-1 text-[10px] font-bold text-[var(--chrome-active)]">
+                    <UserCheck size={10} className="inline mr-1" />Conectar
                   </div>
-                )}
-              </>
-            )}
-          </TabsContent>
-        </Tabs>
-
-        <PessoasSugeridas mentores={mentoresData?.data ?? []} />
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

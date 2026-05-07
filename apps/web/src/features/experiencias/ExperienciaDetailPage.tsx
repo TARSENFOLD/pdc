@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { experienciasApi } from '@/lib/api/experiencias';
 import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
 import { Spinner, Badge, LikeButton, BookmarkButton, RatingStars, Card, Button, EmptyState } from '@/components/ui';
+import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 import { SEOHead } from '@/components/layout/SEOHead';
 import { 
   Building2, 
@@ -37,7 +38,7 @@ function CurriculumSection({ discipline, index, onDwell }: {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ ...APPLE_SPRING, delay: index * 0.05 }}>
       <Card 
-        className={`p-5 cursor-pointer border-white/5 ${isExpanded ? 'bg-accent/[0.03] border-accent/20' : 'bg-surface-alt'}`}
+        className={`p-5 cursor-pointer border-white/5 ${isExpanded ? 'bg-accent/[0.03] border-accent/20' : 'bg-recessed'}`}
         onClick={() => { setIsExpanded(!isExpanded); }}
       >
         <div className="flex items-center justify-between">
@@ -45,13 +46,13 @@ function CurriculumSection({ discipline, index, onDwell }: {
               <div className="h-8 w-8 rounded-lg bg-accent/5 flex items-center justify-center text-accent text-[10px] font-black">
                 {(index + 1).toString().padStart(2, '0')}
               </div>
-              <h4 className="font-bold text-text-primary">{discipline.disciplina}</h4>
+              <h4 className="font-bold text-ink-primary">{discipline.disciplina}</h4>
            </div>
            <ChevronRight size={16} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
         </div>
         {isExpanded && (
           <div className="pt-4 space-y-3">
-            <p className="text-sm text-text-secondary leading-relaxed">{discipline.descricao}</p>
+            <p className="text-sm text-ink-secondary leading-relaxed">{discipline.descricao}</p>
             <p className="text-[10px] font-bold text-accent uppercase tracking-widest">Relevância: {discipline.relevanciaMercado}</p>
           </div>
         )}
@@ -106,13 +107,16 @@ export function ExperienciaDetailPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 pb-20 animate-in fade-in duration-1000">
-      <SEOHead title={`${exp.titulo} | PDC v2`} description={exp.descricao} />
+      <SEOHead title={`${exp.titulo} | PDC`} description={exp.descricao} />
 
       <section className="relative h-[300px] rounded-[32px] overflow-hidden border border-white/5">
          <div className="absolute inset-0 bg-gradient-to-br from-accent/20 to-background opacity-40" />
          <div className="relative h-full flex flex-col justify-end p-8 space-y-4">
-            <Badge className="w-fit bg-accent/10 text-accent border-accent/20 uppercase text-[9px] font-black">Experiência Curricular</Badge>
-            <h1 className="text-4xl font-black text-text-primary tracking-tighter leading-tight">{exp.titulo}</h1>
+            <div className="flex items-center gap-2">
+              <Badge className="w-fit bg-accent/10 text-accent border-accent/20 uppercase text-[9px] font-black">Experiência Curricular</Badge>
+              <EditorialStateBadge state={exp.estado} />
+            </div>
+            <h1 className="text-4xl font-black text-ink-primary tracking-tighter leading-tight">{exp.titulo}</h1>
             <div className="flex items-center gap-4 pt-4">
                <RatingStars targetType="experiencia" targetId={id} stats={ratingStats} />
                <LikeButton targetType="experiencia" targetId={id} initialCount={likeStatus?.count} initialLiked={likeStatus?.liked} />
@@ -123,7 +127,7 @@ export function ExperienciaDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
          <div className="lg:col-span-2 space-y-8">
-            <h3 className="text-2xl font-black text-text-primary tracking-tight flex items-center gap-3">
+            <h3 className="text-2xl font-black text-ink-primary tracking-tight flex items-center gap-3">
               <BookOpen className="text-accent" /> Grade Curricular
             </h3>
             <div className="grid grid-cols-1 gap-3">
@@ -131,11 +135,11 @@ export function ExperienciaDetailPage() {
                  <CurriculumSection key={i} index={i} discipline={disc} onDwell={handleDisciplineDwell} />
                ))}
             </div>
-            <p className="text-text-secondary leading-relaxed">{exp.descricao}</p>
+            <p className="text-ink-secondary leading-relaxed">{exp.descricao}</p>
          </div>
 
          <aside className="space-y-6">
-            <Card className="p-8 bg-surface-alt border-accent/20 space-y-6 shadow-2xl">
+            <Card className="p-8 bg-recessed border-accent/20 space-y-6 shadow-2xl">
                <div className="space-y-4">
                    <div className="flex items-center gap-3">
                       <Building2 size={20} className="text-accent" />
@@ -143,7 +147,7 @@ export function ExperienciaDetailPage() {
                    </div>
                   <div className="flex items-center gap-3">
                      <Calendar size={20} className="text-accent" />
-                     <p className="text-sm font-bold">{new Date(exp.dataInicio).toLocaleDateString('pt-AO')}</p>
+                     <p className="text-sm font-bold">{exp.dataInicio ? new Date(exp.dataInicio).toLocaleDateString('pt-AO') : 'Data a anunciar'}</p>
                   </div>
                </div>
                <Button className="w-full h-14 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs">Inscrever Agora</Button>

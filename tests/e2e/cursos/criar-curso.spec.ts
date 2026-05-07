@@ -9,7 +9,7 @@ test.describe('Criar Curso', () => {
     await mentorPage.fill('textarea[name="descricao"], input[name="descricao"]', 'Descrição automática do teste E2E com mais de dez caracteres.');
     await mentorPage.fill('input[name="area"]', 'Tecnologia');
 
-    await mentorPage.click('button[type="submit"]');
+    await mentorPage.click('button:has-text("Publicar")');
     await expect(mentorPage.locator('text=Sucesso, text=sucesso, text=criado')).toBeVisible({ timeout: 10_000 });
   });
 

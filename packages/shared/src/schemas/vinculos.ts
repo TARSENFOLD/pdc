@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { PerfilPublicoSchema } from '../user.js';
 
-export const VinculoEstadoSchema = z.enum(['pendente', 'aprovado', 'rejeitado']);
+export const VinculoEstadoSchema = z.enum(['pendente', 'aprovado', 'rejeitado', 'concluido']);
 export type VinculoEstado = z.infer<typeof VinculoEstadoSchema>;
 
 export const VinculoTipoSchema = z.enum([
@@ -20,6 +20,10 @@ export const VinculoSchema = z.object({
   destinatarioId: z.string().or(z.number()).optional(),
   status: VinculoEstadoSchema,
   connectionType: VinculoTipoSchema.optional(),
+  mensagem: z.string().max(300).optional(),
+  documentoUrl: z.string().url().optional(),
+  visibleOnProfile: z.boolean().optional(),
+  dataTerminacao: z.string().optional(),
   criadoEm: z.string().optional(),
   resolvidoEm: z.string().optional(),
 });
@@ -53,3 +57,16 @@ export const AceitarRejeitarVinculoPayloadSchema = z.object({
 });
 
 export type AceitarRejeitarVinculoPayload = z.infer<typeof AceitarRejeitarVinculoPayloadSchema>;
+
+export const PedidoVinculoPayloadSchema = z.object({
+  mensagem: z.string().max(300).optional(),
+  documentoUrl: z.string().url().optional(),
+});
+
+export type PedidoVinculoPayload = z.infer<typeof PedidoVinculoPayloadSchema>;
+
+export const VisibilityVinculoPayloadSchema = z.object({
+  visibleOnProfile: z.boolean(),
+});
+
+export type VisibilityVinculoPayload = z.infer<typeof VisibilityVinculoPayloadSchema>;

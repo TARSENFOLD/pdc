@@ -9,17 +9,32 @@ interface Flag {
   domain: string;
   enabled: boolean;
   description: string | null;
-  overrides: Array<{ instituicaoId: number; enabled: boolean }>;
+  overrides?: unknown;
+}
+
+type FeatureFlagsResponse = Flag[] | { data: Flag[] };
+type FlagOverride = { instituicaoId: number; enabled: boolean };
+
+function isFlagOverride(value: unknown): value is FlagOverride {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'instituicaoId' in value &&
+    typeof value.instituicaoId === 'number' &&
+    'enabled' in value &&
+    typeof value.enabled === 'boolean'
+  );
 }
 
 export function FeatureFlagsPage() {
   const qc = useQueryClient();
   const [newOverride, setNewOverride] = useState<{ domain: string; instId: string } | null>(null);
 
-  const { data: flags = [], isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['admin-feature-flags'],
-    queryFn: () => http.get<Flag[]>('/feature-flags'),
+    queryFn: () => http.get<FeatureFlagsResponse>('/feature-flags'),
   });
+  const flags = Array.isArray(data) ? data : data?.data ?? [];
 
   const toggleMutation = useMutation({
     mutationFn: ({ domain, enabled }: { domain: string; enabled: boolean }) =>
@@ -43,12 +58,18 @@ export function FeatureFlagsPage() {
   });
 
   if (isLoading) return <div className="p-6">A carregar...</div>;
+  if (isError) {
+    const message = error instanceof Error ? error.message : 'Erro inesperado';
+    return <div className="p-6 text-error">Erro ao carregar feature flags: {message}</div>;
+  }
 
   return (
     <div className="p-6 space-y-4">
       <h1 className="text-2xl font-bold">Feature Flags</h1>
 
-      {flags.map((f) => (
+      {flags.map((f) => {
+        const overrides = Array.isArray(f.overrides) ? f.overrides.filter(isFlagOverride) : [];
+        return (
         <Card key={f.id.toString()} className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
@@ -83,9 +104,9 @@ export function FeatureFlagsPage() {
               </Button>
             </div>
 
-            {f.overrides.length > 0 ? (
+            {overrides.length > 0 ? (
               <div className="space-y-1">
-                {f.overrides.map((o) => (
+                {overrides.map((o) => (
                   <div key={o.instituicaoId.toString()} className="flex items-center gap-2 text-sm">
                     <span>Inst. #{o.instituicaoId.toString()}</span>
                     <Badge variant={o.enabled ? 'success' : 'default'} className="text-xs">
@@ -152,7 +173,8 @@ export function FeatureFlagsPage() {
             )}
           </div>
         </Card>
-      ))}
+        );
+      })}
     </div>
   );
 }

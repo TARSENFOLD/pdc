@@ -1,14 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
-import { featureFlagsApi } from '../lib/api/feature-flags.js';
+import { useBootstrap } from '../lib/bootstrap/BootstrapContext.js';
 
 export function useFeatureFlags() {
-  const { data: flags = {}, isLoading } = useQuery({
-    queryKey: ['feature-flags', 'effective'],
-    queryFn: () => featureFlagsApi.getEffective(),
-    staleTime: 5 * 60 * 1000, 
-    gcTime: 10 * 60 * 1000,
-    retry: 1,
-  });
+  const { data, isLoading } = useBootstrap();
+  const flags = data?.capabilities.features;
+
+  if (!isLoading && !flags) {
+    throw new Error('Bootstrap capabilities.features ausente');
+  }
 
   /**
    * isEnabled (Fail-Safe)
@@ -16,8 +14,11 @@ export function useFeatureFlags() {
    * a feature é DESATIVADA para proteger a experiência estável.
    */
   const isEnabled = (flag: string): boolean => {
-    if (!flags) return false;
-    return !!flags[flag];
+    if (isLoading) return false;
+    if (!flags) {
+      throw new Error('Bootstrap capabilities.features ausente');
+    }
+    return flags[flag] === true;
   };
 
   return { flags, isEnabled, isLoading };

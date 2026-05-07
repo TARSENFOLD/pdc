@@ -1,1 +1,1 @@
-npm run lint && npm run typecheck && npm test --workspaces --if-present -- --run --bail --changed
+npm run lint && npm run typecheck && npm test --workspaces --if-present -- --run --bail=1 --changed

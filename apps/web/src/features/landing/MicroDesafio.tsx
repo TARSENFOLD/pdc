@@ -1,8 +1,58 @@
 import { motion, useReducedMotion } from 'motion/react';
-import { Circle } from 'lucide-react';
-import { type Area, type PerguntaData, AREA_EMOJI, AREA_LABEL } from './microDesafioData';
+import { Circle, Briefcase, Building2, GraduationCap, Globe, Trophy, Heart, PersonStanding, DollarSign, Wrench, BookOpen, Users, MessageSquare, Palette, Bird, Stethoscope, TrendingUp, Theater, Settings, Laptop, Lightbulb, ShieldCheck, Sparkles, TreePine, Droplets, Hammer, FlaskConical, Landmark, Music, Lock } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { type Area, type PerguntaData, AREA_LABEL } from './microDesafioData';
 import { useMicroDesafio } from './useMicroDesafio';
 import { MicroDesafioVeredito } from './MicroDesafioVeredito.tsx';
+
+const EMOJI_ICON: Record<string, LucideIcon> = {
+  // Carreira / negócio
+  '💼': Briefcase,       // Trabalhar na minha área
+  '🏢': Building2,       // Ter negócio próprio / Estabilidade
+  '🎓': GraduationCap,   // Continuar a estudar
+  '🌍': Globe,           // Ajudar a comunidade
+  // Motivações
+  '🏆': Trophy,          // Sucesso profissional
+  '❤️': Heart,           // Impacto social
+  '🧘': PersonStanding,  // Realização pessoal
+  '💰': DollarSign,      // Segurança financeira
+  // Aprendizagem
+  '🛠️': Wrench,          // Na prática
+  '📖': BookOpen,        // A ler
+  '🧑‍🏫': GraduationCap, // Em aulas
+  '💬': MessageSquare,   // Em grupo
+  // Valores profissionais
+  '🎨': Palette,         // Criatividade
+  '🦅': Bird,            // Autonomia
+  '👥': Users,           // Trabalho em equipa
+  // Impacto
+  '🏥': Stethoscope,     // Na saúde
+  '📈': TrendingUp,      // Na economia
+  '📚': BookOpen,        // Na educação
+  '🎭': Theater,         // Na cultura
+  // Outros comuns da API
+  '⚙️': Settings,        // Engenharia / técnico
+  '💻': Laptop,          // Tecnologia
+  '🌿': TreePine,        // Natureza / sustentabilidade
+  '🌊': Droplets,        // Água / ambiente
+  '🔨': Hammer,          // Construção
+  '🧪': FlaskConical,    // Ciência
+  '🏛️': Landmark,        // Instituição / governo
+  '🎵': Music,           // Arte / cultura
+  '✨': Sparkles,        // Destaque / especial
+  '🛡️': ShieldCheck,     // Protecção / segurança
+};
+
+function OpcaoIcon({ emoji }: { emoji: string }) {
+  const Icon = EMOJI_ICON[emoji];
+  if (!Icon) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`OpcaoIcon: emoji sem mapeamento "${emoji}", usando fallback`);
+    }
+    return <Lightbulb size={22} strokeWidth={1.5} style={{ color: 'var(--accent-terracotta, #B65F2A)' }} />;
+  }
+  return <Icon size={22} strokeWidth={1.5} style={{ color: 'var(--accent-terracotta, #B65F2A)' }} />;
+}
 
 // ─── Animation variants ──────────────────────────────────────────────────────
 
@@ -25,38 +75,43 @@ export function MicroDesafio() {
   const perguntaActual: PerguntaData | undefined = perguntas[state.perguntaActual];
 
   return (
-    <div className="mx-auto mt-14 w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-6 sm:p-10 backdrop-blur-2xl shadow-2xl">
-      {state.fase === 'intro' && <Intro pulso={state.pulso} onComecar={comecar} f={f} />}
-      {state.fase === 'texto_livre' && (
-        <TextoLivre
-          texto={state.textoLivre}
-          area={areaDetectada}
-          onChange={setTextoLivre}
-          onSubmeter={submeterTexto}
-          f={f}
-        />
-      )}
-      {state.fase === 'pergunta' && perguntaActual && (
-        <PerguntaCard
-          pergunta={perguntaActual}
-          index={state.perguntaActual}
-          total={perguntas.length}
-          onResponder={responder}
-          f={f}
-        />
-      )}
-      {state.fase === 'carregando' && <Carregando f={f} />}
-      {state.fase === 'limite' && <Limite onReiniciar={reiniciar} f={f} />}
-      {state.fase === 'erro' && (
-        <motion.div {...f} className="flex flex-col items-center gap-4 py-8 text-center">
-          <p className="text-sm font-medium text-error">Não foi possível gerar o teu veredito.</p>
-          <p className="text-xs text-text-muted">A nossa IA está temporariamente indisponível.</p>
-          <button onClick={reiniciar} className="mt-2 rounded-xl border border-border px-6 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:bg-white/5">Tentar novamente</button>
-        </motion.div>
-      )}
-      {state.fase === 'veredito' && state.veredito && (
-        <MicroDesafioVeredito veredito={state.veredito} onReiniciar={reiniciar} reduced={reduced} />
-      )}
+    <div className="mx-auto mt-14 rounded-2xl backdrop-blur-lg dark:border-white/10 dark:bg-white/5" style={{ width: 'min(100%, 36rem)', borderColor: 'var(--card-border)', border: '1px solid', background: 'rgba(182,95,42,0.08)' }}>
+      {/* Container de dimensões fixas — não encolhe entre fases */}
+      <div className="relative flex items-center justify-center" style={{ minHeight: '380px', width: '100%' }}>
+        <div className="w-full p-6 sm:p-10">
+          {state.fase === 'intro' && <Intro pulso={state.pulso} onComecar={comecar} f={f} />}
+          {state.fase === 'texto_livre' && (
+            <TextoLivre
+              texto={state.textoLivre}
+              area={areaDetectada}
+              onChange={setTextoLivre}
+              onSubmeter={() => { void submeterTexto(); }}
+              f={f}
+            />
+          )}
+          {state.fase === 'pergunta' && perguntaActual && (
+            <PerguntaCard
+              pergunta={perguntaActual}
+              index={state.perguntaActual}
+              total={perguntas.length}
+              onResponder={responder}
+              f={f}
+            />
+          )}
+          {state.fase === 'carregando' && <Carregando f={f} />}
+          {state.fase === 'limite' && <Limite onReiniciar={reiniciar} f={f} />}
+          {state.fase === 'erro' && (
+            <motion.div {...f} className="flex flex-col items-center gap-4 py-8 text-center">
+              <p className="text-sm font-medium text-error">Não foi possível gerar o teu veredito.</p>
+              <p className="text-xs text-text-muted">A nossa IA está temporariamente indisponível.</p>
+              <button onClick={reiniciar} className="mt-2 rounded-xl border border-border px-6 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:bg-white/5">Tentar novamente</button>
+            </motion.div>
+          )}
+          {state.fase === 'veredito' && state.veredito && (
+            <MicroDesafioVeredito veredito={state.veredito} onReiniciar={reiniciar} reduced={reduced} />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -66,15 +121,15 @@ export function MicroDesafio() {
 function Intro({ pulso, onComecar, f }: { pulso: { count: number; area?: string }; onComecar: () => void; f: F }) {
   return (
     <motion.div {...f} className="flex flex-col items-center gap-6 text-center">
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 border border-accent/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-accent">
-        ⚡ Diagnóstico Instantâneo
+      <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--accent-terracotta, #B65F2A)', border: '1px solid var(--accent-terracotta, #B65F2A)', background: 'rgba(182,95,42,0.12)' }}>
+        Diagnóstico Instantâneo
       </span>
-      <h3 className="text-2xl font-bold tracking-tight text-text-primary">
+      <h3 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--ink-primary, #1A1614)' }}>
         Descobre o teu perfil vocacional em 60 segundos
       </h3>
-      <p className="text-sm leading-relaxed text-text-secondary">
+      <p className="text-sm leading-relaxed" style={{ color: 'var(--ink-secondary, #3A3632)' }}>
         Diz-nos o que te interessa + 5 perguntas rápidas. <br />
-        <span className="text-text-muted">O Oráculo PDC processa os dados em tempo real.</span>
+        <span style={{ color: 'var(--ink-tertiary, #6A6660)' }}>O PDC processa os dados em tempo real.</span>
       </p>
       {pulso.count > 0 && (
         <p className="font-mono text-[10px] uppercase tracking-widest text-text-muted opacity-80">
@@ -84,7 +139,7 @@ function Intro({ pulso, onComecar, f }: { pulso: { count: number; area?: string 
       )}
       <button
         onClick={onComecar}
-        className="mt-2 rounded-xl bg-accent px-8 py-3 text-sm font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.03] hover:bg-accent-hover"
+        className="mt-2 rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-accent px-8 py-3 text-sm font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.03] hover:bg-accent-hover"
       >
         Aceitar o desafio
       </button>
@@ -109,14 +164,14 @@ function TextoLivre({ texto, area, onChange, onSubmeter, f }: {
       {texto.length >= 3 && (
         <div className="flex items-center justify-center gap-2">
           <span className="rounded-full bg-accent/10 border border-accent/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-accent">
-            {AREA_EMOJI[area]} {AREA_LABEL[area]} detectado
+            {AREA_LABEL[area]} detectado
           </span>
         </div>
       )}
       <button
         onClick={onSubmeter}
         disabled={texto.trim().length < 3}
-        className="rounded-xl bg-accent px-8 py-3 text-sm font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.03] hover:bg-accent-hover disabled:opacity-30 disabled:hover:scale-100"
+        className="rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-accent px-8 py-3 text-sm font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.03] hover:bg-accent-hover disabled:opacity-30 disabled:hover:scale-100"
       >
         Continuar para análise →
       </button>
@@ -143,9 +198,9 @@ function PerguntaCard({ pergunta, index, total, onResponder, f }: {
           <button
             key={i}
             onClick={() => { onResponder(i); }}
-            className="group flex flex-col items-center gap-3 rounded-xl border border-white/5 bg-white/5 px-3 py-6 text-center transition-all hover:border-accent/40 hover:bg-accent/5"
+            className="group flex flex-col items-center gap-3 rounded-xl border-2 px-3 py-6 text-center transition-all border-black/10 bg-accent/[0.04] hover:border-accent/50 hover:bg-accent/[0.08]"
           >
-            <span className="text-3xl transition-transform group-hover:scale-110">{opcao.emoji}</span>
+            <span className="transition-transform group-hover:scale-110"><OpcaoIcon emoji={opcao.emoji} /></span>
             <span className="text-[11px] font-bold uppercase tracking-widest text-text-secondary group-hover:text-text-primary">{opcao.texto}</span>
           </button>
         ))}
@@ -170,7 +225,7 @@ function Limite({ onReiniciar, f }: { onReiniciar: () => void; f: F }) {
   return (
     <motion.div {...f} className="flex flex-col items-center gap-6 text-center py-6">
       <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 border border-warning/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-warning">
-        🔒 Limite Atingido
+        <Lock size={10} className="inline-block" /> Limite Atingido
       </span>
       <h3 className="text-xl font-bold tracking-tight text-text-primary">
         Esgotaste as tuas 3 simulações gratuitas
@@ -180,8 +235,8 @@ function Limite({ onReiniciar, f }: { onReiniciar: () => void; f: F }) {
       </p>
       <div className="flex flex-col w-full gap-3">
         <a
-          href="/register"
-          className="rounded-xl bg-accent px-8 py-3 text-sm font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.03] hover:bg-accent-hover"
+          href="/criar-conta"
+          className="rounded-tr-2xl rounded-bl-2xl rounded-tl-sm rounded-br-sm bg-accent px-8 py-3 text-sm font-bold text-white shadow-lg shadow-accent/20 transition-all hover:scale-[1.03] hover:bg-accent-hover"
         >
           Criar conta gratuita
         </a>

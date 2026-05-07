@@ -7,13 +7,12 @@ const log = pino({ name: 'strapi-client' });
 const STRAPI_URL = env.STRAPI_URL;
 const STRAPI_API_TOKEN = env.STRAPI_API_TOKEN;
 
-function parseTimeoutEnv(envKey: string, defaultMs: number): number {
-  // @ts-ignore - dynamic access
-  const raw = env[envKey] as string | undefined;
+function parseTimeoutEnv(envKey: 'STRAPI_TIMEOUT' | 'STRAPI_WRITE_TIMEOUT', defaultMs: number): number {
+  const raw = env[envKey];
   if (raw === undefined || raw.trim() === '') return defaultMs;
   const parsed = parseInt(raw, 10);
   if (isNaN(parsed) || parsed <= 0) {
-    log.warn({ envKey, raw, fallback: defaultMs }, `Invalid timeout env var — using default`);
+    log.warn({ envKey, raw, fallback: defaultMs }, 'Invalid timeout env var — using default');
     return defaultMs;
   }
   return parsed;
@@ -23,6 +22,17 @@ const TIMEOUT = parseTimeoutEnv('STRAPI_TIMEOUT', 5000);
 const WRITE_TIMEOUT = parseTimeoutEnv('STRAPI_WRITE_TIMEOUT', 10000);
 const MAX_RETRIES = 1;
 const BASE_DELAY = 300;
+
+export class StrapiHttpError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly path: string,
+  ) {
+    super(message);
+    this.name = 'StrapiHttpError';
+  }
+}
 
 /**
  * Normalise Strapi v4 (nested `attributes`) responses to flat format.
@@ -47,7 +57,7 @@ function normalize<T>(response: T): T {
       }
       return item;
     });
-  } else if (typeof data === 'object' && 'attributes' in data && data !== null) {
+  } else if (typeof data === 'object' && 'attributes' in data) {
     const entry = data as { id: unknown; attributes: Record<string, unknown> };
     res['data'] = { id: entry.id, ...entry.attributes };
   }
@@ -93,19 +103,27 @@ export async function strapiGet<T>(
 ): Promise<StrapiListResponse<T>> {
   const url = new URL(`${STRAPI_URL}/api${path}`);
   if (params) {
-    for (const [k, v] of Object.entries(params)) {
+    for (const [k, originalValue] of Object.entries(params)) {
+      let v = originalValue;
+      // Auto-convert comma-separated populate to array for Strapi v5
+      if (k === 'populate' && typeof v === 'string' && v.includes(',')) {
+        v = v.split(',').map(s => s.trim());
+      }
+
       if (Array.isArray(v)) {
         v.forEach((val, i) => {
-          url.searchParams.append(`${k}[${i}]`, val);
+          url.searchParams.append(`${k}[${String(i)}]`, val);
         });
       } else {
         url.searchParams.set(k, v);
       }
     }
   }
+  log.info({ url: url.toString() }, `Strapi GET ${path}`);
   const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() }, TIMEOUT);
   if (!res.ok) {
-    throw new Error(`Strapi GET ${path} falhou: ${res.status.toString()}`);
+    log.error({ url: url.toString(), status: res.status }, `Strapi GET ${path} falhou`);
+    throw new StrapiHttpError(`Strapi GET ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
   const json = (await res.json()) as StrapiListResponse<T>;
   return normalize(json);
@@ -118,7 +136,7 @@ export async function strapiPost<T>(path: string, body: unknown): Promise<Strapi
     body: JSON.stringify({ data: body }),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new Error(`Strapi POST ${path} falhou: ${res.status.toString()}`);
+    throw new StrapiHttpError(`Strapi POST ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
   const json = (await res.json()) as StrapiSingleResponse<T>;
   return normalize(json);
@@ -131,7 +149,7 @@ export async function strapiPut<T>(path: string, body: unknown): Promise<StrapiS
     body: JSON.stringify({ data: body }),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new Error(`Strapi PUT ${path} falhou: ${res.status.toString()}`);
+    throw new StrapiHttpError(`Strapi PUT ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
   const json = (await res.json()) as StrapiSingleResponse<T>;
   return normalize(json);
@@ -143,7 +161,7 @@ export async function strapiDelete<T>(path: string): Promise<T> {
     headers: buildHeaders(),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new Error(`Strapi DELETE ${path} falhou: ${res.status.toString()}`);
+    throw new StrapiHttpError(`Strapi DELETE ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
   const json = (await res.json()) as T;
   return normalize(json);
@@ -157,7 +175,7 @@ export async function strapiPutRaw<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new Error(`Strapi PUT ${path} falhou: ${res.status.toString()}`);
+    throw new StrapiHttpError(`Strapi PUT ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
   return res.json() as Promise<T>;
 }
@@ -169,7 +187,7 @@ export async function strapiPostRaw<T>(path: string, body: unknown): Promise<T> 
     body: JSON.stringify(body),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new Error(`Strapi POST ${path} falhou: ${res.status.toString()}`);
+    throw new StrapiHttpError(`Strapi POST ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
   return res.json() as Promise<T>;
 }
@@ -183,7 +201,7 @@ export async function strapiGetRaw<T>(path: string, params?: Record<string, stri
   }
   const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() }, TIMEOUT);
   if (!res.ok) {
-    throw new Error(`Strapi GET ${path} falhou: ${res.status.toString()}`);
+    throw new StrapiHttpError(`Strapi GET ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
   return res.json() as Promise<T>;
 }

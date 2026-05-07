@@ -1,86 +1,270 @@
 /**
  * Seed test accounts for Playwright E2E suite.
  *
- * Creates one account per role using the BFF /auth/register/* endpoints.
- * Idempotent — duplicate accounts are silently ignored.
+ * Creates real Strapi users and real Perfil records for each supported role.
+ * Idempotent: existing users are reused, and Perfil.tipo is reconciled to the
+ * expected canonical role before login is verified through the BFF.
  *
- * Requires: DEV_SKIP_OTP=true, API_URL pointing to the running BFF.
+ * Requires a running Strapi and BFF. By default this script loads apps/api/.env
+ * for STRAPI_URL and STRAPI_API_TOKEN.
  */
 
+import { config as loadEnv } from 'dotenv';
+
+loadEnv({ path: 'apps/api/.env' });
+
 const API_URL = process.env['API_URL'] ?? 'http://localhost:3001';
+const STRAPI_URL = process.env['STRAPI_URL'] ?? 'http://localhost:1337';
+const STRAPI_API_TOKEN = process.env['STRAPI_API_TOKEN'];
+
+type SeedRole =
+  | 'estudante'
+  | 'mentor'
+  | 'instituicao'
+  | 'moderador'
+  | 'comite_cientifico'
+  | 'super_admin';
 
 interface TestAccount {
   email: string;
   password: string;
   nome: string;
-  role: string;
+  role: SeedRole;
+}
+
+interface BffUser {
+  id: string | number;
+  email: string;
+  role: SeedRole;
+}
+
+interface StrapiUser {
+  id: string | number;
+  email: string;
+  username?: string;
+}
+
+interface StrapiEntity<T> {
+  id: string | number;
+  documentId?: string;
+  attributes?: T;
+}
+
+interface StrapiListResponse<T> {
+  data?: Array<StrapiEntity<T> & T>;
+}
+
+interface PerfilData {
+  userId: string;
+  email: string;
+  nome: string;
+  tipo: SeedRole;
+  ativo: boolean;
 }
 
 const TEST_ACCOUNTS: TestAccount[] = [
-  { email: 'aluno@traycer.test',        password: 'password123', nome: 'Aluno Teste',       role: 'aluno' },
-  { email: 'mentor@traycer.test',       password: 'password123', nome: 'Mentor Teste',      role: 'mentor' },
-  { email: 'instituicao@traycer.test',  password: 'password123', nome: 'Instituicao Teste', role: 'instituicao' },
-  { email: 'moderador@traycer.test',    password: 'password123', nome: 'Moderador Teste',   role: 'moderador' },
-  { email: 'super_admin@traycer.test',  password: 'password123', nome: 'Admin Teste',       role: 'super_admin' },
+  { email: 'aluno@traycer.test', password: 'password123', nome: 'Aluno Teste', role: 'estudante' },
+  { email: 'estudante@traycer.test', password: 'password123', nome: 'Estudante Teste', role: 'estudante' },
+  { email: 'mentor@traycer.test', password: 'password123', nome: 'Mentor Teste', role: 'mentor' },
+  { email: 'instituicao@traycer.test', password: 'password123', nome: 'Instituicao Teste', role: 'instituicao' },
+  { email: 'moderador@traycer.test', password: 'password123', nome: 'Moderador Teste', role: 'moderador' },
+  { email: 'comite_cientifico@traycer.test', password: 'password123', nome: 'Comite Cientifico Teste', role: 'comite_cientifico' },
+  { email: 'super_admin@traycer.test', password: 'password123', nome: 'Admin Teste', role: 'super_admin' },
 ];
 
-function buildRegistrationRequest(account: TestAccount): { url: string; body: Record<string, unknown> } {
-  const base = { email: account.email, password: account.password };
+function requireStrapiToken(): string {
+  if (!STRAPI_API_TOKEN) {
+    throw new Error('STRAPI_API_TOKEN is required to seed canonical Perfil records');
+  }
+  return STRAPI_API_TOKEN;
+}
+
+async function isBffReachable(): Promise<boolean> {
+  try {
+    await fetch(`${API_URL}/bootstrap`, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function bffLogin(account: Pick<TestAccount, 'email' | 'password'>): Promise<BffUser | null> {
+  try {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: account.email, password: account.password }),
+    });
+
+    if (res.status === 401 || res.status === 400) return null;
+    if (!res.ok) return null;
+    return (await res.json()) as BffUser;
+  } catch {
+    return null;
+  }
+}
+
+async function strapiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  headers.set('Content-Type', 'application/json');
+  headers.set('Authorization', `Bearer ${requireStrapiToken()}`);
+
+  const res = await fetch(`${STRAPI_URL}${path}`, { ...init, headers });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Strapi ${init.method ?? 'GET'} ${path} failed (HTTP ${res.status}): ${body}`);
+  }
+
+  return (await res.json()) as T;
+}
+
+async function findStrapiUserByEmail(email: string): Promise<StrapiUser | null> {
+  try {
+    const users = await strapiFetch<StrapiUser[]>(`/api/users?filters[email][$eq]=${encodeURIComponent(email)}&pagination[pageSize]=1`);
+    return Array.isArray(users) ? (users[0] ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function registerStrapiUser(account: TestAccount): Promise<StrapiUser> {
+  const res = await fetch(`${STRAPI_URL}/api/auth/local/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: account.email,
+      username: account.email,
+      password: account.password,
+    }),
+  });
+
+  if (res.status === 400) {
+    const existing = await findStrapiUserByEmail(account.email);
+    if (existing) return existing;
+  }
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Strapi register failed for ${account.email} (HTTP ${res.status}): ${body}`);
+  }
+
+  const data = (await res.json()) as { user: StrapiUser };
+  return data.user;
+}
+
+function perfilPayload(account: TestAccount, userId: string): PerfilData & Record<string, unknown> {
+  const base: PerfilData = {
+    userId,
+    email: account.email,
+    nome: account.nome,
+    tipo: account.role,
+    ativo: true,
+  };
 
   switch (account.role) {
     case 'mentor':
       return {
-        url: `${API_URL}/auth/register/mentor`,
-        body: { ...base, nome: account.nome, areaEspecialidade: 'ENGENHARIA' },
+        ...base,
+        areaFormacao: 'TECNOLOGIA',
+        areasInteresse: ['TECNOLOGIA', 'ENGENHARIA'],
+        aprovado: true,
       };
     case 'instituicao':
       return {
-        url: `${API_URL}/auth/register/instituicao`,
-        body: { ...base, nomeInstituicao: account.nome, regiao: 'Lisboa', tipo: 'Universidade' },
+        ...base,
+        regiao: 'Luanda',
+        tipoInstituicao: 'universidade',
+        aprovado: true,
       };
-    // aluno, moderador, super_admin all register as estudante
-    // (moderador/super_admin roles must be promoted via Strapi admin after seeding)
-    default:
+    case 'moderador':
+      return { ...base, funcao: 'Moderacao' };
+    case 'comite_cientifico':
+      return { ...base, funcao: 'Validacao Cientifica' };
+    case 'super_admin':
+      return { ...base, funcao: 'Operacao Interna' };
+    case 'estudante':
       return {
-        url: `${API_URL}/auth/register/estudante`,
-        body: { ...base, nome: account.nome, areaInteresse: 'TECNOLOGIA', nivelEnsino: 'Secundário' },
+        ...base,
+        areasInteresse: ['TECNOLOGIA'],
+        nivelEnsino: 'Licenciatura',
       };
   }
 }
 
-async function tryRegister(account: TestAccount): Promise<void> {
-  const { url, body } = buildRegistrationRequest(account);
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+async function findPerfil(account: TestAccount, userId: string): Promise<(StrapiEntity<PerfilData> & PerfilData) | null> {
+  const query = new URLSearchParams({
+    'filters[userId][$eq]': userId,
+    'pagination[pageSize]': '1',
   });
+  const res = await strapiFetch<StrapiListResponse<PerfilData>>(`/api/perfis?${query.toString()}`);
+  return res.data?.[0] ?? null;
+}
 
-  if (res.ok || res.status === 409) {
-    // 201 = created, 409 = already exists — both are fine
+async function upsertPerfil(account: TestAccount, userId: string): Promise<void> {
+  const existing = await findPerfil(account, userId);
+  const payload = perfilPayload(account, userId);
+
+  if (!existing) {
+    await strapiFetch('/api/perfis', {
+      method: 'POST',
+      body: JSON.stringify({ data: payload }),
+    });
     return;
   }
 
-  const text = await res.text();
-  throw new Error(`Failed to seed ${account.email} (HTTP ${res.status}): ${text}`);
+  const current = existing.attributes ?? existing;
+  if (current.tipo === account.role && current.email === account.email && current.nome === account.nome) {
+    return;
+  }
+
+  await strapiFetch(`/api/perfis/${existing.documentId ?? existing.id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ data: payload }),
+  });
 }
 
-async function verifyLoginWorks(account: TestAccount): Promise<void> {
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: account.email, password: account.password }),
-  });
+async function ensureAccount(account: TestAccount, bffAvailable: boolean): Promise<void> {
+  let userId: string;
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Login verification failed for ${account.email} (HTTP ${res.status}): ${body}`);
+  if (bffAvailable) {
+    const user = await bffLogin(account);
+    if (user) {
+      userId = String(user.id);
+    } else {
+      const strapiUser = await registerStrapiUser(account);
+      userId = String(strapiUser.id);
+    }
+  } else {
+    const existing = await findStrapiUserByEmail(account.email);
+    if (existing) {
+      userId = String(existing.id);
+    } else {
+      const strapiUser = await registerStrapiUser(account);
+      userId = String(strapiUser.id);
+    }
+  }
+
+  await upsertPerfil(account, userId);
+
+  if (bffAvailable) {
+    const verified = await bffLogin(account);
+    if (!verified) {
+      throw new Error(`Login verification failed for ${account.email}`);
+    }
+    if (verified.role !== account.role) {
+      throw new Error(`Role mismatch for ${account.email}: expected ${account.role}, got ${verified.role}`);
+    }
+  } else {
+    console.log(`[seed] BFF not available — skipping role verification for ${account.email}`);
   }
 }
 
 async function main() {
-  console.log(`[seed] Seeding ${TEST_ACCOUNTS.length} test accounts against ${API_URL}`);
+  const bffAvailable = await isBffReachable();
+  if (!bffAvailable) {
+    console.log(`[seed] BFF not reachable at ${API_URL} — Strapi-only mode (skipping role verification)`);
+  }
+  console.log(`[seed] Seeding ${TEST_ACCOUNTS.length} test accounts against ${STRAPI_URL}`);
 
   if (process.env['DEV_SKIP_OTP'] !== 'true') {
     console.warn('[seed] WARNING: DEV_SKIP_OTP is not set to "true" — OTP verification will be required during login');
@@ -90,12 +274,11 @@ async function main() {
 
   for (const account of TEST_ACCOUNTS) {
     try {
-      await tryRegister(account);
-      await verifyLoginWorks(account);
-      console.log(`[seed] ✓ ${account.email} (${account.role})`);
+      await ensureAccount(account, bffAvailable);
+      console.log(`[seed] OK ${account.email} (${account.role})`);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error(`[seed] ✗ ${account.email}: ${message}`);
+      console.error(`[seed] FAIL ${account.email}: ${message}`);
       errors.push(message);
     }
   }

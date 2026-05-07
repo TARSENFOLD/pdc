@@ -1,59 +1,90 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import type React from 'react';
 import { programasApi } from '@/lib/api/programas';
-import { Card, Badge, CardGridSkeleton } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
+import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
+import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
+import ContentCard from '@/components/catalogo/ContentCard';
+import { resolveCatalogHref } from '@/components/catalogo/catalogoLinks';
+import { Briefcase, Layers, GraduationCap } from 'lucide-react';
+import type { Programa } from '@pdc/shared';
 
-export function ProgramasCatalogoPage() {
+const TIPOS = [
+  { value: 'standard', label: 'Standard' },
+  { value: 'shadowapro', label: 'Shadow a Pro' },
+  { value: 'eduvisit', label: 'EduVisita' },
+];
+
+export default function ProgramasCatalogoPage(): React.JSX.Element {
   const [tipo, setTipo] = useState('');
-  const { data, isLoading } = useQuery({
+  const location = useLocation();
+  const inApp = location.pathname.startsWith('/app');
+
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['programas-publicos', tipo],
-    queryFn: () => programasApi.list(tipo ? { tipo } : {}),
+    queryFn: () => programasApi.list({
+      ...(tipo ? { tipo } : {}),
+    }),
   });
 
   const programas = data?.data ?? [];
 
   return (
-    <div className="min-h-screen bg-background px-4 py-16 sm:px-6">
-      <SEOHead title="Programas" description="Explore nossos programas educacionais" />
-      <div className="mx-auto max-w-6xl">
-        <h1 className="text-3xl font-bold text-text-primary mb-8">Programas</h1>
-        
-        <div className="flex gap-2 mb-8">
-          {['', 'standard', 'shadowapro', 'eduvisit'].map((t) => (
-            <button 
-              key={t}
-              onClick={() => { setTipo(t); }}
-              className={`px-4 py-2 rounded-full text-sm font-medium ${tipo === t ? 'bg-amber text-black' : 'bg-surface text-text-secondary'}`}
-            >
-              {t === '' ? 'Todos' : t.toUpperCase()}
-            </button>
-          ))}
-        </div>
+    <>
+      <SEOHead
+        title="Programas"
+        description="Percursos integrados que ligam o conhecimento teórico à realidade prática das maiores instituições."
+      />
 
-        {isLoading ? <CardGridSkeleton /> : programas.length === 0 ? (
-          <p className="text-text-muted">Nenhum programa disponível.</p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {programas.map((p) => (
-              <Card key={p.id} className="p-6 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-lg font-bold text-text-primary">{p.titulo}</h3>
-                    <Badge variant="info">{p.tipo.toUpperCase()}</Badge>
-                  </div>
-                  <p className="text-sm text-text-secondary mb-4 line-clamp-2">{p.descricao}</p>
-                </div>
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-                  <span className="text-sm text-text-muted">{p.area}</span>
-                  <Link to={`/programas/${p.id}`} className="text-amber text-sm font-semibold hover:underline">Ver programa →</Link>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
+      <div className="max-w-7xl mx-auto space-y-8">
+        <header>
+          <h1 className="text-2xl font-bold text-ink-primary">Programas de Acesso</h1>
+          <p className="mt-1 text-sm text-ink-secondary">
+            Percursos integrados que ligam o conhecimento teórico à realidade prática.
+          </p>
+        </header>
+
+        <CatalogoGridShell
+          isLoading={isLoading}
+          isEmpty={programas.length === 0}
+          error={error}
+          onRetry={() => { void refetch(); }}
+          onClearFilters={() => { setTipo(''); }}
+          emptyTitle="Nenhum programa nesta categoria"
+          emptyDescription="Experimenta outra categoria ou aguarda novos programas."
+          filterBar={
+            <CatalogoFilterBar
+              areas={TIPOS}
+              selectedArea={tipo}
+              onAreaChange={setTipo}
+              totalResults={data?.data.length ?? 0}
+            />
+          }
+        >
+          {programas.map((p: Programa) => (
+            <ContentCard
+              key={p.id}
+              title={p.titulo}
+              subtitle={p.instituicaoNome || 'Instituição PDC'}
+              image={p.capaUrl || undefined}
+              href={resolveCatalogHref('programa', p.slug || p.id, inApp)}
+              type="programa"
+              ctaLabel="Ver programa"
+              icon={GraduationCap}
+              badges={[
+                { label: p.tipo.toUpperCase(), variant: 'info' },
+                { label: p.area, variant: 'outline' },
+              ]}
+              footerInfo={[
+                { icon: Briefcase, label: p.modalidade || 'Presencial' },
+                { icon: Layers, label: `${String(p.vagas || 0)} vagas` },
+              ]}
+            />
+          ))}
+        </CatalogoGridShell>
       </div>
-    </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@ import { Upload, CheckCircle, XCircle } from 'lucide-react';
 import { http } from '@/lib/api/http';
 import { Spinner } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
+import type { PresignedMediaResponse } from '@pdc/shared';
 
 interface Props {
   onSuccess: (url: string) => void;
@@ -22,7 +23,7 @@ export function SovereignMediaUpload({ onSuccess, accept = 'image/*', maxSizeMB 
     if (!file) return;
 
     if (file.size > maxSizeMB * 1024 * 1024) {
-      setError(`Ficheiro excede o limite de ${maxSizeMB}MB`);
+      setError(`Ficheiro excede o limite de ${String(maxSizeMB)}MB`);
       return;
     }
 
@@ -32,13 +33,13 @@ export function SovereignMediaUpload({ onSuccess, accept = 'image/*', maxSizeMB 
 
     try {
       // 1. G8: Obter Presigned URL do BFF
-      const resPresigned = await http.post('/media/presigned', {
+      const resPresigned = await http.post<PresignedMediaResponse>('/media/presigned', {
         filename: file.name,
         mimeType: file.type,
         sizeBytes: file.size,
       });
 
-      const { uploadUrl, publicUrl, mediaId, key } = resPresigned.data;
+      const { uploadUrl, publicUrl, mediaId, key } = resPresigned;
 
       // 2. G8: Fazer o upload directamente para o Cloudflare R2 (Browser -> R2)
       // Simulamos progresso enquanto o fetch PUT decorre
@@ -61,8 +62,8 @@ export function SovereignMediaUpload({ onSuccess, accept = 'image/*', maxSizeMB 
       setSuccess(true);
       onSuccess(publicUrl);
       toast({ title: 'Mídia Materializada' });
-    } catch (err: any) {
-      const msg = err.response?.data?.error || err.message || 'Erro desconhecido';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(msg);
       toast({ title: 'Falha no Upload', description: msg, variant: 'error' });
     } finally {
@@ -85,20 +86,20 @@ export function SovereignMediaUpload({ onSuccess, accept = 'image/*', maxSizeMB 
         <button 
           type="button" 
           onClick={() => fileInputRef.current?.click()}
-          className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/20 rounded-xl bg-surface-alt/50 hover:bg-surface-alt transition-colors group cursor-pointer"
+          className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/20 rounded-xl bg-recessed/50 hover:bg-recessed transition-colors group cursor-pointer"
         >
-          <Upload size={24} className="text-text-muted group-hover:text-accent transition-colors mb-2" />
-          <span className="text-xs font-bold text-text-secondary">Clica para fazer upload</span>
-          <span className="text-[10px] text-text-muted mt-1">Máx: {maxSizeMB}MB</span>
+          <Upload size={24} className="text-ink-tertiary group-hover:text-accent transition-colors mb-2" />
+          <span className="text-xs font-bold text-ink-secondary">Clica para fazer upload</span>
+          <span className="text-[10px] text-ink-tertiary mt-1">Máx: {String(maxSizeMB)}MB</span>
         </button>
       )}
 
       {isUploading && (
-        <div className="w-full flex flex-col items-center justify-center p-6 border border-white/10 rounded-xl bg-surface-alt/50">
+        <div className="w-full flex flex-col items-center justify-center p-6 border border-white/10 rounded-xl bg-recessed/50">
           <Spinner size="sm" className="mb-3" />
           <span className="text-xs font-bold text-accent">A materializar na Cloud... {progress}%</span>
           <div className="w-full h-1 bg-white/10 rounded-full mt-3 overflow-hidden">
-             <div className="h-full bg-accent transition-all duration-300" style={{ width: `${progress}%` }} />
+             <div className="h-full bg-accent transition-all duration-300" style={{ width: `${String(progress)}%` }} />
           </div>
         </div>
       )}
@@ -107,7 +108,7 @@ export function SovereignMediaUpload({ onSuccess, accept = 'image/*', maxSizeMB 
         <div className="w-full flex items-center gap-3 p-4 border border-emerald-500/20 rounded-xl bg-emerald-500/5">
           <CheckCircle size={20} className="text-emerald-500" />
           <span className="text-xs font-bold text-emerald-500">Mídia materializada com sucesso</span>
-          <button type="button" onClick={() => { setSuccess(false); }} className="ml-auto text-[10px] underline text-text-muted">Substituir</button>
+          <button type="button" onClick={() => { setSuccess(false); }} className="ml-auto text-[10px] underline text-ink-tertiary">Substituir</button>
         </div>
       )}
 

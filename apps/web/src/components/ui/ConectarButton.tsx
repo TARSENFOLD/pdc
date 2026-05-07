@@ -37,7 +37,7 @@ export function ConectarButton({ targetId, connectionType, onConnected }: Conect
       return http.post(`/vinculos`, { receiverId: targetId, connectionType });
     },
     onSuccess: () => {
-      setStatus({ estado: 'pending', vinculoId: null, isSender: true });
+      setStatus({ status: 'pendente', vinculoId: null, isSender: true });
       void qc.invalidateQueries({ queryKey: ['vinculos'] });
       onConnected?.();
     },
@@ -60,7 +60,7 @@ export function ConectarButton({ targetId, connectionType, onConnected }: Conect
   }
 
   // Estado: null → sem vínculo
-  if (status?.estado === null) {
+  if (status?.status === null) {
     return (
       <Button
         variant="primary"
@@ -74,16 +74,16 @@ export function ConectarButton({ targetId, connectionType, onConnected }: Conect
   }
 
   // Estado: pending, sender = true → pedido enviado
-  if (status?.estado === 'pending' && status.isSender) {
+  if (status?.status === 'pendente' && status.isSender) {
     return (
-      <Button variant="ghost" size="sm" disabled className="text-text-muted">
+      <Button variant="ghost" size="sm" disabled className="text-ink-tertiary">
         ⏳ Pendente
       </Button>
     );
   }
 
   // Estado: pending, receiver = true → botões aceitar/recusar
-  if (status?.estado === 'pending' && !status.isSender) {
+  if (status?.status === 'pendente' && !status.isSender) {
     return (
       <div className="flex gap-2">
         <Button
@@ -107,7 +107,7 @@ export function ConectarButton({ targetId, connectionType, onConnected }: Conect
   }
 
   // Estado: connected
-  if (status?.estado === 'connected') {
+  if (status?.status === 'aprovado') {
     return (
       <Button variant="ghost" size="sm" disabled className="text-success">
         ✓ Conectado

@@ -1,5 +1,5 @@
 import pino from 'pino';
-import { z } from 'zod';
+import type { ZodType } from 'zod';
 import { redis } from '../../lib/redis.js';
 import { strapiPost, strapiPut } from '../strapi/strapi.client.js';
 import { 
@@ -14,26 +14,40 @@ import {
 
 const log = pino({ name: 'event-bus' });
 
+function parseEventPayload(name: DomainEventName, payload: unknown): Record<string, unknown> {
+  const schema = EventPayloadSchemas[name] as ZodType<Record<string, unknown>> | undefined;
+  if (!schema) {
+    if (typeof payload === 'object' && payload !== null) {
+      return payload as Record<string, unknown>;
+    }
+    return {};
+  }
+
+  const result = schema.safeParse(payload);
+  if (!result.success) {
+    log.error({ name, errors: result.error.format() }, 'Payload G15 Inválido');
+    throw new Error(`Falha de contrato E2E no evento: ${name}`);
+  }
+  return result.data;
+}
+
 class EventBus {
-  // Mantemos o armazenamento interno flexível para suportar múltiplos payloads
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private hooks: EcosystemHook<any>[] = [];
+  private hooks: EcosystemHook[] = [];
 
   /**
    * Registar um Hook G15 no ecossistema
    */
   registerHook<T>(hook: EcosystemHook<T>) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.hooks.push(hook as EcosystemHook<any>);
+    this.hooks.push(hook as EcosystemHook);
     log.info({ hook: hook.name }, 'G15 Hook Registado');
   }
 
   /**
    * Métodos de Compatibilidade para Testes Legados
    */
-  register(name: DomainEventName, handler: (event: DomainEvent<any>) => Promise<void>) {
+  register(name: DomainEventName, handler: (event: DomainEvent) => Promise<void>) {
     this.registerHook({
-      name: `legacy-handler:${name}` as any,
+      name: `legacy-handler:${name}` as EcosystemHookName,
       dependencies: [],
       idempotencyKey: (e) => `legacy:${e.id}`,
       execute: async (e) => {
@@ -50,49 +64,43 @@ class EventBus {
   /**
    * Publicar evento com persistência Outbox e execução de Hooks G15
    */
-  async publishWithOutbox<TName extends DomainEventName>(
-    name: TName, 
-    payload: unknown
-  ): Promise<void> {
-    const event: DomainEvent<unknown> = {
-      id: crypto.randomUUID(),
+  async publishWithOutbox(
+    name: DomainEventName,
+    payload: unknown,
+    id?: string
+  ): Promise<DomainEvent> {
+    const resolvedId = id || crypto.randomUUID();
+    const event: DomainEvent = {
+      id: resolvedId,
       name,
-      payload: payload as Record<string, unknown>,
+      payload: parseEventPayload(name, payload),
       timestamp: new Date().toISOString(),
+      correlationId: resolvedId,
     };
 
-    // 1. Validação Soberana de Payload
-    const schema = (EventPayloadSchemas as Record<string, z.ZodTypeAny>)[name];
-    if (schema) {
-      const result = schema.safeParse(payload);
-      if (!result.success) {
-        log.error({ name, errors: result.error.format() }, 'Payload G15 Inválido');
-        throw new Error(`Falha de contrato E2E no evento: ${name}`);
-      }
-      event.payload = result.data;
-    }
-
-    // 2. Persistência no Outbox (Strapi)
+    // 1. Persistência no Outbox (Strapi)
     let eventRecordId: string | number | undefined;
     try {
-      const res = await strapiPost<{ id: string | number }>('/domain-events', {
+      const res = await strapiPost<{ id: string | number; documentId?: string }>('/domain-events', {
         name: event.name,
         payload: event.payload,
         correlationId: event.id,
         processed: false,
       });
-      eventRecordId = res.data?.id;
+      eventRecordId = res.data.documentId ?? res.data.id;
 
-      // 3. Execução Orquestrada de Hooks
-      await this.dispatchHooks(event);
+      // 2. Execução Orquestrada de Hooks
+      await this.dispatchHooks(event, eventRecordId);
 
-      // 4. Marcar como Processado
+      // 3. Marcar como Processado
       if (eventRecordId) {
-        await strapiPut<unknown>(`/domain-events/${eventRecordId}`, {
+        await strapiPut<unknown>(`/domain-events/${String(eventRecordId)}`, {
           processed: true,
           processedAt: new Date().toISOString(),
         });
       }
+      
+      return event;
     } catch (err) {
       log.error({ err, eventName: name }, 'Erro no Ciclo E2E G15');
       throw err;
@@ -102,30 +110,42 @@ class EventBus {
   /**
    * Despachar ganchos para um evento já persistido (Replay)
    */
-  async publish(event: DomainEvent<unknown>): Promise<void> {
-    const schema = (EventPayloadSchemas as Record<string, z.ZodTypeAny>)[event.name];
-    if (schema) {
-      const result = schema.safeParse(event.payload);
-      if (!result.success) {
-        log.error({ name: event.name, errors: result.error.format() }, 'Payload G15 Inválido no Replay');
-        throw new Error(`Falha de contrato E2E no evento: ${event.name}`);
-      }
-      event.payload = result.data;
-    }
-    await this.dispatchHooks(event);
+  async publish(event: DomainEvent, eventRecordId?: string | number): Promise<void> {
+    event.payload = parseEventPayload(event.name, event.payload);
+    await this.dispatchHooks(event, eventRecordId);
   }
 
-  private async dispatchHooks(event: DomainEvent<unknown>): Promise<void> {
+  private async dispatchHooks(event: DomainEvent, eventRecordId?: string | number): Promise<void> {
     const context: EcosystemHookContext = {
       results: {} as Record<EcosystemHookName, EcosystemHookResult>
     };
 
+    // Persiste snapshot completo após cada hook. A escrita ocorre DEPOIS de acumular em
+    // context.results para que o último hook paralelo a terminar sempre escreva o snapshot
+    // mais completo. Last-write-wins é seguro porque context.results é monotônico.
+    let persistLock = Promise.resolve();
+
+    const persistSnapshot = async (hookName: EcosystemHookName) => {
+      if (!eventRecordId) return;
+      persistLock = persistLock.then(async () => {
+        try {
+          await strapiPut(`/domain-events/${String(eventRecordId)}`, {
+            hookResults: { ...context.results }
+          });
+        } catch (err) {
+          log.warn({ err, hook: hookName, eventId: event.id }, 'Falha ao persistir hookResult incremental');
+        }
+      });
+      return persistLock;
+    };
+
     // FASE 1: Hooks Independentes (Ranking, Feed, Match, Achievement)
     const independentHooks = this.hooks.filter(h => h.name !== EcosystemHookName.NOTIFY);
-    
+
     await Promise.allSettled(independentHooks.map(async (hook) => {
       const result = await this.executeHook(hook, event, context);
       context.results[hook.name] = result;
+      await persistSnapshot(hook.name);
     }));
 
     // FASE 2: Notify (Sempre último, agrega side-effects)
@@ -133,16 +153,17 @@ class EventBus {
     if (notifyHook) {
       const result = await this.executeHook(notifyHook, event, context);
       context.results[notifyHook.name] = result;
+      await persistSnapshot(notifyHook.name);
     }
   }
 
   private async executeHook(
-    hook: EcosystemHook, 
-    event: DomainEvent, 
+    hook: EcosystemHook,
+    event: DomainEvent,
     context: EcosystemHookContext
   ): Promise<EcosystemHookResult> {
     const key = `idempotency:${hook.name}:${hook.idempotencyKey(event)}`;
-    
+
     // Check Idempotência (Redis SADD)
     const isNew = await redis.sadd(key, event.id);
     if (isNew === 0) {

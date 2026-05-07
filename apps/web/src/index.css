@@ -13,7 +13,51 @@
 
   --color-accent: var(--accent-terracotta);
   --color-accent-soft: var(--accent-terracotta-soft);
+  --color-accent-hover: var(--accent-terracotta-soft);
+  --color-accent-success: var(--accent-success);
+  --color-accent-danger: var(--accent-danger);
   --color-cobalt: var(--institutional-cobalt);
+  --color-trust: var(--accent-terracotta);
+  --color-chrome: var(--chrome-surface);
+  --color-chrome-strong: var(--chrome-surface-strong);
+  --color-chrome-active: var(--chrome-active);
+  --color-brand-authority: var(--brand-authority);
+
+  /* ─── Landing & App — Aliases semânticos ─── */
+  --color-amber: var(--accent-terracotta);
+  --color-amber-hover: var(--accent-terracotta-soft);
+  --color-background: var(--surface-canvas);
+  --color-surface: var(--surface-elevated);
+  --color-surface-alt: var(--surface-recessed);
+  --color-surface-raised: var(--surface-elevated);
+  --color-surface-canvas-dark: #0E0D0C;
+  --color-text-primary: var(--ink-primary);
+  --color-text-secondary: var(--ink-secondary);
+  --color-text-muted: var(--ink-tertiary);
+  --color-border: var(--glass-border-light);
+  --color-border-card: rgba(42, 39, 36, 0.20);
+  --color-error: var(--accent-danger);
+  --color-warning: var(--accent-warning);
+  --color-success: var(--accent-success);
+
+  /* ─── Nomes directos dos tokens (usados em vários componentes) ─── */
+  --color-institutional-cobalt: var(--institutional-cobalt);
+  --color-accent-terracotta: var(--accent-terracotta);
+  --color-accent-terracotta-soft: var(--accent-terracotta-soft);
+  --color-accent-warning: var(--accent-warning);
+  --color-accent-trust: var(--accent-trust);
+  --color-ink-on-accent: var(--ink-on-accent);
+  --color-ink-inverse: var(--ink-on-accent);
+  --color-ink-primary-dark: #ECE7DD;
+  --color-ink-tertiary-dark: #807A6F;
+
+  /* ─── Extras usados em UI ─── */
+  --color-light: var(--glass-border-light);
+  --color-info: var(--institutional-cobalt);
+  --color-primary: var(--accent-terracotta);
+  --color-canvas-hover: #EDE9E1;
+  --color-dark: #18171A;
+  --color-muted-foreground: var(--ink-tertiary);
 
   /* ─── Tipografia ─── */
   --font-sans: var(--font-ui);

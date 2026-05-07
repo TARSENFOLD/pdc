@@ -28,7 +28,7 @@ describe('EventBus', () => {
     const event: DomainEvent = {
       id: '456',
       name: DomainEventName.LOGOUT,
-      payload: {},
+      payload: { userId: '123' }, // Mock rigoroso para satisfazer Zod
       timestamp: new Date().toISOString(),
     };
 
@@ -49,7 +49,8 @@ describe('EventBus', () => {
       timestamp: new Date().toISOString(),
     };
 
-    await expect(eventBus.publish(event)).rejects.toThrow();
+    // No G15, falhas de hooks individuais são contidas (retryable_error), não deitam o bus abaixo
+    await expect(eventBus.publish(event)).resolves.toBeUndefined();
     expect(handler1).toHaveBeenCalled();
     expect(handler2).toHaveBeenCalled();
   });

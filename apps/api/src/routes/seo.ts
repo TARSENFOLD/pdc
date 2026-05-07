@@ -7,6 +7,7 @@ export const seoRoutes = new Hono();
 const BASE_URL = 'https://pdc.ao';
 
 interface StrapiItemAttributes {
+  id: number;
   slug?: string;
   updatedAt?: string;
 }
@@ -52,7 +53,7 @@ seoRoutes.get('/sitemap.xml', async (c) => {
       'Cache-Control': 'public, max-age=3600' 
     });
 
-  } catch (_err) {
+  } catch {
     return c.text('Error generating sitemap', 500);
   }
 });

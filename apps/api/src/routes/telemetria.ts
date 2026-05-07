@@ -102,7 +102,7 @@ telemetriaRoutes.post('/batch', zValidator('json', TelemetriaBatchSchema), async
       if (s.status === 'fulfilled') {
         results.push(s.value);
       } else {
-        const reason = s.status === 'rejected' ? s.reason : 'Erro desconhecido';
+        const reason: unknown = s.reason;
         log.error({ err: reason, eventId: evt?.eventId }, 'Erro batch event');
         results.push({ eventId: evt?.eventId ?? 'unknown', ok: false });
       }
@@ -143,7 +143,7 @@ telemetriaRoutes.get('/summary', async (c) => {
       porTipo,
       ultimoEvento: res.data[0]?.clientTimestamp || null,
     });
-  } catch (_err: unknown) {
+  } catch {
     return c.json({ error: 'Erro summary' }, 500);
   }
 });

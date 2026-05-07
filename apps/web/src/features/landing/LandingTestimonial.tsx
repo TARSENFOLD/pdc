@@ -5,7 +5,7 @@ export function LandingTestimonial() {
   const reduced = useReducedMotion();
 
   return (
-    <section className="bg-surface-alt px-4 py-24 sm:px-6">
+    <section className="px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-4xl">
         <motion.div
           initial={reduced ? { opacity: 0 } : { opacity: 0, y: 24 }}

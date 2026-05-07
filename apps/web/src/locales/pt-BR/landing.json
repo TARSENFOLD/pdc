@@ -1,0 +1,94 @@
+{
+  "navbar": {
+    "logo_tagline": "Por Dentro do Curso",
+    "links": {
+      "problema": "Problema",
+      "como_funciona": "Como funciona",
+      "funcionalidades": "Funcionalidades"
+    },
+    "cta_primary": "Começar grátis",
+    "cta_login": "Entrar",
+    "menu": {
+      "open": "Abrir menu",
+      "close": "Fechar menu"
+    }
+  },
+  "hero": {
+    "badge": "A sua comunidade educacional",
+    "headline": "Experimente uma profissão antes de",
+    "headline_emphasis": "escolher.",
+    "body": "Descubra como é o dia a dia de um estudante do curso que você quer fazendo atividades práticas virtuais. Junte-se a nós e decida o seu futuro com segurança.",
+    "cta_primary": "Vamos descobrir a sua vocação",
+    "cta_secondary": "Entenda como funciona"
+  },
+  "destaques": {
+    "title": "Explore por conta própria",
+    "body": "Simulações reais criadas por mentores e instituições para te ajudar a decidir o seu futuro.",
+    "instituicoes_label": "Instituições parceiras",
+    "ver_todas": "Ver todas"
+  },
+  "problema": {
+    "kicker": "O desafio",
+    "title": "Escolher um curso não deveria ser um salto no escuro",
+    "body": "Todo ano, milhares de estudantes entram em cursos que não conhecem. O resultado? Frustração, mudanças tardias e potencial desperdiçado.",
+    "cards": {
+      "sem_referencia_title": "Escolha sem referência",
+      "sem_referencia_body": "A maioria dos estudantes escolhe o curso sem nunca ter experimentado a profissão. Decidem com base em opinião de terceiros.",
+      "tempo_dinheiro_title": "Tempo e dinheiro perdidos",
+      "tempo_dinheiro_body": "Quem descobre tarde que o curso não é o certo perde semestres inteiros e recursos que poderiam ser investidos melhor.",
+      "desalinhamento_title": "Desalinhamento com o mercado",
+      "desalinhamento_body": "Estudantes se formam em áreas saturadas enquanto o mercado precisa de perfis que ficam por preencher."
+    }
+  },
+  "como_funciona": {
+    "kicker": "Como funciona",
+    "title": "Três passos. Uma decisão segura.",
+    "steps": {
+      "step1_title": "Simule uma profissão",
+      "step1_body": "Escolha uma área e entre em uma simulação prática que replica situações reais do dia a dia profissional.",
+      "step2_title": "A plataforma analisa",
+      "step2_body": "Suas ações, tempo e decisões geram um perfil vocacional único — baseado em comportamento, não em respostas a questionários.",
+      "step3_title": "Decida com clareza",
+      "step3_body": "Você recebe recomendações de cursos e áreas alinhadas ao seu perfil real. Sem adivinhação."
+    }
+  },
+  "features": {
+    "kicker": "Funcionalidades",
+    "title": "Tudo o que você precisa, em um só lugar",
+    "items": {
+      "simulacoes_title": "Simulações práticas",
+      "simulacoes_body": "Vídeo guiado, laboratório externo ou ambiente interativo — experimente o dia a dia real de cada profissão.",
+      "perfil_title": "Perfil vocacional",
+      "perfil_body": "Gerado a partir do seu comportamento nas simulações. Sem questionários genéricos.",
+      "cursos_title": "Cursos com certificado",
+      "cursos_body": "Módulos, tarefas e certificados emitidos por instituições parceiras.",
+      "experiencias_title": "Experiências institucionais",
+      "experiencias_body": "Programas publicados por universidades e escolas — abertos e gratuitos.",
+      "mentoria_title": "Mentoria real",
+      "mentoria_body": "Profissionais da indústria disponíveis para orientação personalizada.",
+      "ia_title": "Tutor IA",
+      "ia_body": "Responde às suas dúvidas com contexto do seu perfil e do conteúdo da plataforma."
+    }
+  },
+  "mentores": {
+    "title": "Aprenda com quem já está lá",
+    "body": "Conecte-se com profissionais da indústria para orientação personalizada.",
+    "cta": "Conhecer mentores"
+  },
+  "cta_final": {
+    "title": "Pronto para experimentar?",
+    "body": "Crie sua conta em segundos e comece a explorar simulações reais. Gratuito. Sem compromisso.",
+    "cta_primary": "Criar conta grátis",
+    "cta_secondary": "Já tenho conta"
+  },
+  "footer": {
+    "tagline": "Por Dentro do Curso — Angola",
+    "links": {
+      "entrar": "Entrar",
+      "registar": "Registrar",
+      "problema": "Problema",
+      "como_funciona": "Como funciona"
+    },
+    "copyright": "© {{year}} Por Dentro do Curso. Todos os direitos reservados."
+  }
+}

@@ -2,151 +2,287 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projetosApi } from '@/lib/api/projetos';
-import { mediaApi } from '@/lib/api/media';
-import { Spinner, Button, Input } from '@/components/ui';
+import { CriarProjetoPayloadSchema, type CriarProjetoPayload } from '@pdc/shared';
+import { useForm, type Resolver } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Input, Select, Button, Spinner } from '@/components/ui';
+import { toast } from '@/hooks/useToast';
+import { BuilderShell, BuilderSection, BuilderUploadZone, BuilderActionsBar } from '@/components/builders';
+import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
+import { motion, AnimatePresence } from 'motion/react';
+import { Lock } from 'lucide-react';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 export function ProjetoFormPage() {
   const { id } = useParams<{ id: string }>();
+  const projetoId = id ?? '';
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { user } = useAuth();
   const isEdit = !!id;
-
-  const [titulo, setTitulo] = useState('');
-  const [descricao, setDescricao] = useState('');
-  const [repoUrl, setRepoUrl] = useState('');
-  const [demoUrl, setDemoUrl] = useState('');
-  const [tagsInput, setTagsInput] = useState('');
-  const [imagemUrl, setImagemUrl] = useState('');
-  const [uploading, setUploading] = useState(false);
+  const [lastEventId, setLastEventId] = useState<string | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   const { data: projeto, isLoading } = useQuery({
-    queryKey: ['projetos', id ?? ''],
-    queryFn: () => projetosApi.getById(id ?? ''),
+    queryKey: ['projetos', projetoId],
+    queryFn: () => projetosApi.getById(projetoId),
     enabled: isEdit,
   });
 
-  useEffect(() => {
-    if (projeto) {
-      setTitulo(projeto.titulo);
-      setDescricao(projeto.descricao);
-      setRepoUrl(projeto.repoUrl ?? '');
-      setDemoUrl(projeto.demoUrl ?? '');
-      setTagsInput(projeto.tags.join(', '));
-      setImagemUrl(projeto.imagemUrl ?? '');
+  const form = useForm<CriarProjetoPayload>({
+    resolver: zodResolver(CriarProjetoPayloadSchema) as Resolver<CriarProjetoPayload>,
+    defaultValues: {
+      titulo: '',
+      abstract: '',
+      core: '',
+      area: 'TECNOLOGIA',
+      modos: ['exposicao'],
+      visibilidade: 'publico',
+      tags: [],
     }
-  }, [projeto]);
-
-  const mutation = useMutation({
-    mutationFn: () => {
-      const tags = tagsInput
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean);
-      const payload = {
-        titulo,
-        descricao,
-        ...(repoUrl ? { repoUrl } : {}),
-        ...(demoUrl ? { demoUrl } : {}),
-        ...(imagemUrl ? { imagemUrl } : {}),
-        ...(tags.length > 0 ? { tags } : {}),
-      };
-      return isEdit
-        ? projetosApi.update(id, payload)
-        : projetosApi.create(payload as Parameters<typeof projetosApi.create>[0]);
-    },
-    onSuccess: (saved) => {
-      void qc.invalidateQueries({ queryKey: ['projetos'] });
-      navigate(`/projetos/${saved.id}`);
-    },
   });
 
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const result = await mediaApi.upload(file);
-      setImagemUrl(result.url);
-    } finally {
-      setUploading(false);
+  const { register, reset, setValue, formState: { errors } } = form;
+
+  useEffect(() => {
+    if (projeto) {
+      reset({
+        titulo: projeto.titulo,
+        abstract: projeto.abstract,
+        core: projeto.core,
+        area: projeto.area,
+        modos: projeto.modos,
+        visibilidade: projeto.visibilidade,
+        repoUrl: projeto.repoUrl ?? '',
+        demoUrl: projeto.demoUrl ?? '',
+        capaUrl: projeto.capaUrl ?? '',
+        tags: projeto.tags,
+      });
     }
-  }
+  }, [projeto, reset]);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    mutation.mutate();
-  }
+  const mutation = useMutation({
+    mutationFn: (data: CriarProjetoPayload) =>
+      isEdit ? projetosApi.update(projetoId, data) : projetosApi.create(data),
+    onSuccess: (saved: { id?: string; data?: { id?: string; eventId?: string }; eventId?: string }) => {
+      void qc.invalidateQueries({ queryKey: ['projetos'] });
+      toast({ title: isEdit ? 'Projeto atualizado' : 'Projeto materializado!' });
 
-  if (isEdit && isLoading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
+      const newId = saved.data?.id || saved.id;
+      if (newId) setSavedId(newId);
+
+      const eventId = saved.eventId || saved.data?.eventId;
+      if (eventId) {
+        setLastEventId(eventId);
+      } else {
+        navigate(`/projetos/${newId || projetoId}`);
+      }
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => toast({
+      title: 'Erro na publicação',
+      description: err.response?.data?.error || 'Falha na persistência',
+      variant: 'error'
+    })
+  });
+  const aclMutation = useMutation({
+    mutationFn: ({ perfilId, acao }: { perfilId: string, acao: 'aprovar' | 'rejeitar' }) => 
+      projetosApi.gerirACL(projetoId, perfilId, acao),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['projetos', id] });
+      toast({ title: 'Permissão de acesso atualizada.' });
+    }
+  });
+
+  const handleSave = () => {
+    const data = form.getValues();
+    mutation.mutate(data);
+  };
+
+  if (isEdit && isLoading) return <div className="flex h-screen items-center justify-center bg-canvas"><Spinner size="lg" /></div>;
 
   return (
-    <div className="max-w-xl">
-      <h1 className="mb-6 text-2xl font-bold text-text-primary">
-        {isEdit ? 'Editar Projeto' : 'Novo Projeto'}
-      </h1>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">Título *</label>
-          <Input value={titulo} onChange={(e) => { setTitulo(e.target.value); }} required minLength={3} maxLength={120} />
+    <>
+      <BuilderShell
+        form={form}
+        title={isEdit ? "Editor de Ativo Soberano" : "Novo Projeto de Ecossistema"}
+        description="Materializa o teu conhecimento em ativos reais. Separa o pitch público do núcleo técnico."
+        state="published"      breadcrumbs={[
+        { label: 'Início', to: '/app' },
+        { label: 'Projetos', to: '/app/catalogo/projetos' },
+        { label: isEdit ? 'Editar' : 'Novo Projeto' }
+      ]}
+      sections={[
+        { id: 'identidade', label: 'Identidade' },
+        { id: 'pitch', label: 'Pitch Público' },
+        { id: 'core', label: 'Núcleo Técnico' },
+        { id: 'modos', label: 'Modos de Atuação' },
+        ...(isEdit ? [{ id: 'acl', label: 'Gestão de Acessos' }] : []),
+        { id: 'recursos', label: 'Repositórios e Tags' },
+      ]}
+      actions={
+        <BuilderActionsBar
+          state="published"
+          userRole={user?.role || 'estudante'}
+          onSaveDraft={handleSave}
+          onSubmitReview={handleSave}
+          onPublish={handleSave}
+          isSubmitting={mutation.isPending}
+        />
+      }
+    >
+      <BuilderSection
+        title="Identidade do Ativo"
+        description="Título, domínio e visibilidade global."
+      >
+        <div className="space-y-6">
+          <Input label="Título do Projeto" {...register('titulo')} error={errors.titulo?.message} />
+          <div className="grid grid-cols-2 gap-4">
+             <Select label="Área de Domínio" {...register('area')}>
+                <option value="TECNOLOGIA">Tecnologia</option>
+                <option value="ENGENHARIA">Engenharia</option>
+                <option value="ARTES">Artes</option>
+                <option value="GESTAO">Gestão</option>
+             </Select>
+             <Select label="Visibilidade" {...register('visibilidade')}>
+                <option value="publico">Público (Catálogo)</option>
+                <option value="privado">Privado (Apenas eu)</option>
+             </Select>
+          </div>
         </div>
+      </BuilderSection>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">Descrição *</label>
-          <textarea
-            value={descricao}
-            onChange={(e) => { setDescricao(e.target.value); }}
-            required
-            minLength={10}
-            maxLength={2000}
-            rows={4}
-            className="w-full rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-amber"
+      <BuilderSection
+        title="Pitch Público (Abstract)"
+        description="Resumo visível a todos no catálogo. Capta a atenção do ecossistema."
+      >
+        <div className="space-y-4">
+          <textarea 
+            className="flex min-h-[120px] w-full rounded-xl border border-ink-tertiary/20 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
+            placeholder="Descreve o propósito e impacto do projeto..."
+            {...register('abstract')}
           />
+          {errors.abstract && <p className="text-xs text-accent-danger">{errors.abstract.message}</p>}
+          <BuilderUploadZone onUploadComplete={(urls) => {
+            if (urls.length > 0 && urls[0]) {
+              setValue('capaUrl', urls[0]);
+            }
+          }} />
         </div>
+      </BuilderSection>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">Tags (separadas por vírgula)</label>
-          <Input value={tagsInput} onChange={(e) => { setTagsInput(e.target.value); }} placeholder="ex: react, typescript, api" />
+      <BuilderSection
+        title="Núcleo Técnico (Core)"
+        description="Documentação profunda, segredos e lógica. Acesso controlado por ACL."
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-institutional-cobalt mb-2">
+             <Lock size={12} /> Camada Protegida
+          </div>
+          <textarea 
+            className="flex min-h-[200px] w-full rounded-xl border border-institutional-cobalt/20 bg-institutional-cobalt/5 px-4 py-3 text-sm focus:border-institutional-cobalt outline-none transition-all"
+            placeholder="Documentação técnica, roadmap, ou links privados..."
+            {...register('core')}
+          />
+          {errors.core && <p className="text-xs text-accent-danger">{errors.core.message}</p>}
         </div>
+      </BuilderSection>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">Repositório</label>
-          <Input type="url" value={repoUrl} onChange={(e) => { setRepoUrl(e.target.value); }} placeholder="https://github.com/…" />
+      <BuilderSection
+        title="Modos de Atuação"
+        description="Como o projeto interage com outros talentos e mentores."
+      >
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { id: 'exposicao', label: 'Exposição', desc: 'Apenas visualização.' },
+            { id: 'colaboracao', label: 'Colaboração', desc: 'Aceita contribuidores.' },
+            { id: 'mentoria', label: 'Mentoria', desc: 'Procura orientação.' },
+            { id: 'financiamento', label: 'Financiamento', desc: 'Procura investimento.' },
+          ].map((modo) => (
+            <label key={modo.id} className="flex items-start gap-3 p-4 rounded-xl border border-ink-tertiary/10 bg-recessed cursor-pointer hover:border-accent/20 transition-all">
+               <input 
+                 type="checkbox" 
+                 value={modo.id} 
+                 className="mt-1 accent-accent"
+                 {...register('modos')}
+               />
+               <div>
+                  <p className="text-sm font-bold text-ink-primary">{modo.label}</p>
+                  <p className="text-[10px] text-ink-tertiary">{modo.desc}</p>
+               </div>
+            </label>
+          ))}
         </div>
+      </BuilderSection>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">Demo</label>
-          <Input type="url" value={demoUrl} onChange={(e) => { setDemoUrl(e.target.value); }} placeholder="https://…" />
+      {isEdit && (
+        <BuilderSection
+          title="Gestão de Acessos (ACL)"
+          description="Pedidos de acesso ao núcleo técnico do teu projeto."
+        >
+          <div className="space-y-4">
+            {!projeto?.acessoCoreACL || projeto.acessoCoreACL.length === 0 ? (
+              <p className="text-sm text-ink-secondary italic py-4">Nenhum pedido de acesso pendente.</p>
+            ) : (
+              projeto.acessoCoreACL.map((entry) => (
+                <div key={entry.perfilId} className="flex items-center justify-between p-4 rounded-xl bg-canvas border border-ink-tertiary/10">
+                   <div>
+                      <p className="text-sm font-bold text-ink-primary">ID: {entry.perfilId}</p>
+                      <p className="text-[9px] text-ink-tertiary uppercase tracking-widest">{entry.estado}</p>
+                   </div>
+                   {entry.estado === 'pendente' && (
+                     <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="text-accent-success" onClick={() => { aclMutation.mutate({ perfilId: entry.perfilId, acao: 'aprovar' }); }}>Aprovar</Button>
+                        <Button size="sm" variant="ghost" className="text-accent-danger" onClick={() => { aclMutation.mutate({ perfilId: entry.perfilId, acao: 'rejeitar' }); }}>Rejeitar</Button>
+                     </div>
+                   )}
+                </div>
+              ))
+            )}
+          </div>
+        </BuilderSection>
+      )}
+
+      <BuilderSection
+        value="recursos"
+        title="Repositórios e Tags"
+        description="Links externos e categorização do ativo."
+      >
+        <div className="space-y-6">
+           <div className="grid grid-cols-2 gap-4">
+              <Input label="URL Repositório" {...register('repoUrl')} placeholder="ex: github.com/..." />
+              <Input label="URL Demo" {...register('demoUrl')} placeholder="ex: ver-demo.vercel.app" />
+           </div>
+           <div className="p-4 rounded-xl bg-recessed/30 border border-ink-tertiary/10 italic text-sm text-ink-secondary">
+             Seletor de Tags avançado disponível em breve.
+           </div>
         </div>
+      </BuilderSection>
+    </BuilderShell>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium text-text-secondary">Imagem de capa</label>
-          {imagemUrl && (
-            <img src={imagemUrl} alt="capa" className="mb-2 h-32 w-full rounded-md object-cover" />
-          )}
-          <input type="file" accept="image/*" onChange={(e) => { void handleImageUpload(e); }} className="text-sm text-text-secondary" disabled={uploading} />
-          {uploading && <p className="mt-1 text-xs text-text-muted">A carregar…</p>}
-        </div>
-
-        {mutation.isError && (
-          <p className="text-sm text-error">Erro ao guardar o projeto. Tenta novamente.</p>
-        )}
-
-        <div className="flex justify-end gap-3 pt-2">
-          <Button type="button" variant="secondary" onClick={() => { navigate(-1); }}>
-            Cancelar
-          </Button>
-          <Button type="submit" isLoading={mutation.isPending}>
-            {isEdit ? 'Guardar alterações' : 'Criar Projeto'}
-          </Button>
-        </div>
-      </form>
-    </div>
+    <AnimatePresence>
+      {lastEventId && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-canvas/95 backdrop-blur-md"
+        >
+          <div className="w-full max-w-xl">
+            <EcosystemImpactPanel 
+              eventId={lastEventId} 
+              variant="full"
+              onComplete={() => {
+                const targetId = savedId || id;
+                const path = targetId ? `/projetos/${targetId}` : '/app/catalogo/projetos';
+                setTimeout(() => { navigate(path); }, 3000);
+              }}
+            />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 }
+
+

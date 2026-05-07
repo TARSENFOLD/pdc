@@ -13,7 +13,7 @@ function ExternalLink({ url, label }: { url: string; label: string }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex h-10 items-center rounded-md bg-amber px-6 text-sm font-semibold text-background hover:bg-amber-hover"
+      className="inline-flex h-10 items-center rounded-md bg-accent px-6 text-sm font-semibold text-background hover:bg-accent-terracotta-soft"
     >
       {label} →
     </a>
@@ -49,7 +49,7 @@ function renderItem(item: ItemModulo): ReactElement {
       return <iframe src={url} className="h-[70vh] w-full rounded-lg border-0" title="PDF" />;
     case 'texto':
       return (
-        <div className="rounded-lg border border-border bg-surface-raised p-6 text-text-secondary leading-relaxed whitespace-pre-wrap">
+        <div className="rounded-lg border border-ink-tertiary/10 bg-elevated p-6 text-ink-secondary leading-relaxed whitespace-pre-wrap">
           {item.conteudo}
         </div>
       );
@@ -111,8 +111,8 @@ export function ItemPlayer() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="mb-1 text-xl font-bold text-text-primary">{item.titulo}</h1>
-      <p className="mb-6 text-xs uppercase tracking-wider text-text-muted">{item.tipo}</p>
+      <h1 className="mb-1 text-xl font-bold text-ink-primary">{item.titulo}</h1>
+      <p className="mb-6 text-xs uppercase tracking-wider text-ink-tertiary">{item.tipo}</p>
       <div className="mb-8">
         {item.tipo === 'quiz' ? (
           <QuizSection cursoId={cursoId} moduloId={moduloId ?? ''} />

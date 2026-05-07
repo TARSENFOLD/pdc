@@ -223,4 +223,5 @@ O PDC será o lugar de referência para preparar e decidir percursos académicos
 - Upload de vídeos > 50MB (usar embed YouTube/Vimeo).
 - Antifraude biométrico avançado.
 
-*Última validação: 20 de Abril de 2026 · Fonte de verdade: este documento.*
+*Última validação: 29 de Abril de 2026 · Fonte de verdade: este documento.*
+*Revisão T-DOC-01 (audit-report-master 2026-04-29): nenhum Drift Constitucional confirmado para esta camada — no-op.*

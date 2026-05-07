@@ -1,12 +1,12 @@
+import pino from 'pino';
 import { strapiGet } from '../strapi/strapi.client.js';
 import { ltiTokenService } from './lti.token.service.js';
 import { ltiAgsService } from './lti.ags.js';
-import type { PerfilCompleto } from '@pdc/shared';
+import type { PerfilCompleto, LtiScoreResult } from '@pdc/shared';
 
-export interface LtiScoreResult {
-  status: 'sent' | 'skipped' | 'retryable_error';
-  reason?: string;
-}
+const log = pino({ name: 'lti-score-service' });
+
+
 
 interface PerfilWithLti extends PerfilCompleto {
   lti_context?: {
@@ -18,12 +18,13 @@ interface PerfilWithLti extends PerfilCompleto {
 }
 
 export const ltiScoreService = {
-  async sendScoreFromContext(perfilId: string, _tentativaId: string, score: number): Promise<LtiScoreResult> {
+  sendScoreFromContext: async (perfilId: string, tentativaId: string, score: number): Promise<LtiScoreResult> => {
     try {
       // 1. Buscar perfil e contexto LTI
       const resPerfil = await strapiGet<PerfilWithLti>(`/perfis/${perfilId}`);
       
-      const perfil = resPerfil.data[0];
+      // /perfis/:id retorna lista com 1 elemento via Strapi REST
+      const perfil = Array.isArray(resPerfil.data) ? resPerfil.data[0] : resPerfil.data;
       if (!perfil) return { status: 'retryable_error', reason: 'perfil-not-found' };
 
       const ltiContext = perfil.lti_context;
@@ -46,11 +47,12 @@ export const ltiScoreService = {
       }
 
       // 2. Obter Token
-      const accessToken = await ltiTokenService.getAccessToken(String(plataforma.id));
+      const accessToken = await ltiTokenService.getAccessToken(plataforma.id.toString());
 
       // 3. Enviar via AGS
       await ltiAgsService.sendScore(ltiContext.lineitemUrl, {
-        userId: perfil.ltiSub || perfil.userId || String(perfil.id),
+        userId: perfil.ltiSub || perfil.userId || perfil.id,
+        activityId: tentativaId,
         scoreGiven: score,
         scoreMaximum: 100,
         activityProgress: 'Completed',
@@ -60,8 +62,8 @@ export const ltiScoreService = {
 
       return { status: 'sent' };
     } catch (err) {
-      console.error('LTI Score Service Error:', err);
+      log.error({ err: err instanceof Error ? err.message : String(err), perfilId, tentativaId }, 'LTI Score Service Error');
       throw err;
     }
-  }
+  },
 };

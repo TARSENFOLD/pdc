@@ -7,7 +7,8 @@ import { otpService } from '../modules/auth/otp.service.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { redis, hasRedis } from '../lib/redis.js';
 import pino from 'pino';
-import { setAuthCookies, canSkipOtp } from '../modules/auth/auth.helper.js';
+import { setAuthCookies } from '../modules/auth/auth.helper.js';
+import { env } from '../lib/env.js';
 import { randomUUID } from 'node:crypto';
 import type { User } from '@pdc/shared';
 
@@ -15,19 +16,27 @@ const log = pino({ name: 'otp-routes' });
 export const otpRoutes = new Hono<{ Variables: AuthVariables }>();
 
 export async function initiate2faChallenge(c: Context<{ Variables: AuthVariables }>, user: User) {
-  if (canSkipOtp()) {
-    log.warn({ userId: user.id }, 'OTP bypassed in dev mode');
+  const isProd = env.NODE_ENV === 'production';
+  const allowOtpBypass = env.NODE_ENV === 'development' || env.NODE_ENV === 'test';
+
+  // E2E / dev: skip OTP entirely when DEV_SKIP_OTP=true (only in development/test)
+  if (allowOtpBypass && env.DEV_SKIP_OTP === 'true') {
+    log.warn({ userId: user.id }, '[DEV] OTP skipped via DEV_SKIP_OTP');
     const { accessToken, refreshToken } = await authService.generateTokens(user);
     await authService.saveRefreshToken(user.id, refreshToken);
     setAuthCookies(c, accessToken, refreshToken);
     return c.json(user);
   }
+
   const challengeId = randomUUID();
   if (hasRedis) await redis.set(`auth_challenge:${challengeId}`, user.id, { ex: 600 });
-  setCookie(c, 'auth_challenge', challengeId, { httpOnly: true, secure: false, sameSite: 'Strict', maxAge: 600, path: '/' });
+  setCookie(c, 'auth_challenge', challengeId, { httpOnly: true, secure: isProd, sameSite: 'Strict', maxAge: 600, path: '/' });
   try {
     const otp = otpService.generateOtp();
     await otpService.storeOtp(user.id, otp, 'email');
+    if (env.NODE_ENV !== 'production') {
+      log.info({ userId: user.id, otp }, '[DEV] OTP gerado — use este código para autenticar');
+    }
     await otpService.sendOtpEmail(user.email, otp);
   } catch (err) {
     log.error({ err }, 'Failed to auto-send OTP');
@@ -68,7 +77,7 @@ otpRoutes.post('/send', zValidator('json', otpSendSchema), async (c) => {
       const fullUser = await authService.getUserById(userId);
       await otpService.sendOtpEmail(fullUser.email, otp);
     } else {
-      if (!phone || !phone.startsWith('+244')) return c.json({ error: 'Número inválido' }, 400);
+      if (!phone || !otpService.validateE164(phone)) return c.json({ error: 'Número inválido. Use o formato E.164 (ex: +244923456789).' }, 400);
       await otpService.sendOtpSms(phone, otp);
     }
     return c.json({ success: true, canal });
@@ -88,7 +97,7 @@ otpRoutes.post('/sms', verifyJwt, zValidator('json', z.object({ phone: z.string(
     if (count > 3) return c.json({ error: 'Muitos pedidos.' }, 429);
   }
   try {
-    if (!phone.startsWith('+244')) return c.json({ error: 'Número inválido' }, 400);
+    if (!otpService.validateE164(phone)) return c.json({ error: 'Número inválido. Use o formato E.164 (ex: +244923456789).' }, 400);
     const otp = otpService.generateOtp();
     await otpService.storeOtp(user.id, otp, 'sms');
     await otpService.sendOtpSms(phone, otp);

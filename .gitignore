@@ -62,6 +62,11 @@ infra/strapi/public/uploads/
 
 # Nao versionar / Local
 nao_versionar/
+awesome-design-md/
 test-results/
 playwright-report/
 coverage/
+.wrangler/
+lint_output.txt
+apps/web/lint-errors.txt
+tests/.auth/*.json

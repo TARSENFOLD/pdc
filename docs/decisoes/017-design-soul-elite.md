@@ -7,7 +7,7 @@
 
 ## Contexto
 
-O PDC v2 necessitava de uma identidade visual que equilibrasse a sofisticação tecnológica global (estética Apple) com a alma cultural angolana. A ADR-006 iniciou o conceito de "Herança Invisível", mas as especificações de cores e geometria evoluíram para o patamar "Soul & Elite" definido na [spec:IMPORTANTE/05](../../specs/IMPORTANTE/05_—_Design_System_Soul_&_Elite_(Tokens,_Primitivos_e_Wireframes).md).
+O PDC v2 necessitava de uma identidade visual que equilibrasse a sofisticação tecnológica global (estética Apple) com a alma cultural angolana. A ADR-006 iniciou o conceito de "Herança Invisível", mas as especificações de cores e geometria evoluíram para o patamar "Soul & Elite" definido na [spec:IMPORTANTE/05](../../specs/IMPORTANTE/05_%E2%80%94_Design_System_Soul_%26_Elite_%28Tokens%2C_Primitivos_e_Wireframes%29.md).
 
 ## Decisão Técnica
 

@@ -10,7 +10,7 @@ Foco em Segurança, Resiliência e Ecossistema (G15).
 ## 🔄 G15 — Ecosystem & Events
 - **Contract**: Disparar obrigatoriamente `eventBus.publishWithOutbox(eventName, payload)`.
 - **Outbox**: Toda escrita no Strapi que gera impacto global deve passar pelo outbox.
-- **Hooks**: Nenhuma funcionalidade E2E está completa sem os 5 hooks (Ranking, Feed, Match, Achievement, Notify).
+- **Hooks**: Nenhuma funcionalidade E2E está completa sem os 6 hooks (Ranking, Feed, Match, Achievement, Behavior, Notify).
 
 ## 🗄️ Persistência e Arquitetura
 - **4 Camadas**: Respeitar estritamente a autoridade L4 (BFF -> Strapi -> Postgres).
@@ -19,4 +19,11 @@ Foco em Segurança, Resiliência e Ecossistema (G15).
 
 ## 📝 Logging e Observabilidade
 - **Sentry**: Capturar erros significativos que podem afectar o E2E.
-- **Pino**: Logs estruturados.
+- **Pino**: Logs estruturados — nunca template strings (AP-05 banído).
+- **Formato**: `logger.warn({ programaId: id }, 'Programa não encontrado')` (JSON context, não interpolação).
+
+## 🔒 Privacidade e Anti-Fraude
+- **Field-level Privacy**: Serialização de perfil filtrada por viewer + role. O frontend não é autoridade de acesso.
+- **Scores φ/R**: Derivados exclusivamente no BFF (`@pdc/shared/heuristics.ts`). O cliente nunca declara scores (anti-fraude D20-D22).
+- **Tag-don't-drop**: Eventos de telemetria inválidos são tagados (`edgeInvalidated: true`), nunca eliminados.
+- **Moderação**: 7 content-types moderáveis com estados distintos por tipo. Ver `docs/arquivo-fundacional/03-roles-permissoes/moderacao-strapi.md`.

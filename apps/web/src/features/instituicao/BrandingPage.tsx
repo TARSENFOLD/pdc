@@ -7,6 +7,7 @@ import { mediaApi } from '@/lib/api/media';
 import { Card, Button, Input, Spinner, Avatar } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 export function BrandingPage() {
   const queryClient = useQueryClient();
@@ -71,12 +72,16 @@ const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         <div className="flex flex-col items-center gap-4 mb-8">
           <Avatar src={avatarUrl || undefined} fallback={user?.nome[0] ?? 'I'} size="lg" className="h-24 w-24" />
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" asChild>
-              <label className="cursor-pointer">
-                {isUploading ? 'A carregar...' : 'Alterar Logotipo'}
-                <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={isUploading} />
-              </label>
-            </Button>
+            <label
+              aria-disabled={isUploading}
+              className={cn(
+                'inline-flex h-11 min-w-[44px] items-center justify-center rounded-md border border-ink-tertiary/10 bg-recessed px-4 text-xs font-semibold text-ink-primary transition-all hover:bg-canvas/50',
+                isUploading ? 'cursor-not-allowed opacity-50 pointer-events-none' : 'cursor-pointer'
+              )}
+            >
+              {isUploading ? 'A carregar...' : 'Alterar Logotipo'}
+              <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={isUploading} />
+            </label>
           </div>
         </div>
 
@@ -90,7 +95,7 @@ const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
           <div className="space-y-1">
             <label className="text-sm font-medium">Descrição Pública</label>
             <textarea 
-              className="flex min-h-[120px] w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-[120px] w-full rounded-md border border-ink-tertiary/10 bg-canvas px-3 py-2 text-sm text-ink-primary ring-offset-background placeholder:text-ink-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               placeholder="Conte aos estudantes sobre a vossa missão..."
               {...register('bio')}
             />

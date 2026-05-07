@@ -91,7 +91,7 @@ export function DiscussionsPanel({ cursoId, isMentorOrAdmin = false }: Props) {
             onChange={(e) => { setNewTitle(e.target.value); }}
           />
           <textarea
-            className="w-full rounded-md border border-border bg-surface p-3 text-sm"
+            className="w-full rounded-md border border-ink-tertiary/10 bg-canvas p-3 text-sm"
             placeholder="Descreve a tua dúvida ou tópico..."
             rows={4}
             value={newBody}
@@ -114,7 +114,7 @@ export function DiscussionsPanel({ cursoId, isMentorOrAdmin = false }: Props) {
 
       <div className="space-y-2">
         {discussions.length === 0 ? (
-          <p className="py-8 text-center text-text-muted">Ainda não há discussões neste curso.</p>
+          <p className="py-8 text-center text-ink-tertiary">Ainda não há discussões neste curso.</p>
         ) : (
           discussions.map((d: Discussion) => (
             <Card
@@ -123,14 +123,14 @@ export function DiscussionsPanel({ cursoId, isMentorOrAdmin = false }: Props) {
               onClick={() => { setActiveDiscussion(d); }}
             >
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-text-primary">{d.titulo}</h3>
+                <h3 className="font-medium text-ink-primary">{d.titulo}</h3>
                 <div className="flex gap-2">
                   {d.pinned && <Badge variant="warning">Fixado</Badge>}
                   {d.resolved && <Badge variant="success">Resolvido</Badge>}
                 </div>
               </div>
-              <p className="mt-1 text-sm text-text-secondary line-clamp-2">{d.corpo}</p>
-              <div className="mt-2 flex items-center gap-4 text-xs text-text-muted">
+              <p className="mt-1 text-sm text-ink-secondary line-clamp-2">{d.corpo}</p>
+              <div className="mt-2 flex items-center gap-4 text-xs text-ink-tertiary">
                 <span>{new Date(d.createdAt).toLocaleDateString('pt-PT')}</span>
               </div>
             </Card>

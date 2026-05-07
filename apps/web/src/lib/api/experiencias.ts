@@ -1,5 +1,5 @@
 import { http } from './http';
-import type { Experiencia, ExperienciaMinha, CriarExperienciaPayload, PaginationParams, InstituicaoStats } from '@pdc/shared';
+import type { Experiencia, ExperienciaMinha, CriarExperienciaPayload, PaginationParams, InstituicaoStats, MutationResult } from '@pdc/shared';
 
 export const experienciasApi = {
   list: (params?: PaginationParams) => {
@@ -26,7 +26,7 @@ export const experienciasApi = {
     http.get<{ data: ExperienciaMinha[] }>('/experiencias/minhas'),
 
   create: (payload: CriarExperienciaPayload) =>
-    http.post<Experiencia>('/experiencias', payload),
+    http.post<MutationResult>('/experiencias', payload),
 
   update: (id: string, payload: Partial<CriarExperienciaPayload>) =>
     http.put<Experiencia>(`/experiencias/${id}`, payload),

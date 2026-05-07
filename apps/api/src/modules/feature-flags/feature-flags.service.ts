@@ -22,17 +22,24 @@ export interface FlagOverride {
 }
 
 async function getAllFlags(): Promise<FeatureFlag[]> {
-  const cached = await redis.get<FeatureFlag[]>(CACHE_KEY);
-  if (cached) return cached;
+  try {
+    const cached = await redis.get<FeatureFlag[]>(CACHE_KEY);
+    if (cached) return cached;
 
-  // Fix: Generic type already represents the item.
-  const res = await strapiGet<FeatureFlag>('/feature-flags', {
-    'pagination[pageSize]': '100',
-  });
+    // Fix: Generic type already represents the item.
+    const res = await strapiGet<FeatureFlag>('/feature-flags', {
+      'pagination[pageSize]': '100',
+    });
 
-  const flags = res.data;
-  await redis.set(CACHE_KEY, flags, { ex: CACHE_TTL });
-  return flags;
+    const flags = res.data;
+    await redis.set(CACHE_KEY, flags, { ex: CACHE_TTL });
+    return flags;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    log.error({ error: message, stack }, 'FAILED TO FETCH FEATURE FLAGS');
+    throw error;
+  }
 }
 
 async function invalidateCache(): Promise<void> {
