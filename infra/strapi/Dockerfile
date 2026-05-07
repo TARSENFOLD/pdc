@@ -19,5 +19,6 @@ COPY --from=build /opt/app/dist/config ./config
 COPY --from=build /opt/app/database ./database
 COPY --from=build /opt/app/public ./public
 COPY --from=build /opt/app/favicon.png ./favicon.png
+RUN mkdir -p ./public/uploads
 EXPOSE 1337
 CMD ["npm", "run", "start"]
