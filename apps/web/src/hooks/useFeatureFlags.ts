@@ -2,7 +2,11 @@ import { useBootstrap } from '../lib/bootstrap/BootstrapContext.js';
 
 export function useFeatureFlags() {
   const { data, isLoading } = useBootstrap();
-  const flags = data?.capabilities.features || {};
+  const flags = data?.capabilities.features;
+
+  if (!isLoading && !flags) {
+    throw new Error('Bootstrap capabilities.features ausente');
+  }
 
   /**
    * isEnabled (Fail-Safe)
@@ -11,7 +15,10 @@ export function useFeatureFlags() {
    */
   const isEnabled = (flag: string): boolean => {
     if (isLoading) return false;
-    return !!flags[flag];
+    if (!flags) {
+      throw new Error('Bootstrap capabilities.features ausente');
+    }
+    return flags[flag] === true;
   };
 
   return { flags, isEnabled, isLoading };

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useFadeUp } from './useFadeUp';
 import { useTranslation } from '@/hooks/useTranslation';
 
-const MotionLink = motion(Link);
+const MotionLink = motion.create(Link);
 const SPRING = { type: 'spring' as const, stiffness: 220, damping: 28 };
 
 export function LandingCTAFinal() {

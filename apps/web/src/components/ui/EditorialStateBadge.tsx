@@ -1,29 +1,14 @@
 import { cn } from '@/lib/utils';
+import type { EstadoEditorial, ProjetoEstado } from '@pdc/shared';
 
-type EditorialState =
-  | 'rascunho'
-  | 'pendente'
-  | 'publicado'
-  | 'rejeitado'
-  | 'arquivado'
-  | 'draft'
-  | 'review'
-  | 'approved'
-  | 'published'
-  | 'rejected'
-  | 'archived';
+type EditorialState = EstadoEditorial | ProjetoEstado;
 
 interface EditorialStateBadgeProps {
-  state: string;
+  state: EditorialState;
   className?: string;
 }
 
 const STATE_CONFIG: Record<EditorialState, { label: string; className: string }> = {
-  rascunho: { label: 'Rascunho', className: 'bg-ink-tertiary/10 text-ink-tertiary' },
-  pendente: { label: 'Pendente', className: 'bg-warning/10 text-warning' },
-  publicado: { label: 'Publicado', className: 'bg-success/10 text-success' },
-  rejeitado: { label: 'Rejeitado', className: 'bg-error/10 text-error' },
-  arquivado: { label: 'Arquivado', className: 'bg-ink-tertiary/5 text-ink-tertiary' },
   draft: { label: 'Rascunho', className: 'bg-ink-tertiary/10 text-ink-tertiary' },
   review: { label: 'Pendente', className: 'bg-warning/10 text-warning' },
   approved: { label: 'Aprovado', className: 'bg-success/10 text-success' },
@@ -32,12 +17,8 @@ const STATE_CONFIG: Record<EditorialState, { label: string; className: string }>
   archived: { label: 'Arquivado', className: 'bg-ink-tertiary/5 text-ink-tertiary' },
 };
 
-function isEditorialState(state: string): state is EditorialState {
-  return state in STATE_CONFIG;
-}
-
 export function EditorialStateBadge({ state, className }: EditorialStateBadgeProps) {
-  const config = isEditorialState(state) ? STATE_CONFIG[state] : STATE_CONFIG.rascunho;
+  const config = STATE_CONFIG[state];
   return (
     <span
       className={cn(

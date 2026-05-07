@@ -95,7 +95,7 @@ estudanteRoutes.get('/dashboard', async (c) => {
           'filters[$or][1][destinatario][id][$eq]': perfilId,
           'filters[status][$eq]': 'aprovado'
         }),
-        strapiGet<PerfilVocacional>('/perfil-vocacionals', {
+        strapiGet<PerfilVocacional>('/perfil-vocacionais', {
           'filters[perfil][id][$eq]': perfilId,
           'sort': 'createdAt:desc',
           'pagination[pageSize]': '1'

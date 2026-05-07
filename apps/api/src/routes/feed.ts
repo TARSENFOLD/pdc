@@ -70,13 +70,13 @@ feedRoutes.get('/trending', verifyJwt, async (c) => {
 });
 
 // ─── GET /vocacional — Feed personalizado por área vocacional ────────────────
-// Pré-requisito P1: requer perfil-vocacionals persistido com areaMatch.
+// Pré-requisito P1: requer perfil-vocacionais persistido com areaMatch.
 
 feedRoutes.get('/vocacional', verifyJwt, async (c) => {
   const user = c.get('user');
   try {
     // 1. Buscar área vocacional do perfil persistido
-    const resVoc = await strapiGet<{ areaMatch?: string }>('/perfil-vocacionals', {
+    const resVoc = await strapiGet<{ areaMatch?: string }>('/perfil-vocacionais', {
       'filters[perfil][userId][$eq]': user.id,
       'sort': 'createdAt:desc',
       'pagination[pageSize]': '1',
@@ -138,14 +138,14 @@ feedRoutes.get('/institucional', verifyJwt, async (c) => {
     const [experiencias, feedPosts] = await Promise.all([
       strapiGet<StrapiEntity>('/experiencias', {
         'filters[instituicaoNome][$eq]': instituicaoNome,
-        'pagination[limit]': '100',
+        'pagination[pageSize]': '100',
         sort: 'publishedAt:desc',
-        populate: 'capa,instituicao',
+        populate: 'instituicao',
       }),
       strapiGet<StrapiEntity>('/feed-posts', {
         'filters[estado][$eq]': 'aprovada',
         'filters[autor][instituicao][nome][$eq]': instituicaoNome,
-        'pagination[limit]': '50',
+        'pagination[pageSize]': '50',
         sort: 'createdAt:desc',
         populate: 'autor.foto',
       }),

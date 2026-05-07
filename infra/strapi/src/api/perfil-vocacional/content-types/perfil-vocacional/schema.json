@@ -25,16 +25,28 @@
         "TURISMO_HOTELARIA", "DESPORTO", "OUTRA"
       ]
     },
+    "areaMatch": {
+      "type": "enumeration",
+      "enum": [
+        "SAUDE", "ENGENHARIA", "TECNOLOGIA", "DIREITO", "GESTAO",
+        "EDUCACAO", "ARTES", "CIENCIAS_AGRARIAS", "CIENCIAS_SOCIAIS",
+        "COMUNICACAO", "CIENCIAS_NATURAIS", "ARQUITETURA",
+        "TURISMO_HOTELARIA", "DESPORTO", "OUTRA"
+      ]
+    },
     "aptidaoTecnica": { "type": "float" },
+    "aptidao": { "type": "float" },
     "compatibilidadePsicologica": { "type": "float" },
     "motivacaoIntrinseca": { "type": "float" },
+    "dedicacao": { "type": "float" },
     "potencialSucesso": { "type": "float" },
     "scoreGlobal": { "type": "float" },
     "certeza": {
       "type": "enumeration",
-      "enum": ["baixa", "media", "alta"]
+      "enum": ["baixa", "media", "alta", "BAIXA", "MEDIA", "ALTA"]
     },
     "totalEventos": { "type": "integer" },
+    "dimensoes": { "type": "json" },
     "resumo": { "type": "text" },
     "ultimoCalculoEm": { "type": "datetime" }
   }

@@ -78,12 +78,9 @@ function validateEnv(): Env {
   } catch (err) {
     if (err instanceof z.ZodError) {
       const missing = err.issues.map((i) => i.path.join('.')).join(', ');
-      log.error(`Variáveis de ambiente em falta ou inválidas: ${missing}`);
-      if (process.env['NODE_ENV'] === 'production') {
-        process.exit(1);
-      }
+      log.error({ issues: err.issues }, `Variáveis de ambiente em falta ou inválidas: ${missing}`);
     }
-    return process.env as unknown as Env;
+    throw err;
   }
 }
 

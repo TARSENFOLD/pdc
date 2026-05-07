@@ -17,8 +17,9 @@ for (const role of roles) {
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    // Navigate to login page
-    await page.goto('/login', { waitUntil: 'networkidle' });
+    // Navigate to login page and wait for the login form, not network idleness.
+    await page.goto('/login');
+    await page.waitForSelector('input[placeholder="nome@exemplo.com"]');
     
     // Fill credentials
     await page.fill('input[placeholder="nome@exemplo.com"]', `${role}@traycer.test`);

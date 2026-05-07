@@ -7,15 +7,6 @@ import CatalogoGridShell from '@/components/catalogo/CatalogoGridShell';
 import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
 import ContentCard from '@/components/catalogo/ContentCard';
 
-interface SimulacaoItem {
-  id: string;
-  titulo: string;
-  area: string;
-  capaUrl?: string | null | undefined;
-  tipo: number;
-  estado?: string;
-}
-
 const AREAS = [
   { value: 'TECNOLOGIA', label: 'Tecnologia' },
   { value: 'ENGENHARIA', label: 'Engenharia' },
@@ -71,13 +62,11 @@ export const SimulacaoListPage = () => {
           />
         }
       >
-        {simulacoes.map((s: SimulacaoItem) => (
+        {simulacoes.map((s) => (
           <div key={s.id} className="relative">
-            {s.estado && (
-              <div className="absolute top-3 left-3 z-10">
-                <EditorialStateBadge state={s.estado} />
-              </div>
-            )}
+            <div className="absolute top-3 left-3 z-10">
+              <EditorialStateBadge state={s.estado} />
+            </div>
             <ContentCard
               title={s.titulo}
               subtitle={s.area}

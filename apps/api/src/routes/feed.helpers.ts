@@ -90,23 +90,23 @@ export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<Item
 export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: FeedItemTipo }>> {
   const [cursos, simulacoes, experiencias, feedPosts] = await Promise.all([
     strapiGet<StrapiEntity>('/cursos', {
-      'pagination[limit]': '100',
+      'pagination[pageSize]': '100',
       sort: 'publishedAt:desc',
-      populate: 'capa,autor',
+      populate: 'autor',
     }),
     strapiGet<StrapiEntity>('/simulacoes', {
-      'pagination[limit]': '100',
+      'pagination[pageSize]': '100',
       sort: 'publishedAt:desc',
-      populate: 'capa',
+      populate: 'autor',
     }),
     strapiGet<StrapiEntity>('/experiencias', {
-      'pagination[limit]': '100',
+      'pagination[pageSize]': '100',
       sort: 'publishedAt:desc',
-      populate: 'capa,instituicao',
+      populate: 'instituicao',
     }),
     strapiGet<StrapiEntity>('/feed-posts', {
       'filters[estado][$eq]': 'aprovada',
-      'pagination[limit]': '100',
+      'pagination[pageSize]': '100',
       sort: 'createdAt:desc',
       populate: 'autor.foto',
     }),

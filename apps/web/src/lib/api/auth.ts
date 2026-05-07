@@ -17,7 +17,7 @@ export interface RegisterPayload {
 }
 
 export const authApi = {
-  me: () => http.get<User>('/auth/me'),
+  me: () => http.get<User | null>('/auth/me'),
   login: (payload: LoginPayload) => http.post<LoginResponse>('/auth/login', payload),
   register: (payload: RegisterPayload) => http.post<LoginResponse>('/auth/register', payload),
   logout: () => http.post<undefined>('/auth/logout', {}),

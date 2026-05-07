@@ -203,8 +203,8 @@ async function gerarRecomendacoes(perfil: PerfilVocacional | null): Promise<Reco
 
   const res = await strapiGet<Curso>('/cursos', {
     'filters[area][$eq]': perfil.areaMatch,
-    'pagination[limit]': '3',
-    'sort': 'rating:desc'
+    'pagination[pageSize]': '3',
+    'sort': 'createdAt:desc',
   });
 
   return res.data.map((curso) => {

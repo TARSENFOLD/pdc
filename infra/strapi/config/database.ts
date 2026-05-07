@@ -1,8 +1,14 @@
-import { parse } from 'pg-connection-string';
+import { parse, type ConnectionOptions } from 'pg-connection-string';
 
-export default ({ env }) => {
+type EnvGetter = {
+  (key: string, defaultValue?: string): string;
+  int: (key: string, defaultValue?: number) => number;
+  bool: (key: string, defaultValue?: boolean) => boolean;
+};
+
+export default ({ env }: { env: EnvGetter }) => {
   const connectionUrl = env('DATABASE_URL');
-  const config = (connectionUrl ? parse(connectionUrl) : {}) as any;
+  const config: Partial<ConnectionOptions> = connectionUrl ? parse(connectionUrl) : {};
 
   return {
     connection: {
@@ -20,5 +26,4 @@ export default ({ env }) => {
     },
   };
 };
-
 

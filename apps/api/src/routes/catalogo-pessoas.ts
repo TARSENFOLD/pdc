@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import pino from 'pino';
 import { AreaVocacionalSchema } from '@pdc/shared';
-import { strapiGet } from '../modules/strapi/strapi.client.js';
+import { strapiGet, strapiGetRaw } from '../modules/strapi/strapi.client.js';
 import { optionalJwt, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
 import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 import { serializePublicProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
@@ -85,6 +85,7 @@ interface StrapiPessoaCatalogo {
 const paginationQuery = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(12),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 function sid(val: string | number): string {
@@ -96,9 +97,22 @@ function toMeta(meta: StrapiListResponse<unknown>['meta']): CatalogoMeta {
   return { page: p.page, pageSize: p.pageSize, total: p.total, pageCount: p.pageCount };
 }
 
-function buildPagination(p: Record<string, string>, page: number, limit: number): void {
+function buildPagination(p: Record<string, string>, page: number, limit: number, pageSize?: number): void {
   p['pagination[page]'] = page.toString();
-  p['pagination[pageSize]'] = limit.toString();
+  p['pagination[pageSize]'] = (pageSize ?? limit).toString();
+}
+
+function buildPerfilPublicoFilters(id: string): Record<string, string> {
+  if (/^\d+$/.test(id)) {
+    return {
+      'filters[$or][0][id][$eq]': id,
+      'filters[$or][1][userId][$eq]': id,
+    };
+  }
+
+  return {
+    'filters[userId][$eq]': id,
+  };
 }
 
 
@@ -135,7 +149,7 @@ mentoresRoutes.get('/', zValidator('query', mentorFilters), async (c) => {
   if (q.disponivel !== undefined) p['filters[disponivel][$eq]'] = String(q.disponivel);
   p['populate'] = 'foto';
 
-  buildPagination(p, q.page, q.limit);
+  buildPagination(p, q.page, q.limit, q.pageSize);
   
   const res = await strapiGet<StrapiMentor>('/perfis', p);
   return c.json({ 
@@ -178,7 +192,7 @@ instituicoesRoutes.get('/', zValidator('query', instFilters), async (c) => {
   const q = c.req.valid('query');
   const p: Record<string, string> = { }; // populate: 'logo' removed
   // publishedFilter(p);
-  buildPagination(p, q.page, q.limit);
+  buildPagination(p, q.page, q.limit, q.pageSize);
   if (q.tipo) p['filters[tipo][$eq]'] = q.tipo;
   if (q.regiao) p['filters[regiao][$eq]'] = q.regiao;
   const res = await strapiGet<StrapiInstituicao>('/instituicoes', p);
@@ -246,7 +260,7 @@ pessoasRoutes.get('/', zValidator('query', pessoaFilters), async (c) => {
   if (q.search) p['filters[nome][$containsi]'] = q.search;
   if (q.area) p['filters[$or][0][areaFormacao][$eq]'] = q.area;
   if (q.area) p['filters[$or][1][areasInteresse][$containsi]'] = q.area;
-  buildPagination(p, q.page, q.limit);
+  buildPagination(p, q.page, q.limit, q.pageSize);
 
   try {
     const res = await strapiGet<StrapiPessoaCatalogo>('/perfis', p);
@@ -275,35 +289,38 @@ perfilPublicoRoutes.get('/:id', async (c) => {
     useV2 = flags['PROFILE_V2_PUBLIC'] === true;
   } catch { /* ignore */ }
 
-  if (useV2) {
-    const res = await strapiGet<StrapiPerfilPublic>(`/perfis`, {
-      'filters[userId][$eq]': id,
+  try {
+    const perfilRes = await strapiGet<StrapiPerfilPublic>(`/perfis`, {
+      ...buildPerfilPublicoFilters(id),
       'pagination[pageSize]': '1',
       populate: 'foto',
     });
-    const first = res.data[0];
-    if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);
-    
-    // Type validation for StrapiPerfil
-    const isStrapiPerfil = (val: unknown): val is StrapiPerfil => val !== null && typeof val === 'object' && 'id' in val;
-    if (!isStrapiPerfil(first)) return c.json({ error: 'Perfil inválido' }, 500);
+    const first = perfilRes.data[0];
 
-    return c.json({ data: serializePublicProfile(first) });
+    if (first) {
+      // Type validation for StrapiPerfil
+      const isStrapiPerfil = (val: unknown): val is StrapiPerfil => val !== null && typeof val === 'object' && 'id' in val;
+      if (!isStrapiPerfil(first)) return c.json({ error: 'Perfil inválido' }, 500);
+
+      return c.json({ data: serializePublicProfile(first) });
+    }
+
+    if (useV2) return c.json({ error: 'Perfil não encontrado' }, 404);
+
+    const d = await strapiGetRaw<StrapiUserPublic>(`/users/${id}`, {});
+    const rawRole = d.role?.name.toLowerCase();
+    const roleName = isRole(rawRole) ? rawRole : 'estudante';
+    const perfil: PerfilPublicoBasico = {
+      id: sid(d.id),
+      nome: d.nome ?? d.username ?? '',
+      avatarUrl: d.avatarUrl || undefined,
+      bio: d.bio,
+      role: roleName,
+      reputacaoTier: 'BRONZE',
+    };
+    return c.json({ data: perfil });
+  } catch (err) {
+    log.error({ err, id }, 'Failed to fetch public profile');
+    return c.json({ error: 'Falha ao carregar perfil público' }, 502);
   }
-
-  const res = await strapiGet<StrapiUserPublic>(`/users/${id}`, { }); // populate: 'avatar,role' removed
-  const d = res.data[0];
-  if (!d) return c.json({ error: 'Utilizador não encontrado' }, 404);
-
-  const rawRole = d.role?.name.toLowerCase();
-  const roleName = isRole(rawRole) ? rawRole : 'estudante';
-  const perfil: PerfilPublicoBasico = {
-    id: sid(d.id),
-    nome: d.nome ?? d.username ?? '',
-    avatarUrl: d.avatarUrl || undefined,
-    bio: d.bio,
-    role: roleName,
-    reputacaoTier: 'BRONZE',
-  };
-  return c.json({ data: perfil });
 });

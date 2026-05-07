@@ -38,8 +38,7 @@ async function getAllFlags(): Promise<FeatureFlag[]> {
     const message = error instanceof Error ? error.message : String(error);
     const stack = error instanceof Error ? error.stack : undefined;
     log.error({ error: message, stack }, 'FAILED TO FETCH FEATURE FLAGS');
-    // Fallback to empty array to avoid 500 in bootstrap
-    return [];
+    throw error;
   }
 }
 
