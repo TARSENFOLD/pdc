@@ -9,6 +9,12 @@ vi.mock('../lib/env.js', () => ({
   },
 }));
 
+vi.mock('pino', () => ({
+  default: vi.fn(() => ({
+    warn: vi.fn(),
+  })),
+}));
+
 import { bootstrapRoutes } from './bootstrap.js';
 import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
@@ -78,7 +84,7 @@ describe('GET /bootstrap', () => {
     expect(json.capabilities.features['MENSAGENS_INBOX']).toBeUndefined(); // Registry barra HIDDEN
   });
 
-  it('deve degradar para defaults estaticos quando overrides remotos falham', async () => {
+  it('deve degradar para defaults estaticos quando overrides remotos falham', async (): Promise<void> => {
     vi.mocked(featureFlagService.getEffectiveFlags).mockRejectedValueOnce(
       new Error('Strapi indisponivel'),
     );

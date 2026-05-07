@@ -58,8 +58,9 @@ bootstrapRoutes.get('/', async (c) => {
   try {
     dynamicFlags = await featureFlagService.getEffectiveFlags(instituicaoId);
   } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error));
     log.warn(
-      { err: error, instituicaoId },
+      { err, instituicaoId },
       'Feature flag overrides unavailable; falling back to static registry defaults',
     );
   }
