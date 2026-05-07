@@ -77,4 +77,22 @@ describe('GET /bootstrap', () => {
     expect(json.capabilities.features['REPUTATION_VISIBLE']).toBe(true); // Strapi ganha
     expect(json.capabilities.features['MENSAGENS_INBOX']).toBeUndefined(); // Registry barra HIDDEN
   });
+
+  it('deve degradar para defaults estaticos quando overrides remotos falham', async () => {
+    vi.mocked(featureFlagService.getEffectiveFlags).mockRejectedValueOnce(
+      new Error('Strapi indisponivel'),
+    );
+
+    const req = new Request('http://localhost/');
+    const res = await bootstrapRoutes.request(req);
+
+    expect(res.status).toBe(200);
+    const json: unknown = await res.json();
+    assertBootstrapPayload(json);
+
+    expect(json.session.isAuthenticated).toBe(false);
+    expect(json.capabilities.features['DISCUSSIONS_ENABLED']).toBe(true);
+    expect(json.capabilities.features['REPUTATION_VISIBLE']).toBe(false);
+    expect(json.capabilities.features['MENSAGENS_INBOX']).toBeUndefined();
+  });
 });
