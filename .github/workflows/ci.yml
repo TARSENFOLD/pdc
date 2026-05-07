@@ -195,7 +195,12 @@ jobs:
         run: docker compose -f docker-compose.test.yml build
 
       - name: Start test infrastructure (Strapi + PG + Redis)
-        run: docker compose -f docker-compose.test.yml up -d --wait --wait-timeout 120
+        run: |
+          docker compose -f docker-compose.test.yml up -d --wait --wait-timeout 120 || {
+            docker compose -f docker-compose.test.yml ps -a
+            docker compose -f docker-compose.test.yml logs --no-color postgres redis strapi
+            exit 1
+          }
 
       - name: Seed test accounts
         run: npx tsx tests/helpers/seed.ts
@@ -227,6 +232,12 @@ jobs:
           STRAPI_URL: http://localhost:1337
           REDIS_URL: redis://localhost:6379
           FRONTEND_URL: http://localhost:5173
+
+      - name: Dump test infrastructure logs
+        if: failure()
+        run: |
+          docker compose -f docker-compose.test.yml ps -a
+          docker compose -f docker-compose.test.yml logs --no-color postgres redis strapi
 
       - name: Stop test infrastructure
         if: always()

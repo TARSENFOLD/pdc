@@ -47,6 +47,7 @@ services:
       APP_KEYS: testkey1,testkey2
       API_TOKEN_SALT: testTokenSalt
       ADMIN_JWT_SECRET: testAdminJwtSecret
+      ENCRYPTION_KEY: testEncryptionKeyForCiMinimum32Chars
       TRANSFER_TOKEN_SALT: testTransferSalt
       JWT_SECRET: testJwtSecret
       STRAPI_API_TOKEN: test-strapi-token
