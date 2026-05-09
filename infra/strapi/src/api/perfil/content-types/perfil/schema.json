@@ -178,6 +178,27 @@
       "relation": "oneToMany",
       "target": "api::feed-post.feed-post",
       "mappedBy": "autor"
+    },
+    "motivoRejeicao": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "aprovadoEm": {
+      "type": "datetime"
+    },
+    "aprovadoPor": {
+      "type": "string"
+    },
+    "onboardingCompleto": {
+      "type": "boolean",
+      "default": true
+    },
+    "oauthVerified": {
+      "type": "boolean",
+      "default": false
+    },
+    "oauthProvider": {
+      "type": "string"
     }
   }
 }

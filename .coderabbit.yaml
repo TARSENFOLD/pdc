@@ -31,10 +31,16 @@ ignore_patterns:
   - "yarn.lock"
   - "infra/strapi/.cache/**"
   - "infra/strapi/build/**"
+  - "infra/strapi/types/generated/**"
   - "apps/web/dist/**"
   - "apps/edge/dist/**"
+  - "apps/web/src/locales/**"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
   - ".windsurf/**"
   - "docs/_archive/**"
+  - "public/**"
+  - "tests/e2e/**"
 
 # Knowledge base
 knowledge_base:

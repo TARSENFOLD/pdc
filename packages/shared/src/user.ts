@@ -98,6 +98,10 @@ export const UserSchema = z.object({
   areaInteresse: z.string().optional(),
   areasInteresse: z.array(z.string()).default([]),
   conquistas: z.array(ConquistaSchema).default([]),
+  aprovado: z.boolean().optional(),
+  oauthVerified: z.boolean().optional(),
+  oauthProvider: z.enum(['google', 'linkedin']).optional(),
+  onboardingCompleto: z.boolean().optional(),
 });
 
 export type User = z.infer<typeof UserSchema>;

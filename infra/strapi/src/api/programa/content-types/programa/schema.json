@@ -87,6 +87,9 @@
     },
     "historicoEstados": { "type": "json", "description": "Audit trail de transições de estado editorial" },
     "motivoRejeicao": { "type": "text", "description": "Motivo da rejeição pelo Comité ou Moderador" },
-    "metadata": { "type": "json", "description": "⚠️ DEPRECATED — usar campos estruturados. Mantido por retrocompatibilidade." }
+    "rejeitadoEm": { "type": "datetime" },
+    "rejeitadoPor": { "type": "string" },
+    "metadata": { "type": "json", "description": "⚠️ DEPRECATED — usar campos estruturados. Mantido por retrocompatibilidade." },
+    "isDemo": { "type": "boolean", "default": false }
   }
 }

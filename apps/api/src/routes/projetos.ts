@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { verifyJwt, optionalJwt, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
+import { requireApproved } from '../middleware/requireApproved.js';
+import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet, strapiPost, strapiPut, strapiDelete } from '../modules/strapi/strapi.client.js';
 import { CriarProjetoPayloadSchema, GerirACLSchema, VotoProjetoPayloadSchema, type Projeto, type ACLEntry, type Voto } from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
@@ -99,6 +101,8 @@ projetoRoutes.get('/:id', optionalJwt, async (c) => {
 projetoRoutes.post('/',
   verifyJwt,
   checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
+  requireApproved(),
+  rateLimitContentCreate,
   zValidator('json', CriarProjetoPayloadSchema),
   async (c) => {
     const body = c.req.valid('json');

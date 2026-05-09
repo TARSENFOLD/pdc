@@ -11,6 +11,7 @@ import {
   type Bookmark,
   type InteractionTargetType,
 } from '@pdc/shared';
+import { rateLimitInteractions } from '../middleware/rateLimit.js';
 
 export const interactionRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -26,7 +27,7 @@ interface StrapiEntity {
 
 // ─── LIKES ────────────────────────────────────────────────────────────────────
 
-interactionRoutes.post('/like', zValidator('json', ToggleLikePayloadSchema), async (c) => {
+interactionRoutes.post('/like', rateLimitInteractions, zValidator('json', ToggleLikePayloadSchema), async (c) => {
   const user = c.get('user');
   const { targetType, targetId } = c.req.valid('json');
 
@@ -86,7 +87,7 @@ interactionRoutes.get('/like/status', zValidator('query', z.object({
 
 // ─── BOOKMARKS ────────────────────────────────────────────────────────────────
 
-interactionRoutes.post('/bookmark', zValidator('json', ToggleBookmarkPayloadSchema), async (c) => {
+interactionRoutes.post('/bookmark', rateLimitInteractions, zValidator('json', ToggleBookmarkPayloadSchema), async (c) => {
   const user = c.get('user');
   const { targetType, targetId } = c.req.valid('json');
 

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { jwtVerify } from 'jose';
+import pino from 'pino';
 import { env } from '../lib/env.js';
 import { authService } from '../modules/auth/auth.service.js';
 import { JwtUserPayloadSchema } from '../modules/auth/auth.middleware.js';
@@ -10,6 +11,7 @@ import { Features, type BootstrapResponse } from '@pdc/shared';
 // Role import removed as it is unused
 
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
+const log = pino({ name: 'routes:bootstrap' });
 
 export const bootstrapRoutes = new Hono();
 
@@ -52,7 +54,16 @@ bootstrapRoutes.get('/', async (c) => {
   }
 
   // 3. Resolução Híbrida de Capabilities (Feature Registry vs Strapi Overrides)
-  const dynamicFlags = await featureFlagService.getEffectiveFlags(instituicaoId);
+  let dynamicFlags: Record<string, boolean> = {};
+  try {
+    dynamicFlags = await featureFlagService.getEffectiveFlags(instituicaoId);
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    log.warn(
+      { err, instituicaoId },
+      'Feature flag overrides unavailable; falling back to static registry defaults',
+    );
+  }
   const cleanFeatures: Record<string, boolean> = {};
 
   // O "Registry" dita os contratos: apenas os conhecidos são passados, e HIDDEN é expurgado

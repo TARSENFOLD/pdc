@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
+import type { Context, Next } from 'hono';
 import { env } from "../lib/env.js";
 
 export function initSentry() {
@@ -8,12 +9,23 @@ export function initSentry() {
   Sentry.init({
     dsn: env.SENTRY_DSN,
     environment: env.NODE_ENV,
+    sendDefaultPii: false,
     integrations: [
       nodeProfilingIntegration(),
     ],
-    // Performance Monitoring
     tracesSampleRate: env.NODE_ENV === 'production' ? 0.1 : 1.0,
-    // Set sampling rate for profiling - this is relative to tracesSampleRate
     profilesSampleRate: env.NODE_ENV === 'production' ? 0.1 : 1.0,
   });
+}
+
+export async function sentryUserContext(c: Context, next: Next) {
+  const user = c.get('user') as { id: string } | undefined;
+  if (user?.id) {
+    Sentry.setUser({ id: user.id });
+  }
+  Sentry.setTag('environment', env.NODE_ENV);
+  await next();
+  if (user?.id) {
+    Sentry.setUser(null);
+  }
 }

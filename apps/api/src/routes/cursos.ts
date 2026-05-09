@@ -3,6 +3,8 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
+import { requireApproved } from '../middleware/requireApproved.js';
+import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { CriarCursoPayloadSchema, type CriarCursoPayload, Curso, Inscricao, BehaviorPattern } from '@pdc/shared';
 import { cursosService } from '../modules/cursos/cursos.service.js';
@@ -96,7 +98,7 @@ cursoRoutes.get('/:id', async (c) => {
 });
 
 // POST /cursos
-cursoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zValidator('json', CriarCursoPayloadSchema), async (c) => {
+cursoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), requireApproved(), rateLimitContentCreate, zValidator('json', CriarCursoPayloadSchema), async (c) => {
   try {
     const curso = await cursosService.criarCursoCompleto(c.req.valid('json'), c.get('user').id);
     return c.json(curso, 201);

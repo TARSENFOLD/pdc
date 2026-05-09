@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { rateLimitDenuncias } from '../middleware/rateLimit.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -30,7 +31,7 @@ export const denunciaRoutes = new Hono<Vars>();
 denunciaRoutes.use('*', verifyJwt);
 
 // POST /denuncias — qualquer utilizador autenticado pode denunciar
-denunciaRoutes.post('/', zValidator('json', createSchema), async (c) => {
+denunciaRoutes.post('/', rateLimitDenuncias, zValidator('json', createSchema), async (c) => {
   const { id: denuncianteId } = c.get('user');
   const body = c.req.valid('json');
   try {

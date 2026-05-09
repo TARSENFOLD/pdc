@@ -3,6 +3,8 @@ import { zValidator } from '@hono/zod-validator';
 
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
+import { requireApproved } from '../middleware/requireApproved.js';
+import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
@@ -95,8 +97,10 @@ programaRoutes.get('/minhas', checkRole(['mentor', 'instituicao', 'super_admin']
 });
 
 // POST /programas - Criar novo programa
-programaRoutes.post('/', 
+programaRoutes.post('/',
   checkRole(['mentor', 'instituicao', 'super_admin']),
+  requireApproved(),
+  rateLimitContentCreate,
   zValidator('json', CriarProgramaPayloadSchema),
   async (c) => {
     const body = c.req.valid('json');

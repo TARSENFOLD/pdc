@@ -72,7 +72,7 @@ estudanteRoutes.get('/dashboard', async (c) => {
     // Fallback gracioso: estudante sem perfil ainda vê dashboard aspiracional
     if (!perfil) {
       const dashboardData: DashboardEstudante = {
-        stats: { xp: 0, reputacao: 0, conquistasCount: 0, vinkulosCount: 0, pulseVariacao: 0 },
+        stats: { xp: 0, reputacao: 0, conquistasCount: 0, vinkulosCount: 0, pulseVariacao: null },
         match: { area: 'Tecnologia', score: 0, insight: 'Completa o teu perfil vocacional para descobrires as tuas áreas de maior afinidade.', directive: 'PERFIL PENDENTE' },
         behavior: null,
         progressoCursos: [],
@@ -122,16 +122,13 @@ estudanteRoutes.get('/dashboard', async (c) => {
       recomendacoes = [];
     }
 
-    // G15: variação real = diferença de scoreGlobal entre o último padrão e zero base
-    const pulseVariacao = lastPattern ? Math.round(lastPattern.scoreGlobal * 10) : 0;
-
     const dashboardData: DashboardEstudante = {
       stats: {
         xp: perfil.xp || 0,
         reputacao: perfil.reputacao || 0,
         conquistasCount: perfil.conquistas.length,
         vinkulosCount: vinculosRes.data.length,
-        pulseVariacao,
+        pulseVariacao: null,
       },
       match: {
         area: areaPrincipal,

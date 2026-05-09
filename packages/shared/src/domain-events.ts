@@ -102,6 +102,7 @@ export enum DomainEventName {
   DENUNCIA_CRIADA = 'denuncia.criada',
   DENUNCIA_RESOLVIDA = 'denuncia.resolvida',
   CONTEUDO_REMOVIDO = 'conteudo.removido',
+  CONTEUDO_REJEITADO = 'conteudo.rejeitado',
   COMITE_APROVOU = 'comite.aprovou',
   COMITE_REJEITOU = 'comite.rejeitou',
   MODERADOR_APROVOU = 'moderador.aprovou',
@@ -114,6 +115,7 @@ export enum DomainEventName {
 
   // --- Onboarding ---
   PERFIL_APROVADO = 'perfil.aprovado',
+  PERFIL_REJEITADO = 'perfil.rejeitado',
   ONBOARDING_PASSO_CONCLUIDO = 'onboarding.passo_concluido',
 }
 
@@ -296,6 +298,7 @@ export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
   [DomainEventName.DENUNCIA_CRIADA]: z.object({ autorId: z.string(), targetType: z.string(), targetId: z.string() }),
   [DomainEventName.DENUNCIA_RESOLVIDA]: z.object({ denunciaId: z.string(), resolutorId: z.string(), acao: z.string() }),
   [DomainEventName.CONTEUDO_REMOVIDO]: z.object({ targetType: z.string(), targetId: z.string(), remocaoId: z.string() }),
+  [DomainEventName.CONTEUDO_REJEITADO]: z.object({ targetType: z.string(), targetId: z.string(), rejeitadorId: z.string(), motivo: z.string().min(10).max(500) }),
   [DomainEventName.COMITE_APROVOU]: z.object({ targetType: z.string(), targetId: z.string(), membroId: z.string() }),
   [DomainEventName.COMITE_REJEITOU]: z.object({ targetType: z.string(), targetId: z.string(), membroId: z.string() }),
   [DomainEventName.MODERADOR_APROVOU]: z.object({ targetType: z.string(), targetId: z.string(), moderadorId: z.string() }),
@@ -307,6 +310,7 @@ export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
   [DomainEventName.MEDIA_FAILED]: z.object({ mediaId: z.string(), reason: z.string() }),
 
   // --- Onboarding ---
-  [DomainEventName.PERFIL_APROVADO]: z.object({ perfilId: z.string(), aprovadorId: z.string(), role: z.string() }),
+  [DomainEventName.PERFIL_APROVADO]: z.object({ perfilId: z.string(), aprovadorId: z.string(), role: z.string(), userId: z.string() }),
+  [DomainEventName.PERFIL_REJEITADO]: z.object({ perfilId: z.string(), rejeitadorId: z.string(), motivo: z.string().min(10).max(500), role: z.string(), userId: z.string() }),
   [DomainEventName.ONBOARDING_PASSO_CONCLUIDO]: z.object({ perfilId: z.string(), passo: z.number(), role: z.string() }),
 };

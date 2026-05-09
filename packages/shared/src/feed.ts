@@ -19,7 +19,8 @@ export const FeedItemTipoSchema = z.enum([
   'curso',
   'simulacao',
   'experiencia',
-  'projeto'
+  'programa',
+  'projeto',
 ]);
 
 export type FeedItemTipo = z.infer<typeof FeedItemTipoSchema>;

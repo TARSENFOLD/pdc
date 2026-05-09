@@ -40,6 +40,16 @@
       "unique": true,
       "description": "ID único do evento para anti-duplicação"
     },
+    "motivoRejeicao": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "rejeitadoEm": {
+      "type": "datetime"
+    },
+    "rejeitadoPor": {
+      "type": "string"
+    },
     "likesCount": {
       "type": "integer",
       "default": 0

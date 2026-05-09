@@ -29,27 +29,29 @@ describe('feed helpers', () => {
       }
 
       if (path === '/feed-posts') {
-        return Promise.resolve(listResponse<StrapiEntity>([
-          {
-            id: 'post-1',
-            corpo: 'Publicação aprovada',
-            estado: 'aprovada',
-            createdAt: '2026-04-30T10:00:00.000Z',
-            autor: { id: 'perfil-1', userId: 'user-1', nome: 'Ana PDC' },
-          },
-          {
-            id: 'post-2',
-            corpo: 'Publicação pendente',
-            estado: 'pendente_moderacao',
-            createdAt: '2026-04-30T10:01:00.000Z',
-          },
-          {
-            id: 'post-3',
-            corpo: 'Publicação oculta',
-            estado: 'hidden',
-            createdAt: '2026-04-30T10:02:00.000Z',
-          },
-        ]));
+        return Promise.resolve(
+          listResponse<StrapiEntity>([
+            {
+              id: 'post-1',
+              corpo: 'Publicação aprovada',
+              estado: 'aprovada',
+              createdAt: '2026-04-30T10:00:00.000Z',
+              autor: { id: 'perfil-1', userId: 'user-1', nome: 'Ana PDC' },
+            },
+            {
+              id: 'post-2',
+              corpo: 'Publicação pendente',
+              estado: 'pendente_moderacao',
+              createdAt: '2026-04-30T10:01:00.000Z',
+            },
+            {
+              id: 'post-3',
+              corpo: 'Publicação oculta',
+              estado: 'hidden',
+              createdAt: '2026-04-30T10:02:00.000Z',
+            },
+          ])
+        );
       }
 
       return Promise.resolve(listResponse<StrapiEntity>([]));
@@ -86,12 +88,31 @@ describe('feed helpers', () => {
       id: 'post-1',
       tipo: 'post',
       userId: 'user-1',
-      titulo: 'Publicação',
+      titulo: 'Texto social real',
       corpo: 'Texto social real',
       autorNome: 'Ana PDC',
       avatar: 'https://cdn.pdc.test/avatar.jpg',
       imagem: 'https://cdn.pdc.test/post.jpg',
       stats: { likes: 3, ratingMedia: 0, ratingTotal: 0 },
+    });
+  });
+
+  it('deriva titulo e userId de campos reais quando nao ha titulo explicito', () => {
+    const stats: ItemStats = { likes: 0, ratingMedia: 0, ratingTotal: 0 };
+    const entity: StrapiEntity & { tipo: FeedItemTipo } = {
+      id: 'curso-1',
+      tipo: 'curso',
+      descricao: 'Curso publicado sem titulo vindo do CMS',
+      estado: 'published',
+      visibilidade: 'publico',
+      createdAt: '2026-04-30T10:00:00.000Z',
+    };
+
+    expect(toFeedItem(entity, stats, 0.2, 0.4)).toMatchObject({
+      id: 'curso-1',
+      userId: 'curso-1',
+      titulo: 'Curso publicado sem titulo vindo do CMS',
+      corpo: 'Curso publicado sem titulo vindo do CMS',
     });
   });
 });

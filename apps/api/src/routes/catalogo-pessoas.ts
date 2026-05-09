@@ -3,9 +3,8 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import pino from 'pino';
 import { AreaVocacionalSchema } from '@pdc/shared';
-import { strapiGet, strapiGetRaw } from '../modules/strapi/strapi.client.js';
+import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { optionalJwt, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
-import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 import { serializePublicProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
 import {
   RoleSchema,
@@ -40,15 +39,6 @@ interface StrapiInstituicao {
   logoUrl?: string;
   tipo?: string;
   regiao?: string;
-}
-
-interface StrapiUserPublic {
-  id: string | number;
-  nome?: string;
-  username?: string;
-  avatarUrl?: string;
-  bio?: string;
-  role?: { name: string };
 }
 
 interface StrapiPerfilPublic {
@@ -281,13 +271,6 @@ perfilPublicoRoutes.use('*', optionalJwt);
 
 perfilPublicoRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
-  const viewerInstituicaoId = c.get('user')?.instituicaoId;
-
-  let useV2 = false;
-  try {
-    const flags = await featureFlagService.getEffectiveFlags(viewerInstituicaoId);
-    useV2 = flags['PROFILE_V2_PUBLIC'] === true;
-  } catch { /* ignore */ }
 
   try {
     const perfilRes = await strapiGet<StrapiPerfilPublic>(`/perfis`, {
@@ -305,20 +288,7 @@ perfilPublicoRoutes.get('/:id', async (c) => {
       return c.json({ data: serializePublicProfile(first) });
     }
 
-    if (useV2) return c.json({ error: 'Perfil não encontrado' }, 404);
-
-    const d = await strapiGetRaw<StrapiUserPublic>(`/users/${id}`, {});
-    const rawRole = d.role?.name.toLowerCase();
-    const roleName = isRole(rawRole) ? rawRole : 'estudante';
-    const perfil: PerfilPublicoBasico = {
-      id: sid(d.id),
-      nome: d.nome ?? d.username ?? '',
-      avatarUrl: d.avatarUrl || undefined,
-      bio: d.bio,
-      role: roleName,
-      reputacaoTier: 'BRONZE',
-    };
-    return c.json({ data: perfil });
+    return c.json({ error: 'Perfil não encontrado' }, 404);
   } catch (err) {
     log.error({ err, id }, 'Failed to fetch public profile');
     return c.json({ error: 'Falha ao carregar perfil público' }, 502);

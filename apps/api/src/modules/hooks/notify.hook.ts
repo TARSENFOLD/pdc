@@ -65,6 +65,55 @@ async function resolvePerfilIdFromUserId(userId: string | number): Promise<strin
   }
 }
 
+// ── Approval Triggers ────────────────────────────────────────────────────────
+
+interface ApprovalPayload {
+  perfilId?: string | number;
+  userId?: string | number;
+  motivo?: string;
+  role?: string;
+}
+
+async function processApprovalTrigger(event: DomainEvent<BaseDomainEventPayload>, payload: ApprovalPayload): Promise<boolean> {
+  const name = event.name;
+  const ts = new Date().toISOString();
+
+  if (name === DomainEventName.PERFIL_APROVADO) {
+    const userId = payload.userId;
+    if (!userId) return false;
+
+    const pId = await resolvePerfilIdFromUserId(userId);
+    if (!pId) return false;
+
+    const titulo = 'Foste aprovado!';
+    const msg = 'A tua conta foi aprovada. Já podes publicar conteúdo na plataforma.';
+    await persistNotificacao(pId, 'aprovacao', titulo, msg, event.id);
+    socketService.emitirNotificacao(String(userId), { id: event.id, tipo: 'sucesso', titulo, mensagem: msg, timestamp: ts });
+    log.info({ perfilId: payload.perfilId, userId }, 'notify: PERFIL_APROVADO processado');
+    return true;
+  }
+
+  if (name === DomainEventName.PERFIL_REJEITADO) {
+    const userId = payload.userId;
+    if (!userId) return false;
+
+    const pId = await resolvePerfilIdFromUserId(userId);
+    if (!pId) return false;
+
+    const motivo = payload.motivo ?? 'Documentação insuficiente.';
+    const titulo = 'Perfil não aprovado';
+    const msg = `A tua candidatura não foi aprovada. Motivo: ${motivo}`;
+    await persistNotificacao(pId, 'rejeicao', titulo, msg, event.id);
+    socketService.emitirNotificacao(String(userId), { id: event.id, tipo: 'aviso', titulo, mensagem: msg, timestamp: ts });
+    log.info({ perfilId: payload.perfilId, userId }, 'notify: PERFIL_REJEITADO processado');
+    return true;
+  }
+
+  return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function processFomoTrigger(event: DomainEvent<BaseDomainEventPayload>, payload: FomoPayload): Promise<void> {
   const name = event.name;
 
@@ -149,7 +198,11 @@ export const notifyHook: EcosystemHook = {
       return { status: 'sent' }; // O chat para aqui (não cria audit trail default)
     }
 
-    // 2. FOMO triggers — notificações contextuais de urgência/oportunidade
+    // 2a. Approval triggers — notificações de aprovação/rejeição de perfil
+    const handledByApproval = await processApprovalTrigger(event, payload);
+    if (handledByApproval) return { status: 'sent' };
+
+    // 2b. FOMO triggers — notificações contextuais de urgência/oportunidade
     await processFomoTrigger(event, payload);
 
     // 3. Resolve real perfil relation id — never persist a raw userId as perfil

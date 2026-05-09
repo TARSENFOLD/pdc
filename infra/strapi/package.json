@@ -13,6 +13,8 @@
     "lint": "eslint scripts/",
     "seed:narrativo": "npx tsx scripts/seed-narrativo.ts",
     "seed:hubs": "npx tsx scripts/seed-hubs.ts",
+    "seed:feature-flags": "npx tsx scripts/seed-feature-flags.ts",
+    "seed:onboarding-videos": "npx tsx scripts/seed-onboarding-videos.ts",
     "typecheck": "tsc --noEmit",
     "upgrade": "npx @strapi/upgrade latest",
     "upgrade:dry": "npx @strapi/upgrade latest --dry"

@@ -3,6 +3,8 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
+import { requireApproved } from '../middleware/requireApproved.js';
+import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { CriarExperienciaPayloadSchema, type Experiencia } from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
@@ -81,9 +83,11 @@ experienciaRoutes.get('/stats', checkRole(['instituicao', 'super_admin']), async
 });
 
 // POST /experiencias
-experienciaRoutes.post('/', 
-  checkRole(['instituicao', 'mentor', 'super_admin']), 
-  zValidator('json', CriarExperienciaPayloadSchema), 
+experienciaRoutes.post('/',
+  checkRole(['instituicao', 'mentor', 'super_admin']),
+  requireApproved(),
+  rateLimitContentCreate,
+  zValidator('json', CriarExperienciaPayloadSchema),
   async (c) => {
     const body = c.req.valid('json');
     const { id } = c.get('user');

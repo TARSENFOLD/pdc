@@ -168,6 +168,7 @@ export const NAV_ITEM_SLUGS = [
   'roteiros',
   'auditoria_cientifica',
   'fila_aprovacoes',
+  'aprovacoes_pendentes',
   'painel_admin',
 ] as const;
 
@@ -207,5 +208,6 @@ export const NavItems: Record<NavItemSlug, NavItemLabel> = {
   roteiros: { 'pt-PT': 'Roteiros (Programas)', 'pt-BR': 'Roteiros (Programas)', en: 'Roadmaps (Programmes)' },
   auditoria_cientifica: { 'pt-PT': 'Auditoria Científica', 'pt-BR': 'Auditoria Científica', en: 'Scientific Audit' },
   fila_aprovacoes: { 'pt-PT': 'Fila de Aprovações', 'pt-BR': 'Fila de Aprovações', en: 'Approvals Queue' },
+  aprovacoes_pendentes: { 'pt-PT': 'Aprovações Pendentes', 'pt-BR': 'Aprovações Pendentes', en: 'Pending Approvals' },
   painel_admin: { 'pt-PT': 'Painel Admin', 'pt-BR': 'Painel Admin', en: 'Admin Panel' },
 };

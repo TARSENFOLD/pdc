@@ -1,8 +1,17 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import {
+  MediaEntityTypeSchema,
+  PresignedRequestSchema,
+  UploadResultSchema,
+  type MediaEntityType,
+} from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
+import { rateLimitMediaUpload } from '../middleware/rateLimit.js';
 import { generatePresignedUrl, getPublicUrl, uploadToR2, readLocalUpload } from '../modules/media/r2.service.js';
+import { ALLOWED_MEDIA_MIME_TYPES, validateMagicBytes } from '../modules/media/file-type-guard.js';
+import { formatBytes, getMediaSizeLimit } from '../modules/media/limits.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import crypto from 'node:crypto';
@@ -10,32 +19,28 @@ import path from 'node:path';
 
 type Vars = { Variables: AuthVariables };
 
-const ALLOWED_MIME_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'application/pdf',
-  'video/mp4',
-]);
-
 export const mediaRoutes = new Hono<Vars>();
 
 mediaRoutes.use('*', verifyJwt);
 
-const PresignedRequestSchema = z.object({
-  filename: z.string().min(1),
-  mimeType: z.string().min(1),
-  sizeBytes: z.number().int().max(10 * 1024 * 1024), // 10MB máximo E2E
-});
-
-// POST /media/presigned — Obtem URL para upload direto via Browser
+// POST /media/presigned — Obtem URL para upload direto via Browser.
+// NOTA: este endpoint não valida magic bytes (browser PUT direto). Usar `/upload`
+// para conteúdo controlado pela plataforma. Pre-signed permanece para uso futuro
+// com validação assíncrona.
 mediaRoutes.post('/presigned', zValidator('json', PresignedRequestSchema), async (c) => {
-  const { filename, mimeType, sizeBytes } = c.req.valid('json');
+  const { filename, mimeType, sizeBytes, entityType } = c.req.valid('json');
   const user = c.get('user');
+  const sizeLimit = getMediaSizeLimit(entityType);
 
-  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
-    return c.json({ error: 'Tipo de ficheiro não permitido pelo ecossistema.' }, 415);
+  if (!ALLOWED_MEDIA_MIME_TYPES.has(mimeType)) {
+    return c.json({ error: 'Tipo de ficheiro não permitido pelo ecossistema.', code: 'TYPE_NOT_ALLOWED' }, 415);
+  }
+
+  if (sizeBytes > sizeLimit) {
+    return c.json({
+      error: `Ficheiro excede o limite de ${formatBytes(sizeLimit)} para ${entityType}.`,
+      code: 'SIZE_LIMIT_EXCEEDED',
+    }, 413);
   }
 
   // Prevenção de colisões com random UUID e sanitização
@@ -54,7 +59,7 @@ mediaRoutes.post('/presigned', zValidator('json', PresignedRequestSchema), async
         mediaId,
         key,
         mimeType,
-        sizeBytes
+        sizeBytes,
       },
       201
     );
@@ -65,24 +70,32 @@ mediaRoutes.post('/presigned', zValidator('json', PresignedRequestSchema), async
 });
 
 // POST /media/upload — Upload direto via FormData (usado pelo frontend ProfilePhotoUpload)
-mediaRoutes.post('/upload', async (c) => {
+mediaRoutes.post('/upload', rateLimitMediaUpload, async (c) => {
   const user = c.get('user');
 
   try {
     const body = await c.req.parseBody();
     const file = body['file'];
+    const entityType = parseEntityType(body['entityType']);
 
     if (!file || !(file instanceof File)) {
       return c.json({ error: 'Ficheiro não fornecido.' }, 400);
     }
 
-    if (!ALLOWED_MIME_TYPES.has(file.type)) {
-      return c.json({ error: 'Tipo de ficheiro não permitido pelo ecossistema.' }, 415);
+    if (!entityType) {
+      return c.json({ error: 'entityType inválido.', code: 'INVALID_ENTITY_TYPE' }, 400);
     }
 
-    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-    if (file.size > MAX_SIZE) {
-      return c.json({ error: 'Ficheiro excede o limite de 10MB.' }, 413);
+    if (!ALLOWED_MEDIA_MIME_TYPES.has(file.type)) {
+      return c.json({ error: 'Tipo de ficheiro não permitido pelo ecossistema.', code: 'TYPE_NOT_ALLOWED' }, 415);
+    }
+
+    const sizeLimit = getMediaSizeLimit(entityType);
+    if (file.size > sizeLimit) {
+      return c.json({
+        error: `Ficheiro excede o limite de ${formatBytes(sizeLimit)} para ${entityType}.`,
+        code: 'SIZE_LIMIT_EXCEEDED',
+      }, 413);
     }
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -91,6 +104,11 @@ mediaRoutes.post('/upload', async (c) => {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const magicBytes = await validateMagicBytes(buffer, file.type);
+
+    if (!magicBytes.ok) {
+      return c.json({ error: magicBytes.reason, code: magicBytes.code }, 415);
+    }
 
     await uploadToR2(key, buffer, file.type);
 
@@ -102,14 +120,16 @@ mediaRoutes.post('/upload', async (c) => {
       url: publicUrl,
     });
 
-    return c.json({
+    const uploadResult = UploadResultSchema.parse({
       id: mediaId,
       url: publicUrl,
       key,
       filename: safeName,
       mimeType: file.type,
       size: file.size,
-    }, 201);
+    });
+
+    return c.json(uploadResult, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -173,3 +193,11 @@ mediaPublicRoutes.get('/local/*', (c): Response => {
     headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=86400' },
   });
 });
+
+function parseEntityType(value: unknown): MediaEntityType | null {
+  if (typeof value !== 'string') {
+    return 'generic';
+  }
+  const parsed = MediaEntityTypeSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}

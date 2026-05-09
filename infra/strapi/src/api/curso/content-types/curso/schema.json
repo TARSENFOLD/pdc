@@ -67,6 +67,9 @@
     "dataInicio": { "type": "date" },
     "dataFim": { "type": "date" },
     "motivoRejeicao": { "type": "text" },
-    "historicoEstados": { "type": "json" }
+    "rejeitadoEm": { "type": "datetime" },
+    "rejeitadoPor": { "type": "string" },
+    "historicoEstados": { "type": "json" },
+    "isDemo": { "type": "boolean", "default": false }
   }
 }

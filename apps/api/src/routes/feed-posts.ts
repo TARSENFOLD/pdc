@@ -9,6 +9,8 @@ import {
 } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
+import { requireApproved } from '../middleware/requireApproved.js';
+import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
@@ -149,6 +151,8 @@ feedPostRoutes.post(
   '/',
   verifyJwt,
   checkRole(['estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin']),
+  requireApproved(),
+  rateLimitContentCreate,
   zValidator('json', CriarPostPayloadSchema),
   async (c) => {
     const user = c.get('user');

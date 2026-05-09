@@ -15,6 +15,7 @@ export const JwtUserPayloadSchema = z.object({
   instituicaoId: z.union([z.string().min(1), z.number().int()]).optional()
     .transform((value) => (value === undefined ? undefined : Number(value)))
     .pipe(z.number().int().positive().optional()),
+  onboardingCompleto: z.boolean().optional(),
 });
 
 export interface AuthVariables {
@@ -23,6 +24,7 @@ export interface AuthVariables {
     role: Role;
     perfilId?: string | undefined;
     instituicaoId?: number | undefined;
+    onboardingCompleto?: boolean | undefined;
   };
 }
 
@@ -32,6 +34,7 @@ export interface OptionalAuthVariables {
     role: Role;
     perfilId?: string | undefined;
     instituicaoId?: number | undefined;
+    onboardingCompleto?: boolean | undefined;
   };
 }
 
@@ -55,9 +58,23 @@ export async function verifyJwt(c: Context<{ Variables: AuthVariables }>, next: 
       role: parsedPayload.role,
       perfilId: parsedPayload.perfilId,
       instituicaoId: parsedPayload.instituicaoId,
+      onboardingCompleto: parsedPayload.onboardingCompleto,
     };
 
     c.set('user', user);
+
+    // Block incomplete OAuth sessions from all routes except auth, finalizar, and media upload
+    if (parsedPayload.onboardingCompleto === false) {
+      const path = c.req.path;
+      const isAllowed =
+        path.startsWith('/auth/') ||
+        path.startsWith('/media/') ||
+        path.includes('/finalizar/');
+      if (!isAllowed) {
+        return c.json({ error: 'Onboarding incompleto' }, 403);
+      }
+    }
+
     await next();
   } catch {
     return c.json({ error: 'Unauthorized' }, 401);

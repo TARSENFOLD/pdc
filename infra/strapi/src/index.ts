@@ -8,6 +8,28 @@ const INITIAL_FLAGS = [
   { domain: 'AUTO_ACHIEVEMENTS', description: 'Desbloquear conquistas automaticamente' },
 ] as const;
 
+const ONBOARDING_VIDEO_ROLES = [
+  'estudante',
+  'mentor',
+  'instituicao',
+  'moderador',
+  'comite_cientifico',
+  'super_admin',
+  'patrocinador',
+] as const;
+
+type OnboardingVideoRole = (typeof ONBOARDING_VIDEO_ROLES)[number];
+
+const ONBOARDING_VIDEO_TITLES: Record<OnboardingVideoRole, { pt: string; en: string }> = {
+  estudante: { pt: 'Bem-vindo, Estudante', en: 'Welcome, Student' },
+  mentor: { pt: 'Bem-vindo, Mentor', en: 'Welcome, Mentor' },
+  instituicao: { pt: 'Bem-vinda, Instituição', en: 'Welcome, Institution' },
+  moderador: { pt: 'Bem-vindo, Moderador', en: 'Welcome, Moderator' },
+  comite_cientifico: { pt: 'Bem-vindo, Comité Científico', en: 'Welcome, Scientific Committee' },
+  super_admin: { pt: 'Bem-vindo, Administrador', en: 'Welcome, Administrator' },
+  patrocinador: { pt: 'Bem-vindo, Patrocinador', en: 'Welcome, Sponsor' },
+};
+
 export default {
   register(/* { strapi }: { strapi: Core.Strapi } */) {},
 
@@ -33,11 +55,52 @@ export default {
       }
     }
 
+    try {
+      await seedOnboardingVideos(strapi);
+    } catch (err) {
+      strapi.log.error('[seed] onboarding-videos failed (non-fatal)', { err });
+    }
+
     if (process.env['NODE_ENV'] === 'test') {
       await seedTestApiToken(strapi);
     }
   },
 };
+
+async function seedOnboardingVideos(strapi: Core.Strapi) {
+  for (const role of ONBOARDING_VIDEO_ROLES) {
+    try {
+      const existing = await strapi.documents('api::onboarding-video.onboarding-video').findMany({
+        filters: { role },
+        limit: 1,
+      });
+
+      if (existing.length > 0) {
+        continue;
+      }
+
+      const titles = ONBOARDING_VIDEO_TITLES[role];
+      // FIXME: substituir 'about:blank' por URL real de R2 quando disponível
+      await strapi.documents('api::onboarding-video.onboarding-video').create({
+        data: {
+          role,
+          videoUrl: 'about:blank',
+          embedType: 'r2',
+          duracaoSegundos: 0,
+          thumbnailUrl: '',
+          tituloPt: titles.pt,
+          tituloEn: titles.en,
+        },
+      });
+      strapi.log.info('[seed] OnboardingVideo created (placeholder)', { role });
+    } catch (err: unknown) {
+      strapi.log.error(
+        '[seed] OnboardingVideo seed failed for role — non-fatal, continuing boot',
+        { role, err: err instanceof Error ? err.message : String(err) },
+      );
+    }
+  }
+}
 
 async function seedTestApiToken(strapi: Core.Strapi) {
   const tokenValue = process.env['STRAPI_API_TOKEN'] ?? 'test-strapi-token';

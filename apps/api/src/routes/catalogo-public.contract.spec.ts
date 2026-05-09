@@ -3,7 +3,6 @@ import { Hono, type Context, type Next } from 'hono';
 import type { StrapiListResponse } from '@pdc/shared';
 import { catalogoRoutes } from './catalogo.js';
 import { strapiGet, strapiGetRaw } from '../modules/strapi/strapi.client.js';
-import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 
 function listResponse<T>(data: Array<T & { id: string | number }>): StrapiListResponse<T> {
   return {
@@ -23,10 +22,6 @@ vi.mock('../modules/auth/auth.middleware.js', () => ({
   },
 }));
 
-vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
-  getEffectiveFlags: vi.fn(),
-}));
-
 vi.mock('../middleware/cache.js', () => ({
   withPublicCache: () => async (_c: Context, next: Next) => {
     await next();
@@ -38,7 +33,6 @@ describe('Catálogo público contracts', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(featureFlagService.getEffectiveFlags).mockResolvedValue({ PROFILE_V2_PUBLIC: true });
   });
 
   it('honra pageSize documentado nos catálogos públicos', async () => {
