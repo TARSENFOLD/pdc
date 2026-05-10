@@ -36,6 +36,10 @@ vi.mock('../modules/moderacao/moderacao.service.js', () => ({
 import { moderacaoRoutes } from './moderacao.js';
 import { moderacaoService } from '../modules/moderacao/moderacao.service.js';
 
+const listarPendentesMock = vi.mocked(moderacaoService)['listarPendentes'];
+const aprovarConteudoMock = vi.mocked(moderacaoService)['aprovarConteudo'];
+const rejeitarConteudoMock = vi.mocked(moderacaoService)['rejeitarConteudo'];
+
 function buildApp() {
   const app = new Hono();
   app.route('/moderacao', moderacaoRoutes);
@@ -55,7 +59,7 @@ describe('moderacao routes', () => {
     });
 
     it('returns paginated list for valid tipo', async () => {
-      vi.mocked(moderacaoService.listarPendentes).mockResolvedValue({
+      listarPendentesMock.mockResolvedValue({
         data: [{ id: '1', titulo: 'Test Curso', autorNome: 'João', submittedAt: new Date().toISOString(), tipo: 'curso' }],
         meta: { page: 1, pageSize: 10, total: 1, pageCount: 1 },
       });
@@ -66,11 +70,11 @@ describe('moderacao routes', () => {
       const body = await res.json() as { data: unknown[]; meta: { total: number } };
       expect(body.data).toHaveLength(1);
       expect(body.meta.total).toBe(1);
-      expect(moderacaoService.listarPendentes).toHaveBeenCalledWith('curso', '1', '10');
+      expect(listarPendentesMock).toHaveBeenCalledWith('curso', '1', '10');
     });
 
     it('accepts all valid tipos including programa, projeto, feed-post', async () => {
-      vi.mocked(moderacaoService.listarPendentes).mockResolvedValue({
+      listarPendentesMock.mockResolvedValue({
         data: [],
         meta: { page: 1, pageSize: 10, total: 0, pageCount: 0 },
       });
@@ -91,7 +95,7 @@ describe('moderacao routes', () => {
     });
 
     it('delegates to moderacaoService.aprovarConteudo and applies auditLog', async () => {
-      vi.mocked(moderacaoService.aprovarConteudo).mockResolvedValue({ eventId: 'evt-1' });
+      aprovarConteudoMock.mockResolvedValue({ eventId: 'evt-1' });
 
       const app = buildApp();
       const res = await app.request('/moderacao/curso/10/aprovar', { method: 'PUT' });
@@ -99,11 +103,11 @@ describe('moderacao routes', () => {
       const body = await res.json() as { success: boolean; eventId: string };
       expect(body.success).toBe(true);
       expect(body.eventId).toBe('evt-1');
-      expect(moderacaoService.aprovarConteudo).toHaveBeenCalledWith('curso', '10', 'mod-123');
+      expect(aprovarConteudoMock).toHaveBeenCalledWith('curso', '10', 'mod-123');
     });
 
     it('returns 404 when service throws 404', async () => {
-      vi.mocked(moderacaoService.aprovarConteudo).mockRejectedValue(
+      aprovarConteudoMock.mockRejectedValue(
         Object.assign(new Error('Conteúdo não encontrado'), { status: 404 }),
       );
 
@@ -113,7 +117,7 @@ describe('moderacao routes', () => {
     });
 
     it('approves programa and feed-post tipos', async () => {
-      vi.mocked(moderacaoService.aprovarConteudo).mockResolvedValue({ eventId: 'evt-2' });
+      aprovarConteudoMock.mockResolvedValue({ eventId: 'evt-2' });
 
       const app = buildApp();
       for (const tipo of ['programa', 'projeto', 'feed-post']) {
@@ -145,7 +149,7 @@ describe('moderacao routes', () => {
     });
 
     it('delegates to moderacaoService.rejeitarConteudo and emits CONTEUDO_REJEITADO', async () => {
-      vi.mocked(moderacaoService.rejeitarConteudo).mockResolvedValue({ eventId: 'evt-reject-1' });
+      rejeitarConteudoMock.mockResolvedValue({ eventId: 'evt-reject-1' });
 
       const motivo = 'Conteúdo não cumpre os requisitos mínimos de qualidade';
       const app = buildApp();
@@ -159,11 +163,11 @@ describe('moderacao routes', () => {
       const body = await res.json() as { success: boolean; eventId: string };
       expect(body.success).toBe(true);
       expect(body.eventId).toBe('evt-reject-1');
-      expect(moderacaoService.rejeitarConteudo).toHaveBeenCalledWith('curso', '7', 'mod-123', motivo);
+      expect(rejeitarConteudoMock).toHaveBeenCalledWith('curso', '7', 'mod-123', motivo);
     });
 
     it('returns 404 when service throws 404', async () => {
-      vi.mocked(moderacaoService.rejeitarConteudo).mockRejectedValue(
+      rejeitarConteudoMock.mockRejectedValue(
         Object.assign(new Error('Conteúdo não encontrado'), { status: 404 }),
       );
 
@@ -179,7 +183,7 @@ describe('moderacao routes', () => {
     it('RBAC: checkRole is applied with moderador/comite_cientifico/super_admin', async () => {
       // The route is set up with verifyJwt + checkRole. This test verifies the
       // route invokes the service (meaning RBAC passed in test context).
-      vi.mocked(moderacaoService.rejeitarConteudo).mockResolvedValue({ eventId: 'evt-3' });
+      rejeitarConteudoMock.mockResolvedValue({ eventId: 'evt-3' });
 
       const app = buildApp();
       const res = await app.request('/moderacao/experiencia/2/rejeitar', {
@@ -188,7 +192,7 @@ describe('moderacao routes', () => {
         headers: { 'Content-Type': 'application/json' },
       });
       expect(res.status).toBe(200);
-      expect(moderacaoService.rejeitarConteudo).toHaveBeenCalledOnce();
+      expect(rejeitarConteudoMock).toHaveBeenCalledOnce();
     });
   });
 });

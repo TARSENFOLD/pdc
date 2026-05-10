@@ -205,7 +205,8 @@ describe('requireApproved — cache invalidation subscriber', () => {
 
     const aprovadoCall = registerMock.mock.calls.find((call) => call[0] === 'perfil.aprovado');
     expect(aprovadoCall).toBeDefined();
-    const handler = aprovadoCall![1] as (event: { payload: Record<string, unknown> }) => Promise<void>;
+    if (!aprovadoCall) throw new Error('aprovadoCall not found');
+    const handler = aprovadoCall[1] as (event: { payload: Record<string, unknown> }) => Promise<void>;
 
     await handler({ payload: { userId: 'user-42' } } as never);
     expect(redisMock.del).toHaveBeenCalledWith('requireApproved:user-42');
@@ -222,7 +223,8 @@ describe('requireApproved — cache invalidation subscriber', () => {
 
     const rejeitadoCall = registerMock.mock.calls.find((call) => call[0] === 'perfil.rejeitado');
     expect(rejeitadoCall).toBeDefined();
-    const handler = rejeitadoCall![1] as (event: { payload: Record<string, unknown> }) => Promise<void>;
+    if (!rejeitadoCall) throw new Error('rejeitadoCall not found');
+    const handler = rejeitadoCall[1] as (event: { payload: Record<string, unknown> }) => Promise<void>;
 
     await handler({ payload: { userId: 'user-99' } } as never);
     expect(redisMock.del).toHaveBeenCalledWith('requireApproved:user-99');

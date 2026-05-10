@@ -20,6 +20,8 @@ import { moderacaoService } from './moderacao.service.js';
 import { strapiGet, strapiPut } from '../strapi/strapi.client.js';
 import { eventBus } from '../events/event-bus.js';
 
+const publishWithOutboxMock = vi.mocked(eventBus)['publishWithOutbox'];
+
 function listResponse(data: Array<{ id: string | number; [k: string]: unknown }>) {
   return {
     data,
@@ -30,7 +32,7 @@ function listResponse(data: Array<{ id: string | number; [k: string]: unknown }>
 describe('moderacaoService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(eventBus.publishWithOutbox).mockResolvedValue({
+    publishWithOutboxMock.mockResolvedValue({
       id: 'evt-uuid',
       name: DomainEventName.MODERADOR_APROVOU,
       payload: {},
@@ -90,7 +92,7 @@ describe('moderacaoService', () => {
         '/cursos/10',
         expect.objectContaining({ estado: 'approved' }),
       );
-      expect(eventBus.publishWithOutbox).toHaveBeenCalledWith(
+      expect(publishWithOutboxMock).toHaveBeenCalledWith(
         DomainEventName.MODERADOR_APROVOU,
         expect.objectContaining({ targetType: 'curso', targetId: '10', moderadorId: 'mod-1' }),
       );
@@ -126,7 +128,7 @@ describe('moderacaoService', () => {
         data: { id: '7' as string | number },
         meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
       });
-      vi.mocked(eventBus.publishWithOutbox).mockResolvedValue({
+      publishWithOutboxMock.mockResolvedValue({
         id: 'evt-reject-uuid',
         name: DomainEventName.CONTEUDO_REJEITADO,
         payload: {},
@@ -144,10 +146,11 @@ describe('moderacaoService', () => {
           rejeitadoPor: 'mod-1',
         }),
       );
-      expect(vi.mocked(strapiPut).mock.calls[0]?.[1]).toMatchObject({
-        rejeitadoEm: expect.any(String),
+      const strapiPutCall: unknown = vi.mocked(strapiPut).mock.calls[0]?.[1];
+      expect(strapiPutCall).toMatchObject({
+        rejeitadoEm: expect.any(String) as string,
       });
-      expect(eventBus.publishWithOutbox).toHaveBeenCalledWith(
+      expect(publishWithOutboxMock).toHaveBeenCalledWith(
         DomainEventName.CONTEUDO_REJEITADO,
         expect.objectContaining({ targetType: 'curso', targetId: '7', rejeitadorId: 'mod-1', motivo }),
       );
@@ -169,6 +172,14 @@ describe('moderacaoService', () => {
     it('throws ZodError for motivo shorter than 10 chars', async () => {
       await expect(
         moderacaoService.rejeitarConteudo('curso', '7', 'mod-1', 'curto'),
+      ).rejects.toThrow();
+      expect(strapiGet).not.toHaveBeenCalled();
+      expect(strapiPut).not.toHaveBeenCalled();
+    });
+
+    it('throws ZodError for motivo longer than 500 chars', async () => {
+      await expect(
+        moderacaoService.rejeitarConteudo('curso', '7', 'mod-1', 'a'.repeat(501)),
       ).rejects.toThrow();
       expect(strapiGet).not.toHaveBeenCalled();
       expect(strapiPut).not.toHaveBeenCalled();

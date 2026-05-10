@@ -24,6 +24,8 @@ import { notifyHook } from './notify.hook.js';
 import { strapiGet, strapiPost } from '../strapi/strapi.client.js';
 import { socketService } from '../realtime/socket.service.js';
 
+const emitirNotificacaoMock = vi.mocked(socketService)['emitirNotificacao'];
+
 function listResponse<T extends { id: string | number }>(data: T[]) {
   return {
     data,
@@ -72,7 +74,7 @@ describe('notifyHook — FOMO triggers', () => {
         lida: false,
       }),
     );
-    expect(vi.mocked(socketService.emitirNotificacao)).toHaveBeenCalledWith(
+    expect(emitirNotificacaoMock).toHaveBeenCalledWith(
       'user-dest',
       expect.objectContaining({ tipo: 'vinculo_pedido', titulo: 'Nova solicitação de conexão' }),
     );
@@ -97,7 +99,7 @@ describe('notifyHook — FOMO triggers', () => {
         lida: false,
       }),
     );
-    expect(vi.mocked(socketService.emitirNotificacao)).toHaveBeenCalledWith(
+    expect(emitirNotificacaoMock).toHaveBeenCalledWith(
       'user-sol',
       expect.objectContaining({ tipo: 'vinculo_aprovado', titulo: 'Conexão aceite!' }),
     );
@@ -122,7 +124,7 @@ describe('notifyHook — FOMO triggers', () => {
         lida: false,
       }),
     );
-    expect(vi.mocked(socketService.emitirNotificacao)).toHaveBeenCalledWith(
+    expect(emitirNotificacaoMock).toHaveBeenCalledWith(
       'user-mentor',
       expect.objectContaining({ tipo: 'info', titulo: 'Pedido de mentoria recebido' }),
     );
@@ -147,7 +149,7 @@ describe('notifyHook — FOMO triggers', () => {
         lida: false,
       }),
     );
-    expect(vi.mocked(socketService.emitirNotificacao)).toHaveBeenCalledWith(
+    expect(emitirNotificacaoMock).toHaveBeenCalledWith(
       'user-autor',
       expect.objectContaining({ tipo: 'sucesso', titulo: 'Talento reconhecido!' }),
     );
@@ -167,7 +169,7 @@ describe('notifyHook — FOMO triggers', () => {
       '/notificacoes',
       expect.objectContaining({ tipo: 'vinculo_pedido' }),
     );
-    expect(vi.mocked(socketService.emitirNotificacao)).not.toHaveBeenCalled();
+    expect(emitirNotificacaoMock).not.toHaveBeenCalled();
   });
 });
 
@@ -198,7 +200,7 @@ describe('notifyHook — approval triggers', () => {
         lida: false,
       }),
     );
-    expect(vi.mocked(socketService.emitirNotificacao)).toHaveBeenCalledWith(
+    expect(emitirNotificacaoMock).toHaveBeenCalledWith(
       'user-mentor',
       expect.objectContaining({ tipo: 'sucesso', titulo: 'Foste aprovado!' }),
     );
@@ -227,12 +229,12 @@ describe('notifyHook — approval triggers', () => {
         lida: false,
       }),
     );
-    expect(vi.mocked(socketService.emitirNotificacao)).toHaveBeenCalledWith(
+    expect(emitirNotificacaoMock).toHaveBeenCalledWith(
       'user-inst',
       expect.objectContaining({
         tipo: 'aviso',
         titulo: 'Perfil não aprovado',
-        mensagem: expect.stringContaining('Documentos inválidos e ilegíveis'),
+        mensagem: expect.stringContaining('Documentos inválidos e ilegíveis') as string,
       }),
     );
   });

@@ -36,16 +36,19 @@ function perfilListResponse(data: Array<{ id: string | number; [k: string]: unkn
   };
 }
 
+const publishWithOutboxMock = vi.mocked(eventBus)['publishWithOutbox'];
+const redisDelMock = vi.mocked(redis)['del'];
+
 describe('aprovacaoService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(eventBus.publishWithOutbox).mockResolvedValue({
+    publishWithOutboxMock.mockResolvedValue({
       id: 'evt-uuid',
       name: DomainEventName.PERFIL_APROVADO,
       payload: {},
       timestamp: new Date().toISOString(),
     });
-    vi.mocked(redis.del).mockResolvedValue(1);
+    redisDelMock.mockResolvedValue(1);
   });
 
   describe('listarPendentes', () => {
@@ -88,8 +91,8 @@ describe('aprovacaoService', () => {
         '/perfis/5',
         expect.objectContaining({ aprovado: true, aprovadoPor: 'admin-1' }),
       );
-      expect(redis.del).toHaveBeenCalledWith('requireApproved:20');
-      expect(eventBus.publishWithOutbox).toHaveBeenCalledWith(
+      expect(redisDelMock).toHaveBeenCalledWith('requireApproved:20');
+      expect(publishWithOutboxMock).toHaveBeenCalledWith(
         DomainEventName.PERFIL_APROVADO,
         expect.objectContaining({ perfilId: '5', aprovadorId: 'admin-1', userId: '20' }),
       );
@@ -112,7 +115,7 @@ describe('aprovacaoService', () => {
         perfilListResponse([{ id: '7', userId: '30', tipo: 'mentor' }]),
       );
       vi.mocked(strapiPut).mockResolvedValue({ data: { id: '7' as string | number }, meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } } });
-      vi.mocked(eventBus.publishWithOutbox).mockResolvedValue({
+      publishWithOutboxMock.mockResolvedValue({
         id: 'evt-reject-uuid',
         name: DomainEventName.PERFIL_REJEITADO,
         payload: {},
@@ -125,8 +128,8 @@ describe('aprovacaoService', () => {
         '/perfis/7',
         expect.objectContaining({ aprovado: false, motivoRejeicao: 'Documentos inválidos e ilegíveis' }),
       );
-      expect(redis.del).toHaveBeenCalledWith('requireApproved:30');
-      expect(eventBus.publishWithOutbox).toHaveBeenCalledWith(
+      expect(redisDelMock).toHaveBeenCalledWith('requireApproved:30');
+      expect(publishWithOutboxMock).toHaveBeenCalledWith(
         DomainEventName.PERFIL_REJEITADO,
         expect.objectContaining({ perfilId: '7', rejeitadorId: 'admin-1', motivo: 'Documentos inválidos e ilegíveis' }),
       );

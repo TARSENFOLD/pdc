@@ -34,8 +34,8 @@ describe('incrementRetry', () => {
 describe('moveToDlq', () => {
   it('faz LPUSH para telemetry_dlq ANTES de LREM da processing queue', async () => {
     const callOrder: string[] = [];
-    vi.mocked(redis.lpush).mockImplementationOnce(async () => { callOrder.push('lpush'); return 1; });
-    vi.mocked(redis.lrem).mockImplementationOnce(async () => { callOrder.push('lrem'); return 1; });
+    vi.mocked(redis.lpush).mockImplementationOnce(() => { callOrder.push('lpush'); return Promise.resolve(1); });
+    vi.mocked(redis.lrem).mockImplementationOnce(() => { callOrder.push('lrem'); return Promise.resolve(1); });
 
     await moveToDlq('raw-event', 'parse error', 0, 'evt-abc');
 

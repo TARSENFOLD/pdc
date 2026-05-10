@@ -63,8 +63,8 @@ export const aprovacaoService = {
     });
 
     return res.data.map((p) => ({
-      id: typeof p.id === 'string' ? parseInt(p.id, 10) : (p.id as number),
-      userId: typeof p.userId === 'string' ? parseInt(p.userId, 10) : ((p.userId ?? 0) as number),
+      id: typeof p.id === 'string' ? parseInt(p.id, 10) : p.id,
+      userId: typeof p.userId === 'string' ? parseInt(p.userId, 10) : (p.userId ?? 0),
       nome: p.nome ?? 'Sem nome',
       tipo: (p.tipo ?? tipo) as 'mentor' | 'instituicao',
       email: p.email ?? '',
@@ -112,7 +112,10 @@ export const aprovacaoService = {
   },
 
   async rejeitarPerfil(perfilId: string, aprovadorUserId: string, motivo: string): Promise<{ eventId: string }> {
-    RejeitarPayloadSchema.parse({ motivo });
+    const validation = RejeitarPayloadSchema.safeParse({ motivo });
+    if (!validation.success) {
+      throw Object.assign(new Error(`Motivo inválido: ${validation.error.issues[0]?.message ?? 'formato incorreto'}`), { status: 400 });
+    }
 
     const res = await strapiGet<StrapiPerfilPendente>('/perfis', {
       'filters[id][$eq]': perfilId,

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
 import { verifyJwt, type AuthVariables } from '../../modules/auth/auth.middleware.js';
 import { checkRole } from '../../modules/auth/rbac.middleware.js';
 import { auditLog } from '../../middleware/audit.js';
@@ -46,7 +47,7 @@ adminAprovacoesRoutes.post(
   '/:perfilId/aprovar',
   auditLog('perfil_aprovar'),
   async (c) => {
-    const perfilId = c.req.param('perfilId') ?? '';
+    const perfilId = c.req.param('perfilId');
     const user = c.get('user');
 
     if (!perfilId) return c.json({ error: 'perfilId obrigatório' }, 400);
@@ -68,21 +69,16 @@ adminAprovacoesRoutes.post(
 adminAprovacoesRoutes.post(
   '/:perfilId/rejeitar',
   auditLog('perfil_rejeitar'),
+  zValidator('json', RejeitarBodySchema),
   async (c) => {
-    const perfilId = c.req.param('perfilId') ?? '';
+    const perfilId = c.req.param('perfilId');
     const user = c.get('user');
+    const { motivo } = c.req.valid('json');
 
     if (!perfilId) return c.json({ error: 'perfilId obrigatório' }, 400);
 
-    let body: { motivo: string };
     try {
-      body = RejeitarBodySchema.parse(await c.req.json());
-    } catch {
-      return c.json({ error: 'motivo é obrigatório (10–500 caracteres)' }, 400);
-    }
-
-    try {
-      const result = await aprovacaoService.rejeitarPerfil(perfilId, user.id, body.motivo);
+      const result = await aprovacaoService.rejeitarPerfil(perfilId, user.id, motivo);
       return c.json({ success: true, perfilId, eventId: result.eventId });
     } catch (err) {
       const status = (err as { status?: number }).status;

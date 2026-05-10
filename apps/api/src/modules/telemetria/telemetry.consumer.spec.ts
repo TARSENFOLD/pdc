@@ -174,7 +174,7 @@ describe('processOneTelemetryEvent', () => {
     expect(status).toBe('error');
     expect(redis.lpush).toHaveBeenCalledWith('telemetry_dlq', expect.any(String));
     expect(Sentry.captureMessage).toHaveBeenCalledWith('telemetry-poison-pill', expect.objectContaining({
-      extra: expect.objectContaining({ eventId: 'evt-123' })
+      extra: expect.objectContaining({ eventId: 'evt-123' }) as Record<string, unknown>,
     }));
   });
 

@@ -45,7 +45,7 @@ moderacaoRoutes.get('/fila', async (c) => {
 
 async function handleAprovar(c: Context<Vars, '/:tipo/:id/aprovar'>) {
   const tipoRaw = c.req.param('tipo');
-  const id = c.req.param('id') ?? '';
+  const id = c.req.param('id');
   const tipoResult = ConteudoTipoSchema.safeParse(tipoRaw);
   if (!tipoResult.success) return c.json({ error: 'Tipo inválido' }, 400);
   const tipo: ConteudoTipo = tipoResult.data;
@@ -63,7 +63,7 @@ async function handleAprovar(c: Context<Vars, '/:tipo/:id/aprovar'>) {
 
 async function handleRejeitar(c: Context<Vars, '/:tipo/:id/rejeitar'>) {
   const tipoRaw = c.req.param('tipo');
-  const id = c.req.param('id') ?? '';
+  const id = c.req.param('id');
   const tipoResult = ConteudoTipoSchema.safeParse(tipoRaw);
   if (!tipoResult.success) return c.json({ error: 'Tipo inválido' }, 400);
   const tipo: ConteudoTipo = tipoResult.data;
@@ -95,7 +95,7 @@ moderacaoRoutes.post('/:tipo/:id/rejeitar', auditLog('conteudo_rejeitar'), handl
 
 // ─── PUT deprecated — grace period 30 dias (ADR-009 update 2026-05-09) ───────
 
-moderacaoRoutes.put('/:tipo/:id/aprovar', auditLog('conteudo_aprovar'), async (c) => {
+moderacaoRoutes.put('/:tipo/:id/aprovar', auditLog('conteudo_aprovar'), async (c: Context<Vars, '/:tipo/:id/aprovar'>) => {
   Sentry.captureMessage('moderacao: PUT /:tipo/:id/aprovar deprecated — use POST', {
     level: 'warning',
     extra: { tipo: c.req.param('tipo'), id: c.req.param('id') },
@@ -103,7 +103,7 @@ moderacaoRoutes.put('/:tipo/:id/aprovar', auditLog('conteudo_aprovar'), async (c
   return handleAprovar(c);
 });
 
-moderacaoRoutes.put('/:tipo/:id/rejeitar', auditLog('conteudo_rejeitar'), async (c) => {
+moderacaoRoutes.put('/:tipo/:id/rejeitar', auditLog('conteudo_rejeitar'), async (c: Context<Vars, '/:tipo/:id/rejeitar'>) => {
   Sentry.captureMessage('moderacao: PUT /:tipo/:id/rejeitar deprecated — use POST', {
     level: 'warning',
     extra: { tipo: c.req.param('tipo'), id: c.req.param('id') },

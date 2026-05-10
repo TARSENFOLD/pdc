@@ -60,20 +60,20 @@ O schema Zod define `id`, `cursoId` e `estudanteId` como `z.string()`, mas o Str
 
 ### DT-03 — `pulseVariacao` sem cálculo real no dashboard do estudante
 
-**Estado:** Mitigado em PROD-D-T01. O BFF devolve `null` até existir cálculo telemetry-driven.
+**Estado:** Mitigado em PROD-D-T01. O BFF devolve `null` — campo presente no schema mas sem cálculo telemetry-driven. Decisão documentada em ADR-033.
 
 **Ficheiros:** `apps/api/src/routes/estudante.ts`, `apps/api/src/routes/dashboard/estudante.ts`
 
-**Problema:** A variação deveria ser calculada a partir de telemetria real (comparação actividade semana actual vs anterior). Sem esse cálculo, mostrar percentagem é mentira UI.
+**Problema:** A variação deveria ser calculada a partir de telemetria real (comparação actividade semana actual vs anterior). A cálculo provisório (`Math.round(lastPattern.scoreGlobal * 10)`) foi removido em favor de `null` explícito porque dependia de `lastPattern` que não é dado de telemetria temporal mas de perfil comportamental — metodologia errada. Ver ADR-033.
 
-**Porquê não foi corrigido por completo:** Corrigir exige pipeline de telemetria funcional + query temporal sobre eventos do utilizador. Isso fica para PROD-E.
+**Porquê não foi corrigido por completo:** Corrigir exige pipeline de telemetria funcional + query temporal sobre eventos do utilizador (contar eventos nos últimos 7 vs 14 dias). Isso fica para PROD-E.
 
-**Risco residual:** Tile/percentagem indisponível até PROD-E. Preferível a mostrar dados falsos.
+**Risco residual:** Tile de variação indisponível até PROD-E. O campo `pulseVariacao: null` é devolvido pelo BFF; a UI não renderiza tile quando `null`. Preferível a mostrar dados falsos.
 
 **Para resolver em PROD-E:**
 1. Implementar query de telemetria: contar eventos por utilizador nos últimos 7 vs 14 dias
 2. Calcular variação percentual real
-3. Substituir o `12` pelo valor calculado
+3. Substituir `null` pelo valor calculado no BFF (`apps/api/src/routes/estudante.ts` e `apps/api/src/routes/dashboard/estudante.ts`)
 
 ---
 

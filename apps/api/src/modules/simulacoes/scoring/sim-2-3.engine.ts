@@ -98,7 +98,7 @@ export function derivePerSession(events: TelemetriaEvento[]): SessionScore {
     const isError =
       e.tipo.includes('erro') ||
       e.tipo.includes('falha') ||
-      (typeof e.payload?.['type'] === 'string' && e.payload['type'] === 'error');
+      (typeof e.payload['type'] === 'string' && e.payload['type'] === 'error');
     return isError ? [...acc, idx] : acc;
   }, []);
 
@@ -119,24 +119,26 @@ export function derivePerSession(events: TelemetriaEvento[]): SessionScore {
   }
 
   // Focus: fraction of session time with active attention
+  const firstEvent = sorted[0];
+  const lastEvent = sorted[sorted.length - 1];
   const totalMs =
-    sorted.length >= 2
-      ? new Date(sorted[sorted.length - 1]!.timestamp).getTime() -
-        new Date(sorted[0]!.timestamp).getTime()
+    sorted.length >= 2 && firstEvent && lastEvent
+      ? new Date(lastEvent.timestamp).getTime() -
+        new Date(firstEvent.timestamp).getTime()
       : 0;
 
   let lostMs = 0;
   const lostEvents = sorted.filter(
     e => e.tipo === 'focus_lost' || e.tipo === 'visibility.lost',
   );
-  const gainedEvents = sorted.filter(
-    e => e.tipo === 'focus_gained' || e.tipo === 'visibility.gained',
-  );
-  for (let i = 0; i < lostEvents.length; i++) {
-    const lost = lostEvents[i];
-    const gained = gainedEvents[i];
-    if (lost && gained) {
-      const dt = new Date(gained.timestamp).getTime() - new Date(lost.timestamp).getTime();
+  for (const lost of lostEvents) {
+    const lostTime = new Date(lost.timestamp).getTime();
+    const nextGained = sorted.find(
+      e => (e.tipo === 'focus_gained' || e.tipo === 'visibility.gained') &&
+           new Date(e.timestamp).getTime() > lostTime,
+    );
+    if (nextGained) {
+      const dt = new Date(nextGained.timestamp).getTime() - lostTime;
       if (dt > 0) lostMs += dt;
     }
   }
@@ -212,7 +214,7 @@ export async function finalizeSession(tentativaId: string, sessionId: string): P
 
 export async function handleLabEvent(event: TelemetriaEvento): Promise<void> {
   const tentativaId =
-    typeof event.payload?.['tentativaId'] === 'string' ? event.payload['tentativaId'] : undefined;
+    typeof event.payload['tentativaId'] === 'string' ? event.payload['tentativaId'] : undefined;
   const sessionId = event.sessionId;
 
   if (!tentativaId || !sessionId) {

@@ -57,6 +57,8 @@ vi.mock('pino', () => ({
 import { oauthRoutes } from './auth.oauth.js';
 import { oauthOnboardingService } from '../modules/auth/oauth-onboarding.service.js';
 
+const verificarOtpMock = vi.mocked(oauthOnboardingService)['verificarOtp'];
+
 const TEST_SECRET = new TextEncoder().encode('test-secret-at-least-32-chars-long!!');
 
 async function makeTestToken(payload: Record<string, unknown>) {
@@ -159,7 +161,7 @@ describe('Google OAuth happy path — onboarded user', () => {
     const res = await oauthRoutes.request('/google/callback?code=auth-code&state=valid-state');
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toMatchObject({ error: expect.stringContaining('Email') });
+    expect(await res.json()).toMatchObject({ error: expect.stringContaining('Email') as string });
     expect(authServiceMock.findOrCreateUser).not.toHaveBeenCalled();
 
     vi.unstubAllGlobals();
@@ -286,7 +288,7 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
     const res = await oauthRoutes.request('/linkedin/callback?code=auth-code&state=valid-state');
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toMatchObject({ error: expect.stringContaining('Email') });
+    expect(await res.json()).toMatchObject({ error: expect.stringContaining('Email') as string });
 
     vi.unstubAllGlobals();
   });
@@ -295,7 +297,7 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
 describe('POST /finalizar/verificar-otp — role upgrade after OTP', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(oauthOnboardingService.verificarOtp).mockResolvedValue(undefined);
+    verificarOtpMock.mockResolvedValue(undefined);
     authServiceMock.saveRefreshToken.mockResolvedValue(undefined);
   });
 
@@ -325,7 +327,7 @@ describe('POST /finalizar/verificar-otp — role upgrade after OTP', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(oauthOnboardingService.verificarOtp).toHaveBeenCalledWith('user-42', '123456');
+    expect(verificarOtpMock).toHaveBeenCalledWith('user-42', '123456');
     expect(authServiceMock.getUserById).toHaveBeenCalledWith('user-42');
     expect(authServiceMock.generateTokens).toHaveBeenCalledWith(mentorUser);
     expect(authServiceMock.saveRefreshToken).toHaveBeenCalledWith('user-42', MOCK_TOKENS_FRESH.refreshToken);
@@ -381,7 +383,7 @@ describe('POST /finalizar/verificar-otp — role upgrade after OTP', () => {
       role: 'estudante',
       onboardingCompleto: false,
     });
-    vi.mocked(oauthOnboardingService.verificarOtp).mockRejectedValue(
+    verificarOtpMock.mockRejectedValue(
       Object.assign(new Error('Código inválido ou expirado'), { status: 400 })
     );
 

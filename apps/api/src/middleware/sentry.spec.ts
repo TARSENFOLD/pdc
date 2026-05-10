@@ -85,7 +85,7 @@ describe('app.onError Sentry integration', () => {
     const body = await response.json() as { error: string };
     expect(body.error).toBe('Internal Server Error');
     expect(captureExceptionMock).toHaveBeenCalledOnce();
-    const capturedErr = captureExceptionMock.mock.calls[0]?.[0];
+    const capturedErr: unknown = captureExceptionMock.mock.calls[0]?.[0];
     expect(capturedErr).toBeInstanceOf(Error);
     expect((capturedErr as Error).message).toBe('Unhandled boom');
   });

@@ -28,6 +28,8 @@ vi.mock('../../events/event-bus.js', () => ({
 import { redis } from '../../../lib/redis.js';
 import { strapiPut } from '../../strapi/strapi.client.js';
 import { eventBus } from '../../events/event-bus.js';
+
+const publishWithOutboxMock = vi.mocked(eventBus)['publishWithOutbox'];
 import {
   aggregateLabEvent,
   derivePerSession,
@@ -70,8 +72,8 @@ describe('aggregateLabEvent', () => {
     expect(redis.get).toHaveBeenCalledWith('sim:session:tent-001:session-001');
     expect(redis.set).toHaveBeenCalledWith(
       'sim:session:tent-001:session-001',
-      expect.objectContaining({ events: expect.any(Array) }),
-      expect.objectContaining({ ex: expect.any(Number) }),
+      expect.objectContaining({ events: expect.any(Array) as unknown[] }),
+      expect.objectContaining({ ex: expect.any(Number) as number }),
     );
   });
 
@@ -151,7 +153,7 @@ describe('finalizeSession', () => {
     vi.mocked(redis.set).mockResolvedValue('OK');
     vi.mocked(redis.get).mockResolvedValue(null);
     vi.mocked(strapiPut).mockResolvedValue({ data: { id: 1 }, meta: {} });
-    vi.mocked(eventBus.publishWithOutbox).mockResolvedValue({} as ReturnType<typeof eventBus.publishWithOutbox> extends Promise<infer T> ? T : never);
+    publishWithOutboxMock.mockResolvedValue({} as ReturnType<typeof eventBus.publishWithOutbox> extends Promise<infer T> ? T : never);
   });
 
   it('chama strapiPut com score derivado após finalização', async () => {
@@ -172,9 +174,9 @@ describe('finalizeSession', () => {
     expect(strapiPut).toHaveBeenCalledWith(
       '/tentativas/tent-001',
       expect.objectContaining({
-        score: expect.any(Number),
+        score: expect.any(Number) as number,
         status: 'concluida',
-        dataFim: expect.any(String),
+        dataFim: expect.any(String) as string,
       }),
     );
   });
@@ -184,10 +186,11 @@ describe('finalizeSession', () => {
     vi.mocked(redis.get).mockResolvedValue({ events, perfilId: 'perfil-001' } as SessionState);
 
     await finalizeSession('tent-001', 'session-001');
-    // Allow microtask queue to flush fire-and-forget promise
-    await new Promise(r => setTimeout(r, 10));
+    await vi.waitFor(() => {
+      expect(publishWithOutboxMock).toHaveBeenCalled();
+    });
 
-    expect(eventBus.publishWithOutbox).toHaveBeenCalledWith(
+    expect(publishWithOutboxMock).toHaveBeenCalledWith(
       'tentativa.concluida',
       expect.objectContaining({ tentativaId: 'tent-001', area: 'simulacao' }),
     );
@@ -200,7 +203,7 @@ describe('finalizeSession', () => {
     await finalizeSession('tent-001', 'session-001');
 
     expect(strapiPut).not.toHaveBeenCalled();
-    expect(eventBus.publishWithOutbox).not.toHaveBeenCalled();
+    expect(publishWithOutboxMock).not.toHaveBeenCalled();
   });
 
   it('timeout automático: finalizeSession sem session.ended prévio (chamada directa por worker)', async () => {
@@ -223,7 +226,7 @@ describe('handleLabEvent', () => {
     vi.mocked(redis.get).mockResolvedValue(null);
     vi.mocked(redis.set).mockResolvedValue('OK');
     vi.mocked(strapiPut).mockResolvedValue({ data: { id: 1 }, meta: {} });
-    vi.mocked(eventBus.publishWithOutbox).mockResolvedValue({} as ReturnType<typeof eventBus.publishWithOutbox> extends Promise<infer T> ? T : never);
+    publishWithOutboxMock.mockResolvedValue({} as ReturnType<typeof eventBus.publishWithOutbox> extends Promise<infer T> ? T : never);
   });
 
   it('ignora evento sem tentativaId no payload', async () => {

@@ -156,27 +156,31 @@ async function computeHomeSummary(userId: string, role: string): Promise<HomeSum
 
   const perfil = perfilRes.data[0];
 
-  const recentActivitiesCursos: InscricaoActivity[] = inscricoesRes.data
-    .filter((i) => i.curso != null)
-    .map((i) => ({
+  const recentActivitiesCursos: InscricaoActivity[] = inscricoesRes.data.flatMap((i) => {
+    if (i.curso == null) return [];
+    const curso = i.curso;
+    return [{
       inscricaoId: String(i.id),
-      cursoId: String(i.curso!.id),
-      cursoTitulo: i.curso!.titulo ?? 'Curso sem título',
-      cursoCapaUrl: i.curso!.capaUrl ?? null,
+      cursoId: String(curso.id),
+      cursoTitulo: curso.titulo ?? 'Curso sem título',
+      cursoCapaUrl: curso.capaUrl ?? null,
       progressoPercentual: i.progressoPercentual ?? 0,
       ultimaAtividadeEm: i.ultimaAtividadeEm ?? i.createdAt ?? new Date().toISOString(),
-    }));
+    }];
+  });
 
-  const recentActivitiesSimulacoes: TentativaActivity[] = tentativasRes.data
-    .filter((t) => t.simulacao != null)
-    .map((t) => ({
+  const recentActivitiesSimulacoes: TentativaActivity[] = tentativasRes.data.flatMap((t) => {
+    if (t.simulacao == null) return [];
+    const simulacao = t.simulacao;
+    return [{
       tentativaId: String(t.id),
-      simulacaoId: String(t.simulacao!.id),
-      simulacaoTitulo: t.simulacao!.titulo ?? 'Simulação sem título',
+      simulacaoId: String(simulacao.id),
+      simulacaoTitulo: simulacao.titulo ?? 'Simulação sem título',
       status: t.status ?? 'em_progresso',
       score: t.score ?? 0,
       dataInicio: t.dataInicio ?? t.createdAt ?? new Date().toISOString(),
-    }));
+    }];
+  });
 
   const rawVideo = videosRes.data[0];
   const onboardingVideo: OnboardingVideo | null = rawVideo
