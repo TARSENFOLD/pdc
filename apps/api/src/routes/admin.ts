@@ -5,6 +5,7 @@ import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.j
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPutRaw } from '../modules/strapi/strapi.client.js';
 import { RoleSchema } from '@pdc/shared';
+import { toPaginatedResponse } from './pagination.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -32,7 +33,8 @@ adminRoutes.get(
     if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
     if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
     try {
-      return c.json(await strapiGet<unknown>('/users', params));
+      const res = await strapiGet<unknown>('/users', params);
+      return c.json(toPaginatedResponse(res));
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
@@ -123,7 +125,8 @@ adminRoutes.get(
     if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
     if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
     try {
-      return c.json(await strapiGet<unknown>('/audit-logs', params));
+      const res = await strapiGet<unknown>('/audit-logs', params);
+      return c.json(toPaginatedResponse(res));
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }

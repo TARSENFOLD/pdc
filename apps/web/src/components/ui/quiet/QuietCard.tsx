@@ -26,7 +26,7 @@ export function QuietCard({
   return (
     <div
       data-testid={testId}
-      className={cn('rounded-lg border', PADDINGS[padding], TONES[tone], className)}
+      className={cn('rounded-sm border', PADDINGS[padding], TONES[tone], className)}
     >
       {children}
     </div>

@@ -16,6 +16,11 @@
     "proposito": { "type": "text", "description": "Propósito pedagógico e valor diferenciador do programa" },
     "metodologia": { "type": "text", "description": "Descrição da metodologia de ensino/learning" },
     "recursos": { "type": "json", "description": "Recursos didáticos, materiais e infraestrutura" },
+    "capa": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"]
+    },
     "responsavel": {
       "type": "relation",
       "relation": "manyToOne",

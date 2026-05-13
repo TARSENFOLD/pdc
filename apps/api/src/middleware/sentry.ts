@@ -23,9 +23,11 @@ export async function sentryUserContext(c: Context, next: Next) {
   if (user?.id) {
     Sentry.setUser({ id: user.id });
   }
-  Sentry.setTag('environment', env.NODE_ENV);
-  await next();
-  if (user?.id) {
-    Sentry.setUser(null);
+  try {
+    await next();
+  } finally {
+    if (user?.id) {
+      Sentry.setUser(null);
+    }
   }
 }

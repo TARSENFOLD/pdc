@@ -33,7 +33,7 @@
     },
     "motivoModeracao": {
       "type": "text",
-      "description": "Motivo da rejeição ou ocultação do post"
+      "description": "DEPRECATED: campo legado. Mapear valores existentes para motivoRejeicao ou motivoOcultacao conforme o estado do post."
     },
     "eventId": {
       "type": "string",
@@ -42,7 +42,13 @@
     },
     "motivoRejeicao": {
       "type": "string",
-      "maxLength": 500
+      "maxLength": 500,
+      "description": "Motivo usado quando o post é rejeitado."
+    },
+    "motivoOcultacao": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Motivo usado quando o post é ocultado."
     },
     "rejeitadoEm": {
       "type": "datetime"

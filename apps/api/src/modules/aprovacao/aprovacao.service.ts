@@ -26,7 +26,7 @@ const CACHE_KEY_PREFIX = 'requireApproved:';
 interface StrapiPerfilPendente {
   id: string | number;
   documentId?: string;
-  userId?: string | number;
+  userId?: string | number | null;
   nome?: string;
   tipo?: string;
   email?: string;
@@ -43,6 +43,13 @@ const RejeitarPayloadSchema = z.object({
 });
 
 export type RejeitarPayload = z.infer<typeof RejeitarPayloadSchema>;
+
+function requirePerfilUserId(perfil: StrapiPerfilPendente): string {
+  if (perfil.userId === undefined || perfil.userId === null || String(perfil.userId).trim() === '') {
+    throw Object.assign(new Error('Perfil sem userId associado'), { status: 500 });
+  }
+  return String(perfil.userId);
+}
 
 async function invalidateApprovalCache(userId: string): Promise<void> {
   try {
@@ -62,19 +69,27 @@ export const aprovacaoService = {
       'populate': 'documentos',
     });
 
-    return res.data.map((p) => ({
-      id: typeof p.id === 'string' ? parseInt(p.id, 10) : p.id,
-      userId: typeof p.userId === 'string' ? parseInt(p.userId, 10) : (p.userId ?? 0),
-      nome: p.nome ?? 'Sem nome',
-      tipo: (p.tipo ?? tipo) as 'mentor' | 'instituicao',
-      email: p.email ?? '',
-      createdAt: p.createdAt ?? new Date().toISOString(),
-      documentos: p.documentos ?? [],
-      areaFormacao: p.areaFormacao,
-      regiao: p.regiao,
-      tipoInstituicao: p.tipoInstituicao,
-      natureza: p.natureza,
-    }));
+    return res.data.map((p) => {
+      for (const field of ['userId', 'nome', 'createdAt'] as const) {
+        if (p[field] === undefined) {
+          log.warn({ perfilId: p.id, missingField: field }, '[aprovacao] perfil pendente com campo obrigatório ausente');
+        }
+      }
+
+      return {
+        id: typeof p.id === 'string' ? parseInt(p.id, 10) : p.id,
+        userId: typeof p.userId === 'string' ? parseInt(p.userId, 10) : (p.userId ?? 0),
+        nome: p.nome ?? 'Sem nome',
+        tipo: (p.tipo ?? tipo) as 'mentor' | 'instituicao',
+        email: p.email ?? '',
+        createdAt: p.createdAt ?? new Date().toISOString(),
+        documentos: p.documentos ?? [],
+        areaFormacao: p.areaFormacao,
+        regiao: p.regiao,
+        tipoInstituicao: p.tipoInstituicao,
+        natureza: p.natureza,
+      };
+    });
   },
 
   async aprovarPerfil(perfilId: string, aprovadorUserId: string): Promise<{ eventId: string }> {
@@ -91,13 +106,14 @@ export const aprovacaoService = {
       throw Object.assign(new Error('Perfil não encontrado'), { status: 404 });
     }
 
+    const userId = requirePerfilUserId(perfil);
+
     await strapiPut<unknown>(`/perfis/${perfilId}`, {
       aprovado: true,
       aprovadoEm: new Date().toISOString(),
       aprovadoPor: aprovadorUserId,
     });
 
-    const userId = String(perfil.userId ?? perfilId);
     await invalidateApprovalCache(userId);
 
     const event = await eventBus.publishWithOutbox(DomainEventName.PERFIL_APROVADO, {
@@ -130,12 +146,13 @@ export const aprovacaoService = {
       throw Object.assign(new Error('Perfil não encontrado'), { status: 404 });
     }
 
+    const userId = requirePerfilUserId(perfil);
+
     await strapiPut<unknown>(`/perfis/${perfilId}`, {
       aprovado: false,
       motivoRejeicao: motivo,
     });
 
-    const userId = String(perfil.userId ?? perfilId);
     await invalidateApprovalCache(userId);
 
     const event = await eventBus.publishWithOutbox(DomainEventName.PERFIL_REJEITADO, {

@@ -55,7 +55,16 @@ describe('aprovacaoService', () => {
     it('returns pending mentor profiles from Strapi', async () => {
       vi.mocked(strapiGet).mockResolvedValue(
         perfilListResponse([
-          { id: '1', userId: '10', nome: 'João Silva', tipo: 'mentor', email: 'joao@test.com', createdAt: new Date().toISOString(), documentos: [{ tipo: 'CV', url: 'https://r2.example.com/cv.pdf' }], areaFormacao: 'Engenharia' },
+          {
+            id: '1',
+            userId: '10',
+            nome: 'João Silva',
+            tipo: 'mentor',
+            email: 'joao@test.com',
+            createdAt: new Date().toISOString(),
+            documentos: [{ tipo: 'CV', url: 'https://r2.example.com/cv.pdf' }],
+            areaFormacao: 'Engenharia',
+          },
         ]),
       );
 
@@ -107,6 +116,20 @@ describe('aprovacaoService', () => {
       });
       expect(strapiPut).not.toHaveBeenCalled();
     });
+
+    it('throws 500 when perfil has no userId', async () => {
+      vi.mocked(strapiGet).mockResolvedValue(
+        perfilListResponse([{ id: '5', tipo: 'mentor' }]),
+      );
+
+      await expect(aprovacaoService.aprovarPerfil('5', 'admin-1')).rejects.toMatchObject({
+        status: 500,
+        message: 'Perfil sem userId associado',
+      });
+      expect(strapiPut).not.toHaveBeenCalled();
+      expect(redisDelMock).not.toHaveBeenCalled();
+      expect(publishWithOutboxMock).not.toHaveBeenCalled();
+    });
   });
 
   describe('rejeitarPerfil', () => {
@@ -147,6 +170,22 @@ describe('aprovacaoService', () => {
       await expect(
         aprovacaoService.rejeitarPerfil('999', 'admin-1', 'Documentos em falta e ilegíveis'),
       ).rejects.toMatchObject({ status: 404 });
+    });
+
+    it('throws 500 when rejected perfil has no userId', async () => {
+      vi.mocked(strapiGet).mockResolvedValue(
+        perfilListResponse([{ id: '7', tipo: 'mentor' }]),
+      );
+
+      await expect(
+        aprovacaoService.rejeitarPerfil('7', 'admin-1', 'Documentos em falta e ilegíveis'),
+      ).rejects.toMatchObject({
+        status: 500,
+        message: 'Perfil sem userId associado',
+      });
+      expect(strapiPut).not.toHaveBeenCalled();
+      expect(redisDelMock).not.toHaveBeenCalled();
+      expect(publishWithOutboxMock).not.toHaveBeenCalled();
     });
   });
 });

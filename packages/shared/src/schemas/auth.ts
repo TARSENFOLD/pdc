@@ -33,7 +33,7 @@ export type AprovacaoAction = z.infer<typeof AprovacaoActionSchema>;
 // Strict role-specific OAuth onboarding document schema
 export const OAuthFinalizarDocumentoSchema = z.object({
   tipo: z.string().min(1),
-  url: z.string().min(1),
+  url: z.string().url(),
 });
 
 export type OAuthFinalizarDocumento = z.infer<typeof OAuthFinalizarDocumentoSchema>;
@@ -65,7 +65,7 @@ export const OAuthFinalizarRoleChoiceSchema = z.discriminatedUnion('role', [
 export type OAuthFinalizarRoleChoice = z.infer<typeof OAuthFinalizarRoleChoiceSchema>;
 
 export const OAuthFinalizarOtpSchema = z.object({
-  otp: z.string().length(6).regex(/^\d{6}$/),
+  otp: z.string().regex(/^\d{6}$/, 'OTP must be exactly 6 digits'),
 });
 
 export type OAuthFinalizarOtp = z.infer<typeof OAuthFinalizarOtpSchema>;

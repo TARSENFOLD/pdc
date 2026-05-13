@@ -11,6 +11,8 @@ import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { canPublishSimTipo, DISABLED_SIM_TIPO_RESPONSE } from '../modules/simulacoes/publish-gates.js';
 import { simulacaoTentativasRoutes } from './simulacoes-tentativas.js';
+import { applyPublicCatalogStateFilter, isPublicCatalogEstado } from './publication-state.js';
+import { toPaginatedResponse } from './pagination.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -44,12 +46,11 @@ simulacaoRoutes.get('/', zValidator('query', simQuerySchema), async (c) => {
   if (q.search !== undefined) params['filters[titulo][$containsi]'] = q.search;
   if (q.tipo !== undefined) params['filters[tipo][$eq]'] = q.tipo.toString();
   
-  // Apenas simulações publicadas
-  params['filters[estado][$eq]'] = 'published';
+  applyPublicCatalogStateFilter(params);
 
   try {
     const res = await strapiGet<StrapiSimulacao>('/simulacoes', params);
-    return c.json(res);
+    return c.json(toPaginatedResponse(res));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -64,7 +65,7 @@ simulacaoRoutes.get('/minhas', checkRole(['mentor', 'instituicao', 'super_admin'
       'filters[autorId][$eq]': id,
       populate: 'capa',
     });
-    return c.json(res);
+    return c.json(toPaginatedResponse(res));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -97,7 +98,7 @@ simulacaoRoutes.get('/:id', async (c) => {
     
     // Verificação de acesso
     const user = c.get('user');
-    if (data.estado !== 'published' && data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
+    if (!isPublicCatalogEstado(data.estado) && data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
       return c.json({ error: 'Acesso negado' }, 403);
     }
 

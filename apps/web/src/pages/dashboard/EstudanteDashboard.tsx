@@ -1,4 +1,4 @@
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { useQuery } from '@tanstack/react-query';
 import { Spinner, Button, GlassCard } from '@/components/ui';
 import { QuietHero, QuietStat, QuietCard, QuietEmpty, QuietSection } from '@/components/ui/quiet';

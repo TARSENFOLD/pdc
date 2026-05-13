@@ -843,7 +843,10 @@ export interface ApiCursoCurso extends Struct.CollectionTypeSchema {
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::curso.curso'> &
       Schema.Attribute.Private;
     moeda: Schema.Attribute.String & Schema.Attribute.DefaultTo<'USD'>;
-    motivoRejeicao: Schema.Attribute.Text;
+    motivoRejeicao: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 500;
+      }>;
     nivel: Schema.Attribute.Enumeration<['basico', 'medio', 'avancado']>;
     nome: Schema.Attribute.String;
     objetivos: Schema.Attribute.Text;
@@ -1025,6 +1028,7 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
     dataFim: Schema.Attribute.DateTime;
     dataInicio: Schema.Attribute.DateTime;
     descricao: Schema.Attribute.Text;
+    duracaoEstimada: Schema.Attribute.Integer;
     estado: Schema.Attribute.Enumeration<
       ['draft', 'review', 'approved', 'published', 'archived']
     > &
@@ -1056,7 +1060,10 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
     painelRealidade: Schema.Attribute.JSON;
     publishedAt: Schema.Attribute.DateTime;
     rejeitadoEm: Schema.Attribute.DateTime;
-    rejeitadoPor: Schema.Attribute.String;
+    rejeitadoPor: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 500;
+      }>;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
     telemetriaConfig: Schema.Attribute.JSON;
@@ -1191,6 +1198,10 @@ export interface ApiFeedPostFeedPost extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     mediaUrls: Schema.Attribute.JSON;
     motivoModeracao: Schema.Attribute.Text;
+    motivoOcultacao: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 500;
+      }>;
     motivoRejeicao: Schema.Attribute.String &
       Schema.Attribute.SetMinMaxLength<{
         maxLength: 500;
@@ -1766,10 +1777,29 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    activePrograms: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
+    activeStudents: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
     anoAcademico: Schema.Attribute.String;
     aprovado: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     aprovadoEm: Schema.Attribute.DateTime;
-    aprovadoPor: Schema.Attribute.String;
+    aprovadoPor: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 255;
+      }>;
     areaFormacao: Schema.Attribute.String;
     areasInteresse: Schema.Attribute.JSON;
     ativo: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
@@ -1790,6 +1820,14 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
       'manyToMany',
       'api::conquista.conquista'
     >;
+    conquistasCount: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1835,7 +1873,7 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     nivelEnsino: Schema.Attribute.String;
     nome: Schema.Attribute.String & Schema.Attribute.Required;
     notificationPreferences: Schema.Attribute.JSON;
-    oauthProvider: Schema.Attribute.String;
+    oauthProvider: Schema.Attribute.Enumeration<['google', 'linkedin']>;
     oauthVerified: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     onboardingCompleto: Schema.Attribute.Boolean &
       Schema.Attribute.DefaultTo<true>;
@@ -1871,8 +1909,24 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     userId: Schema.Attribute.String;
+    vinkulosCount: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
     visibilitySettings: Schema.Attribute.JSON;
     website: Schema.Attribute.String;
+    xp: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<0>;
   };
 }
 
@@ -1948,6 +2002,7 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
         'OUTRO',
       ]
     >;
+    capa: Schema.Attribute.Media<'images'>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -2026,15 +2081,22 @@ export interface ApiProjetoProjeto extends Struct.CollectionTypeSchema {
     acessoCoreACL: Schema.Attribute.JSON;
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
+        'AGRONOMIA',
         'OUTRO',
       ]
     >;
@@ -2047,9 +2109,10 @@ export interface ApiProjetoProjeto extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     criadoEm: Schema.Attribute.DateTime;
+    demoUrl: Schema.Attribute.String;
     descricao: Schema.Attribute.Text;
     estado: Schema.Attribute.Enumeration<
-      ['draft', 'review', 'approved', 'published', 'archived']
+      ['draft', 'review', 'approved', 'published', 'archived', 'hidden']
     > &
       Schema.Attribute.DefaultTo<'draft'>;
     historicoEstados: Schema.Attribute.JSON;
@@ -2060,6 +2123,7 @@ export interface ApiProjetoProjeto extends Struct.CollectionTypeSchema {
       'api::projeto.projeto'
     > &
       Schema.Attribute.Private;
+    media: Schema.Attribute.Media<'images' | 'files' | 'videos', true>;
     mediaUrls: Schema.Attribute.JSON;
     modos: Schema.Attribute.JSON;
     motivoRejeicao: Schema.Attribute.String &
@@ -2068,8 +2132,15 @@ export interface ApiProjetoProjeto extends Struct.CollectionTypeSchema {
       }>;
     publishedAt: Schema.Attribute.DateTime;
     rejeitadoEm: Schema.Attribute.DateTime;
-    rejeitadoPor: Schema.Attribute.String;
+    rejeitadoPor: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 500;
+      }>;
     repositorioUrl: Schema.Attribute.String;
+    repoUrl: Schema.Attribute.String;
+    selo: Schema.Attribute.Enumeration<
+      ['publicado', 'validado_mentor', 'validado_instituicao', 'excelencia']
+    >;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
     titulo: Schema.Attribute.String & Schema.Attribute.Required;
@@ -2317,12 +2388,18 @@ export interface ApiSimulacaoSimulacao extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     materiaisInfo: Schema.Attribute.JSON;
     materiaisLab: Schema.Attribute.JSON;
-    motivoRejeicao: Schema.Attribute.Text;
+    motivoRejeicao: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 500;
+      }>;
     nivel: Schema.Attribute.Enumeration<['basico', 'medio', 'avancado']>;
     nome: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
     rejeitadoEm: Schema.Attribute.DateTime;
-    rejeitadoPor: Schema.Attribute.String;
+    rejeitadoPor: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 255;
+      }>;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
     tentativasMaximas: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;

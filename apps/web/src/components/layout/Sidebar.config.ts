@@ -6,7 +6,7 @@ import {
   Shield, CheckCircle,
   Settings, BookOpenText, PenSquare,
   MapPin, Star, Microscope, ScrollText,
-  Brain, Zap, Building2, BarChart3,
+  Brain, Zap, Building2, BarChart3, Rocket,
   type LucideProps,
 } from 'lucide-react';
 
@@ -58,8 +58,9 @@ export const SIDEBAR_CONFIG: SidebarItem[] = [
     ],
   },
   {
-    type: 'group', slug: 'explorar', icon: Building2, roles: ['estudante'], domain: 'HUB_EXPLORE',
+    type: 'group', slug: 'explorar', icon: Building2, roles: ALL_ROLES, domain: 'HUB_EXPLORE',
     children: [
+      { type: 'leaf', slug: 'projetos', to: '/app/projetos', icon: Rocket, roles: ALL_ROLES },
       { type: 'leaf', slug: 'experiencias', to: '/app/experiencias', icon: MapPin, roles: ['estudante'] },
       { type: 'leaf', slug: 'programas', to: '/app/programas', icon: GraduationCap, roles: ['estudante'] },
       { type: 'leaf', slug: 'catalogo', to: '/app/explorar', icon: ScrollText, roles: ['estudante'] },

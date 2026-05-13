@@ -85,10 +85,21 @@ app.use('*', noStoreCache);
 app.use('*', sentryUserContext);
 app.use('/auth/*', security);
 
+function resolveHttpErrorStatus(err: Error): 400 | 401 | 403 | 404 | 409 | 422 | 429 | 500 {
+  const candidate = err as Error & { status?: unknown; statusCode?: unknown };
+  const status = typeof candidate.status === 'number' ? candidate.status : candidate.statusCode;
+  if (typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599) {
+    return status as 400 | 401 | 403 | 404 | 409 | 422 | 429 | 500;
+  }
+  return 500;
+}
+
 app.onError((err, c) => {
   captureException(err);
-  log.error({ err, path: c.req.path }, 'Unhandled error');
-  return c.json({ error: 'Internal Server Error' }, 500);
+  const status = resolveHttpErrorStatus(err);
+  log.error({ err, path: c.req.path, status }, 'Unhandled error');
+  const message = status === 500 ? 'Internal Server Error' : err.message || 'Erro na requisição';
+  return c.json({ error: message }, status);
 });
 
 // ─── ROTAS ───

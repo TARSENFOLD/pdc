@@ -47,6 +47,28 @@ describe('Catálogo público contracts', () => {
     }));
   });
 
+  it('lista conteúdos approved e published, alinhado ao pipeline canónico de moderação', async () => {
+    vi.mocked(strapiGet).mockResolvedValue(listResponse([
+      {
+        id: 'curso-approved',
+        slug: 'curso-approved',
+        titulo: 'Curso aprovado',
+        descricao: 'Disponível após aprovação',
+        estado: 'approved',
+      },
+    ]));
+
+    const res = await app.request('/catalogo/cursos?page=1&pageSize=12');
+
+    expect(res.status).toBe(200);
+    expect(strapiGet).toHaveBeenCalledWith('/cursos', expect.objectContaining({
+      'filters[estado][$in]': ['approved', 'published'],
+    }));
+    await expect(res.json()).resolves.toMatchObject({
+      data: [{ id: 'curso-approved', titulo: 'Curso aprovado' }],
+    });
+  });
+
   it('devolve 502 sem mascarar falha de persistência do catálogo', async () => {
     vi.mocked(strapiGet).mockRejectedValue(new Error('Strapi indisponível'));
 

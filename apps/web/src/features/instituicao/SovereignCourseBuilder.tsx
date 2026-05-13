@@ -13,7 +13,7 @@ import { CourseCurriculum } from './components/CourseCurriculum';
 import { BuilderShell, BuilderSection, BuilderActionsBar } from '@/components/builders';
 import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 
 type FormValues = z.infer<typeof CriarCursoPayloadSchema>;
 

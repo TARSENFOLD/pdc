@@ -12,11 +12,15 @@ vi.mock('../../../lib/redis.js', () => ({
   redis: {
     get: vi.fn(),
     set: vi.fn(),
+    del: vi.fn(),
+    incr: vi.fn(),
+    expire: vi.fn(),
   },
 }));
 
 vi.mock('../../strapi/strapi.client.js', () => ({
   strapiPut: vi.fn(),
+  strapiGet: vi.fn(),
 }));
 
 vi.mock('../../events/event-bus.js', () => ({
@@ -26,7 +30,7 @@ vi.mock('../../events/event-bus.js', () => ({
 }));
 
 import { redis } from '../../../lib/redis.js';
-import { strapiPut } from '../../strapi/strapi.client.js';
+import { strapiGet, strapiPut } from '../../strapi/strapi.client.js';
 import { eventBus } from '../../events/event-bus.js';
 
 const publishWithOutboxMock = vi.mocked(eventBus)['publishWithOutbox'];
@@ -57,6 +61,11 @@ interface SessionState {
   events: TelemetriaEvento[];
   perfilId?: string;
 }
+
+const areaResponse = {
+  data: [{ simulacao: { area: 'simulacao' } }],
+  meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
+} as unknown as Awaited<ReturnType<typeof strapiGet>>;
 
 describe('aggregateLabEvent', () => {
   beforeEach(() => {
@@ -153,6 +162,7 @@ describe('finalizeSession', () => {
     vi.mocked(redis.set).mockResolvedValue('OK');
     vi.mocked(redis.get).mockResolvedValue(null);
     vi.mocked(strapiPut).mockResolvedValue({ data: { id: 1 }, meta: {} });
+    vi.mocked(strapiGet).mockResolvedValue(areaResponse);
     publishWithOutboxMock.mockResolvedValue({} as ReturnType<typeof eventBus.publishWithOutbox> extends Promise<infer T> ? T : never);
   });
 
@@ -226,6 +236,7 @@ describe('handleLabEvent', () => {
     vi.mocked(redis.get).mockResolvedValue(null);
     vi.mocked(redis.set).mockResolvedValue('OK');
     vi.mocked(strapiPut).mockResolvedValue({ data: { id: 1 }, meta: {} });
+    vi.mocked(strapiGet).mockResolvedValue(areaResponse);
     publishWithOutboxMock.mockResolvedValue({} as ReturnType<typeof eventBus.publishWithOutbox> extends Promise<infer T> ? T : never);
   });
 

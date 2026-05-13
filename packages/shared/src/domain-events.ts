@@ -43,7 +43,11 @@ export enum DomainEventName {
   EDUVISITA_AGENDADA = 'eduvisita.agendada',
 
   // --- Projeto ---
+  PROJETO_CRIADO = 'projeto.criado',
+  PROJETO_SUBMETIDO_PARA_REVISAO = 'projeto.submetido_para_revisao',
+  PROJETO_APROVADO = 'projeto.aprovado',
   PROJETO_PUBLICADO = 'projeto.publicado',
+  PROJETO_ARQUIVADO = 'projeto.arquivado',
   PROJETO_ACESSO_SOLICITADO = 'projeto.acesso_solicitado',
   PROJETO_ACESSO_CONCEDIDO = 'projeto.acesso_concedido',
   PROJETO_ACESSO_RECUSADO = 'projeto.acesso_recusado',
@@ -228,7 +232,11 @@ export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
   [DomainEventName.EDUVISITA_AGENDADA]: z.object({ programaId: z.string(), instituicaoId: z.string(), data: z.string() }),
 
   // --- Projeto ---
+  [DomainEventName.PROJETO_CRIADO]: ContentPublishSchema.extend({ projetoId: z.string() }),
+  [DomainEventName.PROJETO_SUBMETIDO_PARA_REVISAO]: z.object({ projetoId: z.string(), autorId: z.string() }),
+  [DomainEventName.PROJETO_APROVADO]: z.object({ projetoId: z.string(), aprovadorId: z.string() }),
   [DomainEventName.PROJETO_PUBLICADO]: ContentPublishSchema.extend({ projetoId: z.string() }),
+  [DomainEventName.PROJETO_ARQUIVADO]: z.object({ projetoId: z.string(), autorId: z.string() }),
   [DomainEventName.PROJETO_ACESSO_SOLICITADO]: BaseInteractionSchema.extend({ projetoId: z.string() }),
   [DomainEventName.PROJETO_ACESSO_CONCEDIDO]: BaseInteractionSchema.extend({ projetoId: z.string() }),
   [DomainEventName.PROJETO_ACESSO_RECUSADO]: BaseInteractionSchema.extend({ projetoId: z.string() }),

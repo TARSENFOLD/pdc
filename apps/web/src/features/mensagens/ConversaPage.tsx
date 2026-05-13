@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Spinner, Avatar, Card } from '@/components/ui';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { http } from '@/lib/api/http';
 import { useSocket } from '@/hooks/useSocket';
 import { ArrowLeft, Send, Zap, Search } from 'lucide-react';

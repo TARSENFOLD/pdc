@@ -3,7 +3,7 @@ import { Camera, Upload, Trash2 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { mediaApi } from '@/lib/api/media';
 import { perfisApi } from '@/lib/api/perfis';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { toast } from '@/hooks/useToast';
 import { Avatar } from '@/components/ui/Avatar';
 import { useQueryClient } from '@tanstack/react-query';

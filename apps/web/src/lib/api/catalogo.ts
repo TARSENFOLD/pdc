@@ -24,7 +24,7 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
 interface BaseFilters { page?: number; pageSize?: number; search?: string; area?: string }
 interface CursoFiltersPublic extends BaseFilters { nivel?: string; gratuito?: boolean }
 interface SimulacaoFiltersPublic extends BaseFilters { tipo?: string; nivel?: string }
-interface ExperienciaFiltersPublic extends BaseFilters { nivel?: string }
+interface ExperienciaFiltersPublic extends BaseFilters { nivel?: string; modalidade?: string }
 interface InstituicaoFiltersPublic extends BaseFilters { tipo?: string; regiao?: string }
 interface ExplorarParams extends Omit<BaseFilters, 'area'> { tipo?: ExplorarItemTipo; area?: AreaVocacional }
 interface PessoaFiltersPublic extends BaseFilters { role?: Extract<Role, 'estudante' | 'mentor'> }
@@ -45,6 +45,9 @@ export const catalogoApi = {
     const { pageSize, ...rest } = f ?? {};
     return http.get<CatalogoResponse<ExperienciaPublica>>(`/catalogo/experiencias${qs({ ...rest, limit: pageSize })}`);
   },
+
+  getExperienciasRecomendadas: () =>
+    http.get<{ data: Array<{ id: string; titulo: string; tipo: string; matchPercentagem: number; motivo: string }> }>('/catalogo/experiencias/recomendacoes'),
 
   getSimulacao: (slug: string) =>
     http.get<DetailResponse<SimulacaoPublica>>(`/catalogo/simulacoes/${slug}`).then((r) => r.data),

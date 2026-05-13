@@ -16,7 +16,7 @@ vi.mock('../lib/telemetria/telemetria.service', () => ({
 }));
 
 // Mock do Bootstrap Context (Para W1-T4 Token Fetch)
-vi.mock('../lib/bootstrap/BootstrapContext.js', () => ({
+vi.mock('../lib/bootstrap/bootstrap-context.js', () => ({
   useBootstrap: vi.fn().mockReturnValue({
     data: {
       security: {

@@ -5,6 +5,7 @@ import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.j
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { rateLimitDenuncias } from '../middleware/rateLimit.js';
+import { toPaginatedResponse } from './pagination.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -60,7 +61,8 @@ denunciaRoutes.get(
     if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
     if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
     try {
-      return c.json(await strapiGet<unknown>('/denuncias', params));
+      const res = await strapiGet<unknown>('/denuncias', params);
+      return c.json(toPaginatedResponse(res));
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }

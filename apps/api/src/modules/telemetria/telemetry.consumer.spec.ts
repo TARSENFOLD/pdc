@@ -26,6 +26,8 @@ vi.mock('../../lib/redis.js', () => ({
     set: vi.fn(),
     llen: vi.fn(),
     lpush: vi.fn(),
+    rpush: vi.fn(),
+    eval: vi.fn(),
     incr: vi.fn(),
     expire: vi.fn(),
     del: vi.fn(),
@@ -86,6 +88,7 @@ describe('processOneTelemetryEvent', () => {
     vi.clearAllMocks();
     vi.mocked(redis.llen).mockResolvedValue(0);
     vi.mocked(redis.set).mockResolvedValue('OK');
+    vi.mocked(redis.eval).mockResolvedValue(1);
     vi.mocked(redis.incr).mockResolvedValue(1);
     vi.mocked(applySanityRules).mockReturnValue({ valid: true });
   });
@@ -153,21 +156,21 @@ describe('processOneTelemetryEvent', () => {
   it('re-enfileira para retry e liberta lock se falhar com retries < limite', async () => {
     vi.mocked(redis.rpoplpush).mockResolvedValueOnce(JSON.stringify(mockEvent));
     vi.mocked(strapiPost).mockRejectedValueOnce(new Error('Strapi Down'));
-    vi.mocked(redis.incr).mockResolvedValueOnce(3); // Retry 3 de 5
+    vi.mocked(redis.eval).mockResolvedValueOnce(3); // Retry 3 de 5
 
     const status = await processOneTelemetryEvent();
 
     expect(status).toBe('error');
     expect(redis.del).toHaveBeenCalledWith('tel:evt:evt-123'); // Lock libertado para retry
     expect(redis.lrem).toHaveBeenCalledWith('telemetry_processing_queue', 1, JSON.stringify(mockEvent));
-    expect(redis.lpush).toHaveBeenCalledWith('telemetry_queue', JSON.stringify(mockEvent)); // De volta à fila
+    expect(redis.rpush).toHaveBeenCalledWith('telemetry_queue', JSON.stringify(mockEvent)); // De volta ao fim da fila
     expect(Sentry.captureMessage).not.toHaveBeenCalled();
   });
 
   it('move para DLQ e alerta Sentry no 5º retry (retries >= RETRY_LIMIT)', async () => {
     vi.mocked(redis.rpoplpush).mockResolvedValueOnce(JSON.stringify(mockEvent));
     vi.mocked(strapiPost).mockRejectedValueOnce(new Error('Persistent Error'));
-    vi.mocked(redis.incr).mockResolvedValueOnce(5); // 5 >= 5 → DLQ (off-by-one corrigido)
+    vi.mocked(redis.eval).mockResolvedValueOnce(5); // 5 >= 5 → DLQ (off-by-one corrigido)
 
     const status = await processOneTelemetryEvent();
 

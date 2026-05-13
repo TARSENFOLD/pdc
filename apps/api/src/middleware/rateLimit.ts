@@ -26,6 +26,24 @@ interface LimitResult {
 }
 
 const memoryBuckets = new Map<string, { count: number; reset: number }>();
+const MEMORY_BUCKET_SWEEP_MS = 60_000;
+
+const memoryBucketSweeper = setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of memoryBuckets.entries()) {
+    if (entry.reset <= now) {
+      memoryBuckets.delete(key);
+    }
+  }
+}, MEMORY_BUCKET_SWEEP_MS);
+
+if (typeof memoryBucketSweeper === 'object' && 'unref' in memoryBucketSweeper) {
+  memoryBucketSweeper.unref();
+}
+
+export function resetMemoryBuckets(): void {
+  memoryBuckets.clear();
+}
 
 function shouldBypassDevAuthLimits(): boolean {
   return process.env['NODE_ENV'] !== 'production' && process.env['DEV_SKIP_OTP'] === 'true';
@@ -125,7 +143,7 @@ export function createRateLimit(options: RateLimitOptions) {
 
     c.header('X-RateLimit-Limit', result.limit.toString());
     c.header('X-RateLimit-Remaining', result.remaining.toString());
-    c.header('X-RateLimit-Reset', result.reset.toString());
+    c.header('X-RateLimit-Reset', Math.ceil(result.reset / 1000).toString());
 
     if (!result.success) {
       const retryAfter = Math.max(1, Math.ceil((result.reset - Date.now()) / 1000));

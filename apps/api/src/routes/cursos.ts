@@ -8,6 +8,8 @@ import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { CriarCursoPayloadSchema, type CriarCursoPayload, Curso, Inscricao, BehaviorPattern } from '@pdc/shared';
 import { cursosService } from '../modules/cursos/cursos.service.js';
+import { applyPublicCatalogStateFilter, isPublicCatalogEstado } from './publication-state.js';
+import { toPaginatedResponse } from './pagination.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -28,7 +30,8 @@ cursoRoutes.get('/', zValidator('query', cursoQuerySchema), async (c) => {
   const q = c.req.valid('query');
   const user = c.get('user');
   
-  const params: Record<string, string | string[]> = { populate: 'capa,autor', 'filters[estado][$eq]': 'published' };
+  const params: Record<string, string | string[]> = { populate: 'capa,autor' };
+  applyPublicCatalogStateFilter(params);
   if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
   if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
   if (q.search !== undefined) params['filters[titulo][$containsi]'] = q.search;
@@ -51,9 +54,9 @@ cursoRoutes.get('/', zValidator('query', cursoQuerySchema), async (c) => {
         }
         return { ...curso, bloqueado: blocked, motivoBloqueio: reason };
       });
-      return c.json({ ...res, data: enrichedData });
+      return c.json(toPaginatedResponse({ ...res, data: enrichedData }));
     }
-    return c.json(res);
+    return c.json(toPaginatedResponse(res));
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -64,7 +67,7 @@ cursoRoutes.get('/', zValidator('query', cursoQuerySchema), async (c) => {
 cursoRoutes.get('/meus', checkRole(['mentor', 'instituicao', 'super_admin']), async (c) => {
   try {
       const res = await strapiGet<Curso>('/cursos', { 'filters[autorId][$eq]': c.get('user').id, populate: 'capa', 'pagination[page]': c.req.query('page') || '1' });
-      return c.json({ data: res.data, pagination: res.meta.pagination });
+      return c.json(toPaginatedResponse(res));
     } catch (err: unknown) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
@@ -88,7 +91,7 @@ cursoRoutes.get('/:id', async (c) => {
     if (!data) return c.json({ error: 'Curso não encontrado' }, 404);
 
     const user = c.get('user');
-    if (data.estado !== 'published' && data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
+    if (!isPublicCatalogEstado(data.estado) && data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
       return c.json({ error: 'Acesso negado' }, 403);
     }
     return c.json(res);

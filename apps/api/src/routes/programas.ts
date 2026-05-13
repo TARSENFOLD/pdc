@@ -9,11 +9,14 @@ import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.clien
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { CriarProgramaPayloadSchema, AtualizarProgramaEstadoSchema } from '@pdc/shared';
+import { applyPublicCatalogStateFilter } from './publication-state.js';
 
 type Vars = { Variables: AuthVariables };
 export const programaRoutes = new Hono<Vars>();
 
 programaRoutes.use('*', verifyJwt);
+
+const PROGRAMA_POPULATE = 'capa,instituicao,responsavel,cursos,experiencias,simulacoes,projetos';
 
 interface StrapiPrograma {
   id: string;
@@ -30,11 +33,12 @@ interface StrapiPrograma {
 // GET /programas
 programaRoutes.get('/', async (c) => {
   try {
-    const res = await strapiGet<StrapiPrograma>('/programas', {
-      'filters[estado][$eq]': 'published',
-      populate: 'capa,instituicao,responsavel,cursos,experiencias,simulacoes,projetos',
+    const params: Record<string, string | string[]> = {
+      populate: PROGRAMA_POPULATE,
       sort: 'createdAt:desc',
-    });
+    };
+    applyPublicCatalogStateFilter(params);
+    const res = await strapiGet<StrapiPrograma>('/programas', params);
     return c.json(res);
   } catch {
     return c.json({ error: 'Erro ao carregar programas' }, 502);
@@ -79,7 +83,7 @@ programaRoutes.get('/minhas', checkRole(['mentor', 'instituicao', 'super_admin']
     if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
 
     const params: Record<string, string> = {
-      populate: 'capa,instituicao,responsavel,cursos,experiencias,simulacoes,projetos',
+      populate: PROGRAMA_POPULATE,
     };
 
     // Filtrar por criador baseado na role

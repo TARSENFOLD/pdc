@@ -51,6 +51,8 @@ const FLAGS = [
   },
 ];
 
+const REQUEST_TIMEOUT_MS = 10_000;
+
 async function seed(): Promise<void> {
   console.log('🚀 Iniciando seed de Feature Flags (PROD-A-T02)...');
 
@@ -59,34 +61,46 @@ async function seed(): Promise<void> {
     process.exit(1);
   }
 
+  const strapiHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${STRAPI_TOKEN}`,
+  };
+
   for (const flag of FLAGS) {
     try {
       const getRes = await fetch(
         `${STRAPI_URL}/api/feature-flags?filters[domain][$eq]=${flag.domain}`,
-        { headers: { Authorization: `Bearer ${STRAPI_TOKEN}` } },
+        { headers: { Authorization: strapiHeaders.Authorization }, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) },
       );
 
       if (!getRes.ok) {
         throw new Error(`Erro ao consultar ${flag.domain}: ${getRes.status} ${getRes.statusText}`);
       }
 
-      const existing = await getRes.json() as StrapiListResponse<FeatureFlag>;
+      const existingJson: unknown = await getRes.json();
+      if (
+        typeof existingJson !== 'object' ||
+        existingJson === null ||
+        !('data' in existingJson) ||
+        !Array.isArray((existingJson as Record<string, unknown>).data)
+      ) {
+        throw new Error(`Resposta inválida para ${flag.domain}: estrutura inesperada`);
+      }
+      const existing = existingJson as StrapiListResponse<FeatureFlag>;
 
       if (existing.data && existing.data.length > 0) {
         const existingFlag = existing.data[0];
         const docId = existingFlag.documentId ?? String(existingFlag.id);
         const putRes = await fetch(`${STRAPI_URL}/api/feature-flags/${docId}`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${STRAPI_TOKEN}`,
-          },
+          headers: strapiHeaders,
           body: JSON.stringify({
             data: {
               enabled: flag.enabled,
               description: flag.description,
             },
           }),
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
 
         if (!putRes.ok) {
@@ -100,10 +114,7 @@ async function seed(): Promise<void> {
 
       const postRes = await fetch(`${STRAPI_URL}/api/feature-flags`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${STRAPI_TOKEN}`,
-        },
+        headers: strapiHeaders,
         body: JSON.stringify({
           data: {
             domain: flag.domain,
@@ -111,6 +122,7 @@ async function seed(): Promise<void> {
             description: flag.description,
           },
         }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
 
       if (!postRes.ok) {

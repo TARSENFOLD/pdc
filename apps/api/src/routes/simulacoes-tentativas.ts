@@ -29,6 +29,33 @@ const concluirSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 
+const SIMULACAO_ALLOWED_STATES = new Set(['approved', 'published']);
+
+function parsePositiveDuration(metadata: Record<string, unknown> | undefined): number | null {
+  const provided = Number(metadata?.['duracaoSegundos']);
+  if (Number.isFinite(provided) && provided > 0) {
+    return Math.floor(provided);
+  }
+
+  const dataInicio = typeof metadata?.['dataInicio'] === 'string' ? metadata['dataInicio'] : undefined;
+  const dataFim = typeof metadata?.['dataFim'] === 'string' ? metadata['dataFim'] : undefined;
+  if (!dataInicio || !dataFim) return null;
+
+  const inicioMs = Date.parse(dataInicio);
+  const fimMs = Date.parse(dataFim);
+  if (!Number.isFinite(inicioMs) || !Number.isFinite(fimMs) || fimMs <= inicioMs) {
+    return null;
+  }
+
+  return Math.max(1, Math.floor((fimMs - inicioMs) / 1000));
+}
+
+function parsePercentMetric(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  const raw = Number.isNaN(parsed) ? fallback : parsed;
+  return Math.max(0, Math.min(100, raw));
+}
+
 export const simulacaoTentativasRoutes = new Hono<Vars>();
 
 // POST /simulacoes/tentativas — iniciar tentativa (estudante apenas)
@@ -46,6 +73,9 @@ simulacaoTentativasRoutes.post('/', checkRole(['estudante']), zValidator('json',
     const resSim = await strapiGet<StrapiSimulacao>(`/simulacoes/${simulacaoId}`);
     const sim = resSim.data[0];
     if (!sim) return c.json({ error: 'Simulação não encontrada' }, 404);
+    if (!SIMULACAO_ALLOWED_STATES.has(sim.estado)) {
+      return c.json({ error: 'Simulação não está disponível' }, 403);
+    }
 
     const prevTentativas = await strapiGet<Tentativa>('/tentativas', {
       'filters[perfil][id][$eq]': perfilId,
@@ -60,6 +90,7 @@ simulacaoTentativasRoutes.post('/', checkRole(['estudante']), zValidator('json',
       tentativaNum,
       executorTipo: `tipo${sim.tipo.toString()}`,
       status: 'em_progresso',
+      metadata: { perfilId, userId },
     });
 
     await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_INICIADA, {
@@ -78,16 +109,24 @@ simulacaoTentativasRoutes.post('/', checkRole(['estudante']), zValidator('json',
 // PUT /simulacoes/tentativas/:id — concluir tentativa (estudante apenas)
 simulacaoTentativasRoutes.put('/:id', checkRole(['estudante']), zValidator('json', concluirSchema), async (c) => {
   const tentativaId = c.req.param('id');
-  const { metadata } = c.req.valid('json');
   const user = c.get('user');
+  const { metadata } = c.req.valid('json');
+  const duracaoSegundos = parsePositiveDuration(metadata);
+  if (duracaoSegundos === null) {
+    return c.json({ error: 'duracaoSegundos deve ser positivo ou derivável de dataInicio/dataFim' }, 400);
+  }
 
-  const parsedFocus = Number(metadata?.focusStability);
-  const rawFocus = Number.isNaN(parsedFocus) ? 50 : parsedFocus;
-  const phi = Math.max(0, Math.min(100, rawFocus)) / 100;
-  const resFluidity = analyzeFluidity(phi);
-  const resFocus = analyzeFocus(phi);
+  const focusStability = parsePercentMetric(metadata?.focusStability, 50);
+  const fluidityStability = parsePercentMetric(
+    metadata?.fluidityStability ?? metadata?.cognitiveFluidity ?? metadata?.phi,
+    focusStability,
+  );
+  const focusPhi = focusStability / 100;
+  const fluidityPhi = fluidityStability / 100;
+  const resFluidity = analyzeFluidity(fluidityPhi);
+  const resFocus = analyzeFocus(focusPhi);
   const finalScore = (resFluidity.score + resFocus.score) / 2;
-  log.info({ tentativaId, finalScore, phi }, 'Score Soberano derivado no BFF');
+  log.info({ tentativaId, finalScore, fluidityPhi, focusPhi }, 'Score Soberano derivado no BFF');
 
   try {
     const resPut = await strapiPut<Tentativa>(`/tentativas/${tentativaId}`, {
@@ -95,18 +134,14 @@ simulacaoTentativasRoutes.put('/:id', checkRole(['estudante']), zValidator('json
       metadata,
       status: 'concluida',
       dataFim: new Date().toISOString(),
-      duracaoSegundos: Number(metadata?.duracaoSegundos) || 0,
+      duracaoSegundos,
     });
 
-    const resSimInfo = await strapiGet<Tentativa & { simulacao?: StrapiSimulacao }>(`/tentativas/${tentativaId}?populate=simulacao`);
+    const resSimInfo = await strapiGet<Tentativa & { simulacao?: StrapiSimulacao; perfil?: { id: string } }>(`/tentativas/${tentativaId}?populate=simulacao,perfil`);
     const tentativaComSim = resSimInfo.data[0];
     const area = tentativaComSim?.simulacao?.area || (metadata?.domainId as string) || 'geral';
-
-    const resPerfilLookup = await strapiGet<{ id: string }>('/perfis', {
-      'filters[userId][$eq]': user.id,
-      'fields[0]': 'id',
-    });
-    const perfilIdReal = resPerfilLookup.data[0]?.id;
+    const metadataPerfilId = typeof metadata?.perfilId === 'string' ? metadata.perfilId : undefined;
+    const perfilIdReal = tentativaComSim?.perfil?.id ?? metadataPerfilId;
 
     if (perfilIdReal) {
       await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_CONCLUIDA, {
@@ -115,6 +150,8 @@ simulacaoTentativasRoutes.put('/:id', checkRole(['estudante']), zValidator('json
         perfilId: perfilIdReal,
         area,
       });
+    } else {
+      log.warn({ tentativaId, userId: user.id }, 'Perfil ausente — TENTATIVA_CONCLUIDA não publicada');
     }
 
     return c.json(resPut.data);

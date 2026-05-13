@@ -11,6 +11,16 @@ interface StrapiPerfilItem {
   id: string;
   userId?: string;
   tipo?: string;
+  aprovado?: boolean;
+}
+
+function restorePerfilPayload(perfil: StrapiPerfilItem): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries({
+      tipo: perfil.tipo,
+      aprovado: perfil.aprovado,
+    }).filter(([, value]) => value !== undefined),
+  );
 }
 
 export const oauthOnboardingService = {
@@ -51,12 +61,21 @@ export const oauthOnboardingService = {
     const otp = otpService.generateOtp();
     await otpService.storeOtp(userId, otp, 'email');
 
-    if (env.NODE_ENV !== 'production') {
-      log.info({ userId, otp }, '[DEV] OAuth onboarding OTP gerado');
+    if (env.NODE_ENV === 'development') {
+      log.info({ userId, otpPresent: true }, '[DEV] OAuth onboarding OTP gerado');
     }
 
-    const user = await authService.getUserById(userId);
-    await otpService.sendOtpEmail(user.email, otp);
+    try {
+      const user = await authService.getUserById(userId);
+      await otpService.sendOtpEmail(user.email, otp);
+    } catch (err) {
+      await Promise.allSettled([
+        strapiPut<StrapiPerfilItem>(`/perfis/${perfil.id}`, restorePerfilPayload(perfil)),
+        otpService.deleteOtp(userId, 'email'),
+      ]);
+      log.error({ err, userId, perfilId: perfil.id }, 'Falha ao enviar OTP de onboarding OAuth');
+      throw Object.assign(new Error('Falha ao enviar código de verificação'), { status: 500 });
+    }
   },
 
   async verificarOtp(userId: string, otp: string): Promise<void> {

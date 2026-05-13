@@ -20,7 +20,7 @@ Manter `pulseVariacao: null` em ambas as rotas BFF:
 - `apps/api/src/routes/estudante.ts`
 - `apps/api/src/routes/dashboard/estudante.ts`
 
-O campo permanece no schema `DashboardEstudante` (em `packages/shared/src/core.ts`) como `number | null` para preservar o contrato de API e facilitar a implementação futura sem breaking change.
+O campo permanece na interface TypeScript `DashboardEstudante` (em `packages/shared/src/core.ts`) e no schema Zod `DashboardEstudanteSchema` (em `packages/shared/src/schemas/dashboard.ts`) como `number | null` para preservar o contrato de API e facilitar a implementação futura sem breaking change. A validação runtime é aplicável via `DashboardEstudanteSchema.parse()` nas fronteiras do sistema.
 
 A UI do dashboard do estudante não renderiza tile de variação quando `pulseVariacao` é `null` — comportamento correcto (vazio honesto > dado falso).
 

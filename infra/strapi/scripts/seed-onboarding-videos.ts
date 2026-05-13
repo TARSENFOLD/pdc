@@ -5,9 +5,11 @@
  * Standalone — corre fora do Strapi via npx tsx.
  */
 import 'dotenv/config';
+import { ONBOARDING_VIDEO_ROLES, ONBOARDING_VIDEO_TITLES } from '../src/shared/onboarding-video-constants';
 
 const STRAPI_URL = process.env.STRAPI_URL || 'http://localhost:1337';
 const STRAPI_TOKEN = process.env.STRAPI_API_TOKEN;
+const PLACEHOLDER_VIDEO_URL = 'about:blank';
 
 interface OnboardingVideo {
   id: number;
@@ -27,28 +29,6 @@ interface StrapiListResponse<T> {
   };
 }
 
-const ROLES = [
-  'estudante',
-  'mentor',
-  'instituicao',
-  'moderador',
-  'comite_cientifico',
-  'super_admin',
-  'patrocinador',
-] as const;
-
-type Role = (typeof ROLES)[number];
-
-const TITLES: Record<Role, { pt: string; en: string }> = {
-  estudante: { pt: 'Bem-vindo, Estudante', en: 'Welcome, Student' },
-  mentor: { pt: 'Bem-vindo, Mentor', en: 'Welcome, Mentor' },
-  instituicao: { pt: 'Bem-vinda, Instituição', en: 'Welcome, Institution' },
-  moderador: { pt: 'Bem-vindo, Moderador', en: 'Welcome, Moderator' },
-  comite_cientifico: { pt: 'Bem-vindo, Comité Científico', en: 'Welcome, Scientific Committee' },
-  super_admin: { pt: 'Bem-vindo, Administrador', en: 'Welcome, Administrator' },
-  patrocinador: { pt: 'Bem-vindo, Patrocinador', en: 'Welcome, Sponsor' },
-};
-
 async function seed(): Promise<void> {
   console.log('🚀 Iniciando seed de Onboarding Videos (WB-T03)...');
 
@@ -57,7 +37,7 @@ async function seed(): Promise<void> {
     process.exit(1);
   }
 
-  for (const role of ROLES) {
+  for (const role of ONBOARDING_VIDEO_ROLES) {
     try {
       const getRes = await fetch(
         `${STRAPI_URL}/api/onboarding-videos?filters[role][$eq]=${role}`,
@@ -75,8 +55,11 @@ async function seed(): Promise<void> {
         continue;
       }
 
-      const titles = TITLES[role];
-      // FIXME: substituir 'about:blank' por URL real de R2 quando disponível
+      const titles = ONBOARDING_VIDEO_TITLES[role];
+      // FIXME: substituir placeholder por URL real de R2 quando disponível.
+      if (process.env.NODE_ENV === 'production' && PLACEHOLDER_VIDEO_URL === 'about:blank') {
+        throw new Error(`Seed bloqueado em produção: videoUrl placeholder para role "${role}"`);
+      }
       const postRes = await fetch(`${STRAPI_URL}/api/onboarding-videos`, {
         method: 'POST',
         headers: {
@@ -86,7 +69,7 @@ async function seed(): Promise<void> {
         body: JSON.stringify({
           data: {
             role,
-            videoUrl: 'about:blank',
+            videoUrl: PLACEHOLDER_VIDEO_URL,
             embedType: 'r2',
             duracaoSegundos: 0,
             thumbnailUrl: '',

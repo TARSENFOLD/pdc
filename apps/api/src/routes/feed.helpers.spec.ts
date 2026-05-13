@@ -67,6 +67,59 @@ describe('feed helpers', () => {
     });
   });
 
+  it('consulta programas e projetos com populates declarados no schema Strapi', async () => {
+    vi.mocked(strapiGet).mockResolvedValue(listResponse<StrapiEntity>([]));
+
+    await fetchCandidates();
+
+    expect(strapiGet).toHaveBeenCalledWith('/programas', expect.objectContaining({
+      populate: 'capa,instituicao,responsavel',
+    }));
+    expect(strapiGet).toHaveBeenCalledWith('/projetos', expect.objectContaining({
+      populate: 'autor,media',
+    }));
+  });
+
+  it('mantem conteudo approved como candidato visivel no feed/home', async () => {
+    vi.mocked(strapiGet).mockImplementation((path: string) => {
+      if (path === '/cursos') {
+        return Promise.resolve(
+          listResponse<StrapiEntity>([
+            {
+              id: 'curso-approved',
+              titulo: 'Curso aprovado',
+              estado: 'approved',
+              visibilidade: 'publico',
+              createdAt: '2026-04-30T10:00:00.000Z',
+            },
+            {
+              id: 'curso-hidden',
+              titulo: 'Curso oculto',
+              estado: 'hidden',
+              visibilidade: 'publico',
+              createdAt: '2026-04-30T10:01:00.000Z',
+            },
+          ])
+        );
+      }
+
+      if (path === '/feed-posts') {
+        return Promise.resolve(listResponse<StrapiEntity>([]));
+      }
+
+      return Promise.resolve(listResponse<StrapiEntity>([]));
+    });
+
+    const candidates = await fetchCandidates();
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0]).toMatchObject({
+      id: 'curso-approved',
+      tipo: 'curso',
+      estado: 'approved',
+    });
+  });
+
   it('mapeia feed-post aprovado para FeedItem social', () => {
     const stats: ItemStats = { likes: 3, ratingMedia: 0, ratingTotal: 0 };
     const entity: StrapiEntity & { tipo: FeedItemTipo } = {

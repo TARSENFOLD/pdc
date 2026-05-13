@@ -9,6 +9,8 @@ import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.clien
 import { CriarExperienciaPayloadSchema, type Experiencia } from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
+import { applyPublicCatalogStateFilter } from './publication-state.js';
+import { toPaginatedResponse } from './pagination.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -24,14 +26,23 @@ export const experienciaRoutes = new Hono<Vars>();
 experienciaRoutes.use('*', verifyJwt);
 
 // GET /experiencias
-experienciaRoutes.get('/', async (c) => {
+const experienciaQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+experienciaRoutes.get('/', zValidator('query', experienciaQuerySchema), async (c) => {
   try {
-    const res = await strapiGet<Experiencia>('/experiencias', {
-      'filters[estado][$eq]': 'published',
+    const q = c.req.valid('query');
+    const params: Record<string, string | string[]> = {
       populate: 'capa,instituicao',
-      sort: 'createdAt:desc'
-    });
-    return c.json(res);
+      sort: 'createdAt:desc',
+    };
+    if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
+    if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
+    applyPublicCatalogStateFilter(params);
+    const res = await strapiGet<Experiencia>('/experiencias', params);
+    return c.json(toPaginatedResponse(res));
   } catch {
     return c.json({ error: 'Falha ao sincronizar o catálogo de experiências' }, 502);
   }
@@ -45,7 +56,7 @@ experienciaRoutes.get('/minhas', checkRole(['instituicao', 'mentor', 'super_admi
       'filters[instituicaoId][$eq]': id,
       populate: 'capa',
     });
-    return c.json(res);
+    return c.json(toPaginatedResponse(res));
   } catch {
     return c.json({ error: 'Erro ao recuperar as tuas experiências' }, 502);
   }
@@ -58,7 +69,7 @@ experienciaRoutes.get('/stats', checkRole(['instituicao', 'super_admin']), async
     const [experiencias, programas, inscricoes] = await Promise.all([
       strapiGet<{ id: string }>('/experiencias', {
         'filters[instituicaoId][$eq]': userId,
-        'filters[estado][$eq]': 'published',
+        'filters[estado][$in]': ['approved', 'published'],
         'pagination[pageSize]': '1',
       }),
       strapiGet<{ id: string }>('/programas', {

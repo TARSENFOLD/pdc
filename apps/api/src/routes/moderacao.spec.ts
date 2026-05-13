@@ -26,6 +26,14 @@ vi.mock('../middleware/audit.js', () => ({
 }));
 
 vi.mock('../modules/moderacao/moderacao.service.js', () => ({
+  ConteudoTipoSchema: {
+    safeParse: (value: unknown) => {
+      const validTipos = ['curso', 'simulacao', 'experiencia', 'programa', 'projeto', 'feed-post'];
+      return typeof value === 'string' && validTipos.includes(value)
+        ? { success: true, data: value }
+        : { success: false };
+    },
+  },
   moderacaoService: {
     listarPendentes: vi.fn(),
     aprovarConteudo: vi.fn(),
@@ -127,6 +135,46 @@ describe('moderacao routes', () => {
     });
   });
 
+  describe('POST /moderacao/:tipo/:id/aprovar', () => {
+    it('returns 400 for invalid tipo', async () => {
+      const app = buildApp();
+      const res = await app.request('/moderacao/invalido/5/aprovar', { method: 'POST' });
+      expect(res.status).toBe(400);
+    });
+
+    it('delegates to moderacaoService.aprovarConteudo and applies auditLog', async () => {
+      aprovarConteudoMock.mockResolvedValue({ eventId: 'evt-post-1' });
+
+      const app = buildApp();
+      const res = await app.request('/moderacao/curso/10/aprovar', { method: 'POST' });
+      expect(res.status).toBe(200);
+      const body = await res.json() as { success: boolean; eventId: string };
+      expect(body.success).toBe(true);
+      expect(body.eventId).toBe('evt-post-1');
+      expect(aprovarConteudoMock).toHaveBeenCalledWith('curso', '10', 'mod-123');
+    });
+
+    it('returns 404 when service throws 404', async () => {
+      aprovarConteudoMock.mockRejectedValue(
+        Object.assign(new Error('Conteúdo não encontrado'), { status: 404 }),
+      );
+
+      const app = buildApp();
+      const res = await app.request('/moderacao/curso/999/aprovar', { method: 'POST' });
+      expect(res.status).toBe(404);
+    });
+
+    it('approves programa and feed-post tipos', async () => {
+      aprovarConteudoMock.mockResolvedValue({ eventId: 'evt-post-2' });
+
+      const app = buildApp();
+      for (const tipo of ['programa', 'projeto', 'feed-post']) {
+        const res = await app.request(`/moderacao/${tipo}/1/aprovar`, { method: 'POST' });
+        expect(res.status).toBe(200);
+      }
+    });
+  });
+
   describe('PUT /moderacao/:tipo/:id/rejeitar', () => {
     it('returns 400 for invalid tipo', async () => {
       const app = buildApp();
@@ -148,7 +196,7 @@ describe('moderacao routes', () => {
       expect(res.status).toBe(400);
     });
 
-    it('delegates to moderacaoService.rejeitarConteudo and emits CONTEUDO_REJEITADO', async () => {
+    it('delegates to moderacaoService.rejeitarConteudo', async () => {
       rejeitarConteudoMock.mockResolvedValue({ eventId: 'evt-reject-1' });
 
       const motivo = 'Conteúdo não cumpre os requisitos mínimos de qualidade';
@@ -194,6 +242,107 @@ describe('moderacao routes', () => {
       expect(res.status).toBe(200);
       expect(rejeitarConteudoMock).toHaveBeenCalledOnce();
     });
+  });
+});
+
+describe('POST /moderacao/:tipo/:id/aprovar', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns 400 for invalid tipo', async () => {
+    const app = buildApp();
+    const res = await app.request('/moderacao/invalido/5/aprovar', { method: 'POST' });
+    expect(res.status).toBe(400);
+  });
+
+  it('delegates to moderacaoService.aprovarConteudo', async () => {
+    aprovarConteudoMock.mockResolvedValue({ eventId: 'evt-post-1' });
+
+    const app = buildApp();
+    const res = await app.request('/moderacao/curso/10/aprovar', { method: 'POST' });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { success: boolean; eventId: string };
+    expect(body.success).toBe(true);
+    expect(body.eventId).toBe('evt-post-1');
+    expect(aprovarConteudoMock).toHaveBeenCalledWith('curso', '10', 'mod-123');
+  });
+
+  it('returns 404 when service throws 404', async () => {
+    aprovarConteudoMock.mockRejectedValue(
+      Object.assign(new Error('Conteúdo não encontrado'), { status: 404 }),
+    );
+
+    const app = buildApp();
+    const res = await app.request('/moderacao/curso/999/aprovar', { method: 'POST' });
+    expect(res.status).toBe(404);
+  });
+
+  it('approves all valid tipos', async () => {
+    aprovarConteudoMock.mockResolvedValue({ eventId: 'evt-post-2' });
+
+    const app = buildApp();
+    for (const tipo of ['curso', 'simulacao', 'experiencia', 'programa', 'projeto', 'feed-post']) {
+      const res = await app.request(`/moderacao/${tipo}/1/aprovar`, { method: 'POST' });
+      expect(res.status).toBe(200);
+    }
+  });
+});
+
+describe('POST /moderacao/:tipo/:id/rejeitar', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns 400 for invalid tipo', async () => {
+    const app = buildApp();
+    const res = await app.request('/moderacao/invalido/5/rejeitar', {
+      method: 'POST',
+      body: JSON.stringify({ motivo: 'Motivo válido e detalhado para rejeição' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when motivo is missing or too short', async () => {
+    const app = buildApp();
+    const res = await app.request('/moderacao/curso/5/rejeitar', {
+      method: 'POST',
+      body: JSON.stringify({ motivo: 'curto' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('delegates to moderacaoService.rejeitarConteudo', async () => {
+    rejeitarConteudoMock.mockResolvedValue({ eventId: 'evt-post-reject-1' });
+
+    const motivo = 'Conteúdo não cumpre os requisitos mínimos de qualidade';
+    const app = buildApp();
+    const res = await app.request('/moderacao/curso/7/rejeitar', {
+      method: 'POST',
+      body: JSON.stringify({ motivo }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as { success: boolean; eventId: string };
+    expect(body.success).toBe(true);
+    expect(rejeitarConteudoMock).toHaveBeenCalledWith('curso', '7', 'mod-123', motivo);
+  });
+
+  it('returns 404 when service throws 404', async () => {
+    rejeitarConteudoMock.mockRejectedValue(
+      Object.assign(new Error('Conteúdo não encontrado'), { status: 404 }),
+    );
+
+    const app = buildApp();
+    const res = await app.request('/moderacao/simulacao/999/rejeitar', {
+      method: 'POST',
+      body: JSON.stringify({ motivo: 'Conteúdo inválido e incompleto para publicação' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    expect(res.status).toBe(404);
   });
 });
 

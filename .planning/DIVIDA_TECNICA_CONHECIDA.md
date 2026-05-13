@@ -60,7 +60,7 @@ O schema Zod define `id`, `cursoId` e `estudanteId` como `z.string()`, mas o Str
 
 ### DT-03 — `pulseVariacao` sem cálculo real no dashboard do estudante
 
-**Estado:** Mitigado em PROD-D-T01. O BFF devolve `null` — campo presente no schema mas sem cálculo telemetry-driven. Decisão documentada em ADR-033.
+**Estado:** Mitigado em PROD-D-T01. O BFF devolve `null` — campo presente na interface TypeScript `DashboardEstudante` (`packages/shared/src/core.ts`) e no schema Zod `DashboardEstudanteSchema` (`packages/shared/src/schemas/dashboard.ts`), mas sem cálculo telemetry-driven. Validação runtime disponível via `DashboardEstudanteSchema.parse()`. Decisão documentada em ADR-033.
 
 **Ficheiros:** `apps/api/src/routes/estudante.ts`, `apps/api/src/routes/dashboard/estudante.ts`
 

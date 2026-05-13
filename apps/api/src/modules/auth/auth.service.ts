@@ -6,8 +6,10 @@ import { type User, type Role, type Conquista, RoleSchema, normalizeTipo } from 
 import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
 import { z } from 'zod';
+import pino from 'pino';
 
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
+const log = pino({ name: 'auth-service' });
 
 const RefreshPayloadSchema = z.object({
   sub: z.string().min(1),
@@ -61,9 +63,7 @@ function hashToken(token: string): string {
 export const authService = {
   async generateTokens(user: User) {
     const claims: Record<string, unknown> = { sub: user.id, role: user.role };
-    if (user.onboardingCompleto !== undefined) {
-      claims.onboardingCompleto = user.onboardingCompleto;
-    }
+    claims.onboardingCompleto = user.onboardingCompleto;
     const accessToken = await new SignJWT(claims)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
@@ -196,7 +196,11 @@ export const authService = {
       'filters[userId][$eq]': userId,
     });
     const perfil = res.data[0];
-    if (perfil?.id && !perfil.oauthProvider) {
+    if (!perfil?.id) {
+      log.warn({ userId, provider }, 'Cannot set OAuth provider: perfil not found');
+      return;
+    }
+    if (!perfil.oauthProvider) {
       await strapiPut(`/perfis/${perfil.id}`, { oauthProvider: provider });
     }
   },

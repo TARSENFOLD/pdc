@@ -48,7 +48,7 @@ export default function BuilderShell({
     <div className="max-w-5xl mx-auto space-y-12 pb-32">
       <header className="space-y-6">
         {breadcrumbs && (
-          <nav className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">
+          <nav className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-tertiary">
             {breadcrumbs.map((b, i) => (
               <React.Fragment key={i}>
                 {b.to ? (
@@ -64,11 +64,11 @@ export default function BuilderShell({
         
         <div className="flex items-end justify-between gap-6">
           <div className="space-y-4">
-            <h1 className="text-4xl font-black">{title}</h1>
+            <h1 className="text-2xl font-bold text-ink-primary">{title}</h1>
             <p className="text-ink-secondary">{description}</p>
           </div>
           {state && (
-            <div className="px-3 py-1 bg-accent/10 border border-accent/20 rounded-full text-[10px] font-bold text-accent uppercase tracking-tighter">
+            <div className="px-3 py-1 bg-accent/10 border border-accent/20 rounded-sm text-[10px] font-semibold text-accent uppercase tracking-wide">
               {state}
             </div>
           )}
@@ -81,7 +81,7 @@ export default function BuilderShell({
                 key={s.id} 
                 onClick={() => { scrollToSection(s.id); }}
                 className={cn(
-                  "text-[10px] font-black uppercase tracking-widest transition-colors",
+                  "text-[10px] font-semibold uppercase tracking-wide transition-colors",
                   activeSection === s.id ? "text-accent border-b border-accent" : "text-ink-tertiary hover:text-accent"
                 )}
               >

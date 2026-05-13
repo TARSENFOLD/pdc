@@ -88,8 +88,13 @@ async function processApprovalTrigger(event: DomainEvent<BaseDomainEventPayload>
     const titulo = 'Foste aprovado!';
     const msg = 'A tua conta foi aprovada. Já podes publicar conteúdo na plataforma.';
     await persistNotificacao(pId, 'aprovacao', titulo, msg, event.id);
-    socketService.emitirNotificacao(String(userId), { id: event.id, tipo: 'sucesso', titulo, mensagem: msg, timestamp: ts });
-    log.info({ perfilId: payload.perfilId, userId }, 'notify: PERFIL_APROVADO processado');
+    try {
+      // Persistência usa domínio; realtime usa severidade visual consumida pela UI.
+      socketService.emitirNotificacao(String(userId), { id: event.id, tipo: 'sucesso', titulo, mensagem: msg, timestamp: ts });
+    } catch (err: unknown) {
+      log.warn({ err, userId }, 'Falha ao emitir notificação realtime para PERFIL_APROVADO');
+    }
+    log.info({ perfilId: pId, userId }, 'notify: PERFIL_APROVADO processado');
     return true;
   }
 
@@ -104,8 +109,13 @@ async function processApprovalTrigger(event: DomainEvent<BaseDomainEventPayload>
     const titulo = 'Perfil não aprovado';
     const msg = `A tua candidatura não foi aprovada. Motivo: ${motivo}`;
     await persistNotificacao(pId, 'rejeicao', titulo, msg, event.id);
-    socketService.emitirNotificacao(String(userId), { id: event.id, tipo: 'aviso', titulo, mensagem: msg, timestamp: ts });
-    log.info({ perfilId: payload.perfilId, userId }, 'notify: PERFIL_REJEITADO processado');
+    try {
+      // Persistência usa domínio; realtime usa severidade visual consumida pela UI.
+      socketService.emitirNotificacao(String(userId), { id: event.id, tipo: 'aviso', titulo, mensagem: msg, timestamp: ts });
+    } catch (err: unknown) {
+      log.warn({ err, userId }, 'Falha ao emitir notificação realtime para PERFIL_REJEITADO');
+    }
+    log.info({ perfilId: pId, userId }, 'notify: PERFIL_REJEITADO processado');
     return true;
   }
 

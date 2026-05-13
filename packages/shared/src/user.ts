@@ -80,13 +80,14 @@ export type FormacaoAcademica = z.infer<typeof FormacaoAcademicaSchema>;
 
 // ─── Utilizador & Perfis ───────────────────────────────────────────────────
 
-export const UserSchema = z.object({
+const UserObjectSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   nome: z.string(),
   role: RoleSchema,
   perfilId: z.string().optional().nullable(),
   avatarUrl: z.string().url().optional().nullable(),
+  bannerUrl: z.string().url().optional().nullable(),
   reputacaoTier: ReputacaoTierSchema.optional().default('BRONZE'),
   xp: z.number().default(0),
   reputacao: z.number().default(0),
@@ -103,6 +104,14 @@ export const UserSchema = z.object({
   oauthProvider: z.enum(['google', 'linkedin']).optional(),
   onboardingCompleto: z.boolean().optional(),
 });
+
+export const UserSchema = UserObjectSchema.refine(
+  (user) => user.oauthVerified !== true || user.oauthProvider !== undefined,
+  {
+    message: 'oauthProvider é obrigatório quando oauthVerified=true',
+    path: ['oauthProvider'],
+  },
+);
 
 export type User = z.infer<typeof UserSchema>;
 
@@ -181,7 +190,7 @@ export const InstituicaoPublicaSchema = z.object({
 
 export type InstituicaoPublica = z.infer<typeof InstituicaoPublicaSchema>;
 
-export const PerfilCompletoSchema = UserSchema.extend({
+export const PerfilCompletoSchema = UserObjectSchema.extend({
   biografia: z.string().optional(),
   localizacao: z.string().optional(),
   telefone: z.string().optional(),

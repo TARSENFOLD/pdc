@@ -199,4 +199,8 @@ export interface Comment extends Record<string, unknown> {
   userId: string;
   conteudo: string;
   createdAt: string;
+  autor?: {
+    nome?: string;
+    avatarUrl?: string;
+  };
 }

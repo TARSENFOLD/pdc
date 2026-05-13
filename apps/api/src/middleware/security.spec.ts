@@ -74,7 +74,11 @@ describe('securityMiddleware CSP', () => {
     const response = await app.request('/health');
     const csp = response.headers.get('Content-Security-Policy') ?? '';
 
-    expect(csp).toContain("frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com");
+    const frameSrc = csp.split(';').find((d) => d.trim().startsWith('frame-src')) ?? '';
+    expect(frameSrc).toContain("'self'");
+    expect(frameSrc).toContain('https://www.youtube.com');
+    expect(frameSrc).toContain('https://www.youtube-nocookie.com');
+    expect(frameSrc).toContain('https://player.vimeo.com');
     expect(csp).toContain("frame-ancestors 'none'");
   });
 });

@@ -58,7 +58,7 @@ export async function processOneTelemetryEvent(): Promise<TelemetryEventStatus> 
   try {
     const queueLen = await redis.llen(QUEUE_KEY).catch(() => 0);
     if (queueLen > 10_000) {
-      log.warn({ queueLen }, 'Queue acima de 10k eventos — backpressure activo');
+      log.warn({ queueLen }, 'Queue acima de 10k eventos — considerar backpressure');
     }
 
     eventRaw = await redis.rpoplpush<string>(QUEUE_KEY, PROCESSING_QUEUE);
@@ -158,12 +158,12 @@ export async function processOneTelemetryEvent(): Promise<TelemetryEventStatus> 
             // Transient error: libertar lock de idempotência e re-enfileirar
             await redis.del(`tel:evt:${eventId}`);
             await redis.lrem(PROCESSING_QUEUE, 1, eventRaw);
-            await redis.lpush(QUEUE_KEY, eventRaw);
+            await redis.rpush(QUEUE_KEY, eventRaw);
           }
         }
       } catch (innerErr: unknown) {
-        log.error({ innerErr }, 'Erro no handler de retries — fallback DLQ');
-        await moveToDlq(eventRaw, String(err), 0);
+        log.error({ err, innerErr }, 'Erro no handler de retries — fallback DLQ');
+        await moveToDlq(eventRaw, `Original: ${String(err)}; Handler: ${String(innerErr)}`, 0);
       }
     }
 
@@ -172,9 +172,9 @@ export async function processOneTelemetryEvent(): Promise<TelemetryEventStatus> 
 }
 
 const CHUNK_SIZE = 100;
-let processedInChunk = 0;
 
 export async function processTelemetryQueue() {
+  let processedInChunk = 0;
   for (;;) {
     processedInChunk++;
     if (processedInChunk >= CHUNK_SIZE) {

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { SignJWT } from 'jose';
 
 const redisMock = vi.hoisted(() => ({
@@ -125,6 +125,10 @@ describe('Google OAuth happy path — onboarded user', () => {
     authServiceMock.setOauthProvider.mockResolvedValue(undefined);
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('exchanges code for token, fetches userinfo, creates user, and redirects to /app', async () => {
     const fetchMock = vi
       .fn()
@@ -143,8 +147,6 @@ describe('Google OAuth happy path — onboarded user', () => {
     expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS.accessToken, MOCK_TOKENS.refreshToken);
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/app');
-
-    vi.unstubAllGlobals();
   });
 
   it('returns 400 when Google userinfo returns no email', async () => {
@@ -163,8 +165,6 @@ describe('Google OAuth happy path — onboarded user', () => {
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: expect.stringContaining('Email') as string });
     expect(authServiceMock.findOrCreateUser).not.toHaveBeenCalled();
-
-    vi.unstubAllGlobals();
   });
 
   it('deletes the oauth state key after a valid state check', async () => {
@@ -181,8 +181,6 @@ describe('Google OAuth happy path — onboarded user', () => {
     await oauthRoutes.request('/google/callback?code=auth-code&state=valid-state');
 
     expect(redisMock.del).toHaveBeenCalledWith('oauth_state:valid-state');
-
-    vi.unstubAllGlobals();
   });
 });
 
@@ -195,6 +193,10 @@ describe('Google OAuth — new user redirects to onboarding', () => {
     authServiceMock.generateTokens.mockResolvedValue(MOCK_TOKENS);
     authServiceMock.saveRefreshToken.mockResolvedValue(undefined);
     authServiceMock.setOauthProvider.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('redirects to /criar-conta/finalizar when oauthVerified is not set', async () => {
@@ -212,8 +214,6 @@ describe('Google OAuth — new user redirects to onboarding', () => {
 
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/criar-conta/finalizar?upgrade=true');
-
-    vi.unstubAllGlobals();
   });
 
   it('redirects with ?upgrade=true when onboardingCompleto is explicitly false', async () => {
@@ -236,8 +236,6 @@ describe('Google OAuth — new user redirects to onboarding', () => {
 
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/criar-conta/finalizar?upgrade=true');
-
-    vi.unstubAllGlobals();
   });
 });
 
@@ -250,6 +248,10 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
     authServiceMock.generateTokens.mockResolvedValue(MOCK_TOKENS);
     authServiceMock.saveRefreshToken.mockResolvedValue(undefined);
     authServiceMock.setOauthProvider.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('exchanges code for token, fetches userinfo, creates user, and redirects to /app', async () => {
@@ -270,8 +272,6 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
     expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS.accessToken, MOCK_TOKENS.refreshToken);
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/app');
-
-    vi.unstubAllGlobals();
   });
 
   it('returns 400 when LinkedIn userinfo returns no email', async () => {
@@ -289,8 +289,6 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
 
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: expect.stringContaining('Email') as string });
-
-    vi.unstubAllGlobals();
   });
 });
 

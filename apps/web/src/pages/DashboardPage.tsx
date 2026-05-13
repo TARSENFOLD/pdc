@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { useTelemetry } from '@/hooks/useTelemetry';
 
 export default function DashboardPage() {

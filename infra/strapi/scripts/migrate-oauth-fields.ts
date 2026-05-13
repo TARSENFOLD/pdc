@@ -29,9 +29,13 @@ async function main() {
   }
 
   const client = new Client({ connectionString: databaseUrl });
-  await client.connect();
+  let inTransaction = false;
 
   try {
+    await client.connect();
+    await client.query('BEGIN');
+    inTransaction = true;
+
     const countRes = await client.query<{ count: string }>(
       `SELECT COUNT(*) FROM perfis WHERE oauth_verified IS NULL`
     );
@@ -40,12 +44,20 @@ async function main() {
     console.log(`Perfis with oauth_verified IS NULL: ${total.toString()}`);
 
     if (isDryRun) {
+      const sampleRes = await client.query<{ id: number; created_at: Date }>(
+        `SELECT id, created_at FROM perfis WHERE oauth_verified IS NULL ORDER BY id LIMIT 5`
+      );
       console.log('[dry-run] No changes applied.');
+      console.log('[dry-run] Sample affected records:', JSON.stringify(sampleRes.rows, null, 2));
+      await client.query('ROLLBACK');
+      inTransaction = false;
       return;
     }
 
     if (total === 0) {
       console.log('Nothing to migrate.');
+      await client.query('ROLLBACK');
+      inTransaction = false;
       return;
     }
 
@@ -56,9 +68,16 @@ async function main() {
              updated_at = NOW()
        WHERE oauth_verified IS NULL`
     );
+    await client.query('COMMIT');
+    inTransaction = false;
 
     console.log(`Updated ${(updateRes.rowCount ?? 0).toString()} rows.`);
     console.log('Migration complete.');
+  } catch (err) {
+    if (inTransaction) {
+      await client.query('ROLLBACK');
+    }
+    throw err;
   } finally {
     await client.end();
   }

@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import SidebarContent from '../Sidebar';
 import { ThemeProvider } from '@/lib/theme/ThemeContext';
-import { AuthContext } from '@/lib/auth/AuthContext';
-import { BootstrapContext } from '@/lib/bootstrap/BootstrapContext';
+import { AuthContext } from '@/lib/auth/auth-context';
+import { BootstrapContext } from '@/lib/bootstrap/bootstrap-context';
 import type { Role, User } from '@pdc/shared';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/lib/i18n'; // Import i18n setup

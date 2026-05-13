@@ -95,27 +95,33 @@ describe('HomeSummarySchema v2', () => {
   });
 
   it('rejeita recentActivitiesCursos com mais de 2 items', () => {
-    const threeItems = Array.from({ length: 3 }, (_, i) => ({
-      inscricaoId: String(i),
-      cursoId: String(i),
-      cursoTitulo: `Curso ${String(i)}`,
-      cursoCapaUrl: null,
-      progressoPercentual: 50,
-      ultimaAtividadeEm: '2026-05-01T00:00:00Z',
-    }));
+    const threeItems = Array.from({ length: 3 }, (_, i) => {
+      const index = String(i);
+      return {
+        inscricaoId: index,
+        cursoId: index,
+        cursoTitulo: `Curso ${index}`,
+        cursoCapaUrl: null,
+        progressoPercentual: 50,
+        ultimaAtividadeEm: '2026-05-01T00:00:00Z',
+      };
+    });
     const result = HomeSummarySchema.safeParse({ ...minimalPayload, recentActivitiesCursos: threeItems });
     expect(result.success).toBe(false);
   });
 
   it('rejeita recentActivitiesSimulacoes com mais de 2 items', () => {
-    const threeItems = Array.from({ length: 3 }, (_, i) => ({
-      tentativaId: String(i),
-      simulacaoId: String(i),
-      simulacaoTitulo: `Simulação ${String(i)}`,
-      status: 'concluida' as const,
-      score: 80,
-      dataInicio: '2026-05-01T00:00:00Z',
-    }));
+    const threeItems = Array.from({ length: 3 }, (_, i) => {
+      const index = String(i);
+      return {
+        tentativaId: index,
+        simulacaoId: index,
+        simulacaoTitulo: `Simulação ${index}`,
+        status: 'concluida' as const,
+        score: 80,
+        dataInicio: '2026-05-01T00:00:00Z',
+      };
+    });
     const result = HomeSummarySchema.safeParse({ ...minimalPayload, recentActivitiesSimulacoes: threeItems });
     expect(result.success).toBe(false);
   });

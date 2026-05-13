@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import pino from 'pino';
 import { UpdatePerfilPayloadSchema, DomainEventName, type UpdatePerfilPayload } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
@@ -7,6 +8,8 @@ import { strapiGet, strapiPut, strapiPutRaw } from '../modules/strapi/strapi.cli
 import { serializePublicProfile, serializePrivateProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
 import { getTier } from '../modules/reputation/reputation.service.js';
 import { eventBus } from '../modules/events/event-bus.js';
+
+const log = pino({ name: 'perfis-routes' });
 
 type Vars = { Variables: AuthVariables };
 
@@ -90,11 +93,7 @@ perfilRoutes.get('/me', async (c) => {
       }
     }
 
-    // Fallback: buscar utilizador base (Mudar para lançar 404 futuramente se perfil for obrigatório)
-    const data = await strapiGet<StrapiPerfilRaw>(`/users/${id}`, {
-      populate: 'role,avatar',
-    });
-    return c.json(data.data[0]);
+    return c.json({ error: 'Perfil não encontrado' }, 404);
   } catch (err) {
     const message = (err as Error).message || 'Erro interno';
     return c.json({ error: message }, 502);
@@ -232,7 +231,9 @@ perfilRoutes.get('/:id', async (c) => {
           }),
         ]);
         isConnected = r1.data.length > 0 || r2.data.length > 0;
-      } catch { /* ignore vinculos fail */ }
+      } catch (err) {
+        log.warn({ err, userId, requesterId }, 'vinculos lookup failed — isConnected defaults to false');
+      }
     }
 
     const profileData = first as unknown as StrapiPerfil;

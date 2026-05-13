@@ -53,6 +53,13 @@ export const otpService = {
     return false;
   },
 
+  async deleteOtp(userId: string, canal: 'email' | 'sms'): Promise<void> {
+    if (!hasRedis) {
+      throw new Error('OTP requer Redis (não configurado)');
+    }
+    await redis.del(`otp:${userId}:${canal}`);
+  },
+
   async sendOtpEmail(email: string, otp: string): Promise<void> {
     const apiKey = env.SENDGRID_API_KEY;
     if (!apiKey) {

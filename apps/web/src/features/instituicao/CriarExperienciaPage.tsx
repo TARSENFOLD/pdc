@@ -10,7 +10,7 @@ import { toast } from '@/hooks/useToast';
 import { BuilderShell, BuilderSection, BuilderUploadZone, BuilderActionsBar } from '@/components/builders';
 import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 
 const STORAGE_KEY = 'pdc_builder_experiencia_draft';
 
@@ -138,23 +138,42 @@ export function CriarExperienciaPage() {
           <div className="space-y-1">
             <label className="text-sm font-bold uppercase tracking-widest text-ink-tertiary">Descrição Narrativa</label>
             <textarea 
-              className="flex min-h-[120px] w-full rounded-xl border border-ink-tertiary/20 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
+              className="flex min-h-[120px] w-full rounded-sm border border-ink-tertiary/20 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
               {...register('descricao')}
             />
             {errors.descricao && <p className="text-xs text-accent-danger">{errors.descricao.message}</p>}
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <Select label="Área Vocacional" {...register('area')}>
                <option value="TECNOLOGIA">Tecnologia</option>
                <option value="SAUDE">Saúde</option>
                <option value="GESTAO">Gestão</option>
                <option value="ARTES">Artes</option>
+               <option value="ENGENHARIA">Engenharia</option>
+               <option value="DIREITO">Direito</option>
+               <option value="EDUCACAO">Educação</option>
+               <option value="COMUNICACAO">Comunicação</option>
+               <option value="CIENCIAS_SOCIAIS">Ciências Sociais</option>
+               <option value="CIENCIAS_NATURAIS">Ciências Naturais</option>
+               <option value="ARQUITETURA">Arquitetura</option>
+               <option value="TURISMO_HOTELARIA">Turismo e Hotelaria</option>
+               <option value="DESPORTO">Desporto</option>
+               <option value="OUTRA">Outra</option>
             </Select>
             <Select label="Nível" {...register('nivel')}>
                <option value="basico">Básico</option>
                <option value="medio">Médio</option>
                <option value="avancado">Avançado</option>
             </Select>
+            <Input
+              label="Duração (horas)"
+              type="number"
+              min={1}
+              max={10000}
+              placeholder="ex: 40"
+              {...register('duracaoEstimada', { valueAsNumber: true })}
+              error={errors.duracaoEstimada?.message}
+            />
           </div>
         </div>
       </BuilderSection>

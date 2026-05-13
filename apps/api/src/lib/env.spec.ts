@@ -3,19 +3,36 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const originalEnv = { ...process.env };
 
 function restoreEnv(): void {
-  process.env = { ...originalEnv };
+  for (const key in process.env) {
+    if (!(key in originalEnv)) {
+      Reflect.deleteProperty(process.env, key);
+    }
+  }
+  for (const key in originalEnv) {
+    process.env[key] = originalEnv[key];
+  }
 }
 
 function setBaseEnv(nodeEnv: 'development' | 'production' | 'test' = 'production'): void {
-  process.env = {
-    NODE_ENV: nodeEnv,
-    PORT: '3001',
-    API_URL: 'http://localhost:3001',
-    FRONTEND_URL: 'http://localhost:5173',
-    STRAPI_URL: 'http://localhost:1337',
-    STRAPI_API_TOKEN: 'test-strapi-token',
-    JWT_SECRET: 'test-jwt-secret-for-ci-minimum-32-chars',
-  };
+  for (const key of [
+    'R2_ACCOUNT_ID',
+    'R2_ACCESS_KEY_ID',
+    'R2_SECRET_ACCESS_KEY',
+    'R2_PUBLIC_URL',
+    'SENDGRID_API_KEY',
+    'SENDGRID_FROM_EMAIL',
+    'RESEND_API_KEY',
+  ]) {
+    Reflect.deleteProperty(process.env, key);
+  }
+
+  process.env.NODE_ENV = nodeEnv;
+  process.env.PORT = '3001';
+  process.env.API_URL = 'http://localhost:3001';
+  process.env.FRONTEND_URL = 'http://localhost:5173';
+  process.env.STRAPI_URL = 'http://localhost:1337';
+  process.env.STRAPI_API_TOKEN = 'test-strapi-token';
+  process.env.JWT_SECRET = 'test-jwt-secret-for-ci-minimum-32-chars';
 }
 
 describe('env boot validation', () => {

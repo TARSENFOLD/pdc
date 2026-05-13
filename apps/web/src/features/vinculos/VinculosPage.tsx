@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { Avatar, Badge, Button, Card, EmptyState, Spinner, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { http } from '@/lib/api/http';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { useSocket } from '@/hooks/useSocket';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { useToast } from '@/hooks/useToast';

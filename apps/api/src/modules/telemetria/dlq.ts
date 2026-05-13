@@ -9,8 +9,15 @@ const RETRY_TTL_SECONDS = 60 * 60 * 24 * 7; // 7d — paralelo a tel:evt:<eventI
 
 export async function incrementRetry(eventId: string): Promise<number> {
   const retryKey = `tel:retry:${eventId}`;
-  const count = await redis.incr(retryKey);
-  await redis.expire(retryKey, RETRY_TTL_SECONDS);
+  const count = await redis.eval<[number], number>(
+    `
+local count = redis.call("INCR", KEYS[1])
+redis.call("EXPIRE", KEYS[1], ARGV[1])
+return count
+`,
+    [retryKey],
+    [RETRY_TTL_SECONDS],
+  );
   return count;
 }
 
@@ -26,7 +33,7 @@ export async function moveToDlq(
 
   Sentry.captureMessage('telemetry-poison-pill', {
     level: 'error',
-    extra: { eventId, reason, retries },
+    extra: { ...(eventId !== undefined && { eventId }), reason, retries },
   });
 }
 

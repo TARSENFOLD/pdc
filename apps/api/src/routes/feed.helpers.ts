@@ -7,6 +7,7 @@ import { redis } from '../lib/redis.js';
 import { calcRecencyScore, calcScore, type FeedFeatures } from '../modules/feed/feed.scoring.js';
 import { AreaVocacionalSchema, type FeedItem, type FeedItemTipo } from '@pdc/shared';
 import { env } from '../lib/env.js';
+import { isPublicCatalogEstado } from './publication-state.js';
 
 // ── Strapi interfaces (Flat v5) ──────────────────────────────────────────────
 
@@ -146,9 +147,8 @@ export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: Fe
 
   return all.filter((c) => {
     if (c.tipo === 'post') return c.estado === 'aprovada';
-    const estado = c.estado ?? 'published';
     const vis = c.visibilidade ?? 'publico';
-    return estado === 'published' && vis === 'publico';
+    return isPublicCatalogEstado(c.estado) && vis === 'publico';
   });
 }
 

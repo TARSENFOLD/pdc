@@ -104,7 +104,35 @@ async function main() {
       });
     }
 
-    // 4. As 100 Personas e Telemetria Massiva (9000 eventos)
+    // 4. Projetos de Excelência (Catálogo)
+    console.log('🌟 Criando Projetos (Catálogos)...');
+    const projetos: SeedDocument[] = [];
+    const projetosData = [
+      { titulo: 'Plataforma de IA para Saúde', area: 'SAUDE', abstract: 'Sistema inteligente de apoio à decisão clínica e triagem rápida.', isDemo: true, estado: 'published', buscandoParceiros: true },
+      { titulo: 'Drone Agrícola Autónomo', area: 'AGRONOMIA', abstract: 'Mapeamento de plantações usando visão computacional e controle autónomo de drones.', isDemo: true, estado: 'published', buscandoParceiros: false },
+      { titulo: 'Sistema de Gestão Escolar', area: 'EDUCACAO', abstract: 'Gestão escolar descentralizada para registos e certificados à prova de fraude.', isDemo: true, estado: 'published', buscandoParceiros: true },
+      { titulo: 'Micro-rede de Energia Solar', area: 'ENGENHARIA', abstract: 'Implementação de micro-redes solares para eletrificação de comunidades isoladas.', isDemo: true, estado: 'published', buscandoParceiros: true },
+      { titulo: 'App de Inclusão Financeira', area: 'TECNOLOGIA', abstract: 'Carteira digital com foco em utilizadores sem conta bancária, usando USSD e app mobile.', isDemo: true, estado: 'published', buscandoParceiros: false }
+    ];
+
+    for (let i = 0; i < projetosData.length; i++) {
+      const pData = projetosData[i];
+      const p = await findOrCreate('api::projeto.projeto', { slug: `proj-${pData.area.toLowerCase()}-${i}` }, {
+        titulo: pData.titulo,
+        slug: `proj-${pData.area.toLowerCase()}-${i}`,
+        abstract: pData.abstract,
+        area: pData.area,
+        estado: pData.estado,
+        isDemo: pData.isDemo,
+        buscandoParceiros: pData.buscandoParceiros,
+        tags: [pData.area.toLowerCase(), 'inovacao', 'destaque'],
+        visibilidade: 'publico',
+        autor: mentorProfiles[i % mentorProfiles.length]?.id
+      });
+      projetos.push(p);
+    }
+
+    // 5. As 100 Personas e Telemetria Massiva (9000 eventos)
     console.log('👥 Criando 100 Personas e Injetando 9000 Eventos de Telemetria...');
     const behaviorTypes = ['resiliente', 'impulsivo', 'metodico', 'indeciso'];
     

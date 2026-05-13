@@ -13,10 +13,13 @@ export const FeedPostSchema = z.object({
   corpo: z.string().min(1).max(2000),
   mediaUrls: z.array(z.string().url()).max(10).optional(),
   estado: FeedPostEstadoSchema,
+  motivoRejeicao: z.string().optional(),
+  motivoOcultacao: z.string().optional(),
   motivoModeracao: z.string().optional(),
   eventId: z.string().optional(),
   likesCount: z.number().int().min(0).default(0),
   comentariosCount: z.number().int().min(0).default(0),
+  sharesCount: z.number().int().min(0).default(0),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -32,6 +35,8 @@ export type CriarPostPayload = z.infer<typeof CriarPostPayloadSchema>;
 
 export const ModerarPostSchema = z.object({
   estado: z.enum(['aprovada', 'rejeitada', 'hidden']),
+  motivoRejeicao: z.string().max(500).optional(),
+  motivoOcultacao: z.string().max(500).optional(),
   motivoModeracao: z.string().optional(),
 });
 

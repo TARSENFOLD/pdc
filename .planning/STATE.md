@@ -34,7 +34,7 @@ Estamos na **Fase F — Pre-Production Hardening** (PROD-A/B/C/D/E concluído). 
 | **PROD-C** | Security Hardening | 2 | 2 | 0 | 0 | Boot env validation, rate limit factory per-endpoint, telemetria per-user |
 | **PROD-D** | Data Hygiene | 3 | 2 | 1 | 0 | Sim Tipo 2/3 ALPHA flags, páginas legais, doc sync (T03 gaps → Wave A WA-T06) |
 | **PROD-E** | Moderação + Scoring Pipeline | 4 | 4 | 0 | 0 | DLQ telemetria (PE-T04), scoring sim-2-3 STABLE (PE-T03), moderação unificada (PE-T02), doc sync (FIX-002) |
-| **Total** | | **56** | **41** | **15** | **1** | |
+| **Total** | | **57** | **41** | **14** | **1** | |
 
 ### Métricas do Codebase
 

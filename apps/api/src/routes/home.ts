@@ -35,6 +35,9 @@ interface PerfilStats {
   xp?: number;
   reputacao?: number;
   conquistasCount?: number;
+  vinkulosCount?: number;
+  activeStudents?: number;
+  activePrograms?: number;
   nome?: string;
 }
 
@@ -82,18 +85,18 @@ const LEARNING_TIPOS = new Set<FeedItemTipo>(['curso', 'simulacao', 'experiencia
 type QuickActionItem = { label: string; to: string; icon: string; variant: 'primary' | 'secondary' | 'ghost' };
 const QUICK_ACTIONS_BY_ROLE: Record<string, QuickActionItem[]> = {
   estudante: [
-    { label: 'Simulações', to: '/app/simulacoes', icon: 'FlaskConical', variant: 'primary' },
-    { label: 'Programa', to: '/app/programas', icon: 'GraduationCap', variant: 'secondary' },
-    { label: 'Projecto', to: '/app/explorar', icon: 'FolderKanban', variant: 'secondary' },
-    { label: 'Cursos', to: '/app/cursos', icon: 'BookOpen', variant: 'secondary' },
-    { label: 'Feed', to: '/app/feed', icon: 'Zap', variant: 'secondary' },
+    { label: 'Experiências', to: '/app/explorar',               icon: 'Compass',      variant: 'primary' },
+    { label: 'Simulações',   to: '/app/simulacoes',             icon: 'FlaskConical', variant: 'secondary' },
+    { label: 'Cursos',       to: '/app/cursos',                 icon: 'BookOpen',     variant: 'secondary' },
+    { label: 'Projectos',    to: '/app/explorar',               icon: 'FolderKanban', variant: 'secondary' },
+    { label: 'Perfil',       to: '/app/dashboard/estudante',   icon: 'User',         variant: 'secondary' },
   ],
   mentor: [
-    { label: 'Simulações', to: '/app/mentor/simulacoes', icon: 'FlaskConical', variant: 'primary' },
-    { label: 'Programa', to: '/app/instituicao/programas', icon: 'GraduationCap', variant: 'secondary' },
-    { label: 'Projecto', to: '/app/explorar', icon: 'FolderKanban', variant: 'secondary' },
-    { label: 'Cursos', to: '/app/mentor/cursos', icon: 'BookOpen', variant: 'secondary' },
-    { label: 'Feed', to: '/app/feed', icon: 'Zap', variant: 'secondary' },
+    { label: 'Simulações',  to: '/app/mentor/simulacoes',      icon: 'FlaskConical',  variant: 'primary' },
+    { label: 'Programas',   to: '/app/instituicao/programas',  icon: 'GraduationCap', variant: 'secondary' },
+    { label: 'Cursos',      to: '/app/mentor/cursos',          icon: 'BookOpen',      variant: 'secondary' },
+    { label: 'Explorar',    to: '/app/explorar',               icon: 'Compass',       variant: 'secondary' },
+    { label: 'Dashboard',   to: '/app/dashboard/mentor',       icon: 'BarChart2',     variant: 'secondary' },
   ],
   instituicao: [
     { label: 'Programas', to: '/app/instituicao/programas', icon: 'GraduationCap', variant: 'primary' },
@@ -124,8 +127,11 @@ async function computeHomeSummary(userId: string, role: string): Promise<HomeSum
   const [perfilRes, inscricoesRes, tentativasRes, videosRes, candidates] = await Promise.all([
     strapiGet<PerfilStats>('/perfis', {
       'filters[userId][$eq]': userId,
-      'fields': 'xp,reputacao,conquistasCount,nome',
-    }),
+      'fields': 'xp,reputacao,conquistasCount,vinkulosCount,activeStudents,activePrograms,nome',
+    }).catch(() => ({
+      data: [] as (PerfilStats & { id: string | number })[],
+      meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
+    })),
     strapiGet<InscricaoRaw>('/inscricoes', {
       'filters[perfil][userId][$eq]': userId,
       'sort': 'ultimaAtividadeEm:desc',
@@ -237,6 +243,10 @@ async function computeHomeSummary(userId: string, role: string): Promise<HomeSum
     nextDirective = { label: `Continua "${inProgressInscricao.curso.titulo ?? 'o curso'}"`, to: `/app/cursos/${String(inProgressInscricao.curso.id)}`, type: 'learning', description: `${String(inProgressInscricao.progressoPercentual ?? 0)}% concluído` };
   } else if (inProgressTentativa?.simulacao) {
     nextDirective = { label: `Retoma "${inProgressTentativa.simulacao.titulo ?? 'simulação'}"`, to: `/app/simulacoes/${String(inProgressTentativa.simulacao.id)}`, type: 'learning', description: 'Simulação em progresso' };
+  } else if (role === 'estudante') {
+    nextDirective = { label: 'Descobre a tua primeira Experiência', to: '/app/explorar', type: 'onboarding', description: 'Explora áreas antes de decidir o teu percurso' };
+  } else if (role === 'mentor' || role === 'instituicao') {
+    nextDirective = { label: 'Completa o teu perfil de mentor', to: '/app/dashboard/mentor', type: 'onboarding', description: 'Um perfil completo atrai mais estudantes' };
   }
 
   const quickActions = QUICK_ACTIONS_BY_ROLE[role] ?? QUICK_ACTIONS_BY_ROLE['estudante'] ?? [];
@@ -248,6 +258,9 @@ async function computeHomeSummary(userId: string, role: string): Promise<HomeSum
       xp: perfil?.xp ?? 0,
       reputacao: perfil?.reputacao ?? 0,
       conquistasCount: perfil?.conquistasCount ?? 0,
+      vinkulosCount: perfil?.vinkulosCount ?? 0,
+      activeStudents: perfil?.activeStudents ?? 0,
+      activePrograms: perfil?.activePrograms ?? 0,
       pendingActions: 0,
     },
     nextDirective,

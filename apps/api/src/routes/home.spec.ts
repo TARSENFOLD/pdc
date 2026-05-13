@@ -96,7 +96,16 @@ beforeEach(() => {
 
   // Default Strapi responses
   vi.mocked(strapiGet).mockImplementation((path: string) => {
-    if (path === '/perfis') return Promise.resolve(listResponse([{ id: 'perfil-1', xp: 100, reputacao: 200, conquistasCount: 3, nome: 'Ana Silva' }]));
+    if (path === '/perfis') return Promise.resolve(listResponse([{
+      id: 'perfil-1',
+      xp: 100,
+      reputacao: 200,
+      conquistasCount: 3,
+      vinkulosCount: 4,
+      activeStudents: 5,
+      activePrograms: 6,
+      nome: 'Ana Silva',
+    }]));
     if (path === '/inscricoes') return Promise.resolve(emptyList());
     if (path === '/tentativas') return Promise.resolve(emptyList());
     if (path === '/onboarding-videos') return Promise.resolve(emptyList());
@@ -136,7 +145,10 @@ describe('GET /app/home', () => {
     const res = await homeRoutes.request(authRequest());
 
     expect(res.status).toBe(200);
-    expect(strapiGet).toHaveBeenCalledWith('/perfis', expect.objectContaining({ 'filters[userId][$eq]': 'user-1' }));
+    expect(strapiGet).toHaveBeenCalledWith('/perfis', expect.objectContaining({
+      'filters[userId][$eq]': 'user-1',
+      'fields': 'xp,reputacao,conquistasCount,vinkulosCount,activeStudents,activePrograms,nome',
+    }));
     expect(strapiGet).toHaveBeenCalledWith('/inscricoes', expect.objectContaining({ 'filters[perfil][userId][$eq]': 'user-1' }));
     expect(strapiGet).toHaveBeenCalledWith('/tentativas', expect.objectContaining({ 'filters[perfil][userId][$eq]': 'user-1' }));
     expect(strapiGet).toHaveBeenCalledWith('/onboarding-videos', expect.objectContaining({ 'filters[role][$eq]': 'estudante' }));
@@ -166,7 +178,7 @@ describe('GET /app/home', () => {
 
   it('user novo sem inscrições/tentativas: retorna 200 com arrays vazios', async () => {
     vi.mocked(strapiGet).mockImplementation((path: string) => {
-      if (path === '/perfis') return Promise.resolve(listResponse([{ id: 'perfil-new', xp: 0, reputacao: 0, conquistasCount: 0, nome: 'Novo User' }]));
+      if (path === '/perfis') return Promise.resolve(listResponse([{ id: 'perfil-new', xp: 0, reputacao: 0, conquistasCount: 0, vinkulosCount: 0, activeStudents: 0, activePrograms: 0, nome: 'Novo User' }]));
       return Promise.resolve(emptyList());
     });
 
@@ -178,6 +190,36 @@ describe('GET /app/home', () => {
     expect(body.recentActivitiesSimulacoes).toEqual([]);
     expect(body.onboardingVideo).toBeNull();
     expect(body.stats.xp).toBe(0);
+  });
+
+  it('stats: usa campos persistidos do perfil', async () => {
+    vi.mocked(strapiGet).mockImplementation((path: string) => {
+      if (path === '/perfis') {
+        return Promise.resolve(listResponse([{
+          id: 'perfil-1',
+          xp: 120,
+          reputacao: 80,
+          conquistasCount: 2,
+          conquistas: [{ id: 'c1' }, { id: 'c2' }],
+          vinkulosCount: 3,
+          activeStudents: 4,
+          activePrograms: 5,
+          nome: 'Ana Silva',
+        }]));
+      }
+      return Promise.resolve(emptyList());
+    });
+
+    const res = await homeRoutes.request(authRequest());
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as HomeSummary;
+    expect(body.stats.xp).toBe(120);
+    expect(body.stats.reputacao).toBe(80);
+    expect(body.stats.conquistasCount).toBe(2);
+    expect(body.stats.vinkulosCount).toBe(3);
+    expect(body.stats.activeStudents).toBe(4);
+    expect(body.stats.activePrograms).toBe(5);
   });
 
   it('role-awareness: filtro de onboarding-videos usa role do JWT', async () => {

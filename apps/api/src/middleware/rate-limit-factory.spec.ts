@@ -26,7 +26,11 @@ describe('createRateLimit', () => {
 
     const blocked = await app.request('/limited', { method: 'POST' });
     expect(blocked.status).toBe(429);
-    expect(blocked.headers.get('Retry-After')).toBeTruthy();
+    const retryAfter = blocked.headers.get('Retry-After');
+    expect(retryAfter).toBeTruthy();
+    const isNumericSeconds = retryAfter !== null && /^\d+$/.test(retryAfter) && Number(retryAfter) > 0;
+    const isHttpDate = retryAfter !== null && Number.isFinite(Date.parse(retryAfter));
+    expect(isNumericSeconds || isHttpDate).toBe(true);
     await expect(blocked.json()).resolves.toMatchObject({ code: 'RATE_LIMITED' });
   });
 

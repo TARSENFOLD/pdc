@@ -6,7 +6,8 @@ import { DomainEventName } from '../events/types.js';
 
 const log = pino({ name: 'moderacao-service' });
 
-export type ConteudoTipo = 'curso' | 'simulacao' | 'experiencia' | 'programa' | 'projeto' | 'feed-post';
+export const ConteudoTipoSchema = z.enum(['curso', 'simulacao', 'experiencia', 'programa', 'projeto', 'feed-post']);
+export type ConteudoTipo = z.infer<typeof ConteudoTipoSchema>;
 
 const TIPO_COLECAO: Record<ConteudoTipo, string> = {
   curso: 'cursos',
@@ -42,6 +43,12 @@ function colecao(tipo: ConteudoTipo): string {
   return TIPO_COLECAO[tipo];
 }
 
+function parsePositiveInt(value: string, fallback: number): number {
+  if (!/^[1-9]\d*$/.test(value)) return fallback;
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export const moderacaoService = {
   async listarPendentes(
     tipo: ConteudoTipo,
@@ -49,20 +56,16 @@ export const moderacaoService = {
     pageSize = '10',
   ): Promise<{ data: ConteudoPendenteItem[]; meta: { page: number; pageSize: number; total: number; pageCount: number } }> {
     const col = colecao(tipo);
+    const pageNum = parsePositiveInt(page, 1);
+    const pageSizeNum = parsePositiveInt(pageSize, 10);
 
-    const [itemsRes, totalRes] = await Promise.all([
-      strapiGet<StrapiConteudoItem>(`/${col}`, {
-        'filters[estado][$eq]': 'review',
-        'pagination[page]': page,
-        'pagination[pageSize]': pageSize,
-        'fields': 'id,titulo,estado,createdAt',
-        'populate': 'autor,autorId',
-      }),
-      strapiGet<StrapiConteudoItem>(`/${col}`, {
-        'filters[estado][$eq]': 'review',
-        'pagination[pageSize]': '1',
-      }),
-    ]);
+    const itemsRes = await strapiGet<StrapiConteudoItem>(`/${col}`, {
+      'filters[estado][$eq]': 'review',
+      'pagination[page]': pageNum.toString(),
+      'pagination[pageSize]': pageSizeNum.toString(),
+      'fields': 'id,titulo,estado,createdAt',
+      'populate': 'autor,autorId',
+    });
 
     const data = itemsRes.data.map((item) => ({
       id: item.id,
@@ -75,10 +78,10 @@ export const moderacaoService = {
     return {
       data,
       meta: {
-        page: parseInt(page),
-        pageSize: parseInt(pageSize),
-        total: totalRes.meta.pagination.total,
-        pageCount: totalRes.meta.pagination.pageCount,
+        page: pageNum,
+        pageSize: pageSizeNum,
+        total: itemsRes.meta.pagination.total,
+        pageCount: itemsRes.meta.pagination.pageCount,
       },
     };
   },

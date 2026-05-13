@@ -24,7 +24,7 @@ export const MediaEntityTypeSchema = z.enum([
 
 export type MediaEntityType = z.infer<typeof MediaEntityTypeSchema>;
 
-// Canonical size limits by entity type (bytes)
+// Canonical size limits by entity type (bytes). Rich media surfaces below were raised to 50 MB; monitor upload rejections and storage cost after deploy.
 export const MEDIA_SIZE_LIMITS: Record<MediaEntityType, number> = {
   avatar: 2 * 1024 * 1024,              // 2 MB
   capa: 5 * 1024 * 1024,               // 5 MB

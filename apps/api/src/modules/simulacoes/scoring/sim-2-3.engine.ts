@@ -9,20 +9,45 @@ const log = pino({ name: 'sim-2-3-engine' });
 
 const SESSION_TTL_SECONDS = 4 * 60 * 60;
 const FINALIZED_TTL_SECONDS = 24 * 60 * 60;
+const FINALIZING_TTL_SECONDS = 60;
 const AREA_CACHE_TTL_MS = 5 * 60 * 1000;
+const AREA_CACHE_TTL_SECONDS = Math.ceil(AREA_CACHE_TTL_MS / 1000);
+const MAX_SESSION_EVENTS = 2000;
+// Assumed cadence for single-event sessions when no interval can be derived.
+const DEFAULT_AVERAGE_INTERVAL_MS = 5000;
+// Assumed attention stability when the session duration cannot be measured.
+const DEFAULT_STABILITY_SCORE = 0.8;
 
-const simulacaoAreaCache = new Map<string, { area: string; expiresAt: number }>();
+function simulacaoAreaKey(tentativaId: string): string {
+  return `sim:area:${tentativaId}`;
+}
+
+async function incrementTentativaConcluidaPublishFailure(
+  tentativaId: string,
+  perfilId: string,
+): Promise<void> {
+  const day = new Date().toISOString().slice(0, 10);
+  const metricKey = `metrics:tentativasConcluidasPublishFailures:${day}`;
+  await redis.incr(metricKey);
+  await redis.expire(metricKey, 60 * 60 * 24 * 14);
+  log.warn(
+    { metric: 'tentativasConcluidasPublishFailures', tentativaId, perfilId },
+    'Métrica de falha TENTATIVA_CONCLUIDA incrementada',
+  );
+}
 
 async function fetchSimulacaoArea(tentativaId: string): Promise<string> {
-  const cached = simulacaoAreaCache.get(tentativaId);
-  if (cached && cached.expiresAt > Date.now()) return cached.area;
   try {
+    const cacheKey = simulacaoAreaKey(tentativaId);
+    const cached = await redis.get<string>(cacheKey);
+    if (typeof cached === 'string' && cached.length > 0) return cached;
+
     const res = await strapiGet<{ simulacao?: { area?: string } }>(
       '/tentativas',
       { 'filters[id][$eq]': tentativaId, populate: 'simulacao', 'pagination[pageSize]': '1' },
     );
     const area = res.data[0]?.simulacao?.area ?? 'simulacao';
-    simulacaoAreaCache.set(tentativaId, { area, expiresAt: Date.now() + AREA_CACHE_TTL_MS });
+    await redis.set(cacheKey, area, { ex: AREA_CACHE_TTL_SECONDS });
     return area;
   } catch {
     return 'simulacao';
@@ -60,6 +85,9 @@ export async function aggregateLabEvent(
 
   const state: SessionState = existing ?? { events: [] };
   state.events.push(event);
+  if (state.events.length > MAX_SESSION_EVENTS) {
+    state.events = state.events.slice(-MAX_SESSION_EVENTS);
+  }
   if (event.perfilId && !state.perfilId) {
     state.perfilId = event.perfilId;
   }
@@ -88,7 +116,7 @@ export function derivePerSession(events: TelemetriaEvento[]): SessionScore {
   }
   const avgIntervalMs = intervals.length > 0
     ? intervals.reduce((a, b) => a + b, 0) / intervals.length
-    : 5000;
+    : DEFAULT_AVERAGE_INTERVAL_MS;
   // 500ms avg → phi=1.0; 10s+ → phi=0.0
   const phi = Math.max(0, Math.min(1, 1 - (avgIntervalMs - 500) / 9500));
 
@@ -142,7 +170,7 @@ export function derivePerSession(events: TelemetriaEvento[]): SessionScore {
       if (dt > 0) lostMs += dt;
     }
   }
-  const stability = totalMs > 0 ? Math.max(0, 1 - lostMs / totalMs) : 0.8;
+  const stability = totalMs > 0 ? Math.max(0, 1 - lostMs / totalMs) : DEFAULT_STABILITY_SCORE;
 
   const hFluidity = analyzeFluidity(phi);
   const hResilience = analyzeResilience(r);
@@ -170,46 +198,59 @@ export function derivePerSession(events: TelemetriaEvento[]): SessionScore {
 }
 
 export async function finalizeSession(tentativaId: string, sessionId: string): Promise<void> {
-  // Idempotency: NX ensures only the first finalization runs
-  const isNew = await redis.set(finalizedKey(tentativaId), '1', {
+  const finalKey = finalizedKey(tentativaId);
+  const isNew = await redis.set(finalKey, 'pending', {
     nx: true,
-    ex: FINALIZED_TTL_SECONDS,
+    ex: FINALIZING_TTL_SECONDS,
   });
   if (!isNew) {
     log.warn({ tentativaId }, 'Session já finalizada — idempotência garantida');
     return;
   }
 
-  const state = await redis.get<SessionState>(sessionKey(tentativaId, sessionId));
-  if (!state) {
-    log.warn({ tentativaId, sessionId }, 'Sem eventos acumulados para session — score zero');
-    return;
-  }
+  try {
+    const state = await redis.get<SessionState>(sessionKey(tentativaId, sessionId));
+    if (!state) {
+      await redis.del(finalKey);
+      log.warn({ tentativaId, sessionId }, 'Sem eventos acumulados para session — score zero');
+      return;
+    }
 
-  const { score, areaScore } = derivePerSession(state.events);
+    const { score, areaScore } = derivePerSession(state.events);
 
-  await strapiPut<unknown>(`/tentativas/${tentativaId}`, {
-    score,
-    areaScore,
-    dataFim: new Date().toISOString(),
-    status: 'concluida',
-  });
-
-  const area = await fetchSimulacaoArea(tentativaId);
-
-  // Fire-and-forget: não bloqueia o retorno (§7 Telemetria Sagrada)
-  void eventBus
-    .publishWithOutbox(DomainEventName.TENTATIVA_CONCLUIDA, {
-      tentativaId,
-      perfilId: state.perfilId ?? '',
-      area,
+    await strapiPut<unknown>(`/tentativas/${tentativaId}`, {
       score,
-    })
-    .catch((err: unknown) => {
-      log.error({ err, tentativaId }, 'Falha ao emitir TENTATIVA_CONCLUIDA');
+      areaScore,
+      dataFim: new Date().toISOString(),
+      status: 'concluida',
     });
 
-  log.info({ tentativaId, score }, 'Sessão lab finalizada — score derivado e persistido');
+    await redis.set(finalKey, '1', { ex: FINALIZED_TTL_SECONDS });
+    await redis.del(sessionKey(tentativaId, sessionId));
+
+    const area = await fetchSimulacaoArea(tentativaId);
+    const perfilId = state.perfilId ?? '';
+
+    // Fire-and-forget: não bloqueia o retorno (§7 Telemetria Sagrada)
+    void eventBus
+      .publishWithOutbox(DomainEventName.TENTATIVA_CONCLUIDA, {
+        tentativaId,
+        perfilId,
+        area,
+        score,
+      })
+      .catch((err: unknown) => {
+        void incrementTentativaConcluidaPublishFailure(tentativaId, perfilId).catch((metricErr: unknown) => {
+          log.error({ metricErr, tentativaId, perfilId }, 'Falha ao incrementar métrica TENTATIVA_CONCLUIDA');
+        });
+        log.error({ err, tentativaId, perfilId }, 'Falha ao emitir TENTATIVA_CONCLUIDA');
+      });
+
+    log.info({ tentativaId, score }, 'Sessão lab finalizada — score derivado e persistido');
+  } catch (err) {
+    await redis.del(finalKey);
+    throw err;
+  }
 }
 
 export async function handleLabEvent(event: TelemetriaEvento): Promise<void> {

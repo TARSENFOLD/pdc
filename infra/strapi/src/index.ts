@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 import type { Core } from '@strapi/strapi';
+import { ONBOARDING_VIDEO_ROLES, ONBOARDING_VIDEO_TITLES } from './shared/onboarding-video-constants';
 
 const INITIAL_FLAGS = [
   { domain: 'DISCUSSIONS_ENABLED', description: 'Habilitar módulo de discussões' },
@@ -7,28 +8,6 @@ const INITIAL_FLAGS = [
   { domain: 'PROFILE_V2_PUBLIC', description: 'Ativar novo layout de perfil público (v2)' },
   { domain: 'AUTO_ACHIEVEMENTS', description: 'Desbloquear conquistas automaticamente' },
 ] as const;
-
-const ONBOARDING_VIDEO_ROLES = [
-  'estudante',
-  'mentor',
-  'instituicao',
-  'moderador',
-  'comite_cientifico',
-  'super_admin',
-  'patrocinador',
-] as const;
-
-type OnboardingVideoRole = (typeof ONBOARDING_VIDEO_ROLES)[number];
-
-const ONBOARDING_VIDEO_TITLES: Record<OnboardingVideoRole, { pt: string; en: string }> = {
-  estudante: { pt: 'Bem-vindo, Estudante', en: 'Welcome, Student' },
-  mentor: { pt: 'Bem-vindo, Mentor', en: 'Welcome, Mentor' },
-  instituicao: { pt: 'Bem-vinda, Instituição', en: 'Welcome, Institution' },
-  moderador: { pt: 'Bem-vindo, Moderador', en: 'Welcome, Moderator' },
-  comite_cientifico: { pt: 'Bem-vindo, Comité Científico', en: 'Welcome, Scientific Committee' },
-  super_admin: { pt: 'Bem-vindo, Administrador', en: 'Welcome, Administrator' },
-  patrocinador: { pt: 'Bem-vindo, Patrocinador', en: 'Welcome, Sponsor' },
-};
 
 export default {
   register(/* { strapi }: { strapi: Core.Strapi } */) {},
@@ -87,7 +66,7 @@ async function seedOnboardingVideos(strapi: Core.Strapi) {
           videoUrl: 'about:blank',
           embedType: 'r2',
           duracaoSegundos: 0,
-          thumbnailUrl: '',
+          thumbnailUrl: null,
           tituloPt: titles.pt,
           tituloEn: titles.en,
         },

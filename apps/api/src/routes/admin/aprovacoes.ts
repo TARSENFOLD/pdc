@@ -17,6 +17,10 @@ const RejeitarBodySchema = z.object({
   motivo: z.string().min(10).max(500),
 });
 
+const PerfilIdParamSchema = z.object({
+  perfilId: z.string().regex(/^\d+$/, 'perfilId deve ser numérico'),
+});
+
 const adminAprovacoesRoutes = new Hono<Vars>();
 
 adminAprovacoesRoutes.use('*', verifyJwt);
@@ -46,11 +50,10 @@ adminAprovacoesRoutes.get('/pendentes', async (c) => {
 adminAprovacoesRoutes.post(
   '/:perfilId/aprovar',
   auditLog('perfil_aprovar'),
+  zValidator('param', PerfilIdParamSchema),
   async (c) => {
-    const perfilId = c.req.param('perfilId');
+    const { perfilId } = c.req.valid('param');
     const user = c.get('user');
-
-    if (!perfilId) return c.json({ error: 'perfilId obrigatório' }, 400);
 
     try {
       const result = await aprovacaoService.aprovarPerfil(perfilId, user.id);
@@ -69,13 +72,12 @@ adminAprovacoesRoutes.post(
 adminAprovacoesRoutes.post(
   '/:perfilId/rejeitar',
   auditLog('perfil_rejeitar'),
+  zValidator('param', PerfilIdParamSchema),
   zValidator('json', RejeitarBodySchema),
   async (c) => {
-    const perfilId = c.req.param('perfilId');
+    const { perfilId } = c.req.valid('param');
     const user = c.get('user');
     const { motivo } = c.req.valid('json');
-
-    if (!perfilId) return c.json({ error: 'perfilId obrigatório' }, 400);
 
     try {
       const result = await aprovacaoService.rejeitarPerfil(perfilId, user.id, motivo);

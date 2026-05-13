@@ -12,7 +12,7 @@ import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPane
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Globe } from 'lucide-react';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 
 const CRITERIOS = [
   { id: 'fluidez', label: 'Fluidez \u03D5', desc: 'Métrica de velocidade e precisão cognitiva.' },

@@ -7,6 +7,7 @@ vi.mock('../../lib/redis.js', () => ({
   redis: {
     incr: vi.fn(),
     expire: vi.fn(),
+    eval: vi.fn(),
     lpush: vi.fn(),
     lrem: vi.fn(),
     del: vi.fn(),
@@ -18,16 +19,18 @@ import { incrementRetry, moveToDlq, clearRetries } from './dlq.js';
 
 beforeEach(() => { vi.clearAllMocks(); });
 
+const RETRY_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days — mirrors dlq.ts
+
 describe('incrementRetry', () => {
-  it('retorna count incremental e chama EXPIRE com 604800 (7 dias)', async () => {
-    vi.mocked(redis.incr).mockResolvedValueOnce(3);
-    vi.mocked(redis.expire).mockResolvedValueOnce(1);
+  it('retorna count incremental e aplica EXPIRE atomicamente via Lua', async () => {
+    vi.mocked(redis.eval).mockResolvedValueOnce(3);
 
     const count = await incrementRetry('evt-abc');
 
     expect(count).toBe(3);
-    expect(redis.incr).toHaveBeenCalledWith('tel:retry:evt-abc');
-    expect(redis.expire).toHaveBeenCalledWith('tel:retry:evt-abc', 604800);
+    expect(redis.eval).toHaveBeenCalledWith(expect.stringContaining('INCR'), ['tel:retry:evt-abc'], [RETRY_TTL_SECONDS]);
+    expect(redis.incr).not.toHaveBeenCalled();
+    expect(redis.expire).not.toHaveBeenCalled();
   });
 });
 

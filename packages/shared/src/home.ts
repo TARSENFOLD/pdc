@@ -7,7 +7,7 @@ export const InscricaoActivitySchema = z.object({
   cursoTitulo: z.string(),
   cursoCapaUrl: z.string().url().nullable(),
   progressoPercentual: z.number(),
-  ultimaAtividadeEm: z.string(),
+  ultimaAtividadeEm: z.string().datetime(),
 });
 
 export type InscricaoActivity = z.infer<typeof InscricaoActivitySchema>;
@@ -18,7 +18,7 @@ export const TentativaActivitySchema = z.object({
   simulacaoTitulo: z.string(),
   status: z.enum(['em_progresso', 'concluida', 'falhou']),
   score: z.number(),
-  dataInicio: z.string(),
+  dataInicio: z.string().datetime(),
 });
 
 export type TentativaActivity = z.infer<typeof TentativaActivitySchema>;
@@ -27,7 +27,7 @@ export const OnboardingVideoSchema = z.object({
   embedType: z.enum(['r2', 'youtube', 'vimeo']),
   videoUrl: z.string().url(),
   thumbnailUrl: z.string().url().nullable(),
-  duracaoSegundos: z.number().int().positive(),
+  duracaoSegundos: z.number().int().nonnegative(),
   tituloPt: z.string(),
   tituloEn: z.string(),
 });
@@ -60,7 +60,7 @@ export const HomeSummarySchema = z.object({
   nextDirective: z.object({
     label: z.string(),
     to: z.string(),
-    type: z.enum(['learning', 'review', 'collaboration', 'setup']),
+    type: z.enum(['learning', 'review', 'collaboration', 'setup', 'onboarding']),
     description: z.string(),
   }).nullable(),
   socialPulse: z.array(z.object({

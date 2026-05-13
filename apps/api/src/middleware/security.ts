@@ -10,7 +10,10 @@ function originFromUrl(value: string | undefined): string | null {
   }
 }
 
+let cachedCsp: string | null = null;
+
 function buildCsp(): string {
+  if (cachedCsp) return cachedCsp;
   const scriptSrc = env.NODE_ENV === 'production'
     ? "script-src 'self'"
     : "script-src 'self' 'unsafe-inline'";
@@ -24,7 +27,7 @@ function buildCsp(): string {
   ];
   const connectSrc = new Set(connectSrcItems.filter((v): v is string => typeof v === 'string'));
 
-  return [
+  cachedCsp = [
     "default-src 'self'",
     scriptSrc,
     "style-src 'self' 'unsafe-inline'",
@@ -34,6 +37,7 @@ function buildCsp(): string {
     "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com",
     "frame-ancestors 'none'",
   ].join('; ');
+  return cachedCsp;
 }
 
 export async function securityMiddleware(c: Context, next: Next) {

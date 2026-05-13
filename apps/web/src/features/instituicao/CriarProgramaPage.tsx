@@ -11,7 +11,7 @@ import { BuilderShell, BuilderSection, BuilderActionsBar } from '@/components/bu
 import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { Layers, Coins } from 'lucide-react';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 
 export default function CriarProgramaPage() {
   const navigate = useNavigate();

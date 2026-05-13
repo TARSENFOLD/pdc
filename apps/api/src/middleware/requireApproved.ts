@@ -55,8 +55,12 @@ async function lookupAprovado(userId: string): Promise<boolean> {
  */
 export function registerApprovalCacheInvalidator(): void {
   const invalidate = async (userId: string) => {
-    await redis.del(cacheKey(userId));
-    log.info({ userId }, '[requireApproved] cache invalidado');
+    try {
+      await redis.del(cacheKey(userId));
+      log.info({ userId }, '[requireApproved] cache invalidado');
+    } catch (err) {
+      log.error({ err, userId }, '[requireApproved] falha ao invalidar cache via evento');
+    }
   };
 
   eventBus.register(DomainEventName.PERFIL_APROVADO, async (event) => {
@@ -99,7 +103,7 @@ export function requireApproved() {
         return;
       }
     } catch (err) {
-      log.error({ err }, '[requireApproved] falha ao ler feature flags — fail-open na flag');
+      log.error({ err }, '[requireApproved] falha ao ler feature flags — permitindo acesso (fail-open)');
       await next();
       return;
     }

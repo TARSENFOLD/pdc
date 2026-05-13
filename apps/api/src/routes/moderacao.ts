@@ -5,13 +5,11 @@ import * as Sentry from '@sentry/node';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { auditLog } from '../middleware/audit.js';
-import { moderacaoService, type ConteudoTipo } from '../modules/moderacao/moderacao.service.js';
+import { ConteudoTipoSchema, moderacaoService, type ConteudoTipo } from '../modules/moderacao/moderacao.service.js';
 
 const log = pino({ name: 'moderacao-routes' });
 
 type Vars = { Variables: AuthVariables };
-
-const ConteudoTipoSchema = z.enum(['curso', 'simulacao', 'experiencia', 'programa', 'projeto', 'feed-post']);
 
 const RejeitarBodySchema = z.object({
   motivo: z.string().min(10).max(500),
@@ -26,8 +24,21 @@ moderacaoRoutes.use('*', checkRole(['moderador', 'comite_cientifico', 'super_adm
 
 moderacaoRoutes.get('/fila', async (c) => {
   const tipoRaw = c.req.query('tipo');
-  const page = c.req.query('page') ?? '1';
-  const pageSize = c.req.query('pageSize') ?? '10';
+  const pageRaw = c.req.query('page');
+  const pageSizeRaw = c.req.query('pageSize');
+
+  const parsePositiveInt = (value: string | undefined, fallback: number): number | null => {
+    if (value === undefined) return fallback;
+    if (!/^\d+$/.test(value)) return null;
+    const parsed = parseInt(value, 10);
+    return parsed >= 1 ? parsed : null;
+  };
+  const page = parsePositiveInt(pageRaw, 1);
+  const pageSize = parsePositiveInt(pageSizeRaw, 10);
+
+  if (page === null || pageSize === null) {
+    return c.json({ error: 'page e pageSize devem ser inteiros positivos' }, 400);
+  }
 
   const tipoResult = ConteudoTipoSchema.safeParse(tipoRaw);
   if (!tipoResult.success) {
@@ -35,7 +46,7 @@ moderacaoRoutes.get('/fila', async (c) => {
   }
 
   try {
-    const result = await moderacaoService.listarPendentes(tipoResult.data, page, pageSize);
+    const result = await moderacaoService.listarPendentes(tipoResult.data, String(page), String(pageSize));
     return c.json(result);
   } catch (err) {
     log.error({ err }, '[moderacao] erro ao buscar fila');

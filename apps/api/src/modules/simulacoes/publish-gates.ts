@@ -5,7 +5,7 @@ import { featureFlagService } from '../feature-flags/feature-flags.service.js';
 const log = pino({ name: 'simulacoes:publish-gates' });
 
 const DISABLED_SIM_TIPO_RESPONSE = {
-  error: 'Sim Tipo 2/3 indisponível em PDC v2.0',
+  error: 'Publicação desta simulação desabilitada',
   code: 'SIM_TIPO_DISABLED',
 } as const;
 

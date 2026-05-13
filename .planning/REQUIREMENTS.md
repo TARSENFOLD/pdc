@@ -82,7 +82,7 @@
 | F3 | Perfil Público Showcase (LinkedIn vocacional) | `[ ]` | REQ-5-006 |
 | F4 | Stories — formato vídeo curto vertical | `[ ]` | REQ-4-011 |
 | F5 | Pílulas de Conhecimento — micro-simulações | `[ ]` | REQ-4-012 |
-| F6 | Push FOMO / Notificações inteligentes | `[~]` | `notify.hook.ts` (4.4KB) existe — base implementado, rate-limited per-user (PROD-C). Triggers FOMO específicos ("3 instituições viram o teu perfil", `perfil_visualizado_por_instituicao`, `streak_quebrado`) **não implementados**. Ver DT-14. |
+| F6 | Push FOMO / Notificações inteligentes | `[~]` | `notify.hook.ts` existe — base implementado, rate-limited per-user (PROD-C). Triggers FOMO específicos ("3 instituições viram o teu perfil", `perfil_visualizado_por_instituicao`, `streak_quebrado`) **não implementados**. Ver DT-14. |
 | F7 | Endorsements / Kudos públicos | `[x]` | (= T10 — implementado 2026-05-03 via votos em projetos) |
 | F8 | Top Bar com Command+K (search global) | `[x]` | T-REM-3 (2026-04-30). CommandPalette com search dinâmico via `GET /catalogo/explorar` (debounced 300ms), role-awareness (7 roles × nav items), navegação por teclado (↑↓↵), secções Nav + Conteúdo, loading state. |
 | F9 | Sidebar slim (retrátil) | `[ ]` | REQ-NF-010 |

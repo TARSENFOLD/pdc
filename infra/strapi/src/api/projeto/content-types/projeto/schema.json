@@ -22,13 +22,16 @@
     "area": {
       "type": "enumeration",
       "enum": [
-        "ENGENHARIA", "SAUDE", "TECNOLOGIA", "AGRONOMIA", "GESTAO",
-        "EDUCACAO", "DIREITO", "CIENCIAS_SOCIAIS", "ARTES", "OUTRO"
+        "SAUDE", "ENGENHARIA", "TECNOLOGIA", "DIREITO", "GESTAO",
+        "EDUCACAO", "ARTES", "CIENCIAS_AGRARIAS", "CIENCIAS_SOCIAIS",
+        "COMUNICACAO", "CIENCIAS_NATURAIS", "ARQUITETURA",
+        "TURISMO_HOTELARIA", "DESPORTO", "OUTRA",
+        "AGRONOMIA", "OUTRO"
       ]
     },
     "estado": {
       "type": "enumeration",
-      "enum": ["draft", "review", "approved", "published", "archived"],
+      "enum": ["draft", "review", "approved", "published", "archived", "hidden"],
       "default": "draft"
     },
     "autor": {
@@ -39,7 +42,18 @@
     "colaboradores": { "type": "json", "description": "⚠️ DEPRECATED — usar acessoCoreACL. Mantido por retrocompatibilidade." },
     "tags": { "type": "json" },
     "mediaUrls": { "type": "json" },
-    "repositorioUrl": { "type": "string" },
+    "media": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": ["images", "files", "videos"]
+    },
+    "repositorioUrl": { "type": "string", "description": "⚠️ DEPRECATED — usar repoUrl. Mantido por retrocompatibilidade." },
+    "repoUrl": { "type": "string" },
+    "demoUrl": { "type": "string" },
+    "selo": {
+      "type": "enumeration",
+      "enum": ["publicado", "validado_mentor", "validado_instituicao", "excelencia"]
+    },
     "visibilidade": {
       "type": "enumeration",
       "enum": ["publico", "privado"],
@@ -49,7 +63,7 @@
     "criadoEm": { "type": "datetime" },
     "motivoRejeicao": { "type": "string", "maxLength": 500 },
     "rejeitadoEm": { "type": "datetime" },
-    "rejeitadoPor": { "type": "string" },
+    "rejeitadoPor": { "type": "string", "maxLength": 500 },
     "isDemo": { "type": "boolean", "default": false }
   }
 }

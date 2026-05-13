@@ -26,11 +26,11 @@ const ELIGIBILITY_MIN_PROGRESS = 30;
 
 async function checkRatingEligibility(
   userId: string,
-  targetType: 'curso' | 'simulacao' | 'mentor',
+  targetType: 'curso' | 'simulacao' | 'mentor' | 'experiencia',
   targetId: string
 ): Promise<boolean> {
-  // Mentors are always rateable (no progress gating)
-  if (targetType === 'mentor') return true;
+  // Mentors and experiencias are always rateable (no progress gating)
+  if (targetType === 'mentor' || targetType === 'experiencia') return true;
 
   const strapiCollection = targetType === 'curso' ? '/inscricaos' : '/simulacoes';
   const filterKey = targetType === 'curso' ? 'filters[curso][id][$eq]' : 'filters[id][$eq]';
@@ -49,7 +49,7 @@ async function checkRatingEligibility(
 
 // POST /ratings
 ratingRoutes.post('/', zValidator('json', z.object({
-  targetType: z.enum(['curso', 'simulacao', 'mentor']),
+  targetType: z.enum(['curso', 'simulacao', 'mentor', 'experiencia']),
   targetId: z.string(),
   valor: z.number().min(1).max(5),
 })), async (c) => {
@@ -107,7 +107,7 @@ ratingRoutes.post('/', zValidator('json', z.object({
 
 // GET /ratings/stats
 ratingRoutes.get('/stats', zValidator('query', z.object({
-  targetType: z.enum(['curso', 'simulacao', 'mentor']),
+  targetType: z.enum(['curso', 'simulacao', 'mentor', 'experiencia']),
   targetId: z.string(),
 })), async (c) => {
   const { targetType, targetId } = c.req.valid('query');

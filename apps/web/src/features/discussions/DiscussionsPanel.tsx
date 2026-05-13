@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { discussionsApi, type Discussion } from '../../lib/api/discussions';
-import { useAuth } from '../../lib/auth/AuthContext';
+import { useAuth } from '../../lib/auth/auth-context';
 import { Button, Card, Spinner, Input, Badge } from '../../components/ui';
 import { DiscussionThread } from './DiscussionThread';
 

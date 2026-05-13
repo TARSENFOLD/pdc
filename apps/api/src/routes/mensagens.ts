@@ -5,6 +5,7 @@ import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.j
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
+import { toPaginatedResponse } from './pagination.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -80,10 +81,7 @@ mensagensRoutes.get('/conversas', zValidator('query', mensagensQuerySchema), asy
       };
     });
 
-    return c.json({
-      data: conversas,
-      meta: res.meta,
-    });
+    return c.json(toPaginatedResponse({ ...res, data: conversas }));
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
   }
@@ -175,10 +173,7 @@ mensagensRoutes.get('/conversas/:conversaId', zValidator('query', mensagensQuery
       }
     }
 
-    return c.json({
-      data: mensagens.data,
-      meta: mensagens.meta,
-    });
+    return c.json(toPaginatedResponse(mensagens));
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
   }

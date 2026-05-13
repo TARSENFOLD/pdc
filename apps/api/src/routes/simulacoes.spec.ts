@@ -86,7 +86,7 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
 
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({
-      error: 'Sim Tipo 2/3 indisponível em PDC v2.0',
+      error: 'Publicação desta simulação desabilitada',
       code: 'SIM_TIPO_DISABLED',
     });
     expect(strapiPost).not.toHaveBeenCalled();
@@ -103,7 +103,7 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
 
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({
-      error: 'Sim Tipo 2/3 indisponível em PDC v2.0',
+      error: 'Publicação desta simulação desabilitada',
       code: 'SIM_TIPO_DISABLED',
     });
     expect(strapiPost).not.toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
 
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({
-      error: 'Sim Tipo 2/3 indisponível em PDC v2.0',
+      error: 'Publicação desta simulação desabilitada',
       code: 'SIM_TIPO_DISABLED',
     });
     expect(strapiPut).not.toHaveBeenCalled();
@@ -200,6 +200,30 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
     // (4.5 + 5.0) / 2 = 4.75
     expect(strapiPut).toHaveBeenCalledWith('/tentativas/tent-2', expect.objectContaining({
       score: 4.75
+    }));
+  });
+
+  it('deve derivar score com fluidez e foco independentes quando fluidez é fornecida', async () => {
+    vi.mocked(strapiPut).mockResolvedValue(singleResponse({ id: 'tent-3', score: 7.25, status: 'concluida', perfil: 'perf-3' }));
+
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ id: 'tent-3', simulacao: { area: 'ENGENHARIA' } }]))
+      .mockResolvedValueOnce(listResponse([{ id: 'perf-3' }]));
+
+    const res = await app.request('/simulacoes/tentativas/tent-3', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        metadata: { tipo: 2, focusStability: 40, fluidityStability: 95, duracaoSegundos: 300 }
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    // analyzeFluidity(0.95) -> 9.5
+    // analyzeFocus(0.4) -> 5.0
+    // (9.5 + 5.0) / 2 = 7.25
+    expect(strapiPut).toHaveBeenCalledWith('/tentativas/tent-3', expect.objectContaining({
+      score: 7.25
     }));
   });
 });

@@ -31,4 +31,15 @@ describe('validateMagicBytes', () => {
       reason: 'Tipo declarado text/plain não é permitido',
     });
   });
+
+  it('rejeita quando não consegue detectar o tipo real do ficheiro', async () => {
+    const unknownBytes = Buffer.from([0x00, 0x00, 0x00, 0x00]);
+    const result = await validateMagicBytes(unknownBytes, 'image/jpeg');
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'TYPE_NOT_ALLOWED',
+      reason: expect.stringContaining('Não foi possível detectar') as string,
+    });
+  });
 });

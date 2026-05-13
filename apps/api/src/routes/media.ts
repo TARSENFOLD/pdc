@@ -16,8 +16,10 @@ import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import crypto from 'node:crypto';
 import path from 'node:path';
+import pino from 'pino';
 
 type Vars = { Variables: AuthVariables };
+const log = pino({ name: 'routes:media' });
 
 export const mediaRoutes = new Hono<Vars>();
 
@@ -27,7 +29,7 @@ mediaRoutes.use('*', verifyJwt);
 // NOTA: este endpoint não valida magic bytes (browser PUT direto). Usar `/upload`
 // para conteúdo controlado pela plataforma. Pre-signed permanece para uso futuro
 // com validação assíncrona.
-mediaRoutes.post('/presigned', zValidator('json', PresignedRequestSchema), async (c) => {
+mediaRoutes.post('/presigned', rateLimitMediaUpload, zValidator('json', PresignedRequestSchema), async (c) => {
   const { filename, mimeType, sizeBytes, entityType } = c.req.valid('json');
   const user = c.get('user');
   const sizeLimit = getMediaSizeLimit(entityType);
@@ -37,6 +39,10 @@ mediaRoutes.post('/presigned', zValidator('json', PresignedRequestSchema), async
   }
 
   if (sizeBytes > sizeLimit) {
+    log.warn(
+      { metric: 'upload_rejection_count', reason: 'size_limit', entityType, sizeBytes, sizeLimit },
+      'Upload rejeitado por limite de tamanho',
+    );
     return c.json({
       error: `Ficheiro excede o limite de ${formatBytes(sizeLimit)} para ${entityType}.`,
       code: 'SIZE_LIMIT_EXCEEDED',
@@ -92,6 +98,10 @@ mediaRoutes.post('/upload', rateLimitMediaUpload, async (c) => {
 
     const sizeLimit = getMediaSizeLimit(entityType);
     if (file.size > sizeLimit) {
+      log.warn(
+        { metric: 'upload_rejection_count', reason: 'size_limit', entityType, sizeBytes: file.size, sizeLimit },
+        'Upload rejeitado por limite de tamanho',
+      );
       return c.json({
         error: `Ficheiro excede o limite de ${formatBytes(sizeLimit)} para ${entityType}.`,
         code: 'SIZE_LIMIT_EXCEEDED',
@@ -195,8 +205,11 @@ mediaPublicRoutes.get('/local/*', (c): Response => {
 });
 
 function parseEntityType(value: unknown): MediaEntityType | null {
-  if (typeof value !== 'string') {
+  if (value === undefined) {
     return 'generic';
+  }
+  if (typeof value !== 'string') {
+    return null;
   }
   const parsed = MediaEntityTypeSchema.safeParse(value);
   return parsed.success ? parsed.data : null;

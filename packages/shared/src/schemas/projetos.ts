@@ -5,7 +5,7 @@ import { PerfilPublicoSchema } from '../user.js';
 // Modos do projeto (5 modos canónicos)
 export const ProjetoModoSchema = z.enum(['exposicao', 'colaboracao', 'mentoria', 'financiamento', 'feedbackComunitario']);
 export type ProjetoModo = z.infer<typeof ProjetoModoSchema>;
-export const ProjetoEstadoSchema = z.enum(['draft', 'review', 'approved', 'published', 'archived']);
+export const ProjetoEstadoSchema = z.enum(['draft', 'review', 'approved', 'published', 'archived', 'hidden']);
 export type ProjetoEstado = z.infer<typeof ProjetoEstadoSchema>;
 export const ProjetoVisibilidadeSchema = z.enum(['publico', 'privado']);
 
@@ -38,7 +38,10 @@ export const HistoricoEstadoSchema = z.object({
 
 export type HistoricoEstado = z.infer<typeof HistoricoEstadoSchema>;
 
-export const SeloSchema = z.enum(['aptidao_validada']).optional();
+export const SeloTipoSchema = z.enum(['publicado', 'validado_mentor', 'validado_instituicao', 'excelencia']);
+export type SeloTipo = z.infer<typeof SeloTipoSchema>;
+
+export const SeloSchema = SeloTipoSchema.optional();
 export type Selo = z.infer<typeof SeloSchema>;
 
 export const ProjetoSchema = z.object({
@@ -162,6 +165,16 @@ export const ProjetoFiltersSchema = z.object({
   estudanteId: z.string().optional(),
   cursoId: z.string().optional(),
   tags: z.string().optional(),
+  estado: ProjetoEstadoSchema.optional(),
+  area: AreaVocacionalSchema.optional(),
+  modos: ProjetoModoSchema.optional(),
 });
 
 export type ProjetoFilters = z.infer<typeof ProjetoFiltersSchema>;
+
+export const TransicaoEstadoPayloadSchema = z.object({
+  novoEstado: ProjetoEstadoSchema,
+  motivo: z.string().max(500).optional(),
+});
+
+export type TransicaoEstadoPayload = z.infer<typeof TransicaoEstadoPayloadSchema>;

@@ -14,6 +14,14 @@ import { oauthOnboardingService } from '../modules/auth/oauth-onboarding.service
 const log = pino({ name: 'oauth-routes' });
 export const oauthRoutes = new Hono<{ Variables: AuthVariables }>();
 
+function extractErrorDetails(err: unknown): { status: number; message: string } {
+  const status = (err !== null && typeof err === 'object' && 'status' in err)
+    ? (err as { status: number }).status
+    : 500;
+  const message = err instanceof Error ? err.message : 'Erro interno';
+  return { status, message };
+}
+
 oauthRoutes.get('/google', async (c) => {
   const state = randomUUID();
   await redis.set(`oauth_state:${state}`, 'true', { ex: 600 });
@@ -135,10 +143,7 @@ oauthRoutes.post('/finalizar/escolher-role', verifyJwt, zValidator('json', OAuth
     await oauthOnboardingService.escolherRole(user.id, payload);
     return c.json({ success: true });
   } catch (err: unknown) {
-    const status = (err !== null && typeof err === 'object' && 'status' in err)
-      ? (err as { status: number }).status
-      : 500;
-    const message = err instanceof Error ? err.message : 'Erro interno';
+    const { status, message } = extractErrorDetails(err);
     log.error({ err, userId: user.id }, 'escolherRole error');
     return c.json({ error: message }, status as 400 | 404 | 500);
   }
@@ -156,10 +161,7 @@ oauthRoutes.post('/finalizar/verificar-otp', verifyJwt, zValidator('json', verif
     setAuthCookies(c, accessToken, refreshToken);
     return c.json(updatedUser);
   } catch (err: unknown) {
-    const status = (err !== null && typeof err === 'object' && 'status' in err)
-      ? (err as { status: number }).status
-      : 500;
-    const message = err instanceof Error ? err.message : 'Erro interno';
+    const { status, message } = extractErrorDetails(err);
     log.error({ err, userId: user.id }, 'verificarOtp error');
     return c.json({ error: message }, status as 400 | 404 | 500);
   }

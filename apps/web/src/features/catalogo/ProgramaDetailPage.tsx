@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { programasApi } from '@/lib/api/programas';
 import { Spinner, Badge, Button, Card } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { useToast } from '@/hooks/useToast';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Search } from 'lucide-react';

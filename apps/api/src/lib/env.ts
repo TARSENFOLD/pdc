@@ -115,7 +115,7 @@ function logRuntimeEnvStatus(parsedEnv: Env): void {
 
     if (!parsedEnv.SENTRY_DSN) log.warn('SENTRY_DSN ausente em produção.');
     if (!parsedEnv.TWILIO_ACCOUNT_SID || !parsedEnv.TWILIO_AUTH_TOKEN || !parsedEnv.TWILIO_PHONE_NUMBER) {
-      log.error('Credenciais Twilio ausentes em produção — OTP SMS não funcionará. Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_PHONE_NUMBER no Railway.');
+      log.warn('Credenciais Twilio ausentes em produção — OTP SMS não funcionará. Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_PHONE_NUMBER no Railway.');
     }
     return;
   }

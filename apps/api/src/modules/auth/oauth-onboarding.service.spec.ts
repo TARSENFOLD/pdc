@@ -6,6 +6,7 @@ const otpServiceMock = vi.hoisted(() => ({
   generateOtp: vi.fn(),
   storeOtp: vi.fn(),
   verifyOtp: vi.fn(),
+  deleteOtp: vi.fn(),
   sendOtpEmail: vi.fn(),
 }));
 const authServiceMock = vi.hoisted(() => ({
@@ -41,6 +42,7 @@ describe('oauthOnboardingService.escolherRole', () => {
     strapiPutMock.mockResolvedValue({ data: MOCK_PERFIL });
     otpServiceMock.generateOtp.mockReturnValue('123456');
     otpServiceMock.storeOtp.mockResolvedValue(undefined);
+    otpServiceMock.deleteOtp.mockResolvedValue(undefined);
     otpServiceMock.sendOtpEmail.mockResolvedValue(undefined);
     authServiceMock.getUserById.mockResolvedValue(MOCK_USER);
   });
@@ -104,6 +106,21 @@ describe('oauthOnboardingService.escolherRole', () => {
     await expect(
       oauthOnboardingService.escolherRole('user-42', { role: 'estudante' })
     ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('rolls back perfil and removes OTP when OTP email delivery fails', async () => {
+    strapiGetMock.mockResolvedValue({ data: [{ ...MOCK_PERFIL, tipo: 'estudante', aprovado: false }] });
+    otpServiceMock.sendOtpEmail.mockRejectedValue(new Error('email down'));
+
+    await expect(
+      oauthOnboardingService.escolherRole('user-42', { role: 'mentor', areaEspecialidade: 'TECNOLOGIA', documentos: [] })
+    ).rejects.toMatchObject({ status: 500 });
+
+    expect(strapiPutMock).toHaveBeenLastCalledWith('/perfis/perfil-1', {
+      tipo: 'estudante',
+      aprovado: false,
+    });
+    expect(otpServiceMock.deleteOtp).toHaveBeenCalledWith('user-42', 'email');
   });
 });
 
