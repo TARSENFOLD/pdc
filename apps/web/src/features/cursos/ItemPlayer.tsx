@@ -23,7 +23,13 @@ function ExternalLink({ url, label }: { url: string; label: string }) {
 function VideoPlayer({ src }: { src: string }) {
   const isYoutube = src.includes('youtube.com') || src.includes('youtu.be');
   if (isYoutube) {
-    const videoId = new URL(src).searchParams.get('v') ?? src.split('/').at(-1) ?? '';
+    const videoId = (() => {
+      try {
+        return new URL(src).searchParams.get('v') ?? src.split('/').at(-1) ?? '';
+      } catch {
+        return src.split('/').at(-1) ?? '';
+      }
+    })();
     return (
       <iframe
         src={`https://www.youtube.com/embed/${videoId}`}
@@ -37,7 +43,7 @@ function VideoPlayer({ src }: { src: string }) {
 }
 
 function renderItem(item: ItemModulo): ReactElement {
-  const url = item.conteudo ?? '';
+  const url = item.url ?? item.conteudo ?? '';
   switch (item.tipo) {
     case 'video':
       return (
@@ -56,10 +62,14 @@ function renderItem(item: ItemModulo): ReactElement {
     case 'iframe':
       return <iframe src={url} className="h-[70vh] w-full rounded-lg border-0" title="Conteúdo" />;
     case 'quiz':
-      return null as unknown as ReactElement;
+      return <></>;
     case 'tarefa':
       return <ExternalLink url={url} label="Abrir Tarefa" />;
   }
+}
+
+function routeId(value: unknown): string {
+  return String(value);
 }
 
 export function ItemPlayer() {
@@ -73,7 +83,7 @@ export function ItemPlayer() {
     enabled: !!cursoId,
   });
 
-  const { data: progresso = [] } = useQuery({
+  const { data: progresso = [], isError: progressoError } = useQuery({
     queryKey: ['cursos', cursoId ?? '', 'progresso'],
     queryFn: () => cursosApi.getProgresso(cursoId ?? ''),
     enabled: !!cursoId,
@@ -100,9 +110,12 @@ export function ItemPlayer() {
   if (!curso) {
     return <p className="py-12 text-center text-error">Curso não encontrado.</p>;
   }
+  if (progressoError) {
+    return <p className="py-12 text-center text-error">Inscreve-te no curso para aceder ao player.</p>;
+  }
 
-  const item = curso.modulos?.flatMap((m) => m.itens).find((i) => i.id === itemId);
-  const moduloId = curso.modulos?.find((m) => m.itens.some((i) => i.id === itemId))?.id;
+  const item = curso.modulos?.flatMap((m) => m.itens).find((i) => routeId(i.id) === itemId);
+  const moduloId = curso.modulos?.find((m) => m.itens.some((i) => routeId(i.id) === itemId))?.id;
   if (!item) {
     return <p className="py-12 text-center text-error">Item não encontrado.</p>;
   }

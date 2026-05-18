@@ -5,9 +5,11 @@ import { Spinner, Badge } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BookOpen } from 'lucide-react';
+import { useAuth } from '@/lib/auth/auth-context';
 
 export function CursoPublicoDetailPage() {
   const { slug } = useParams<{ slug: string }>();
+  const { user } = useAuth();
 
   const { data: curso, isLoading, isError } = useQuery({
     queryKey: ['catalogo-curso', slug],
@@ -61,12 +63,12 @@ export function CursoPublicoDetailPage() {
         </div>
 
         <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-          <Link 
-            to="/login" 
+          <Link
+            to={user ? `/app/cursos/${curso.id}` : `/login?redirect=/cursos/${slug ?? ''}`}
             className="rounded-lg bg-accent px-6 py-3 text-center text-sm font-semibold transition-colors hover:bg-accent-terracotta-soft"
             style={{ color: 'var(--ink-on-accent)' }}
           >
-            Inscrever-me neste curso
+            {user ? 'Ver curso' : 'Inscrever-me neste curso'}
           </Link>
           <Link to="/cursos" className="rounded-lg border border-transparent px-6 py-3 text-center text-sm text-ink-secondary transition-colors hover:border-ink-tertiary/20 hover:bg-recessed">
             Ver mais cursos

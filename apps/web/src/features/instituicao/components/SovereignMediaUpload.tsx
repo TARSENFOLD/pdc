@@ -1,17 +1,18 @@
 import { useState, useRef } from 'react';
 import { Upload, CheckCircle, XCircle } from 'lucide-react';
-import { http } from '@/lib/api/http';
 import { Spinner } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
-import type { PresignedMediaResponse } from '@pdc/shared';
+import { mediaApi } from '@/lib/api/media';
+import type { MediaEntityType } from '@pdc/shared';
 
 interface Props {
   onSuccess: (url: string) => void;
   accept?: string;
   maxSizeMB?: number;
+  entityType?: MediaEntityType;
 }
 
-export function SovereignMediaUpload({ onSuccess, accept = 'image/*', maxSizeMB = 5 }: Props) {
+export function SovereignMediaUpload({ onSuccess, accept = 'image/*', maxSizeMB = 5, entityType = 'generic' }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -32,35 +33,13 @@ export function SovereignMediaUpload({ onSuccess, accept = 'image/*', maxSizeMB 
     setSuccess(false);
 
     try {
-      // 1. G8: Obter Presigned URL do BFF
-      const resPresigned = await http.post<PresignedMediaResponse>('/media/presigned', {
-        filename: file.name,
-        mimeType: file.type,
-        sizeBytes: file.size,
-      });
-
-      const { uploadUrl, publicUrl, mediaId, key } = resPresigned;
-
-      // 2. G8: Fazer o upload directamente para o Cloudflare R2 (Browser -> R2)
-      // Simulamos progresso enquanto o fetch PUT decorre
       setProgress(30);
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': file.type,
-        },
-        body: file,
-      });
-
-      if (!uploadRes.ok) throw new Error('Falha no upload para o R2');
+      const uploaded = await mediaApi.upload(file, entityType);
       setProgress(80);
-
-      // 3. G8: Confirmar o upload com o ecossistema G15
-      await http.post('/media/confirm', { mediaId, key, publicUrl });
       
       setProgress(100);
       setSuccess(true);
-      onSuccess(publicUrl);
+      onSuccess(uploaded.url);
       toast({ title: 'Mídia Materializada' });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido';

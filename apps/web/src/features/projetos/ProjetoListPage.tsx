@@ -127,7 +127,7 @@ export function ProjetoListPage() {
           serif={false}
           actions={
             <Link to="/app/projetos/novo">
-              <Button variant="default" className="rounded-sm">
+              <Button variant="primary" className="rounded-sm">
                 <Plus size={16} className="mr-2" /> Criar Projeto
               </Button>
             </Link>

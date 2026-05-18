@@ -38,7 +38,7 @@ export const projetosApi = {
   remove: (id: string) => http.delete<{ ok: boolean }>(`/projetos/${id}`),
 
   requestAccess: (id: string) =>
-    http.post<{ success: boolean }>(`/projetos/${id}/solicitar-acesso`),
+    http.post<{ success: boolean }>(`/projetos/${id}/solicitar-acesso`, {}),
 
   getVotes: (id: string) =>
     http.get<{ endorsements: number; votos_count: number; endorsed: boolean; voted: boolean }>(`/projetos/${id}/votos`),

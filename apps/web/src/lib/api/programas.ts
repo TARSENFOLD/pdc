@@ -1,6 +1,22 @@
 import { http } from './http';
 import type { Programa, CriarProgramaPayload } from '@pdc/shared';
 
+export type InscricaoPrograma = {
+  id: string;
+  programa?: {
+    id: string;
+    titulo: string;
+    tipo: string;
+    area: string;
+    estado: string;
+    capaUrl?: string | null;
+    modalidade?: string;
+    instituicao?: { id: string; nome?: string };
+  };
+  concluido?: boolean;
+  dataConclusao?: string;
+};
+
 export const programasApi = {
   list: (params?: { page?: number; pageSize?: number; search?: string; tipo?: string }) => {
     const searchParams = new URLSearchParams();
@@ -11,8 +27,13 @@ export const programasApi = {
     return http.get<{ data: Programa[] }>(`/programas?${searchParams.toString()}`);
   },
 
+  // Inscrições do utilizador autenticado (estudante)
   getMeus: () =>
-    http.get<{ data: Programa[] }>('/programas/meus'),
+    http.get<{ data: InscricaoPrograma[] }>('/programas/meus'),
+
+  // Programas criados pelo utilizador (instituição/mentor)
+  getMinhas: () =>
+    http.get<{ data: Programa[] }>('/programas/minhas'),
 
   create: (payload: CriarProgramaPayload) =>
     http.post<Programa>('/programas', payload),
@@ -21,5 +42,13 @@ export const programasApi = {
     http.put<Programa>(`/programas/${id}`, payload),
 
   getById: (id: string) => http.get<Programa>(`/programas/${id}`),
-  inscrever: (id: string, inviteCode?: string) => http.post<{ success: boolean; inscricaoId: string }>(`/programas/${id}/inscricao`, { inviteCode }),
+
+  inscrever: (id: string) =>
+    http.post<{ id: string }>(`/programas/${id}/inscricao`, {}),
+
+  concluir: (id: string) =>
+    http.post<{ success: boolean }>(`/programas/${id}/concluir`, {}),
+
+  updateEstado: (id: string, estado: string) =>
+    http.patch<{ success: boolean }>(`/programas/${id}/estado`, { estado }),
 };

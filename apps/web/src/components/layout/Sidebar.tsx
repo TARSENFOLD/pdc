@@ -22,7 +22,6 @@ export default function SidebarContent({ onNavigate, collapsed = false }: Sideba
 
   const getLabel = (slug: NavItemSlug) => {
     const entry = NavItems[slug];
-    if (!entry) return String(slug);
     const lang = i18n.language as keyof typeof entry;
     return entry[lang] || entry['pt-PT'];
   };

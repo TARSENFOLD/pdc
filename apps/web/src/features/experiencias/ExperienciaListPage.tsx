@@ -133,7 +133,7 @@ export function ExperienciaListPage() {
               icon={Building2}
               variant="error"
               title="Erro de Sincronização"
-              description="Não foi possível aceder aos roteiros institucionais. O Oráculo está a ser estabilizado."
+              description="Não foi possível aceder aos roteiros institucionais. Por favor tenta novamente mais tarde."
               onRetry={() => { window.location.reload(); }}
             />
           ) : experiencias.length === 0 ? (

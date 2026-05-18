@@ -44,7 +44,7 @@ export const cursosApi = {
     http.put<CursoMeu>(`/cursos/${id}`, payload),
 
   inscrever: (cursoId: string) => 
-    http.post<Inscricao>(`/cursos/${cursoId}/inscrever`, {}),
+    http.post<Inscricao>(`/cursos/${cursoId}/inscricao`, {}),
 
   getProgresso: (cursoId: string) => 
     http.get<ProgressoItem[]>(`/cursos/${cursoId}/progresso`),
@@ -52,7 +52,7 @@ export const cursosApi = {
   updateProgresso: (cursoId: string, itemId: string, concluido: boolean) => 
     http.patch<ProgressoItem>(`/cursos/${cursoId}/progresso/${itemId}`, { concluido }),
 
-  updateEstado: (id: string, estado: 'review' | 'published' | 'archived') =>
+  updateEstado: (id: string, estado: 'draft' | 'review' | 'published' | 'archived') =>
     http.patch<{ success: boolean }>(`/cursos/${id}/estado`, { estado }),
 
   getMinhasInscricoes: () =>

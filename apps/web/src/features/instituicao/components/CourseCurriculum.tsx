@@ -1,11 +1,14 @@
-import { UseFormRegister, UseFieldArrayReturn } from 'react-hook-form';
+import { Control, UseFormRegister, UseFieldArrayReturn, useFieldArray, UseFormSetValue } from 'react-hook-form';
 import { Card, Input, Button } from '@/components/ui';
-import { Plus, Trash2, BookOpen, Layers } from 'lucide-react';
+import { Plus, Trash2, BookOpen, Layers, Link as LinkIcon, FileUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CriarCursoPayload } from '@pdc/shared';
+import { SovereignMediaUpload } from './SovereignMediaUpload';
 
 interface Props {
   register: UseFormRegister<CriarCursoPayload>;
+  control: Control<CriarCursoPayload>;
+  setValue: UseFormSetValue<CriarCursoPayload>;
   modulosArray: UseFieldArrayReturn<CriarCursoPayload, 'modulos'>;
 }
 
@@ -13,11 +16,106 @@ function moduloPath(index: number, field: 'titulo') {
   return ['modulos', index, field].join('.') as `modulos.${number}.${typeof field}`;
 }
 
-function itemPath(index: number, itemIndex: number, field: 'tipo' | 'titulo') {
+function itemPath(index: number, itemIndex: number, field: 'tipo' | 'titulo' | 'conteudo' | 'url') {
   return ['modulos', index, 'itens', itemIndex, field].join('.') as `modulos.${number}.itens.${number}.${typeof field}`;
 }
 
-export function CourseCurriculum({ register, modulosArray }: Props) {
+function ModuleItemsEditor({
+  register,
+  control,
+  setValue,
+  moduleIndex,
+}: {
+  register: UseFormRegister<CriarCursoPayload>;
+  control: Control<CriarCursoPayload>;
+  setValue: UseFormSetValue<CriarCursoPayload>;
+  moduleIndex: number;
+}) {
+  const itemsName = `modulos.${moduleIndex.toString()}.itens` as `modulos.${number}.itens`;
+  const itemsArray = useFieldArray({
+    control,
+    name: itemsName,
+  });
+
+  return (
+    <div className="pl-4 border-l-2 border-white/5 space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-[10px] font-black text-ink-tertiary uppercase tracking-widest">
+          <BookOpen size={12} /> Conteúdos do Módulo
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            itemsArray.append({
+              titulo: `Novo Conteúdo ${String(itemsArray.fields.length + 1)}`,
+              tipo: 'texto',
+              ordem: itemsArray.fields.length + 1,
+              conteudo: '',
+            });
+          }}
+          className="gap-2 text-[10px]"
+        >
+          <Plus size={14} /> Adicionar Item
+        </Button>
+      </div>
+
+      {itemsArray.fields.map((item, itemIndex) => (
+        <div key={item.id} className="rounded-xl border border-white/10 bg-canvas/40 p-4 space-y-3">
+          <div className="grid gap-3 md:grid-cols-[140px_1fr_auto]">
+            <select {...register(itemPath(moduleIndex, itemIndex, 'tipo'))} className="bg-canvas border border-white/10 rounded-lg px-3 py-2 text-xs">
+              <option value="video">Vídeo</option>
+              <option value="pdf">PDF</option>
+              <option value="iframe">Iframe</option>
+              <option value="tarefa">Tarefa</option>
+              <option value="quiz">Quiz</option>
+              <option value="texto">Texto</option>
+            </select>
+            <Input className="h-10 text-xs bg-canvas/50" {...register(itemPath(moduleIndex, itemIndex, 'titulo'))} placeholder="Título do Conteúdo" />
+            <button
+              type="button"
+              onClick={() => { itemsArray.remove(itemIndex); }}
+              className="text-error p-2 hover:bg-error/10 rounded-lg"
+              aria-label="Remover item"
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="space-y-1">
+              <span className="flex items-center gap-2 text-[10px] font-bold uppercase text-ink-tertiary"><LinkIcon size={12} /> URL / Embed</span>
+              <Input className="h-10 text-xs bg-canvas/50" {...register(itemPath(moduleIndex, itemIndex, 'url'))} placeholder="https://..." />
+            </label>
+            <div className="space-y-1">
+              <span className="flex items-center gap-2 text-[10px] font-bold uppercase text-ink-tertiary"><FileUp size={12} /> Upload</span>
+              <SovereignMediaUpload
+                accept="image/*,video/mp4,application/pdf"
+                maxSizeMB={50}
+                entityType="generic"
+                onSuccess={(url) => {
+                  setValue(itemPath(moduleIndex, itemIndex, 'url'), url, { shouldDirty: true, shouldValidate: true });
+                }}
+              />
+            </div>
+          </div>
+
+          <label className="space-y-1 block">
+            <span className="text-[10px] font-bold uppercase text-ink-tertiary">Texto / Instruções / Conteúdo Richtext</span>
+            <textarea
+              {...register(itemPath(moduleIndex, itemIndex, 'conteudo'))}
+              className="min-h-24 w-full rounded-xl border border-white/10 bg-canvas/50 px-4 py-3 text-xs outline-none transition-all focus:border-accent"
+              placeholder="Conteúdo textual, instruções da tarefa ou descrição do recurso."
+            />
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function CourseCurriculum({ register, control, setValue, modulosArray }: Props) {
   const { fields: modulos, append: appendModulo, remove: removeModulo } = modulosArray;
 
   return (
@@ -58,21 +156,7 @@ export function CourseCurriculum({ register, modulosArray }: Props) {
                       </button>
                     </div>
                     
-                    {/* Conteúdos do Módulo */}
-                    <div className="pl-4 border-l-2 border-white/5 space-y-3">
-                       <div className="flex items-center gap-2 text-[10px] font-black text-ink-tertiary uppercase tracking-widest mb-2">
-                         <BookOpen size={12} /> Conteúdos do Módulo
-                       </div>
-                       <div className="flex gap-3">
-	                         <select {...register(itemPath(index, 0, 'tipo'))} className="bg-canvas border border-white/10 rounded-lg px-3 py-1 text-xs">
-                           <option value="video">🎥 Vídeo</option>
-                           <option value="tarefa">🛠️ Tarefa Prática</option>
-                           <option value="quiz">🧠 Quiz</option>
-                           <option value="texto">📄 Texto</option>
-                         </select>
-	                         <Input className="h-8 text-xs bg-canvas/50" {...register(itemPath(index, 0, 'titulo'))} placeholder="Título do Conteúdo" />
-                       </div>
-                    </div>
+                    <ModuleItemsEditor register={register} control={control} setValue={setValue} moduleIndex={index} />
                   </div>
                 </div>
               </Card>
