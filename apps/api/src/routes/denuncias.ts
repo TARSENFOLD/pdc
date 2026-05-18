@@ -6,6 +6,7 @@ import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { rateLimitDenuncias } from '../middleware/rateLimit.js';
 import { toPaginatedResponse } from './pagination.js';
+import { writeAuditLog } from '../middleware/audit.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -96,12 +97,13 @@ denunciaRoutes.put(
         nota: body.nota,
       });
 
-      await strapiPost('/audit-logs', { 
-        userId: c.get('user').id, 
+      await writeAuditLog({
+        actor: c.get('user'),
         accao: 'denuncia_resolver', 
         recurso: `/denuncias/${id}`, 
-        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown', 
-        timestamp: new Date().toISOString() 
+        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
+        userAgent: c.req.header('user-agent'),
+        detalhes: { accao: body.accao, nota: body.nota },
       }).catch(() => {});
 
       return c.json(data);

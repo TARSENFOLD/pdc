@@ -23,7 +23,7 @@ catalogoRoutes.use('*', withPublicCache(60, 300));
 
 interface StrapiCurso {
   id: string | number; slug: string; titulo: string; descricao: string;
-  capaUrl?: string; area?: string; nivel?: string; idioma?: string;
+  capaUrl?: string; thumbnailUrl?: string; area?: string; nivel?: string; idioma?: string;
   gratuito?: boolean; totalHoras?: number; autorNome?: string;
 }
 
@@ -82,7 +82,7 @@ function parseOptional<T>(schema: z.ZodType<T>, value: unknown): T | undefined {
 function mapCurso(d: StrapiCurso): CursoPublico {
   return {
     id: sid(d.id), slug: d.slug, titulo: d.titulo, descricao: d.descricao,
-    capaUrl: d.capaUrl, area: parseOptional(AreaVocacionalSchema, d.area), nivel: parseOptional(NivelSchema, d.nivel), idioma: d.idioma,
+    capaUrl: d.capaUrl ?? d.thumbnailUrl, area: parseOptional(AreaVocacionalSchema, d.area), nivel: parseOptional(NivelSchema, d.nivel), idioma: d.idioma,
     gratuito: d.gratuito, totalHoras: d.totalHoras ?? 0, autorNome: d.autorNome,
   };
 }
@@ -147,6 +147,7 @@ function mapExp(d: StrapiExperiencia, ratingAvg?: number | null): ExperienciaPub
 const cursoQ = pgQ.extend({
   area: AreaVocacionalSchema.optional(), nivel: z.string().optional(),
   idioma: z.string().optional(), gratuito: z.coerce.boolean().optional(),
+  q: z.string().optional(), search: z.string().optional(),
 });
 
 catalogoRoutes.get('/cursos', zValidator('query', cursoQ), async (c) => {
@@ -158,6 +159,7 @@ catalogoRoutes.get('/cursos', zValidator('query', cursoQ), async (c) => {
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
   if (q.idioma) p['filters[idioma][$eq]'] = q.idioma;
   if (q.gratuito !== undefined) p['filters[gratuito][$eq]'] = String(q.gratuito);
+  if (q.q || q.search) p['filters[titulo][$containsi]'] = q.q ?? q.search ?? '';
   
   try {
     const res = await strapiGet<StrapiCurso>('/cursos', p);

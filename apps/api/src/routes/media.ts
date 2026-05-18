@@ -177,7 +177,7 @@ mediaPublicRoutes.get('/local/*', (c): Response => {
   if (process.env.NODE_ENV === 'production') {
     return c.json({ error: 'Not available in production.' }, 403);
   }
-  const key = c.req.param('*');
+  const key = c.req.param('*') || c.req.path.split('/local/')[1] || '';
   if (!key) {
     return c.json({ error: 'Chave inválida.' }, 400);
   }
@@ -185,7 +185,7 @@ mediaPublicRoutes.get('/local/*', (c): Response => {
     return c.json({ error: 'Chave inválida.' }, 400);
   }
   const normalizedKey = path.posix.normalize(key).replace(/^\/+/, '');
-  if (normalizedKey === '.' || normalizedKey.startsWith('../') || path.isAbsolute(key)) {
+  if (normalizedKey === '.' || normalizedKey.startsWith('../') || path.isAbsolute(normalizedKey)) {
     return c.json({ error: 'Chave inválida.' }, 400);
   }
   const UPLOADS_BASE = path.resolve(process.cwd(), 'uploads');

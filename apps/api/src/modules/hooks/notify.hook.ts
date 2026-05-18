@@ -16,10 +16,16 @@ const log = pino({ name: 'notify-hook' });
 async function resolvePerfilId(payload: BaseDomainEventPayload): Promise<string | undefined> {
   if (payload.perfilId) return String(payload.perfilId);
 
-  const lookupUserId = payload.autorId || payload.userId;
-  if (!lookupUserId) return undefined;
+  const lookupUserId =
+    payload.userId ||
+    payload.autorId ||
+    payload.estudanteId ||
+    payload.uploaderId ||
+    payload.moderadorId ||
+    payload.membroId;
+  if (typeof lookupUserId !== 'string' && typeof lookupUserId !== 'number') return undefined;
 
-  return resolvePerfilIdFromUserId(lookupUserId);
+  return resolvePerfilIdFromUserId(String(lookupUserId));
 }
 
 // ── FOMO Triggers (F6 — Spec §3.2 ROADMAP_PRODUTO_DISRUPTIVO) ───────────────

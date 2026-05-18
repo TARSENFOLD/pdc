@@ -41,7 +41,7 @@ describe('sentryUserContext middleware', () => {
     const response = await app.request('/test');
     expect(response.status).toBe(200);
     expect(setUserMock).not.toHaveBeenCalled();
-    expect(setTagMock).toHaveBeenCalledWith('environment', 'test');
+    // setTag é chamado pelo initSentry via Sentry.init({ environment }), não por sentryUserContext
   });
 
   it('calls setUser with id only when user is authenticated', async () => {
@@ -57,11 +57,10 @@ describe('sentryUserContext middleware', () => {
     const response = await app.request('/test');
     expect(response.status).toBe(200);
     expect(setUserMock).toHaveBeenCalledWith({ id: 'user-42' });
-    // No email or PII
+    // No email ou PII
     const callArg = setUserMock.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
     expect(callArg).toBeDefined();
     expect(callArg).not.toHaveProperty('email');
-    expect(setTagMock).toHaveBeenCalledWith('environment', 'test');
   });
 });
 

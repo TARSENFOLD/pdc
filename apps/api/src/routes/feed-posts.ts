@@ -74,6 +74,10 @@ function compactPayload(payload: Record<string, unknown>): Record<string, unknow
   return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined));
 }
 
+function firstFeedPost(posts: StrapiFeedPost[]): StrapiFeedPost | null {
+  return posts[0] ?? null;
+}
+
 async function getPerfilByUserId(userId: string): Promise<StrapiPerfil | null> {
   const res = await strapiGet<StrapiPerfil>('/perfis', {
     'filters[userId][$eq]': userId,
@@ -159,18 +163,23 @@ feedPostRoutes.get('/', zValidator('query', listQuerySchema), async (c) => {
 
 feedPostRoutes.get('/:id', verifyJwt, async (c) => {
   const id = c.req.param('id');
+  if (!id) {
+    return c.json({ error: 'Id do post é obrigatório' }, 400);
+  }
+
   try {
     const res = await strapiGet<StrapiFeedPost>('/feed-posts', {
       'filters[id][$eq]': id,
       'populate': 'autor.foto',
       'pagination[pageSize]': '1',
     });
-    
-    if (!res.data.length) {
+    const post = firstFeedPost(res.data);
+
+    if (!post) {
       return c.json({ error: 'Post não encontrado' }, 404);
     }
-    
-    return c.json(mapFeedPost(res.data[0]));
+
+    return c.json(mapFeedPost(post));
   } catch (err: unknown) {
     log.error({ err, postId: id }, 'Erro ao carregar o post');
     return c.json({ error: 'Erro ao carregar o post' }, 502);
@@ -244,6 +253,9 @@ feedPostRoutes.patch(
   zValidator('json', ModerarPostSchema),
   async (c) => {
     const id = c.req.param('id');
+    if (!id) {
+      return c.json({ error: 'Id do post é obrigatório' }, 400);
+    }
     const payload = c.req.valid('json');
 
     try {
@@ -252,7 +264,7 @@ feedPostRoutes.patch(
         'populate': 'autor.foto',
         'pagination[pageSize]': '1',
       });
-      const post = lookup.data[0];
+      const post = firstFeedPost(lookup.data);
 
       if (!post) {
         return c.json({ error: 'Post não encontrado' }, 404);
@@ -296,6 +308,9 @@ feedPostRoutes.put(
   zValidator('json', CriarPostPayloadSchema),
   async (c) => {
     const id = c.req.param('id');
+    if (!id) {
+      return c.json({ error: 'Id do post é obrigatório' }, 400);
+    }
     const user = c.get('user');
     const payload = c.req.valid('json');
 
@@ -305,7 +320,7 @@ feedPostRoutes.put(
         'populate': 'autor.foto',
         'pagination[pageSize]': '1',
       });
-      const post = lookup.data[0];
+      const post = firstFeedPost(lookup.data);
 
       if (!post) {
         return c.json({ error: 'Post não encontrado' }, 404);
@@ -333,13 +348,16 @@ feedPostRoutes.post(
   verifyJwt,
   async (c) => {
     const id = c.req.param('id');
+    if (!id) {
+      return c.json({ error: 'Id do post é obrigatório' }, 400);
+    }
 
     try {
       const lookup = await strapiGet<StrapiFeedPost>('/feed-posts', {
         'filters[id][$eq]': id,
         'pagination[pageSize]': '1',
       });
-      const post = lookup.data[0];
+      const post = firstFeedPost(lookup.data);
 
       if (!post) {
         return c.json({ error: 'Post não encontrado' }, 404);

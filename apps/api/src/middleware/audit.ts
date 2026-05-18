@@ -1,9 +1,43 @@
 import type { Context, Next } from 'hono';
 import pino from 'pino';
+import crypto from 'node:crypto';
 
 const log = pino({ name: 'audit-mw' });
 import type { AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiPost } from '../modules/strapi/strapi.client.js';
+
+interface AuditActor {
+  id: string;
+  role: string;
+}
+
+interface AuditLogInput {
+  actor: AuditActor;
+  accao: string;
+  recurso: string;
+  ip: string;
+  userAgent?: string | undefined;
+  detalhes?: Record<string, unknown>;
+}
+
+function hashIp(ip: string): string {
+  return crypto.createHash('sha256').update(ip).digest('hex');
+}
+
+export async function writeAuditLog(input: AuditLogInput): Promise<void> {
+  await strapiPost('/audit-logs', {
+    acao: input.accao,
+    actorId: input.actor.id,
+    actorRole: input.actor.role,
+    detalhes: {
+      recurso: input.recurso,
+      ...(input.detalhes ?? {}),
+    },
+    ipHash: hashIp(input.ip),
+    ...(input.userAgent ? { userAgent: input.userAgent } : {}),
+    serverTimestamp: new Date().toISOString(),
+  });
+}
 
 /**
  * Factory de middleware de auditoria.
@@ -26,12 +60,12 @@ export function auditLog(accao: string) {
       'unknown';
 
     // Registo assíncrono — não bloqueia a resposta
-    strapiPost('/audit-logs', {
-      userId: user.id,
+    writeAuditLog({
+      actor: user,
       accao,
       recurso: new URL(c.req.url).pathname,
       ip,
-      timestamp: new Date().toISOString(),
+      userAgent: c.req.header('user-agent'),
     }).catch((err: unknown) => {
       log.error({ err }, '[auditLog] falha ao registar');
     });

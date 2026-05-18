@@ -94,6 +94,7 @@ export const CriarProgramaPayloadSchema = z.object({
   titulo: z.string().min(3).max(120),
   proposito: z.string().min(10).max(2000),
   metodologia: z.string().min(10).max(2000),
+  capaUrl: z.string().url().optional().nullable(),
   recursos: z.record(z.unknown()).optional(),
   cronograma: z.array(CronogramaEtapaSchema).optional(),
   responsavelId: z.string().optional(),
