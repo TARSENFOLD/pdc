@@ -106,7 +106,7 @@ export function ProjetoDetailPage() {
     );
   }
 
-  const isOwner = !!(user?.perfilId && user.perfilId === projeto.autor?.id);
+  const isOwner = !!(user?.perfilId && user.perfilId === String(projeto.autor?.id ?? ''));
   const canDelete = isOwner || user?.role === 'moderador' || user?.role === 'super_admin';
 
   return (

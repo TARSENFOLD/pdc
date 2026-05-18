@@ -76,7 +76,7 @@ projetoRoutes.get('/', optionalJwt, zValidator('query', projetoQuerySchema), asy
     const canModerate = canModerateProjetos(user);
 
     const params: Record<string, string> = {
-      populate: 'autor,media',
+      populate: 'autor.foto,media',
       sort: 'createdAt:desc',
     };
     if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
@@ -125,7 +125,7 @@ projetoRoutes.get('/:id', optionalJwt, async (c) => {
     const perfilId = await resolvePerfilId(user?.id);
 
     const res = await strapiGet<StrapiProjeto>(`/projetos/${id}`, {
-      populate: 'autor,media',
+      populate: 'autor.foto,media',
     });
 
     const project = firstProjeto(res.data);
