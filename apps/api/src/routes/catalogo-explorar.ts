@@ -5,6 +5,7 @@ import {
   type ExplorarItem, 
   type ExplorarItemTipo 
 } from '@pdc/shared';
+import { applyPublicCatalogStateFilter } from './publication-state.js';
 
 export const catalogoExplorarRoutes = new Hono();
 
@@ -77,7 +78,7 @@ catalogoExplorarRoutes.get('/', async (c) => {
 
   const fetches = types.map(async (t): Promise<ExplorarItem[]> => {
     const cfg = CONFIGS[t];
-    const params: Record<string, string> = {};
+    const params: Record<string, string | string[]> = {};
 
     if (cfg.isMentor) {
       params['filters[role][name][$eq]'] = 'mentor';
@@ -85,7 +86,7 @@ catalogoExplorarRoutes.get('/', async (c) => {
     } else if (cfg.isInstituicao) {
       params['filters[role][name][$eq]'] = 'instituicao';
     } else {
-      params['filters[estado][$eq]'] = 'published';
+      applyPublicCatalogStateFilter(params);
     }
 
     params[`filters[${cfg.titleField}][$containsi]`] = q;

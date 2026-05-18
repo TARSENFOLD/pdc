@@ -2,8 +2,8 @@ import { http } from './http';
 import type { PerfilCompleto, UpdatePerfilPayload, Role, EstudanteStats } from '@pdc/shared';
 
 export const perfisApi = {
-  getById: (id: string) => 
-    http.get<PerfilCompleto>(`/perfis/${id}`),
+  getById: (id: string) =>
+    http.get<{ data: PerfilCompleto }>(`/perfis/${id}`).then((r) => r.data),
 
   getMe: () => 
     http.get<PerfilCompleto>('/perfis/me'),

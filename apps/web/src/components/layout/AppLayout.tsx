@@ -45,28 +45,36 @@ export default function AppLayout(): React.JSX.Element {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen bg-[var(--surface-canvas)] text-[var(--ink-primary)] antialiased">
+    <div className="flex h-screen overflow-hidden bg-[var(--chrome-surface)] text-[var(--ink-primary)] antialiased">
       {/* ── Desktop sidebar (fixed, collapsible) ── */}
       <motion.aside
-        className="hidden lg:flex shrink-0"
+        className="hidden lg:flex shrink-0 relative"
         animate={{ width: sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
         transition={reduced ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 280 }}
       >
         <motion.div
-          className="fixed top-0 bottom-0 flex flex-col border-r border-[var(--chrome-border)] bg-[var(--chrome-surface)] overflow-hidden"
+          className="fixed top-0 bottom-0 flex flex-col bg-[var(--chrome-surface)] overflow-hidden"
           animate={{ width: sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
           transition={reduced ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 280 }}
         >
           <SidebarContent collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
+          {/* Faixa de resize — ocupa toda a borda direita */}
+          <button
+            onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
+            className="absolute inset-y-0 right-0 w-1.5 cursor-col-resize group/resize focus-visible:outline-none"
+          >
+            <span className="absolute inset-y-0 right-0 w-0 transition-all duration-150 group-hover/resize:w-1 group-hover/resize:bg-[var(--accent-terracotta)] group-hover/resize:opacity-70" />
+          </button>
         </motion.div>
       </motion.aside>
 
       {/* ── Main content area ── */}
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         <TopBar onOpenMobileMenu={() => { setDrawerOpen(true); }} />
 
-        <main className="flex-1 relative">
-          <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
+        <main className="flex-1 min-h-0 relative bg-[var(--surface-canvas)] rounded-tl-2xl overflow-hidden">
+          <div className="mx-auto max-w-[1600px] p-3 lg:p-4 h-full overflow-y-auto">
             <AppErrorBoundary>
               <Outlet />
             </AppErrorBoundary>

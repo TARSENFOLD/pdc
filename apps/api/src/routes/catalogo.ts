@@ -5,10 +5,13 @@ import pino from 'pino';
 import { AreaVocacionalSchema, EstadoEditorialSchema, ModalidadeSchema } from '@pdc/shared';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { withPublicCache } from '../middleware/cache.js';
+import { verifyJwt } from '../modules/auth/auth.middleware.js';
 import type { CursoPublico, SimulacaoPublica, ExperienciaPublica, CatalogoMeta } from '@pdc/shared';
 import { catalogoExplorarRoutes } from './catalogo-explorar.js';
 import { mentoresRoutes, instituicoesRoutes, perfilPublicoRoutes, pessoasRoutes } from './catalogo-pessoas.js';
 import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
+import { applyPublicCatalogStateFilter } from './publication-state.js';
+import { vocacionalService } from '../modules/vocacional/vocacional.service.js';
 
 export const catalogoRoutes = new Hono();
 const log = pino({ name: 'catalogo' });
@@ -20,7 +23,7 @@ catalogoRoutes.use('*', withPublicCache(60, 300));
 
 interface StrapiCurso {
   id: string | number; slug: string; titulo: string; descricao: string;
-  capaUrl?: string; area?: string; nivel?: string; idioma?: string;
+  capaUrl?: string; thumbnailUrl?: string; area?: string; nivel?: string; idioma?: string;
   gratuito?: boolean; totalHoras?: number; autorNome?: string;
 }
 
@@ -43,6 +46,8 @@ interface StrapiExperiencia {
   validadoAcademicamente?: boolean;
   estado?: 'draft' | 'review' | 'approved' | 'published' | 'rejected';
   modalidade?: string;
+  duracaoEstimada?: number;
+  vagas?: number;
 }
 
 const NivelSchema = z.enum(['basico', 'medio', 'avancado']);
@@ -63,7 +68,7 @@ function toMeta(meta: StrapiListResponse<unknown>['meta']): CatalogoMeta {
   return { page: p.page, pageSize: p.pageSize, total: p.total, pageCount: p.pageCount };
 }
 
-function addPg(p: Record<string, string>, page: number, limit: number): void {
+function addPg(p: Record<string, string | string[]>, page: number, limit: number): void {
   p['pagination[page]'] = page.toString();
   p['pagination[pageSize]'] = limit.toString();
 }
@@ -77,7 +82,7 @@ function parseOptional<T>(schema: z.ZodType<T>, value: unknown): T | undefined {
 function mapCurso(d: StrapiCurso): CursoPublico {
   return {
     id: sid(d.id), slug: d.slug, titulo: d.titulo, descricao: d.descricao,
-    capaUrl: d.capaUrl, area: parseOptional(AreaVocacionalSchema, d.area), nivel: parseOptional(NivelSchema, d.nivel), idioma: d.idioma,
+    capaUrl: d.capaUrl ?? d.thumbnailUrl, area: parseOptional(AreaVocacionalSchema, d.area), nivel: parseOptional(NivelSchema, d.nivel), idioma: d.idioma,
     gratuito: d.gratuito, totalHoras: d.totalHoras ?? 0, autorNome: d.autorNome,
   };
 }
@@ -99,7 +104,24 @@ function mapSim(d: StrapiSimulacao): SimulacaoPublica {
     tentativasMaximas: d.tentativasMaximas ?? 0,
   };
 }
-function mapExp(d: StrapiExperiencia): ExperienciaPublica {
+async function fetchRatingAvg(targetId: string): Promise<number | null> {
+  try {
+    interface StrapiRatingRecord { id: string; valor: number }
+    const res = await strapiGet<StrapiRatingRecord>('/ratings', {
+      'filters[targetType][$eq]': 'experiencia',
+      'filters[targetId][$eq]': targetId,
+      'pagination[limit]': '1000',
+      'fields[0]': 'valor',
+    });
+    if (!res.data.length) return null;
+    const soma = res.data.reduce((acc, r) => acc + r.valor, 0);
+    return Number((soma / res.data.length).toFixed(1));
+  } catch {
+    return null;
+  }
+}
+
+function mapExp(d: StrapiExperiencia, ratingAvg?: number | null): ExperienciaPublica {
   return {
     id: sid(d.id), 
     slug: d.slug, 
@@ -114,6 +136,9 @@ function mapExp(d: StrapiExperiencia): ExperienciaPublica {
     validadoAcademicamente: d.validadoAcademicamente ?? false,
     estado: parseOptional(EstadoEditorialSchema, d.estado) ?? 'published',
     modalidade: parseOptional(ModalidadeSchema, d.modalidade),
+    duracaoEstimada: d.duracaoEstimada ?? null,
+    vagas: d.vagas ?? null,
+    ratingAvg: ratingAvg ?? null,
   };
 }
 
@@ -122,16 +147,19 @@ function mapExp(d: StrapiExperiencia): ExperienciaPublica {
 const cursoQ = pgQ.extend({
   area: AreaVocacionalSchema.optional(), nivel: z.string().optional(),
   idioma: z.string().optional(), gratuito: z.coerce.boolean().optional(),
+  q: z.string().optional(), search: z.string().optional(),
 });
 
 catalogoRoutes.get('/cursos', zValidator('query', cursoQ), async (c) => {
   const q = c.req.valid('query');
-  const p: Record<string, string> = { 'filters[estado][$eq]': 'published' }; 
+  const p: Record<string, string | string[]> = {};
+  applyPublicCatalogStateFilter(p);
   addPg(p, q.page, q.pageSize ?? q.limit);
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
   if (q.idioma) p['filters[idioma][$eq]'] = q.idioma;
   if (q.gratuito !== undefined) p['filters[gratuito][$eq]'] = String(q.gratuito);
+  if (q.q || q.search) p['filters[titulo][$containsi]'] = q.q ?? q.search ?? '';
   
   try {
     const res = await strapiGet<StrapiCurso>('/cursos', p);
@@ -144,10 +172,10 @@ catalogoRoutes.get('/cursos', zValidator('query', cursoQ), async (c) => {
 
 catalogoRoutes.get('/cursos/:slug', async (c) => {
   const slug = c.req.param('slug');
-  const p: Record<string, string> = { 
+  const p: Record<string, string | string[]> = { 
     'filters[slug][$eq]': slug,
-    'filters[estado][$eq]': 'published'
   }; 
+  applyPublicCatalogStateFilter(p);
   try {
     const res = await strapiGet<StrapiCurso>('/cursos', p);
     const first = res.data[0];
@@ -171,7 +199,8 @@ const SIM_ALLOWED_SORTS = new Set(['createdAt:desc', 'createdAt:asc', 'updatedAt
 
 catalogoRoutes.get('/simulacoes', zValidator('query', simQ), async (c) => {
   const q = c.req.valid('query');
-  const p: Record<string, string> = { 'filters[estado][$eq]': 'published' }; 
+  const p: Record<string, string | string[]> = {};
+  applyPublicCatalogStateFilter(p);
   addPg(p, q.page, q.pageSize ?? q.limit);
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.tipo !== undefined) p['filters[tipo][$eq]'] = q.tipo.toString();
@@ -193,10 +222,10 @@ catalogoRoutes.get('/simulacoes', zValidator('query', simQ), async (c) => {
 
 catalogoRoutes.get('/simulacoes/:slug', async (c) => {
   const slug = c.req.param('slug');
-  const p: Record<string, string> = { 
+  const p: Record<string, string | string[]> = { 
     'filters[slug][$eq]': slug,
-    'filters[estado][$eq]': 'published'
   }; 
+  applyPublicCatalogStateFilter(p);
   try {
     const res = await strapiGet<StrapiSimulacao>('/simulacoes', p);
     const first = res.data[0];
@@ -210,21 +239,47 @@ catalogoRoutes.get('/simulacoes/:slug', async (c) => {
 
 // ─── Experiências ─────────────────────────────────────────────────────────────
 
-const expQ = pgQ.extend({ area: AreaVocacionalSchema.optional(), nivel: z.string().optional() });
+const expQ = pgQ.extend({
+  area: AreaVocacionalSchema.optional(),
+  nivel: z.string().optional(),
+  modalidade: ModalidadeSchema.optional(),
+});
 
 catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
   const q = c.req.valid('query');
-  const p: Record<string, string> = { 'filters[estado][$eq]': 'published' }; 
+  const p: Record<string, string | string[]> = {};
+  applyPublicCatalogStateFilter(p);
   addPg(p, q.page, q.pageSize ?? q.limit);
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
+  if (q.modalidade) p['filters[modalidade][$eq]'] = q.modalidade;
   
   try {
     const res = await strapiGet<StrapiExperiencia>('/experiencias', p);
-    return c.json({ data: res.data.map(mapExp), meta: toMeta(res.meta) });
+    // Enriquecer cada experiência com ratingAvg em paralelo
+    const enriched = await Promise.all(
+      res.data.map(async (d) => {
+        const ratingAvg = await fetchRatingAvg(sid(d.id));
+        return mapExp(d, ratingAvg);
+      })
+    );
+    return c.json({ data: enriched, meta: toMeta(res.meta) });
   } catch (err) {
     log.error({ err, params: p }, 'Failed to fetch experiencias catalog');
     return c.json({ error: 'Falha ao carregar catálogo de experiências' }, 502);
+  }
+});
+
+// GET /catalogo/experiencias/recomendacoes — requer autenticação, usa heurísticas biométricas
+catalogoRoutes.get('/experiencias/recomendacoes', verifyJwt, async (c) => {
+  const user = (c as Parameters<typeof verifyJwt>[0] & { get: (k: 'user') => { id: string } }).get('user');
+  try {
+    const perfil = await vocacionalService.calcularPerfil(user.id);
+    const recomendacoes = await vocacionalService.gerarRecomendacoesExperiencias(perfil);
+    return c.json({ data: recomendacoes });
+  } catch (err) {
+    log.warn({ err, userId: user.id }, 'Falha ao gerar recomendações de experiências — retornando lista vazia');
+    return c.json({ data: [] });
   }
 });
 

@@ -3,8 +3,10 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
-import { strapiGet, strapiPost, strapiPutRaw } from '../modules/strapi/strapi.client.js';
+import { strapiGet, strapiPutRaw } from '../modules/strapi/strapi.client.js';
 import { RoleSchema } from '@pdc/shared';
+import { toPaginatedResponse } from './pagination.js';
+import { writeAuditLog } from '../middleware/audit.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -32,7 +34,8 @@ adminRoutes.get(
     if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
     if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
     try {
-      return c.json(await strapiGet<unknown>('/users', params));
+      const res = await strapiGet<unknown>('/users', params);
+      return c.json(toPaginatedResponse(res));
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
@@ -50,12 +53,13 @@ adminRoutes.put(
     try {
       const data = await strapiPutRaw<unknown>(`/users/${id}`, { role });
       
-      await strapiPost('/audit-logs', { 
-        userId: c.get('user').id, 
+      await writeAuditLog({
+        actor: c.get('user'),
         accao: 'admin_alterar_role', 
         recurso: `/users/${id}`, 
-        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown', 
-        timestamp: new Date().toISOString() 
+        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
+        userAgent: c.req.header('user-agent'),
+        detalhes: { role },
       }).catch(() => {});
       
       return c.json(data);
@@ -123,7 +127,8 @@ adminRoutes.get(
     if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
     if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
     try {
-      return c.json(await strapiGet<unknown>('/audit-logs', params));
+      const res = await strapiGet<unknown>('/audit-logs', params);
+      return c.json(toPaginatedResponse(res));
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
@@ -141,12 +146,12 @@ adminRoutes.put(
         bloqueado: false,
         suspendidoEm: null,
       });
-      await strapiPost('/audit-logs', {
-        userId: c.get('user').id,
+      await writeAuditLog({
+        actor: c.get('user'),
         accao: 'admin_reativar_utilizador',
         recurso: `/users/${String(id)}`,
         ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
-        timestamp: new Date().toISOString(),
+        userAgent: c.req.header('user-agent'),
       }).catch(() => {});
       return c.json(data);
     } catch (err) {

@@ -1,4 +1,4 @@
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { useQuery } from '@tanstack/react-query';
 import { Spinner, Button, GlassCard } from '@/components/ui';
 import { QuietHero, QuietStat, QuietCard, QuietEmpty, QuietSection } from '@/components/ui/quiet';
@@ -13,7 +13,7 @@ import type { DashboardEstudante } from '@pdc/shared';
 const SPRING = { type: 'spring', stiffness: 220, damping: 28 } as const;
 
 const EMPTY: DashboardEstudante = {
-  stats: { xp: 0, reputacao: 0, conquistasCount: 0, vinkulosCount: 0, pulseVariacao: 0 },
+  stats: { xp: 0, reputacao: 0, conquistasCount: 0, vinkulosCount: 0, pulseVariacao: null },
   match: { area: 'Tecnologia', score: 0, insight: '', directive: 'PERFIL PENDENTE' },
   behavior: null,
   progressoCursos: [],

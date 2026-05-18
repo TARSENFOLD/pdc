@@ -26,7 +26,7 @@ dashboardEstudanteRoutes.get('/', async (c) => {
   const { id: userId } = c.get('user');
 
   const EMPTY_DASHBOARD: DashboardEstudante = {
-    stats: { xp: 0, reputacao: 0, conquistasCount: 0, vinkulosCount: 0, pulseVariacao: 0 },
+    stats: { xp: 0, reputacao: 0, conquistasCount: 0, vinkulosCount: 0, pulseVariacao: null },
     match: {
       area: 'Tecnologia',
       score: 0,
@@ -95,17 +95,13 @@ dashboardEstudanteRoutes.get('/', async (c) => {
       );
     }
 
-    // G15: pulseVariacao deve ser derivado de telemetria histórica. 
-    // TODO: Integrar com pipeline de telemetria real (W4). Por agora, reflecte drift vocacional se existir.
-    const pulseVariacao = lastPattern ? (lastPattern.scoreGlobal * 10) : 0;
-
     const dashboardData: DashboardEstudante = {
       stats: {
         xp: perfil.xp || 0,
         reputacao: perfil.reputacao || 0,
         conquistasCount: perfil.conquistas.length,
         vinkulosCount: vinculosRes.data.length,
-        pulseVariacao,
+        pulseVariacao: null,
       },
       match: {
         area: areaPrincipal,

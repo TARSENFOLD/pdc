@@ -13,12 +13,13 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "hono": "^4.12.14"
+    "@pdc/shared": "*",
+    "hono": "^4.12.18"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260417.1",
     "typescript": "^5.0.0",
     "vitest": "^4.1.4",
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.90.0"
   }
 }

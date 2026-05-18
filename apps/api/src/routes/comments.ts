@@ -11,6 +11,7 @@ import {
 } from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
+import { rateLimitComments } from '../middleware/rateLimit.js';
 
 export const commentsRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -27,7 +28,7 @@ interface StrapiComment extends StrapiEntity {
   estado: 'pendente'|'aprovado'|'rejeitado';
 }
 
-commentsRoutes.post('/', verifyJwt, zValidator('json', CreateCommentPayloadSchema), async (c) => {
+commentsRoutes.post('/', verifyJwt, rateLimitComments, zValidator('json', CreateCommentPayloadSchema), async (c) => {
   const user = c.get('user');
   const { targetType, targetId, conteudo } = c.req.valid('json');
 

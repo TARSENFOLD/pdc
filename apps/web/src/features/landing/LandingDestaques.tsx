@@ -69,8 +69,11 @@ export function LandingDestaques() {
     );
   }
 
-  // Regra zero mocks: se houver erro ou não houver dados em simulações, não renderiza nada
-  if (simError || instError || !simulacoes?.data.length) {
+  const sims = simError ? [] : simulacoes?.data ?? [];
+  const insts = instError ? [] : instituicoes?.data ?? [];
+
+  // Regra zero mocks: renderiza apenas blocos com dados reais.
+  if (sims.length === 0 && insts.length === 0) {
     return null;
   }
 
@@ -88,9 +91,10 @@ export function LandingDestaques() {
 
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
           {/* Simulações Col (2/3) */}
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              {simulacoes.data.map((sim: SimulacaoPublica, i: number) => {
+          {sims.length > 0 ? (
+            <div className="lg:col-span-2">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {sims.map((sim: SimulacaoPublica, i: number) => {
                 const colors = getPlaceholderColors(sim.area);
                 return (
                   <motion.div
@@ -127,16 +131,18 @@ export function LandingDestaques() {
                   </motion.div>
                 );
               })}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {/* Instituições Col */}
-          <div className="flex flex-col gap-6">
+          {insts.length > 0 ? (
+          <div className={sims.length > 0 ? 'flex flex-col gap-6' : 'flex flex-col gap-6 lg:col-span-3'}>
             <h3 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted">
               <Building2 size={12} className="text-accent" /> {t('destaques.instituicoes_label')}
             </h3>
-            <div className="flex flex-col gap-3">
-              {instituicoes?.data.map((inst: InstituicaoPublica, i: number) => (
+            <div className={sims.length > 0 ? 'flex flex-col gap-3' : 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3'}>
+              {insts.map((inst: InstituicaoPublica, i: number) => (
                 <motion.div
                   key={inst.id}
                   {...fadeUp}
@@ -167,6 +173,7 @@ export function LandingDestaques() {
               {t('destaques.ver_todas')} <ChevronRight size={12} />
             </Link>
           </div>
+          ) : null}
         </div>
       </div>
     </section>

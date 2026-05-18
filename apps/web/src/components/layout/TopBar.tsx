@@ -49,7 +49,7 @@ export default function TopBar({ onOpenMobileMenu }: TopBarProps): React.JSX.Ele
       
       <header
         data-testid="topbar"
-        className="sticky top-0 z-30 flex min-h-14 w-full items-center justify-between border-b border-[var(--chrome-border)] px-4 bg-[var(--chrome-surface)] sm:px-6 lg:px-8"
+        className="sticky top-0 z-30 flex min-h-14 w-full items-center justify-between px-4 bg-[var(--chrome-surface)] sm:px-6 lg:px-8"
       >
         {/* ── Esquerda: Logo Mobile + Breadcrumbs ── */}
         <div className="flex items-center gap-4">

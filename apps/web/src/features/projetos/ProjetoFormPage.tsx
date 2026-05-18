@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projetosApi } from '@/lib/api/projetos';
@@ -11,7 +11,13 @@ import { BuilderShell, BuilderSection, BuilderUploadZone, BuilderActionsBar } fr
 import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lock } from 'lucide-react';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
+
+function emptyStringToUndefined(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : trimmed;
+}
 
 export function ProjetoFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,19 +28,20 @@ export function ProjetoFormPage() {
   const isEdit = !!id;
   const [lastEventId, setLastEventId] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const pendingActionRef = useRef<'draft' | 'review' | 'publish'>('draft');
 
-  const { data: projeto, isLoading } = useQuery({
+  const { data: rawProjeto, isLoading } = useQuery({
     queryKey: ['projetos', projetoId],
     queryFn: () => projetosApi.getById(projetoId),
     enabled: isEdit,
   });
+  const projeto = rawProjeto?.data[0];
 
   const form = useForm<CriarProjetoPayload>({
     resolver: zodResolver(CriarProjetoPayloadSchema) as Resolver<CriarProjetoPayload>,
     defaultValues: {
       titulo: '',
       abstract: '',
-      core: '',
       area: 'TECNOLOGIA',
       modos: ['exposicao'],
       visibilidade: 'publico',
@@ -64,22 +71,47 @@ export function ProjetoFormPage() {
   const mutation = useMutation({
     mutationFn: (data: CriarProjetoPayload) =>
       isEdit ? projetosApi.update(projetoId, data) : projetosApi.create(data),
-    onSuccess: (saved: { id?: string; data?: { id?: string; eventId?: string }; eventId?: string }) => {
+    onSuccess: async (saved: { id?: string; data?: { id?: string; eventId?: string }; eventId?: string }) => {
       void qc.invalidateQueries({ queryKey: ['projetos'] });
-      toast({ title: isEdit ? 'Projeto atualizado' : 'Projeto materializado!' });
 
       const newId = saved.data?.id || saved.id;
       if (newId) setSavedId(newId);
+      const targetId = newId || projetoId;
+      const action = pendingActionRef.current;
 
+      if (action === 'review' && targetId) {
+        try {
+          await projetosApi.transitionState(targetId, 'review');
+          toast({ title: 'Projeto submetido para revisão' });
+        } catch {
+          toast({ title: 'Projeto guardado, mas falhou a submissão para revisão', variant: 'error' });
+        }
+        navigate(`/app/projetos/${targetId}`);
+        return;
+      }
+
+      if (action === 'publish' && targetId) {
+        try {
+          await projetosApi.transitionState(targetId, 'published');
+          toast({ title: 'Projeto publicado!' });
+        } catch {
+          toast({ title: 'Projeto guardado, mas falhou a publicação', variant: 'error' });
+        }
+        navigate(`/app/projetos/${targetId}`);
+        return;
+      }
+
+      // Default: draft save
+      toast({ title: isEdit ? 'Projeto atualizado' : 'Projeto criado com sucesso' });
       const eventId = saved.eventId || saved.data?.eventId;
       if (eventId) {
         setLastEventId(eventId);
       } else {
-        navigate(`/projetos/${newId || projetoId}`);
+        navigate(`/app/projetos/${targetId}`);
       }
     },
     onError: (err: { response?: { data?: { error?: string } } }) => toast({
-      title: 'Erro na publicação',
+      title: 'Erro ao guardar projeto',
       description: err.response?.data?.error || 'Falha na persistência',
       variant: 'error'
     })
@@ -93,10 +125,20 @@ export function ProjetoFormPage() {
     }
   });
 
-  const handleSave = () => {
-    const data = form.getValues();
+  const handleSaveDraft = form.handleSubmit((data) => {
+    pendingActionRef.current = 'draft';
     mutation.mutate(data);
-  };
+  });
+
+  const handleSubmitReview = form.handleSubmit((data) => {
+    pendingActionRef.current = 'review';
+    mutation.mutate(data);
+  });
+
+  const handlePublish = form.handleSubmit((data) => {
+    pendingActionRef.current = 'publish';
+    mutation.mutate(data);
+  });
 
   if (isEdit && isLoading) return <div className="flex h-screen items-center justify-center bg-canvas"><Spinner size="lg" /></div>;
 
@@ -104,11 +146,12 @@ export function ProjetoFormPage() {
     <>
       <BuilderShell
         form={form}
-        title={isEdit ? "Editor de Ativo Soberano" : "Novo Projeto de Ecossistema"}
-        description="Materializa o teu conhecimento em ativos reais. Separa o pitch público do núcleo técnico."
-        state="published"      breadcrumbs={[
+        title={isEdit ? 'Editar Projeto' : 'Novo Projeto'}
+        description="Cria um projeto que demonstra as tuas competências. Separa o resumo público do conteúdo técnico."
+        state={projeto?.estado ?? 'draft'}
+        breadcrumbs={[
         { label: 'Início', to: '/app' },
-        { label: 'Projetos', to: '/app/catalogo/projetos' },
+        { label: 'Projetos', to: '/app/projetos' },
         { label: isEdit ? 'Editar' : 'Novo Projeto' }
       ]}
       sections={[
@@ -121,18 +164,19 @@ export function ProjetoFormPage() {
       ]}
       actions={
         <BuilderActionsBar
-          state="published"
+          state={projeto?.estado ?? 'draft'}
           userRole={user?.role || 'estudante'}
-          onSaveDraft={handleSave}
-          onSubmitReview={handleSave}
-          onPublish={handleSave}
+          onSaveDraft={() => { void handleSaveDraft(); }}
+          onSubmitReview={() => { void handleSubmitReview(); }}
+          onPublish={() => { void handlePublish(); }}
           isSubmitting={mutation.isPending}
         />
       }
     >
       <BuilderSection
-        title="Identidade do Ativo"
-        description="Título, domínio e visibilidade global."
+        value="identidade"
+        title="Identidade do Projeto"
+        description="Título, área e visibilidade." 
       >
         <div className="space-y-6">
           <Input label="Título do Projeto" {...register('titulo')} error={errors.titulo?.message} />
@@ -140,8 +184,19 @@ export function ProjetoFormPage() {
              <Select label="Área de Domínio" {...register('area')}>
                 <option value="TECNOLOGIA">Tecnologia</option>
                 <option value="ENGENHARIA">Engenharia</option>
-                <option value="ARTES">Artes</option>
+                <option value="SAUDE">Saúde</option>
+                <option value="DIREITO">Direito</option>
                 <option value="GESTAO">Gestão</option>
+                <option value="EDUCACAO">Educação</option>
+                <option value="ARTES">Artes</option>
+                <option value="CIENCIAS_AGRARIAS">Ciências Agrárias</option>
+                <option value="CIENCIAS_SOCIAIS">Ciências Sociais</option>
+                <option value="COMUNICACAO">Comunicação</option>
+                <option value="CIENCIAS_NATURAIS">Ciências Naturais</option>
+                <option value="ARQUITETURA">Arquitetura</option>
+                <option value="TURISMO_HOTELARIA">Turismo e Hotelaria</option>
+                <option value="DESPORTO">Desporto</option>
+                <option value="OUTRA">Outra</option>
              </Select>
              <Select label="Visibilidade" {...register('visibilidade')}>
                 <option value="publico">Público (Catálogo)</option>
@@ -152,17 +207,18 @@ export function ProjetoFormPage() {
       </BuilderSection>
 
       <BuilderSection
+        value="pitch"
         title="Pitch Público (Abstract)"
         description="Resumo visível a todos no catálogo. Capta a atenção do ecossistema."
       >
         <div className="space-y-4">
           <textarea 
-            className="flex min-h-[120px] w-full rounded-xl border border-ink-tertiary/20 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
+            className="flex min-h-[120px] w-full rounded-sm border border-ink-tertiary/20 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
             placeholder="Descreve o propósito e impacto do projeto..."
             {...register('abstract')}
           />
           {errors.abstract && <p className="text-xs text-accent-danger">{errors.abstract.message}</p>}
-          <BuilderUploadZone onUploadComplete={(urls) => {
+          <BuilderUploadZone entityType="projeto" onUploadComplete={(urls) => {
             if (urls.length > 0 && urls[0]) {
               setValue('capaUrl', urls[0]);
             }
@@ -171,23 +227,26 @@ export function ProjetoFormPage() {
       </BuilderSection>
 
       <BuilderSection
+        value="core"
         title="Núcleo Técnico (Core)"
-        description="Documentação profunda, segredos e lógica. Acesso controlado por ACL."
+        description="Documentação técnica e detalhes. Acesso controlado — só pessoas autorizadas verão esta secção."
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-institutional-cobalt mb-2">
-             <Lock size={12} /> Camada Protegida
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-accent mb-2">
+             <Lock size={12} /> Camada Privada
           </div>
+          <p className="text-xs text-ink-tertiary mb-3">Esta camada só será visível para pessoas autorizadas.</p>
           <textarea 
-            className="flex min-h-[200px] w-full rounded-xl border border-institutional-cobalt/20 bg-institutional-cobalt/5 px-4 py-3 text-sm focus:border-institutional-cobalt outline-none transition-all"
+            className="flex min-h-[200px] w-full rounded-sm border border-accent/20 bg-accent/5 px-4 py-3 text-sm focus:border-accent outline-none transition-all"
             placeholder="Documentação técnica, roadmap, ou links privados..."
-            {...register('core')}
+            {...register('core', { setValueAs: emptyStringToUndefined })}
           />
           {errors.core && <p className="text-xs text-accent-danger">{errors.core.message}</p>}
         </div>
       </BuilderSection>
 
       <BuilderSection
+        value="modos"
         title="Modos de Atuação"
         description="Como o projeto interage com outros talentos e mentores."
       >
@@ -197,8 +256,9 @@ export function ProjetoFormPage() {
             { id: 'colaboracao', label: 'Colaboração', desc: 'Aceita contribuidores.' },
             { id: 'mentoria', label: 'Mentoria', desc: 'Procura orientação.' },
             { id: 'financiamento', label: 'Financiamento', desc: 'Procura investimento.' },
+            { id: 'feedbackComunitario', label: 'Feedback Comunitário', desc: 'Pede opiniões da comunidade.' },
           ].map((modo) => (
-            <label key={modo.id} className="flex items-start gap-3 p-4 rounded-xl border border-ink-tertiary/10 bg-recessed cursor-pointer hover:border-accent/20 transition-all">
+            <label key={modo.id} className="flex items-start gap-3 p-4 rounded-sm border border-ink-tertiary/10 bg-recessed cursor-pointer hover:border-accent/20 transition-all">
                <input 
                  type="checkbox" 
                  value={modo.id} 
@@ -206,7 +266,7 @@ export function ProjetoFormPage() {
                  {...register('modos')}
                />
                <div>
-                  <p className="text-sm font-bold text-ink-primary">{modo.label}</p>
+                  <p className="text-sm font-semibold text-ink-primary">{modo.label}</p>
                   <p className="text-[10px] text-ink-tertiary">{modo.desc}</p>
                </div>
             </label>
@@ -216,6 +276,7 @@ export function ProjetoFormPage() {
 
       {isEdit && (
         <BuilderSection
+          value="acl"
           title="Gestão de Acessos (ACL)"
           description="Pedidos de acesso ao núcleo técnico do teu projeto."
         >
@@ -224,10 +285,10 @@ export function ProjetoFormPage() {
               <p className="text-sm text-ink-secondary italic py-4">Nenhum pedido de acesso pendente.</p>
             ) : (
               projeto.acessoCoreACL.map((entry) => (
-                <div key={entry.perfilId} className="flex items-center justify-between p-4 rounded-xl bg-canvas border border-ink-tertiary/10">
+                <div key={entry.perfilId} className="flex items-center justify-between p-4 rounded-sm bg-canvas border border-ink-tertiary/10">
                    <div>
-                      <p className="text-sm font-bold text-ink-primary">ID: {entry.perfilId}</p>
-                      <p className="text-[9px] text-ink-tertiary uppercase tracking-widest">{entry.estado}</p>
+                      <p className="text-sm font-semibold text-ink-primary">ID: {entry.perfilId}</p>
+                      <p className="text-[9px] text-ink-tertiary uppercase tracking-wide">{entry.estado}</p>
                    </div>
                    {entry.estado === 'pendente' && (
                      <div className="flex gap-2">
@@ -249,10 +310,10 @@ export function ProjetoFormPage() {
       >
         <div className="space-y-6">
            <div className="grid grid-cols-2 gap-4">
-              <Input label="URL Repositório" {...register('repoUrl')} placeholder="ex: github.com/..." />
-              <Input label="URL Demo" {...register('demoUrl')} placeholder="ex: ver-demo.vercel.app" />
+              <Input label="URL Repositório" {...register('repoUrl', { setValueAs: emptyStringToUndefined })} placeholder="https://github.com/..." />
+              <Input label="URL Demo" {...register('demoUrl', { setValueAs: emptyStringToUndefined })} placeholder="https://demo.exemplo.ao" />
            </div>
-           <div className="p-4 rounded-xl bg-recessed/30 border border-ink-tertiary/10 italic text-sm text-ink-secondary">
+           <div className="p-4 rounded-sm bg-recessed/30 border border-ink-tertiary/10 italic text-sm text-ink-secondary">
              Seletor de Tags avançado disponível em breve.
            </div>
         </div>
@@ -273,7 +334,7 @@ export function ProjetoFormPage() {
               variant="full"
               onComplete={() => {
                 const targetId = savedId || id;
-                const path = targetId ? `/projetos/${targetId}` : '/app/catalogo/projetos';
+                const path = targetId ? `/app/projetos/${targetId}` : '/app/projetos';
                 setTimeout(() => { navigate(path); }, 3000);
               }}
             />
@@ -284,5 +345,3 @@ export function ProjetoFormPage() {
     </>
   );
 }
-
-

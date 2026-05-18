@@ -1,21 +1,9 @@
-import { createContext, useContext, type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { authApi, type LoginPayload, type LoginResponse, type RegisterPayload } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/http';
-import type { User } from '@pdc/shared';
 import { telemetriaService } from '../telemetria/telemetria.service';
-
-interface AuthContextValue {
-  user: User | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  login: (payload: LoginPayload) => Promise<LoginResponse>;
-  completeOtp: (otp: string, canal: 'email' | 'sms') => Promise<void>;
-  register: (payload: RegisterPayload) => Promise<LoginResponse>;
-  logout: () => Promise<void>;
-}
-
-export const AuthContext = createContext<AuthContextValue | null>(null);
+import { AuthContext } from './auth-context';
 
 function getErrorStatus(error: unknown): number | undefined {
   if (typeof error !== 'object' || error === null) return undefined;
@@ -128,12 +116,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return ctx;
 }

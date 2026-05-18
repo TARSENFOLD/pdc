@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mentoriasApi } from '@/lib/api/mentorias';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { Spinner, Badge, Button } from '@/components/ui';
 import { SolicitarMentoriaModal } from './SolicitarMentoriaModal';
 import { useState } from 'react';

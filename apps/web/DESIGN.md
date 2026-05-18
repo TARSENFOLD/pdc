@@ -116,7 +116,7 @@ Always pair `<Label>` with `<Input>`. Validation errors use `text-danger text-xs
 - **Grid:** 12-column CSS grid for desktop; single column for mobile. Never Bootstrap or manual float.
 - **Spacing scale:** use Tailwind spacing tokens only (`p-4`, `gap-6`, `mt-8`). Do not use arbitrary `p-[13px]`.
 - **Max-width containers:** `max-w-7xl mx-auto px-6` for page content.
-- **Cards:** `rounded-2xl` (16px) for cards, `rounded-xl` (12px) for inputs and badges.
+- **Border-radius:** `rounded-sm` (2px) universal — cards, inputs, badges, buttons, modals, images. No exceptions.
 
 ### Sidebar
 - Width: `w-64` (256px) fixed on desktop, drawer on mobile.
@@ -147,7 +147,7 @@ Elevation is expressed through background layering — not drop shadows.
 |---|---|
 | Use `text-ink-primary/secondary/tertiary` for all text | Hardcode `text-gray-500` or hex values |
 | Use `bg-accent` for the single primary CTA per view (teal) | Use terracotta for routine app CTAs |
-| Use `rounded-2xl` for cards | Mix `rounded-lg` and `rounded-2xl` inconsistently |
+| Use `rounded-sm` universally (2px) | Mix different border-radius values (`rounded-lg`, `rounded-xl`, `rounded-2xl`, `rounded-full`) |
 | Use `font-bold` or `font-semibold` for emphasis | Use `font-black` outside brand moments |
 | Use `QuietCard` for dashboard content | Import `GlassCard` in non-HUD pages |
 | Keep animations to `duration-300` max | Add `duration-700+` for content transitions |
@@ -194,7 +194,7 @@ Requirements:
 - No GlassCard, no font-black, no hardcoded hex colors
 - No inline style={{ var(--…) }} — use Tailwind utilities
 - Spacing: p-6 for cards, gap-6 for grids
-- Rounded: rounded-2xl for cards, rounded-xl for inputs
+- Rounded: rounded-sm for everything (2px universal)
 - One primary CTA maximum per viewport using <Button variant="default">
 - Fetch data via @tanstack/react-query with useQuery
 - Handle loading state with <Spinner /> and error state with <ErrorBoundary>
@@ -322,3 +322,55 @@ Termos proibidos em copy de produto visível ao utilizador:
 - ❌ "Oráculo" — substituir por "PDC" ou "sistema"
 - ❌ "Heurísticas" — substituir por "análise" ou "perfil"
 - Emojis em badges/pills de produto: ❌ proibidos — usar apenas texto uppercase tracking-wider
+
+---
+
+## 11. Anti-Card-Bloat (ADR-027) — 2026-05-12
+
+> **Princípio:** A UI do PDC não é um painel administrativo de 2012. Não encaixotar cada fragmento de informação num card com bordas arredondadas pesadas é uma regra de design, não uma preferência.
+
+### 11.1 — Quando NÃO usar card
+
+| Contexto | Padrão correcto |
+|---|---|
+| Listas de feed (posts, actividades) | `py-4 border-b border-border` — separador horizontal, sem card |
+| Secções de conteúdo dentro de uma página | `<section>` com espaçamento (`space-y-4`) — sem card wrapper |
+| Estatísticas simples (número + label) | Stack vertical puro — sem card |
+| Quick actions / navegação rápida | Botões/links isolados — sem card |
+
+### 11.2 — Quando SIM usar card
+
+| Contexto | Border-radius |
+|---|---|
+| Content preview (curso, simulação, experiência) com thumbnail | `rounded-sm` (2px) |
+| Widget lateral de alto valor (stats, next action) | `rounded-sm` (2px) |
+| Modal / drawer content | `rounded-sm` (2px) |
+| Landing page / marketing | `rounded-sm` (2px) — contexto expressivo também usa a mesma regra |
+
+### 11.3 — Border-radius Canónico (App Interior) — ADR-028
+
+```
+rounded-sm (2px) — TUDO: cards, inputs, badges, pills, buttons, modals, drawers, images, skeletons
+```
+
+❌ **Proibido no interior da app:** `rounded-lg`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`, `rounded-full`, `rounded-[Npx]`. Sem excepções.
+
+*Referência: ADR-028 · Aprovado: 2026-05-13 — substitui regras anteriores de §5 e ADR-027 §11.3.*
+
+### 11.4 — Espaço como Separador
+
+Preferir espaçamento (`gap-*`, `space-y-*`, `py-*`) e linhas subtis (`border-b border-border`) como separadores visuais em vez de boxes/cards que criam "jaulas" de conteúdo.
+
+```tsx
+// ✅ Feed de actividades — sem card
+<div className="py-4 border-b border-border">
+  ...
+</div>
+
+// ❌ Feed de actividades — card desnecessário
+<div className="rounded-2xl bg-elevated border border-border p-4 mb-3">
+  ...
+</div>
+```
+
+*Referência: ADR-027 · Aprovado: 2026-05-12*

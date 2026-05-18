@@ -12,6 +12,7 @@ const log = pino({ name: 'telemetria-routes' });
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { redis } from '../lib/redis.js';
 import { strapiPost, strapiGet } from '../modules/strapi/strapi.client.js';
+import { rateLimitTelemetry } from '../middleware/rateLimit.js';
 
 const CONCURRENCY = 5;
 
@@ -75,7 +76,7 @@ export const telemetriaRoutes = new Hono<Vars>();
 telemetriaRoutes.use('*', verifyJwt);
 
 // POST / — single event
-telemetriaRoutes.post('/', zValidator('json', TelemetriaEventoSchema), async (c) => {
+telemetriaRoutes.post('/', rateLimitTelemetry, zValidator('json', TelemetriaEventoSchema), async (c) => {
   const user = c.get('user');
   const body = c.req.valid('json');
   try {
@@ -88,7 +89,7 @@ telemetriaRoutes.post('/', zValidator('json', TelemetriaEventoSchema), async (c)
 });
 
 // POST /batch — parallel in chunks
-telemetriaRoutes.post('/batch', zValidator('json', TelemetriaBatchSchema), async (c) => {
+telemetriaRoutes.post('/batch', rateLimitTelemetry, zValidator('json', TelemetriaBatchSchema), async (c) => {
   const user = c.get('user');
   const { events } = c.req.valid('json');
 

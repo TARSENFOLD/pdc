@@ -62,7 +62,13 @@ export const TelemetriaTipoSchema = z.enum([
   'focus_gained',
   'simulacao.pos_error',
   'feed.scrolled',
-  'feed.entry_clicked'
+  'feed.entry_clicked',
+  'media.upload.started',
+  'media.upload.completed',
+  'media.upload.failed',
+  'simulacao.lab.event',
+  'simulacao.lab.session.started',
+  'simulacao.lab.session.ended'
 ]);
 export type TelemetriaTipo = z.infer<typeof TelemetriaTipoSchema>;
 

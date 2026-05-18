@@ -294,6 +294,7 @@ jobs:
           DEV_SKIP_OTP: "true"
           API_URL: http://localhost:3001
           STRAPI_URL: http://localhost:1337
+          STRAPI_API_TOKEN: test-strapi-token
           REDIS_URL: redis://localhost:6379
 
       - name: Run Playwright full suite
@@ -302,6 +303,7 @@ jobs:
           DEV_SKIP_OTP: "true"
           NODE_ENV: test
           STRAPI_URL: http://localhost:1337
+          STRAPI_API_TOKEN: test-strapi-token
           REDIS_URL: redis://localhost:6379
           FRONTEND_URL: http://localhost:5173
 

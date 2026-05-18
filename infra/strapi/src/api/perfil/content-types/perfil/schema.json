@@ -34,6 +34,11 @@
     "userId": {
       "type": "string"
     },
+    "xp": {
+      "type": "integer",
+      "default": 0,
+      "min": 0
+    },
     "ativo": {
       "type": "boolean",
       "default": true
@@ -158,6 +163,26 @@
       "min": 0,
       "max": 100
     },
+    "conquistasCount": {
+      "type": "integer",
+      "default": 0,
+      "min": 0
+    },
+    "vinkulosCount": {
+      "type": "integer",
+      "default": 0,
+      "min": 0
+    },
+    "activeStudents": {
+      "type": "integer",
+      "default": 0,
+      "min": 0
+    },
+    "activePrograms": {
+      "type": "integer",
+      "default": 0,
+      "min": 0
+    },
     "lti_context": {
       "type": "json"
     },
@@ -178,6 +203,29 @@
       "relation": "oneToMany",
       "target": "api::feed-post.feed-post",
       "mappedBy": "autor"
+    },
+    "motivoRejeicao": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "aprovadoEm": {
+      "type": "datetime"
+    },
+    "aprovadoPor": {
+      "type": "string",
+      "maxLength": 255
+    },
+    "onboardingCompleto": {
+      "type": "boolean",
+      "default": true
+    },
+    "oauthVerified": {
+      "type": "boolean",
+      "default": false
+    },
+    "oauthProvider": {
+      "type": "enumeration",
+      "enum": ["google", "linkedin"]
     }
   }
 }

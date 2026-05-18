@@ -13,13 +13,15 @@
     "lint": "eslint scripts/",
     "seed:narrativo": "npx tsx scripts/seed-narrativo.ts",
     "seed:hubs": "npx tsx scripts/seed-hubs.ts",
+    "seed:feature-flags": "npx tsx scripts/seed-feature-flags.ts",
+    "seed:onboarding-videos": "npx tsx scripts/seed-onboarding-videos.ts",
     "typecheck": "tsc --noEmit",
     "upgrade": "npx @strapi/upgrade latest",
     "upgrade:dry": "npx @strapi/upgrade latest --dry"
   },
   "dependencies": {
-    "@strapi/plugin-users-permissions": "5.42.1",
-    "@strapi/strapi": "5.42.1",
+    "@strapi/plugin-users-permissions": "5.45.0",
+    "@strapi/strapi": "5.45.0",
     "better-sqlite3": "12.8.0",
     "date-fns": "^2.30.0",
     "pg": "^8.20.0",
@@ -27,7 +29,7 @@
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-router-dom": "^6.0.0",
-    "styled-components": "^6.0.0"
+    "styled-components": "^6.4.1"
   },
   "devDependencies": {
     "@types/node": "^20",

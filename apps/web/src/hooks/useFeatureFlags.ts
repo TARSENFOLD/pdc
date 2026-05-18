@@ -1,4 +1,4 @@
-import { useBootstrap } from '../lib/bootstrap/BootstrapContext.js';
+import { useBootstrap } from '../lib/bootstrap/bootstrap-context.js';
 
 export function useFeatureFlags() {
   const { data, isLoading } = useBootstrap();

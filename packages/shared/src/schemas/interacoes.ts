@@ -6,6 +6,7 @@ export const InteractionTargetTypeSchema = z.enum([
   'experiencia',
   'projeto',
   'mentor',
+  'instituicao',
   'post',
   'conquista',
 ]);

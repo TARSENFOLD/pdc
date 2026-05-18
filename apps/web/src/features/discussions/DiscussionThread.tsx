@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { discussionsApi, type Discussion, type DiscussionReply } from '../../lib/api/discussions';
-import { useAuth } from '../../lib/auth/AuthContext';
+import { useAuth } from '../../lib/auth/auth-context';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 

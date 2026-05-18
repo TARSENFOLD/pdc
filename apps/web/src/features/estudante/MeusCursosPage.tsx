@@ -10,7 +10,7 @@ export function MeusCursosPage() {
     queryFn: () => cursosApi.getMinhasInscricoes(),
   });
 
-  const inscricoes = (data?.data ?? []) as unknown as InscricaoComCurso[];
+  const inscricoes: InscricaoComCurso[] = data?.data ?? [];
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
 
@@ -26,24 +26,28 @@ export function MeusCursosPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {inscricoes.map((inscricao: InscricaoComCurso) => (
-            <Link
-
-              key={inscricao.id}
-              to={`/app/cursos/${inscricao.cursoId}`}
-              className="flex items-center justify-between rounded-xl border border-ink-tertiary/10 bg-elevated p-4 transition-colors hover:border-accent/20"
-            >
-              <div>
-                <p className="text-sm font-medium text-ink-primary">{inscricao.curso?.titulo ?? 'Curso'}</p>
-                <p className="mt-0.5 text-xs text-ink-tertiary">
-                  Inscrito em {new Date(inscricao.dataInscricao).toLocaleDateString('pt-AO')}
-                </p>
-              </div>
-              <Badge variant={inscricao.concluido ? 'success' : 'outline'}>
-                {inscricao.concluido ? 'Concluído' : `${String(inscricao.progressoPercentagem)}%`}
-              </Badge>
-            </Link>
-          ))}
+          {inscricoes.map((inscricao) => {
+            const cursoId = inscricao.cursoId ?? inscricao.curso?.id;
+            const progresso = inscricao.progressoPercentual;
+            if (!cursoId) return null;
+            return (
+              <Link
+                key={inscricao.id}
+                to={`/app/cursos/${cursoId}`}
+                className="flex items-center justify-between rounded-xl border border-ink-tertiary/10 bg-elevated p-4 transition-colors hover:border-accent/20"
+              >
+                <div>
+                  <p className="text-sm font-medium text-ink-primary">{inscricao.curso?.titulo ?? 'Curso'}</p>
+                  <p className="mt-0.5 text-xs text-ink-tertiary">
+                    Inscrito em {new Date(inscricao.dataInscricao).toLocaleDateString('pt-AO')}
+                  </p>
+                </div>
+                <Badge variant={inscricao.concluido ? 'success' : 'outline'}>
+                  {inscricao.concluido ? 'Concluído' : `${String(progresso)}%`}
+                </Badge>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

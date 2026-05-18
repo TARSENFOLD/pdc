@@ -1,5 +1,5 @@
 import { http } from './http.js';
-import type { Projeto, CriarProjetoPayload, ProjetoFilters, PedidoAcesso } from '@pdc/shared';
+import type { Projeto, CriarProjetoPayload, ProjetoFilters, ProjetoEstado } from '@pdc/shared';
 
 export const projetosApi = {
   list: (filters?: ProjetoFilters) => {
@@ -9,13 +9,22 @@ export const projetosApi = {
     if (filters?.estudanteId) params.set('estudanteId', filters.estudanteId);
     if (filters?.cursoId) params.set('cursoId', filters.cursoId);
     if (filters?.tags) params.set('tags', filters.tags);
+    if (filters?.estado) params.set('estado', filters.estado);
+    if (filters?.area) params.set('area', filters.area);
+    if (filters?.modos) params.set('modos', filters.modos);
 
     return http.get<{ data: Projeto[]; pagination: { pageCount: number } }>(
       `/projetos?${params.toString()}`
     );
   },
 
-  getById: (id: string) => http.get<Projeto>(`/projetos/${id}`),
+  meusProjetos: () =>
+    http.get<{ data: Projeto[]; pagination: { pageCount: number } }>('/projetos/meus'),
+
+  getById: (id: string) => http.get<{ data: Projeto[] }>(`/projetos/${id}`),
+
+  transitionState: (id: string, novoEstado: ProjetoEstado, motivo?: string) =>
+    http.patch<{ success: boolean; estado: string }>(`/projetos/${id}/estado`, { novoEstado, motivo }),
 
   create: (payload: CriarProjetoPayload) =>
     http.post<Projeto>('/projetos', payload),
@@ -28,11 +37,8 @@ export const projetosApi = {
 
   remove: (id: string) => http.delete<{ ok: boolean }>(`/projetos/${id}`),
 
-  requestAccess: (id: string, motivo?: string) =>
-    http.post<PedidoAcesso>(`/projetos/${id}/pedidos-acesso`, { motivo }),
-
-  respondPedido: (id: string, pedidoId: string, status: 'aprovado' | 'rejeitado') =>
-    http.put<PedidoAcesso>(`/projetos/${id}/pedidos-acesso/${pedidoId}`, { status }),
+  requestAccess: (id: string) =>
+    http.post<{ success: boolean }>(`/projetos/${id}/solicitar-acesso`, {}),
 
   getVotes: (id: string) =>
     http.get<{ endorsements: number; votos_count: number; endorsed: boolean; voted: boolean }>(`/projetos/${id}/votos`),

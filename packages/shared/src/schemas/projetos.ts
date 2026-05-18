@@ -2,10 +2,16 @@ import { z } from 'zod';
 import { AreaVocacionalSchema } from './enums.js';
 import { PerfilPublicoSchema } from '../user.js';
 
+// Strapi pode devolver string vazia — converte para undefined para não falhar .url()
+const OptionalUrlSchema = z.preprocess(
+  (v) => (v === '' ? undefined : v),
+  z.string().url().optional(),
+);
+
 // Modos do projeto (5 modos canónicos)
 export const ProjetoModoSchema = z.enum(['exposicao', 'colaboracao', 'mentoria', 'financiamento', 'feedbackComunitario']);
 export type ProjetoModo = z.infer<typeof ProjetoModoSchema>;
-export const ProjetoEstadoSchema = z.enum(['draft', 'review', 'approved', 'published', 'archived']);
+export const ProjetoEstadoSchema = z.enum(['draft', 'review', 'approved', 'published', 'archived', 'hidden']);
 export type ProjetoEstado = z.infer<typeof ProjetoEstadoSchema>;
 export const ProjetoVisibilidadeSchema = z.enum(['publico', 'privado']);
 
@@ -38,21 +44,24 @@ export const HistoricoEstadoSchema = z.object({
 
 export type HistoricoEstado = z.infer<typeof HistoricoEstadoSchema>;
 
-export const SeloSchema = z.enum(['aptidao_validada']).optional();
+export const SeloTipoSchema = z.enum(['publicado', 'validado_mentor', 'validado_instituicao', 'excelencia']);
+export type SeloTipo = z.infer<typeof SeloTipoSchema>;
+
+export const SeloSchema = SeloTipoSchema.optional();
 export type Selo = z.infer<typeof SeloSchema>;
 
 export const ProjetoSchema = z.object({
-  id: z.string(),
+  id: z.coerce.string(),
   titulo: z.string(),
   descricao: z.string().optional(), // DEPRECATED
   abstract: z.string().min(10).max(1000),
   core: z.string().min(10).max(5000).optional(),
   area: AreaVocacionalSchema.optional(),
   estudanteId: z.string().optional(),
-  capaUrl: z.string().url().optional(),
+  capaUrl: OptionalUrlSchema,
   mediaUrls: z.array(z.string().url()).optional(),
-  repoUrl: z.string().url().optional(),
-  demoUrl: z.string().url().optional(),
+  repoUrl: OptionalUrlSchema,
+  demoUrl: OptionalUrlSchema,
   tags: z.array(z.string()).default([]),
   estado: ProjetoEstadoSchema,
   visibilidade: ProjetoVisibilidadeSchema.optional(),
@@ -66,7 +75,7 @@ export const ProjetoSchema = z.object({
   votos: z.array(VotoSchema).optional(),
   historicoEstados: z.array(HistoricoEstadoSchema).optional(),
   autor: z.object({
-    id: z.string(),
+    id: z.coerce.string(),
     nome: z.string(),
     foto: z.object({
       url: z.string().url(),
@@ -84,10 +93,10 @@ export const CriarProjetoPayloadBaseSchema = z.object({
   abstract: z.string().min(10).max(1000),
   core: z.string().min(10).max(5000).optional(),
   area: AreaVocacionalSchema.optional(),
-  capaUrl: z.string().url().optional(),
+  capaUrl: OptionalUrlSchema,
   mediaUrls: z.array(z.string().url()).max(10).optional(),
-  repoUrl: z.string().url().optional(),
-  demoUrl: z.string().url().optional(),
+  repoUrl: OptionalUrlSchema,
+  demoUrl: OptionalUrlSchema,
   tags: z.array(z.string()).max(10).default([]),
   visibilidade: ProjetoVisibilidadeSchema.optional(),
   buscandoParceiros: z.boolean().optional(),
@@ -162,6 +171,16 @@ export const ProjetoFiltersSchema = z.object({
   estudanteId: z.string().optional(),
   cursoId: z.string().optional(),
   tags: z.string().optional(),
+  estado: ProjetoEstadoSchema.optional(),
+  area: AreaVocacionalSchema.optional(),
+  modos: ProjetoModoSchema.optional(),
 });
 
 export type ProjetoFilters = z.infer<typeof ProjetoFiltersSchema>;
+
+export const TransicaoEstadoPayloadSchema = z.object({
+  novoEstado: ProjetoEstadoSchema,
+  motivo: z.string().max(500).optional(),
+});
+
+export type TransicaoEstadoPayload = z.infer<typeof TransicaoEstadoPayloadSchema>;

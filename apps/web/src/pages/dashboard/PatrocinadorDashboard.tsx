@@ -1,4 +1,4 @@
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { Link } from 'react-router-dom';
 import { GlassCard } from '@/components/ui';
 import { Zap, Building2, ChevronRight, ShieldCheck } from 'lucide-react';

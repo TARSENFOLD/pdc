@@ -4,11 +4,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Button, Spinner, Badge, EmptyState, Card } from '@/components/ui';
 import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
-import { BookOpen, Lock, ShieldCheck, Zap, MessageSquare } from 'lucide-react';
+import { BookOpen, Lock, ShieldCheck, Zap, MessageSquare, CheckCircle } from 'lucide-react';
 import { cursosApi } from '@/lib/api/cursos';
+import { ratingsApi } from '@/lib/api/interactions';
 import { useTelemetry } from '@/hooks/useTelemetry';
+import { toast } from '@/hooks/useToast';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ProgressoItem, Curso, Modulo, ItemModulo } from '@pdc/shared';
+import { RatingStars } from '@/components/ui/RatingStars';
 
 export function CursoDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,17 +29,34 @@ export function CursoDetailPage() {
     enabled: !!id,
   });
 
-  const { data: progresso = [] } = useQuery<ProgressoItem[]>({
+  const progressoQuery = useQuery<ProgressoItem[]>({
     queryKey: ['cursos', id ?? '', 'progresso'],
     queryFn: () => cursosApi.getProgresso(id ?? ''),
     enabled: !!id,
     retry: false,
   });
+  const progresso = progressoQuery.data ?? [];
+
+  const { data: ratingStats } = useQuery({
+    queryKey: ['curso', id ?? '', 'ratings'],
+    queryFn: () => ratingsApi.getStats('curso', id ?? ''),
+    enabled: !!id,
+  });
 
   const inscricaoMutation = useMutation({
     mutationFn: () => cursosApi.inscrever(id ?? ''),
     onSuccess: () => {
+      setShowPayInfo(false);
+      void qc.invalidateQueries({ queryKey: ['cursos', id ?? ''] });
       void qc.invalidateQueries({ queryKey: ['cursos', id ?? '', 'progresso'] });
+    },
+    onError: (err: unknown) => {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 409) {
+        void qc.invalidateQueries({ queryKey: ['cursos', id ?? '', 'progresso'] });
+        return;
+      }
+      toast({ title: 'Erro ao inscrever', description: 'Tente novamente mais tarde.', variant: 'error' });
     },
   });
 
@@ -48,11 +68,14 @@ export function CursoDetailPage() {
     return <div className="flex min-h-screen items-center justify-center bg-canvas p-4"><EmptyState icon={BookOpen} variant="error" title="Erro ao carregar o curso" description="Não foi possível carregar os dados deste curso." /></div>;
   }
 
-  const isEnrolled = progresso.length > 0;
+  const isEnrolled = progressoQuery.data !== undefined;
   const isBlockedByMerit = curso.bloqueado;
   const motivoBloqueio = curso.motivoBloqueio;
   const isPaid = !curso.gratuito;
   const modulos = curso.modulos ?? [];
+  const totalItems = modulos.reduce((total, modulo) => total + modulo.itens.length, 0);
+  const completedItems = progresso.filter((item) => item.concluido).length;
+  const progressoPercentual = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   const handleEnrollClick = () => {
     if (isBlockedByMerit) return;
@@ -114,12 +137,19 @@ export function CursoDetailPage() {
                         </div>
                         <ul className="space-y-2 pl-12">
                            {mod.itens.map((item: ItemModulo) => (
-                             <li key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-elevated/30 border border-ink-tertiary/10 text-sm">
+                             <li key={item.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-elevated/30 border border-ink-tertiary/10 text-sm">
                                 <div className="flex items-center gap-3">
                                    <Zap size={14} className="text-accent" />
                                    <span className="font-medium text-ink-secondary">{item.titulo}</span>
                                 </div>
-                                <Badge variant="outline" className="text-[9px] uppercase font-bold">{item.tipo}</Badge>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-[9px] uppercase font-bold">{item.tipo}</Badge>
+                                  {isEnrolled ? (
+                                    <Link to={`/app/cursos/${id}/itens/${item.id}`}>
+                                      <Button size="sm" variant="ghost" className="h-8 text-[10px] font-black uppercase">Abrir</Button>
+                                    </Link>
+                                  ) : null}
+                                </div>
                              </li>
                            ))}
                         </ul>
@@ -158,7 +188,7 @@ export function CursoDetailPage() {
                          O teu mpetro atual é insuficiente para este curso. ({motivoBloqueio}). Realiza mais simulações para subires a tua Fluidez Cognitiva.
                       </p>
                       <Link to="/app/simulacoes">
-                         <Button variant="outline" className="w-full rounded-xl border-error/20 text-error hover:bg-error/5 font-black uppercase text-[10px]">Evoluir no Oráculo</Button>
+                         <Button variant="outline" className="w-full rounded-xl border-error/20 text-error hover:bg-error/5 font-black uppercase text-[10px]">Treinar Competências</Button>
                       </Link>
                    </div>
                  ) : (
@@ -196,13 +226,31 @@ export function CursoDetailPage() {
                  )}
 
                  <div className="pt-8 border-t border-ink-tertiary/10 flex flex-col gap-4">
+                    {isEnrolled ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-ink-secondary">
+                          <span>Progresso</span>
+                          <span className="text-accent">{progressoPercentual}%</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-ink-tertiary/10">
+                          <div className="h-full bg-accent" style={{ width: `${String(progressoPercentual)}%` }} />
+                        </div>
+                      </div>
+                    ) : null}
                     <div className="flex items-center justify-between">
                        <span className="text-[10px] font-black uppercase text-ink-tertiary">Aptidão Validada</span>
                        <ShieldCheck size={16} className="text-accent" />
                     </div>
                     <div className="flex items-center justify-between text-xs font-bold text-ink-secondary">
                        <span>Certificado Digital</span>
-                       <span className="text-accent">✅</span>
+                       <CheckCircle size={14} className="text-accent" />
+                    </div>
+                    <div className="space-y-2 border-t border-ink-tertiary/10 pt-4">
+                      <span className="text-[10px] font-black uppercase text-ink-tertiary">Avaliação</span>
+                      <RatingStars targetType="curso" targetId={id} stats={ratingStats} readOnly={!isEnrolled || progressoPercentual < 30} />
+                      {isEnrolled && progressoPercentual < 30 ? (
+                        <p className="text-[10px] text-ink-tertiary">Completa pelo menos 30% para avaliar.</p>
+                      ) : null}
                     </div>
                  </div>
               </div>

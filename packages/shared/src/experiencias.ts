@@ -45,6 +45,8 @@ export const ExperienciaSchema = z.object({
   estado: EstadoEditorialSchema.optional().default('draft'),
   validadoAcademicamente: z.boolean().default(false),
   vagas: z.number().int().optional().nullable(),
+  duracaoEstimada: z.number().int().optional().nullable(), // horas — espelha curso.duracaoEstimada
+  ratingAvg: z.number().min(0).max(5).optional().nullable(), // calculado em runtime pelo BFF
   dataInicio: z.string().optional().nullable(),
   dataFim: z.string().optional().nullable(),
   gradeDestaque: z.array(z.object({
@@ -81,6 +83,7 @@ export const CriarExperienciaPayloadSchema = z.object({
   area: AreaVocacionalSchema,
   nivel: z.enum(['basico', 'medio', 'avancado']),
   modalidade: ModalidadeSchema,
+  duracaoEstimada: z.number().int().min(1).max(10000).optional(), // horas
   painelRealidade: PainelRealidadeSchema.optional(),
   muralVozes: z.array(MuralVozesItemSchema).optional(),
   guiaInstitucional: GuiaInstitucionalSchema.optional(),

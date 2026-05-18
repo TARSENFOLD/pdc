@@ -4,6 +4,9 @@ import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { rateLimitDenuncias } from '../middleware/rateLimit.js';
+import { toPaginatedResponse } from './pagination.js';
+import { writeAuditLog } from '../middleware/audit.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -30,7 +33,7 @@ export const denunciaRoutes = new Hono<Vars>();
 denunciaRoutes.use('*', verifyJwt);
 
 // POST /denuncias — qualquer utilizador autenticado pode denunciar
-denunciaRoutes.post('/', zValidator('json', createSchema), async (c) => {
+denunciaRoutes.post('/', rateLimitDenuncias, zValidator('json', createSchema), async (c) => {
   const { id: denuncianteId } = c.get('user');
   const body = c.req.valid('json');
   try {
@@ -59,7 +62,8 @@ denunciaRoutes.get(
     if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
     if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
     try {
-      return c.json(await strapiGet<unknown>('/denuncias', params));
+      const res = await strapiGet<unknown>('/denuncias', params);
+      return c.json(toPaginatedResponse(res));
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
@@ -93,12 +97,13 @@ denunciaRoutes.put(
         nota: body.nota,
       });
 
-      await strapiPost('/audit-logs', { 
-        userId: c.get('user').id, 
+      await writeAuditLog({
+        actor: c.get('user'),
         accao: 'denuncia_resolver', 
         recurso: `/denuncias/${id}`, 
-        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown', 
-        timestamp: new Date().toISOString() 
+        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
+        userAgent: c.req.header('user-agent'),
+        detalhes: { accao: body.accao, nota: body.nota },
       }).catch(() => {});
 
       return c.json(data);

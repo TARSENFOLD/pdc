@@ -221,7 +221,47 @@ async function gerarRecomendacoes(perfil: PerfilVocacional | null): Promise<Reco
   });
 }
 
+interface StrapiExperienciaRec {
+  id: string | number;
+  titulo: string;
+  area?: string;
+  modalidade?: string;
+  duracaoEstimada?: number;
+}
+
+async function gerarRecomendacoesExperiencias(perfil: PerfilVocacional | null): Promise<Recomendacao[]> {
+  if (!perfil) return [];
+
+  const res = await strapiGet<StrapiExperienciaRec>('/experiencias', {
+    'filters[area][$eq]': perfil.areaMatch,
+    'filters[estado][$eq]': 'published',
+    'pagination[pageSize]': '4',
+    'sort': 'createdAt:desc',
+    'fields[0]': 'id',
+    'fields[1]': 'titulo',
+    'fields[2]': 'area',
+    'fields[3]': 'modalidade',
+    'fields[4]': 'duracaoEstimada',
+  });
+
+  return res.data.map((exp) => {
+    // Heurística biométrica: distância entre scoreGlobal do perfil e "esperado" da área
+    // Sem ratingAvg disponível na listagem leve, usamos score da área como proxy
+    const areaWeight = exp.area === perfil.areaMatch ? 0 : 15;
+    const matchPercentagem = Math.max(70, 100 - areaWeight - Math.max(0, 50 - perfil.scoreGlobal) / 5);
+
+    return {
+      id: typeof exp.id === 'number' ? exp.id.toString() : exp.id,
+      titulo: exp.titulo,
+      tipo: 'experiencia' as const,
+      matchPercentagem: Math.round(matchPercentagem),
+      motivo: `O teu perfil em ${perfil.areaMatch} com ${perfil.certeza === 'ALTA' ? 'alta' : perfil.certeza === 'MEDIA' ? 'média' : 'baixa'} certeza vocacional indica afinidade com esta experiência.`,
+    };
+  });
+}
+
 export const vocacionalService = {
   calcularPerfil,
   gerarRecomendacoes,
+  gerarRecomendacoesExperiencias,
 };

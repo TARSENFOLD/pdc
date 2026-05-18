@@ -38,4 +38,28 @@ test.describe('Dashboard Empty States', () => {
     await adminPage.goto('/app/home');
     await expect(adminPage.locator('[data-testid="page-hero-title"]')).toBeVisible({ timeout: 15_000 });
   });
+
+  // FIX-003 regression guard: pulseVariacao: null must not produce an orphan tile or placeholder
+  test('estudante dashboard with pulseVariacao null renders safely — no pulse tile', async ({ alunoPage }) => {
+    await alunoPage.route('**/api/dashboard/estudante', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          stats: { xp: 120, reputacao: 45, conquistasCount: 3, vinkulosCount: 2, pulseVariacao: null },
+          match: { area: 'Tecnologia', score: 0, insight: '', directive: 'PERFIL PENDENTE' },
+          behavior: null,
+          progressoCursos: [],
+          proximaAcao: { label: 'Completar Perfil', to: '/app/perfil-vocacional' },
+          insightsTina: [],
+        }),
+      }),
+    );
+
+    await alunoPage.goto('/app/dashboard/estudante');
+    await expect(alunoPage.locator('[data-testid="page-hero-title"]')).toBeVisible({ timeout: 15_000 });
+
+    // Pulse-variation tile must be absent — null data should render silently
+    await expect(alunoPage.locator('[data-testid="kpi-pulse"]')).not.toBeAttached();
+  });
 });

@@ -14,6 +14,15 @@ export const feedApi = {
   updateWeights: (tipo: 'geral' | 'trending', payload: UpdateFeedWeightsPayload) =>
     http.put<{ success: boolean }>(`/feed/weights/${tipo}`, payload),
 
+  getPost: (id: string) =>
+    http.get<FeedPost>(`/feed-posts/${id}`),
+
   createPost: (payload: CriarPostPayload) =>
     http.post<FeedPost>('/feed-posts', payload),
+
+  updatePost: (id: string, payload: CriarPostPayload) =>
+    http.put<FeedPost>(`/feed-posts/${id}`, payload),
+
+  sharePost: (id: string) =>
+    http.post<{ success: boolean; sharesCount: number }>(`/feed-posts/${id}/share`, {}),
 };

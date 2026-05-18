@@ -50,7 +50,8 @@ async function request<T>(path: string, init?: RequestInit, retried = false): Pr
     throw new ApiError(response.status, `HTTP ${String(response.status)}: ${path}`, body);
   }
 
-  return response.json() as Promise<T>;
+  const data = await response.json() as unknown;
+  return data as T;
 }
 
 export const http = {

@@ -8,6 +8,16 @@ import axios from 'axios';
 const STRAPI_URL = process.env.STRAPI_URL || 'http://localhost:1337';
 const API_TOKEN = process.env.STRAPI_API_TOKEN;
 
+interface UiStringRecord {
+  id: number;
+  documentId?: string;
+  key: string;
+}
+
+interface StrapiListResponse<T> {
+  data: T[];
+}
+
 const INITIAL_STRINGS = [
   {
     key: 'landing.hero.title',
@@ -335,12 +345,12 @@ async function seedCopy(): Promise<void> {
   for (const item of INITIAL_STRINGS) {
     try {
       // Verificar se já existe (URL encoded)
-      const existing = await axios.get(
+      const existing = await axios.get<StrapiListResponse<UiStringRecord>>(
         `${STRAPI_URL}/api/ui-strings?filters[key][$eq]=${encodeURIComponent(item.key)}`,
         axiosConfig
       );
       
-      const records = existing.data?.data;
+      const records = existing.data.data;
       if (!Array.isArray(records)) {
         console.error(`❌ Resposta inesperada para ${item.key}`);
         continue;

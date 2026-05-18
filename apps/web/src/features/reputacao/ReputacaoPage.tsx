@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { reputationApi } from '@/lib/api/reputation';
 import { Card, Spinner, EmptyState, Badge } from '@/components/ui';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { Star, TrendingUp, Award, Clock, MessageSquare, BookOpen, Brain, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 

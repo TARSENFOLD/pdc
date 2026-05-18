@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { authApi } from '@/lib/api/auth';
 import { RefreshCw, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui';

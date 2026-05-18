@@ -93,7 +93,7 @@ export default function CursosCatalogoPage(): React.JSX.Element {
               title={c.titulo}
               subtitle={c.autorNome}
               image={c.capaUrl || undefined}
-              href={resolveCatalogHref('curso', c.slug, inApp)}
+              href={resolveCatalogHref('curso', inApp ? c.id : c.slug, inApp)}
               type="curso"
               ctaLabel="Ver curso"
               icon={BookOpen}

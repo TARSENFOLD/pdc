@@ -3,7 +3,6 @@ import { Hono, type Context, type Next } from 'hono';
 import type { StrapiListResponse } from '@pdc/shared';
 import { catalogoRoutes } from './catalogo.js';
 import { strapiGet, strapiGetRaw } from '../modules/strapi/strapi.client.js';
-import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 
 function listResponse<T>(data: Array<T & { id: string | number }>): StrapiListResponse<T> {
   return {
@@ -21,10 +20,10 @@ vi.mock('../modules/auth/auth.middleware.js', () => ({
   optionalJwt: async (_c: Context, next: Next) => {
     await next();
   },
-}));
-
-vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
-  getEffectiveFlags: vi.fn(),
+  verifyJwt: async (c: Context, next: Next) => {
+    c.set('user', { id: 'user-1', role: 'estudante' });
+    await next();
+  },
 }));
 
 vi.mock('../middleware/cache.js', () => ({
@@ -38,7 +37,6 @@ describe('Catálogo público contracts', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(featureFlagService.getEffectiveFlags).mockResolvedValue({ PROFILE_V2_PUBLIC: true });
   });
 
   it('honra pageSize documentado nos catálogos públicos', async () => {
@@ -50,6 +48,39 @@ describe('Catálogo público contracts', () => {
     expect(strapiGet).toHaveBeenCalledWith('/cursos', expect.objectContaining({
       'pagination[page]': '2',
       'pagination[pageSize]': '7',
+    }));
+  });
+
+  it('lista conteúdos approved e published, alinhado ao pipeline canónico de moderação', async () => {
+    vi.mocked(strapiGet).mockResolvedValue(listResponse([
+      {
+        id: 'curso-approved',
+        slug: 'curso-approved',
+        titulo: 'Curso aprovado',
+        descricao: 'Disponível após aprovação',
+        estado: 'approved',
+      },
+    ]));
+
+    const res = await app.request('/catalogo/cursos?page=1&pageSize=12');
+
+    expect(res.status).toBe(200);
+    expect(strapiGet).toHaveBeenCalledWith('/cursos', expect.objectContaining({
+      'filters[estado][$in]': ['approved', 'published'],
+    }));
+    await expect(res.json()).resolves.toMatchObject({
+      data: [{ id: 'curso-approved', titulo: 'Curso aprovado' }],
+    });
+  });
+
+  it('aplica busca textual do catálogo de cursos no BFF', async () => {
+    vi.mocked(strapiGet).mockResolvedValue(listResponse([]));
+
+    const res = await app.request('/catalogo/cursos?q=engenharia&page=1&pageSize=12');
+
+    expect(res.status).toBe(200);
+    expect(strapiGet).toHaveBeenCalledWith('/cursos', expect.objectContaining({
+      'filters[titulo][$containsi]': 'engenharia',
     }));
   });
 

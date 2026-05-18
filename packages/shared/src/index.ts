@@ -38,6 +38,7 @@ export * from './schemas/media.js';
 export * from './schemas/posts.js';
 export * from './schemas/conquistas.js';
 export * from './schemas/copy.js';
+export * from './schemas/auth.js';
 
 // Cold Storage (Telemetria Inválida — Compliance)
 export * from './cold-storage.js';

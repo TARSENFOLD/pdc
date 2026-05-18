@@ -61,9 +61,12 @@ describe('GET /bootstrap', () => {
     
     expect(json.session.isAuthenticated).toBe(false);
     expect(json.session.user).toBeNull();
-    // 'STABLE' default is true, 'BETA' is false, 'HIDDEN' is omitted
+    // 'STABLE' default is true, 'BETA'/'ALPHA'/'ROLLOUT' = false, 'HIDDEN' = omitted
     expect(json.capabilities.features['DISCUSSIONS_ENABLED']).toBe(true);
     expect(json.capabilities.features['REPUTATION_VISIBLE']).toBe(false);
+    // SIM_TIPO_2/3 promoted to STABLE (DT-15) — static default is ON; Strapi operator sets enabled=false in prod
+    expect(json.capabilities.features['SIM_TIPO_2_PUBLISH_ENABLED']).toBe(true);
+    expect(json.capabilities.features['SIM_TIPO_3_PUBLISH_ENABLED']).toBe(true);
     expect(json.capabilities.features['MENSAGENS_INBOX']).toBeUndefined(); // HIDDEN
   });
 

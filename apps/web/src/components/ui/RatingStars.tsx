@@ -37,6 +37,8 @@ export function RatingStars({ targetType, targetId, readOnly = false, stats }: R
           <button
             key={star}
             type="button"
+            aria-label={`Avaliar com ${String(star)} estrela${star > 1 ? 's' : ''}`}
+            aria-pressed={rating === star}
             disabled={readOnly}
             onClick={() => { handleClick(star); }}
             onMouseEnter={() => { if (!readOnly) setHoverValue(star); }}

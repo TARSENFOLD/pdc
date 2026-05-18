@@ -1,7 +1,41 @@
 import { z } from 'zod';
+import { DenunciaSchema } from './moderacao.js';
 
 export { DenunciaSchema, type Denuncia } from './moderacao.js';
-import { DenunciaSchema } from './moderacao.js';
+
+export const DashboardEstudanteSchema = z.object({
+  stats: z.object({
+    xp: z.number(),
+    reputacao: z.number(),
+    conquistasCount: z.number(),
+    vinkulosCount: z.number(),
+    pulseVariacao: z.number().nullable(),
+  }),
+  match: z.object({
+    area: z.string(),
+    score: z.number(),
+    insight: z.string(),
+    directive: z.string(),
+  }),
+  behavior: z.object({
+    domainId: z.string(),
+    fluidez: z.number(),
+    resiliencia: z.number(),
+    foco: z.number(),
+  }).nullable(),
+  progressoCursos: z.array(
+    z.object({
+      id: z.string(),
+      titulo: z.string(),
+      progresso: z.number(),
+    }),
+  ),
+  proximaAcao: z.object({
+    label: z.string(),
+    to: z.string(),
+  }),
+  insightsTina: z.array(z.string()),
+});
 
 export const EstudanteStatsSchema = z.object({
   simulacoesConcluidas: z.number(),

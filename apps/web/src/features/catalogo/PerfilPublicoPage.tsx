@@ -12,7 +12,7 @@ import { Avatar, Spinner } from '@/components/ui';
 import { AspirationalEmpty } from '@/components/ui/AspirationalEmpty';
 import { SEOHead } from '@/components/layout/SEOHead';
 import { catalogoApi } from '@/lib/api/catalogo';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { cn } from '@/lib/utils';
 import type { PerfilCompleto, HistoricoProfissional, FormacaoAcademica } from '@pdc/shared';
 

@@ -1,0 +1,53 @@
+{
+  "kind": "collectionType",
+  "collectionName": "onboarding_videos",
+  "info": {
+    "singularName": "onboarding-video",
+    "pluralName": "onboarding-videos",
+    "displayName": "Onboarding Video",
+    "description": "Vídeo de onboarding por role (ADR-031)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "role": {
+      "type": "enumeration",
+      "enum": [
+        "estudante",
+        "mentor",
+        "instituicao",
+        "moderador",
+        "comite_cientifico",
+        "super_admin",
+        "patrocinador"
+      ],
+      "required": true,
+      "unique": true
+    },
+    "videoUrl": {
+      "type": "string",
+      "required": true
+    },
+    "embedType": {
+      "type": "enumeration",
+      "enum": ["youtube", "vimeo", "r2", "external"],
+      "required": true,
+      "default": "r2"
+    },
+    "duracaoSegundos": {
+      "type": "integer",
+      "required": true
+    },
+    "thumbnailUrl": {
+      "type": "string"
+    },
+    "tituloPt": {
+      "type": "string",
+      "required": true
+    },
+    "tituloEn": {
+      "type": "string"
+    }
+  }
+}

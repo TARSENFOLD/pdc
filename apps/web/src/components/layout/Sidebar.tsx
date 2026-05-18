@@ -2,18 +2,18 @@ import { useState } from 'react';
 import type React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import type { Role } from '@pdc/shared';
 import { NavItems, type NavItemSlug } from '@pdc/shared';
-import { ChevronRight, PanelLeftClose, PanelLeftOpen, Settings, LogOut } from 'lucide-react';
+import { ChevronRight, Settings, LogOut } from 'lucide-react';
 import { ALL_ROLES, DASHBOARD_BY_ROLE, SIDEBAR_CONFIG, type NavGroup, type NavLeaf } from './Sidebar.config';
 
-export default function SidebarContent({ onNavigate, collapsed = false, onToggleCollapse }: SidebarContentProps): React.JSX.Element {
+export default function SidebarContent({ onNavigate, collapsed = false }: SidebarContentProps): React.JSX.Element {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { isEnabled } = useFeatureFlags();
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const role = user?.role;
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
@@ -114,26 +114,15 @@ export default function SidebarContent({ onNavigate, collapsed = false, onToggle
   }
 
   return (
-    <div className="flex h-full flex-col bg-[var(--chrome-surface)] border-r border-[var(--chrome-border)]">
-      {/* Header: logo + botão de colapso */}
-      <div className={`flex items-center border-b border-[var(--chrome-border)] py-5 ${collapsed ? 'justify-center px-0' : 'gap-4 px-6'}`}>
+    <div className="flex h-full flex-col bg-[var(--chrome-surface)]">
+      {/* Header: logo */}
+      <div className={`flex items-center py-5 ${collapsed ? 'justify-center px-0' : 'gap-4 px-6'}`}>
         <img src="/favicon.png" alt="PDC Logo" className="h-10 w-10 shrink-0 object-contain rounded-[var(--radius-asym-a)]" />
         {!collapsed && (
           <div className="flex-1 min-w-0">
             <span className="block text-lg font-semibold text-[var(--ink-primary)] tracking-tight">PDC</span>
             <span className="block text-xs font-medium text-[var(--ink-secondary)]">Por Dentro do Curso</span>
           </div>
-        )}
-        {onToggleCollapse && (
-          <button
-            onClick={onToggleCollapse}
-            aria-label={collapsed ? t('sidebar.expand', 'Expandir sidebar') : t('sidebar.collapse', 'Recolher sidebar')}
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--ink-secondary)] transition-colors hover:bg-[var(--chrome-surface-strong)] hover:text-[var(--ink-primary)] ${collapsed ? 'mt-2' : ''}`}
-          >
-            {collapsed
-              ? <PanelLeftOpen size={16} aria-hidden={true} />
-              : <PanelLeftClose size={16} aria-hidden={true} />}
-          </button>
         )}
       </div>
 
@@ -146,7 +135,8 @@ export default function SidebarContent({ onNavigate, collapsed = false, onToggle
       </nav>
 
       {/* ── Footer fixo: Configurações + Sair ── */}
-      <div className={`shrink-0 border-t border-[var(--chrome-border)] py-3 ${collapsed ? 'px-2 space-y-1' : 'px-3 space-y-0.5'}`}>
+      <div className={`shrink-0 py-3 ${collapsed ? 'px-2 space-y-1' : 'px-3 space-y-0.5'}`}>
+        <div className="mx-4 h-px bg-[var(--chrome-border)] mb-3 opacity-50" />
         <button
           onClick={() => { onNavigate?.(); navigate('/app/configuracoes'); }}
           title={collapsed ? 'Configurações' : undefined}

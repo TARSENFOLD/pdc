@@ -19,27 +19,30 @@ export const MediaEntityTypeSchema = z.enum([
   'curso-capa',
   'post-media',
   'generic',
+  'onboarding-video',
 ]);
 
 export type MediaEntityType = z.infer<typeof MediaEntityTypeSchema>;
 
-// Canonical size limits by entity type (bytes)
+// Canonical size limits by entity type (bytes). Rich media surfaces below were raised to 50 MB; monitor upload rejections and storage cost after deploy.
 export const MEDIA_SIZE_LIMITS: Record<MediaEntityType, number> = {
-  avatar: 2 * 1024 * 1024,       // 2 MB
-  capa: 5 * 1024 * 1024,         // 5 MB
-  projeto: 10 * 1024 * 1024,     // 10 MB
-  'curso-capa': 5 * 1024 * 1024, // 5 MB
-  'post-media': 10 * 1024 * 1024,// 10 MB
-  generic: 10 * 1024 * 1024,     // 10 MB
+  avatar: 2 * 1024 * 1024,              // 2 MB
+  capa: 5 * 1024 * 1024,               // 5 MB
+  projeto: 50 * 1024 * 1024,           // 50 MB
+  'curso-capa': 5 * 1024 * 1024,       // 5 MB
+  'post-media': 50 * 1024 * 1024,      // 50 MB
+  generic: 50 * 1024 * 1024,           // 50 MB
+  'onboarding-video': 50 * 1024 * 1024, // 50 MB
 };
 
 // Canonical aspect ratios by entity type (width/height)
 export const MEDIA_ASPECT_RATIOS: Record<Exclude<MediaEntityType, 'generic'>, number | null> = {
-  avatar: 1,        // 1:1
-  capa: 3,          // 3:1
-  projeto: 4 / 3,   // 4:3
-  'curso-capa': 16 / 9, // 16:9
-  'post-media': null,   // free
+  avatar: 1,             // 1:1
+  capa: 3,               // 3:1
+  projeto: 4 / 3,        // 4:3
+  'curso-capa': 16 / 9,  // 16:9
+  'post-media': null,    // free
+  'onboarding-video': 16 / 9, // 16:9
 };
 
 export const PresignedRequestSchema = z.object({

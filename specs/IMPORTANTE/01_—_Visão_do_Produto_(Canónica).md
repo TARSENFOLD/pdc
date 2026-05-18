@@ -8,7 +8,7 @@
 
 ## 1. O Problema que o PDC Resolve
 
-Em Angola e em mercados emergentes, a escolha de curso universitário é uma **aposta**, não uma decisão informada:
+Em Angola e em mercados emergentes, a escolha de curso universitário e da educação em geral é uma **aposta**, não uma decisão informada:
 
 - Altos níveis** de evasão** universitário.
 - Famílias perdem dinheiro em cursos abandonados.

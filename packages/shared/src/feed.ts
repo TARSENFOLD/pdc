@@ -19,7 +19,8 @@ export const FeedItemTipoSchema = z.enum([
   'curso',
   'simulacao',
   'experiencia',
-  'projeto'
+  'programa',
+  'projeto',
 ]);
 
 export type FeedItemTipo = z.infer<typeof FeedItemTipoSchema>;
@@ -46,6 +47,8 @@ export const FeedItemSchema = z.object({
   instituicaoId: z.string().optional(),
   stats: z.object({
     likes: z.number(),
+    comentarios: z.number().optional(),
+    shares: z.number().optional(),
     ratingMedia: z.number(),
     ratingTotal: z.number(),
     completionRate: z.number().optional(),

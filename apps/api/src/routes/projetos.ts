@@ -1,33 +1,69 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import { verifyJwt, optionalJwt, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
+import { requireApproved } from '../middleware/requireApproved.js';
+import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet, strapiPost, strapiPut, strapiDelete } from '../modules/strapi/strapi.client.js';
-import { CriarProjetoPayloadSchema, GerirACLSchema, VotoProjetoPayloadSchema, type Projeto, type ACLEntry, type Voto } from '@pdc/shared';
+import { CriarProjetoPayloadSchema, GerirACLSchema, VotoProjetoPayloadSchema, TransicaoEstadoPayloadSchema, type Projeto, type ACLEntry, type Voto, type HistoricoEstado } from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
+import { toPaginatedResponse } from './pagination.js';
 
 type Vars = { Variables: OptionalAuthVariables };
 export const projetoRoutes = new Hono<Vars>();
 
+const projetoQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  estado: z.string().optional(),
+  area: z.string().optional(),
+  modos: z.string().optional(),
+});
+
 interface StrapiProjeto extends Omit<Projeto, 'autor'> {
-  autor?: { id: string; userId: string };
+  autor?: { id: string | number; userId: string };
   acessoCoreACL?: ACLEntry[];
 }
 
+type OptionalUser = NonNullable<OptionalAuthVariables['user']>;
+
+function normalizeAutorId(projeto: StrapiProjeto): StrapiProjeto {
+  if (projeto.autor?.id !== undefined) {
+    return { ...projeto, autor: { ...projeto.autor, id: String(projeto.autor.id) } };
+  }
+  return projeto;
+}
+
 function filterCoreField(projeto: StrapiProjeto, perfilId: string | null): Partial<StrapiProjeto> {
-  const isAutor = perfilId !== null && projeto.autor?.id === perfilId;
-  const hasApprovedAccess = perfilId && projeto.acessoCoreACL?.some(
+  const normalized = normalizeAutorId(projeto);
+  const isAutor = perfilId !== null && normalized.autor?.id === perfilId;
+  const hasApprovedAccess = perfilId && normalized.acessoCoreACL?.some(
     (entry) => entry.perfilId === perfilId && entry.estado === 'aprovado'
   );
 
   if (isAutor || hasApprovedAccess) {
-    return projeto;
+    return normalized;
   }
 
-  const { core, ...publicData } = projeto;
+  const { core, ...publicData } = normalized;
   void core;
   return publicData;
+}
+
+function firstProjeto(data: StrapiProjeto[] | StrapiProjeto): StrapiProjeto | null {
+  return Array.isArray(data) ? data[0] ?? null : data;
+}
+
+function canModerateProjetos(user: OptionalUser | undefined): boolean {
+  return user?.role === 'moderador' || user?.role === 'super_admin';
+}
+
+function canViewProjeto(projeto: StrapiProjeto, perfilId: string | null, user: OptionalUser | undefined): boolean {
+  const isOwner = perfilId !== null && String(projeto.autor?.id) === perfilId;
+  if (isOwner || canModerateProjetos(user)) return true;
+  return projeto.estado === 'published' && projeto.visibilidade !== 'privado';
 }
 
 async function resolvePerfilId(userId: string | undefined): Promise<string | null> {
@@ -40,18 +76,32 @@ async function resolvePerfilId(userId: string | undefined): Promise<string | nul
 }
 
 // GET /projetos — público, core filtrado por ACL
-projetoRoutes.get('/', optionalJwt, async (c) => {
+projetoRoutes.get('/', optionalJwt, zValidator('query', projetoQuerySchema), async (c) => {
   try {
-    const userId = c.get('user')?.id;
-    const perfilId = await resolvePerfilId(userId);
+    const q = c.req.valid('query');
+    const user = c.get('user');
+    const perfilId = await resolvePerfilId(user?.id);
+    const canModerate = canModerateProjetos(user);
 
-    const res = await strapiGet<StrapiProjeto>('/projetos', {
-      populate: 'autor,media',
+    const params: Record<string, string> = {
+      populate: 'autor.foto,media',
       sort: 'createdAt:desc',
-    });
+    };
+    if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
+    if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
+    if (q.estado && canModerate) {
+      params['filters[estado][$eq]'] = q.estado;
+    } else {
+      params['filters[estado][$eq]'] = 'published';
+    }
+    if (!canModerate) params['filters[visibilidade][$eq]'] = 'publico';
+    if (q.area) params['filters[area][$eq]'] = q.area;
+    if (q.modos) params['filters[modos][$containsi]'] = q.modos;
+
+    const res = await strapiGet<StrapiProjeto>('/projetos', params);
 
     const filteredData = res.data.map(p => filterCoreField(p, perfilId));
-    return c.json({ ...res, data: filteredData });
+    return c.json(toPaginatedResponse({ ...res, data: filteredData }));
   } catch {
     return c.json({ error: 'Falha ao sincronizar o ecossistema de projetos' }, 502);
   }
@@ -68,7 +118,7 @@ projetoRoutes.get('/meus', verifyJwt, async (c) => {
       'filters[autor][id][$eq]': perfilId,
       populate: 'media',
     });
-    return c.json(res);
+    return c.json(toPaginatedResponse(res));
   } catch {
     return c.json({ error: 'Erro ao recuperar os teus ativos' }, 502);
   }
@@ -79,15 +129,16 @@ projetoRoutes.get('/:id', optionalJwt, async (c) => {
   const id = c.req.param('id');
   if (!id) return c.json({ error: 'Projeto não encontrado' }, 404);
   try {
-    const userId = c.get('user')?.id;
-    const perfilId = await resolvePerfilId(userId);
+    const user = c.get('user');
+    const perfilId = await resolvePerfilId(user?.id);
 
     const res = await strapiGet<StrapiProjeto>(`/projetos/${id}`, {
-      populate: 'autor,media',
+      populate: 'autor.foto,media',
     });
 
-    const project = Array.isArray(res.data) ? res.data[0] : res.data;
+    const project = firstProjeto(res.data);
     if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
+    if (!canViewProjeto(project, perfilId, user)) return c.json({ error: 'Projeto não encontrado' }, 404);
 
     return c.json({ data: [filterCoreField(project, perfilId)] });
   } catch {
@@ -99,6 +150,8 @@ projetoRoutes.get('/:id', optionalJwt, async (c) => {
 projetoRoutes.post('/',
   verifyJwt,
   checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
+  requireApproved(),
+  rateLimitContentCreate,
   zValidator('json', CriarProjetoPayloadSchema),
   async (c) => {
     const body = c.req.valid('json');
@@ -110,18 +163,24 @@ projetoRoutes.post('/',
 
       const slug = `${body.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')}-${Math.random().toString(36).substring(2, 7)}`;
 
+      const now = new Date().toISOString();
+      const historicoEstados: HistoricoEstado[] = [
+        { estado: 'draft', timestamp: now, autorId: perfilId },
+      ];
+
       const res = await strapiPost<StrapiProjeto>('/projetos', {
         ...body,
         autor: perfilId,
-        estado: 'published',
+        estado: 'draft',
         slug,
         acessoCoreACL: [],
         votos: [],
+        historicoEstados,
       });
 
       const projetoId = res.data.id;
 
-      const event = await eventBus.publishWithOutbox(DomainEventName.PROJETO_PUBLICADO, {
+      const event = await eventBus.publishWithOutbox(DomainEventName.PROJETO_CRIADO, {
         projetoId,
         autorId: perfilId,
         titulo: body.titulo,
@@ -131,6 +190,36 @@ projetoRoutes.post('/',
       return c.json({ ...res.data, eventId: event.id }, 201);
     } catch {
       return c.json({ error: 'Falha na publicação do projeto' }, 502);
+    }
+  }
+);
+
+// PUT /projetos/:id — apenas o autor pode editar
+projetoRoutes.put('/:id',
+  verifyJwt,
+  zValidator('json', CriarProjetoPayloadSchema),
+  async (c) => {
+    const id = c.req.param('id');
+    if (!id) return c.json({ error: 'Projeto não encontrado' }, 404);
+    const body = c.req.valid('json');
+    const userId = c.get('user').id;
+
+    try {
+      const perfilId = await resolvePerfilId(userId);
+      if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
+
+      const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
+      const project = firstProjeto(resGet.data);
+      if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
+
+      if (project.autor?.userId !== userId) {
+        return c.json({ error: 'Apenas o autor pode editar o projeto' }, 403);
+      }
+
+      const res = await strapiPut<StrapiProjeto>(`/projetos/${id}`, body);
+      return c.json(res.data);
+    } catch {
+      return c.json({ error: 'Erro ao atualizar projeto' }, 502);
     }
   }
 );
@@ -146,7 +235,7 @@ projetoRoutes.post('/:id/solicitar-acesso', verifyJwt, async (c) => {
     if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
 
     const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-    const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+    const project = firstProjeto(resGet.data);
     if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
     const acl = project.acessoCoreACL ?? [];
@@ -191,7 +280,7 @@ projetoRoutes.patch('/:id/acl',
 
     try {
       const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-      const project = resGet.data[0];
+      const project = firstProjeto(resGet.data);
       if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
       if (project.autor?.userId !== userId) {
@@ -205,7 +294,7 @@ projetoRoutes.patch('/:id/acl',
       const entry = acl[entryIdx];
       if (!entry) return c.json({ error: 'Erro interno' }, 500);
 
-      const autorId = project.autor.id;
+      const autorId = String(project.autor.id);
       if (!autorId) {
         return c.json({ error: 'Autor do projeto não identificado' }, 502);
       }
@@ -239,7 +328,7 @@ projetoRoutes.get('/:id/votos', optionalJwt, async (c) => {
 
   try {
     const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, {});
-    const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+    const project = firstProjeto(resGet.data);
     if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
     const votos: Voto[] = project.votos ?? [];
@@ -271,7 +360,7 @@ projetoRoutes.post('/:id/votos',
       if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
 
       const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-      const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+      const project = firstProjeto(resGet.data);
       if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
       if (project.autor?.userId === userId) {
@@ -288,10 +377,15 @@ projetoRoutes.post('/:id/votos',
       await strapiPut(`/projetos/${id}`, { votos });
 
       if (tipo === 'endorsement') {
+        const targetId = project.autor?.id;
+        if (targetId === undefined) {
+          return c.json({ error: 'Autor do projeto não identificado' }, 502);
+        }
+
         await eventBus.publishWithOutbox(DomainEventName.PROJETO_ENDORSEMENT_RECEBIDO, {
           projetoId: id,
-          perfilId,
-          autorId: project.autor?.id ?? '',
+          autorId: perfilId,
+          targetId: String(targetId),
         });
       }
 
@@ -317,7 +411,7 @@ projetoRoutes.delete('/:id/votos', verifyJwt, async (c) => {
     if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
 
     const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, {});
-    const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+    const project = firstProjeto(resGet.data);
     if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
     const votos: Voto[] = project.votos ?? [];
@@ -333,19 +427,23 @@ projetoRoutes.delete('/:id/votos', verifyJwt, async (c) => {
   }
 });
 
-// DELETE /projetos/:id — apenas o autor
+// DELETE /projetos/:id — autor, moderador ou super_admin
 projetoRoutes.delete('/:id', verifyJwt, async (c) => {
   const id = c.req.param('id');
   if (!id) return c.json({ error: 'Projeto não identificado' }, 404);
   const userId = c.get('user').id;
+  const userRole = c.get('user').role;
 
   try {
     const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-    const existing = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+    const existing = firstProjeto(resGet.data);
 
     if (!existing) return c.json({ error: 'Projeto não identificado' }, 404);
 
-    if (existing.autor?.userId !== userId) {
+    const isAutor = existing.autor?.userId === userId;
+    const isModerador = ['moderador', 'super_admin'].includes(userRole);
+
+    if (!isAutor && !isModerador) {
       return c.json({ error: 'Autoridade insuficiente' }, 403);
     }
 
@@ -355,3 +453,89 @@ projetoRoutes.delete('/:id', verifyJwt, async (c) => {
     return c.json({ error: 'Falha na eliminação do ativo' }, 502);
   }
 });
+
+// PATCH /projetos/:id/estado — transição de estado com RBAC e historico
+const TRANSICOES_AUTOR: Record<string, string[]> = {
+  draft: ['review'],
+  approved: ['published', 'archived'],
+};
+const TRANSICOES_MODERADOR: Record<string, string[]> = {
+  review: ['approved', 'draft'],
+  approved: ['published', 'hidden'],
+  hidden: ['approved'],
+};
+
+projetoRoutes.patch('/:id/estado',
+  verifyJwt,
+  zValidator('json', TransicaoEstadoPayloadSchema),
+  async (c) => {
+    const id = c.req.param('id');
+    if (!id) return c.json({ error: 'Projeto não encontrado' }, 404);
+    const { novoEstado, motivo } = c.req.valid('json');
+    const userId = c.get('user').id;
+    const userRole = c.get('user').role;
+
+    try {
+      const perfilId = await resolvePerfilId(userId);
+      if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
+
+      const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
+      const project = firstProjeto(resGet.data);
+      if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
+
+      const estadoActual = project.estado;
+      const isAutor = project.autor?.userId === userId;
+      const isModerador = ['moderador', 'super_admin'].includes(userRole);
+
+      const transicoesPermitidas = isAutor
+        ? TRANSICOES_AUTOR[estadoActual] ?? []
+        : isModerador
+          ? TRANSICOES_MODERADOR[estadoActual] ?? []
+          : [];
+
+      if (!transicoesPermitidas.includes(novoEstado)) {
+        return c.json({ error: `Transição ${estadoActual} → ${novoEstado} não permitida` }, 403);
+      }
+
+      const now = new Date().toISOString();
+      const historico: HistoricoEstado[] = project.historicoEstados ?? [];
+      historico.push({ estado: novoEstado, timestamp: now, autorId: perfilId });
+
+      await strapiPut(`/projetos/${id}`, {
+        estado: novoEstado,
+        historicoEstados: historico,
+        ...(motivo && novoEstado === 'draft' ? { motivoRejeicao: motivo } : {}),
+      });
+
+      const eventMap: Record<string, DomainEventName> = {
+        review: DomainEventName.PROJETO_SUBMETIDO_PARA_REVISAO,
+        approved: DomainEventName.PROJETO_APROVADO,
+        published: DomainEventName.PROJETO_PUBLICADO,
+        archived: DomainEventName.PROJETO_ARQUIVADO,
+      };
+
+      const eventName = eventMap[novoEstado];
+      if (eventName) {
+        const basePayload = { projetoId: id, titulo: project.titulo, area: project.area };
+        const projectAuthorId = project.autor?.id;
+        if (novoEstado === 'published' && projectAuthorId === undefined) {
+          return c.json({ error: 'Autor do projeto não identificado' }, 502);
+        }
+
+        const payload = novoEstado === 'published'
+          ? { ...basePayload, autorId: String(projectAuthorId) }
+          : novoEstado === 'approved'
+          ? { ...basePayload, aprovadorId: perfilId }
+          : novoEstado === 'review' || novoEstado === 'archived'
+            ? { ...basePayload, autorId: perfilId }
+            : basePayload;
+
+        await eventBus.publishWithOutbox(eventName, payload);
+      }
+
+      return c.json({ success: true, estado: novoEstado });
+    } catch {
+      return c.json({ error: 'Erro ao transitar estado do projeto' }, 502);
+    }
+  }
+);

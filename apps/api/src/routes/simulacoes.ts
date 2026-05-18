@@ -1,16 +1,19 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import pino from 'pino';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
+import { requireApproved } from '../middleware/requireApproved.js';
+import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
-import { CriarSimulacaoPayloadSchema } from '@pdc/shared';
+import { CriarSimulacaoPayloadSchema, type Tentativa } from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
-import { type Tentativa, analyzeFluidity, analyzeFocus } from '@pdc/shared';
+import { canPublishSimTipo, DISABLED_SIM_TIPO_RESPONSE } from '../modules/simulacoes/publish-gates.js';
+import { simulacaoTentativasRoutes } from './simulacoes-tentativas.js';
+import { applyPublicCatalogStateFilter, isPublicCatalogEstado } from './publication-state.js';
+import { toPaginatedResponse } from './pagination.js';
 
-const log = pino({ name: 'routes:simulacoes' });
 type Vars = { Variables: AuthVariables };
 
 const simQuerySchema = z.object({
@@ -18,10 +21,6 @@ const simQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
   search: z.string().optional(),
   tipo: z.coerce.number().int().min(1).max(3).optional(),
-});
-
-const iniciarSchema = z.object({
-  simulacaoId: z.string().min(1),
 });
 
 interface StrapiSimulacao {
@@ -36,6 +35,7 @@ interface StrapiSimulacao {
 export const simulacaoRoutes = new Hono<Vars>();
 
 simulacaoRoutes.use('*', verifyJwt);
+simulacaoRoutes.route('/tentativas', simulacaoTentativasRoutes);
 
 // GET /simulacoes
 simulacaoRoutes.get('/', zValidator('query', simQuerySchema), async (c) => {
@@ -46,12 +46,11 @@ simulacaoRoutes.get('/', zValidator('query', simQuerySchema), async (c) => {
   if (q.search !== undefined) params['filters[titulo][$containsi]'] = q.search;
   if (q.tipo !== undefined) params['filters[tipo][$eq]'] = q.tipo.toString();
   
-  // Apenas simulações publicadas
-  params['filters[estado][$eq]'] = 'published';
+  applyPublicCatalogStateFilter(params);
 
   try {
     const res = await strapiGet<StrapiSimulacao>('/simulacoes', params);
-    return c.json(res);
+    return c.json(toPaginatedResponse(res));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -66,7 +65,7 @@ simulacaoRoutes.get('/minhas', checkRole(['mentor', 'instituicao', 'super_admin'
       'filters[autorId][$eq]': id,
       populate: 'capa',
     });
-    return c.json(res);
+    return c.json(toPaginatedResponse(res));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -99,7 +98,7 @@ simulacaoRoutes.get('/:id', async (c) => {
     
     // Verificação de acesso
     const user = c.get('user');
-    if (data.estado !== 'published' && data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
+    if (!isPublicCatalogEstado(data.estado) && data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
       return c.json({ error: 'Acesso negado' }, 403);
     }
 
@@ -111,11 +110,15 @@ simulacaoRoutes.get('/:id', async (c) => {
 });
 
 // POST /simulacoes — criar simulação
-simulacaoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), zValidator('json', CriarSimulacaoPayloadSchema), async (c) => {
+simulacaoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), requireApproved(), rateLimitContentCreate, zValidator('json', CriarSimulacaoPayloadSchema), async (c) => {
   const payload = c.req.valid('json');
   const { id: autorId } = c.get('user');
   
   try {
+    if (!(await canPublishSimTipo(payload.tipo))) {
+      return c.json(DISABLED_SIM_TIPO_RESPONSE, 403);
+    }
+
     const res = await strapiPost<StrapiSimulacao>('/simulacoes', {
       ...payload,
       autorId,
@@ -207,6 +210,10 @@ simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'modera
       }, 400);
     }
 
+    if (estado === 'published' && !(await canPublishSimTipo(sim.tipo))) {
+      return c.json(DISABLED_SIM_TIPO_RESPONSE, 403);
+    }
+
     // Actualizar estado
     await strapiPut<unknown>(`/simulacoes/${id}`, { estado });
 
@@ -221,122 +228,6 @@ simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'modera
     }
 
     return c.json({ success: true });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    return c.json({ error: message }, 502);
-  }
-});
-
-// POST /simulacoes/tentativas — iniciar tentativa (estudante apenas)
-simulacaoRoutes.post('/tentativas', checkRole(['estudante']), zValidator('json', iniciarSchema), async (c) => {
-  const { id: userId } = c.get('user');
-  const { simulacaoId } = c.req.valid('json');
-  try {
-    // Buscar perfilId real do usuário
-    const resPerfil = await strapiGet<{ id: string }>('/perfis', {
-      'filters[userId][$eq]': userId,
-      'fields[0]': 'id',
-    });
-    const perfilId = resPerfil.data[0]?.id;
-    if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
-
-    // Buscar simulação para obter tipo
-    const resSim = await strapiGet<StrapiSimulacao>(`/simulacoes/${simulacaoId}`);
-    const sim = resSim.data[0];
-    if (!sim) return c.json({ error: 'Simulação não encontrada' }, 404);
-
-    const tipo = sim.tipo;
-    
-    // Contar tentativas anteriores
-    const prevTentativas = await strapiGet<Tentativa>('/tentativas', {
-      'filters[perfil][id][$eq]': perfilId,
-      'filters[simulacao][id][$eq]': simulacaoId,
-    });
-    const tentativaNum = prevTentativas.meta.pagination.total + 1;
-
-    // D22: Usamos dataInicio (PT) para alinhar com o domínio canónico (ADR-012).
-    // Strapi tem aliases startedAt/finishedAt, mas BFF prefere PT.
-    const resPost = await strapiPost<Tentativa>('/tentativas', {
-      simulacao: simulacaoId,
-      perfil: perfilId,
-      dataInicio: new Date().toISOString(),
-      tentativaNum,
-      executorTipo: `tipo${tipo.toString()}`,
-      status: 'em_progresso',
-    });
-
-    // G15: Impacto no Ecossistema
-    await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_INICIADA, {
-      tentativaId: resPost.data.id,
-      perfilId,
-      simulacaoId
-    });
-
-    return c.json(resPost, 201);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    return c.json({ error: message }, 502);
-  }
-});
-
-const concluirSchema = z.object({
-  metadata: z.record(z.unknown()).optional(),
-});
-
-// PUT /simulacoes/tentativas/:id — concluir tentativa (estudante apenas)
-simulacaoRoutes.put('/tentativas/:id', checkRole(['estudante']), zValidator('json', concluirSchema), async (c) => {
-  const tentativaId = c.req.param('id');
-  const { metadata } = c.req.valid('json');
-  const user = c.get('user');
-
-  // G2-T3 Anti-Fraude: Derivação de score no BFF SEMPRE.
-  // Qualquer score cliente-side é ignorado. O Oráculo é soberano.
-  const parsedFocus = Number(metadata?.focusStability);
-  const rawFocus = Number.isNaN(parsedFocus) ? 50 : parsedFocus;
-  const phi = Math.max(0, Math.min(100, rawFocus)) / 100;
-  const resFluidity = analyzeFluidity(phi);
-  const resFocus = analyzeFocus(phi);
-
-  // Média simples (spec: (analyzeFluidity + analyzeFocus) / 2)
-  const finalScore = (resFluidity.score + resFocus.score) / 2;
-  log.info({ tentativaId, finalScore, phi }, 'Score Soberano derivado no BFF');
-
-  try {
-    // D21/D22: Persistimos metadata da simulação e data de fim em PT.
-    const resPut = await strapiPut<Tentativa>(`/tentativas/${tentativaId}`, {
-      score: finalScore,
-      metadata,
-      status: 'concluida',
-      dataFim: new Date().toISOString(),
-      duracaoSegundos: Number(metadata?.duracaoSegundos) || 0,
-    });
-
-    const data = resPut.data;
-
-    // G15: O impacto ecossistémico (Behavior, Ranking, Achievement, Notify) 
-    // é agora orquestrado pelo EventBus. O behaviorHook tratará do processamento psicométrico.
-    
-    // Obter area da simulação para o payload do evento
-    const resSimInfo = await strapiGet<Tentativa & { simulacao?: StrapiSimulacao }>(`/tentativas/${tentativaId}?populate=simulacao`);
-    const tentativaComSim = resSimInfo.data[0];
-    const area = tentativaComSim?.simulacao?.area || (metadata?.domainId as string) || 'geral';
-
-    const resPerfilLookup = await strapiGet<{ id: string }>('/perfis', {
-      'filters[userId][$eq]': user.id,
-      'fields[0]': 'id',
-    });
-    const perfilIdReal = resPerfilLookup.data[0]?.id;
-
-    if (perfilIdReal) {
-      await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_CONCLUIDA, {
-        tentativaId,
-        score: finalScore || 0,
-        perfilId: perfilIdReal,
-        area
-      });
-    }
-
-    return c.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);

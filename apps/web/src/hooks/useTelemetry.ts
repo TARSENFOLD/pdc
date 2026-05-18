@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { TelemetriaTipo, TelemetriaEvento } from '@pdc/shared';
 import { telemetriaService } from '../lib/telemetria/telemetria.service.js';
-import { useBootstrap } from '../lib/bootstrap/BootstrapContext.js';
+import { useBootstrap } from '../lib/bootstrap/bootstrap-context.js';
 
 const BUFFER_LIMIT = 10;
 const FLUSH_INTERVAL = 30000;

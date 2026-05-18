@@ -36,6 +36,6 @@ export const ModalidadeSchema = z.enum(['presencial', 'online', 'hibrido']);
 
 export type Modalidade = z.infer<typeof ModalidadeSchema>;
 
-export const EstadoEditorialSchema = z.enum(['draft', 'review', 'approved', 'published', 'rejected']);
+export const EstadoEditorialSchema = z.enum(['draft', 'review', 'approved', 'published', 'rejected', 'hidden']);
 
 export type EstadoEditorial = z.infer<typeof EstadoEditorialSchema>;

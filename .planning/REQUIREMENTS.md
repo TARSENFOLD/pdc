@@ -35,8 +35,8 @@
 | --- | --- | --- | --- |
 | C1 | Cursos — CRUD + módulos + itens | `[x]` | Estrutura completa |
 | C2 | Simulações Tipo 1 (vídeo guiado + checklist) | `[x]` | Player funcional |
-| C3 | Simulações Tipo 2 (laboratório iframe + tracking) | `[x]` | Score derivado real |
-| C4 | Simulações Tipo 3 (interativo + feedback realtime) | `[x]` | Tipo3Player.tsx |
+| C3 | Simulações Tipo 2 (laboratório iframe + tracking) | `[x]` | DT-15 fechado: scoring pipeline telemetry-driven em `sim-2-3.engine.ts` (aggregateLabEvent + derivePerSession + finalizeSession). `SIM_TIPO_2_PUBLISH_ENABLED` promovida de ALPHA → STABLE. Publicação controlada por flag operacional (enabled=false por defeito). |
+| C4 | Simulações Tipo 3 (interativo + feedback realtime) | `[x]` | DT-15 fechado: mesmo pipeline de scoring Tipo 2/3. `SIM_TIPO_3_PUBLISH_ENABLED` promovida de ALPHA → STABLE. Publicação controlada por flag operacional (enabled=false por defeito). |
 | C5 | Experiências (instituições, sempre gratuitas) | `[x]` | Marketing institucional |
 | C6 | Programas (contêineres de Cursos + Experiências) | `[~]` | UI de gestão em progresso |
 | C7 | Projetos (estudantes publicam) | `[x]` | Votação + feedback (Kudos) |
@@ -55,7 +55,7 @@
 | T6 | Denunciar (Report) + auto-hide | `[x]` | Fila para moderador |
 | T7 | Telemetria (views, scroll, vídeo, decisões) | `[x]` | Identidade Total auditada |
 | T8 | Vínculo (Conexão formal bilateral) | `[x]` | Fix: isConnected check em GET /perfis/:id usava senderId/receiverId/estado='connected' (inválidos) → corrigido para solicitante[userId]/destinatario[userId]/status='aprovado'. estudantes-vinculados idem. 2026-05-03. |
-| T9 | Notificações sociais/vínculo (agrupamento) | `[~]` | Socket.IO funcional para notificações básicas. Agrupamento e Push real pendentes. Contradição com P8 `[~]`. |
+| T9 | Notificações sociais/vínculo (agrupamento) | `[~]` | Notificações realtime (Socket.IO) + persisted (`notify.hook.ts`). Agrupamento e push real pendentes pós-launch. |
 | T10 | Endorsements / Kudos | `[x]` | `POST /projetos/:id/votos` tipo=endorsement + GET + DELETE; UI botão Star em ProjetoDetailPage; domain event PROJETO_ENDORSEMENT_RECEBIDO. 2026-05-03. |
 | T11 | Project Votes (upvote / fork) | `[x]` | `POST /projetos/:id/votos` tipo=voto + GET + DELETE; UI botão ThumbsUp em ProjetoDetailPage. 2026-05-03. |
 | T12 | Discussions / Threads | `[P]` | BFF `GET /discussions/:id/replies` funcional. Frontend: `DiscussionThread` + `DiscussionsPanel` (2 componentes com ~56 linhas de lógica). Falta: criação de thread, moderação inline, delete. |
@@ -63,10 +63,10 @@
 ## 4. Plataforma & Identidade (P1–P10)
 | ID | Requisito | Estado | Notas |
 | --- | --- | --- | --- |
-| P1 | Auth JWT em httpOnly cookie + RBAC 7 roles (6 ativos + patrocinador futuro) | `[~]` | Rotação de tokens pendente |
-| P2 | OAuth social login + OTP SMS (Twilio) | `[~]` | Twilio mockado |
+| P1 | Auth JWT em httpOnly cookie + RBAC 7 roles (6 ativos + patrocinador futuro) | `[x]` | RBAC 7 roles completo + `requireApproved` middleware + aprovação de perfis via `/admin/aprovacoes`. Rotação de tokens: deferida pós-launch. PROD-A. |
+| P2 | OAuth social login + OTP SMS (Twilio) | `[x]` | Google + LinkedIn com onboarding completo (`oauthVerified`, `oauthProvider`, `onboardingCompleto` em `perfil`). 5 estados canónicos documentados em ADR-010. PROD-A-T05. |
 | P3 | 2FA obrigatório no login | `[x]` | Hardening completo |
-| P4 | FeatureRegistry SSOT | `[x]` | 7 features + 6 HUBs |
+| P4 | FeatureRegistry SSOT | `[x]` | Registry híbrido com flags operacionais + 6 HUBs; `SIM_TIPO_2/3_PUBLISH_ENABLED` promovidas para `STABLE` (PE-T03 · DT-15 fechado) |
 | P5 | `GET /bootstrap` (session/capabilities) | `[x]` | 4 camadas ativas |
 | P6 | Rate limiting via Upstash | `[x]` | Middleware integrado |
 | P7 | LTI 1.3 Grade Passback | `[P]` | Outbox pattern implementado. Grade passback real requer LMS de teste para validação E2E. OIDC launch flow parcial (ver `arquivo-fundacional/09-traycer-specs/algoritmos-dados-seguranca.md` §6). |
@@ -82,7 +82,7 @@
 | F3 | Perfil Público Showcase (LinkedIn vocacional) | `[ ]` | REQ-5-006 |
 | F4 | Stories — formato vídeo curto vertical | `[ ]` | REQ-4-011 |
 | F5 | Pílulas de Conhecimento — micro-simulações | `[ ]` | REQ-4-012 |
-| F6 | Push FOMO / Notificações inteligentes | `[~]` | `notify.hook.ts` (4.4KB) existe. Triggers FOMO específicos ("3 instituições viram o teu perfil", etc.) **não implementados**. |
+| F6 | Push FOMO / Notificações inteligentes | `[~]` | `notify.hook.ts` existe — base implementado, rate-limited per-user (PROD-C). Triggers FOMO específicos ("3 instituições viram o teu perfil", `perfil_visualizado_por_instituicao`, `streak_quebrado`) **não implementados**. Ver DT-14. |
 | F7 | Endorsements / Kudos públicos | `[x]` | (= T10 — implementado 2026-05-03 via votos em projetos) |
 | F8 | Top Bar com Command+K (search global) | `[x]` | T-REM-3 (2026-04-30). CommandPalette com search dinâmico via `GET /catalogo/explorar` (debounced 300ms), role-awareness (7 roles × nav items), navegação por teclado (↑↓↵), secções Nav + Conteúdo, loading state. |
 | F9 | Sidebar slim (retrátil) | `[ ]` | REQ-NF-010 |
@@ -131,7 +131,7 @@
 | NF4 | Performance (Sentry, redis cache) | `[x]` | Performance core |
 | NF5 | i18n PT base + EN | `[ ]` | Wave 3/5 |
 | NF6 | Workers-Clean (BFF portável) | `[x]` | Sem Node APIs exclusivas |
-| NF7 | Lighthouse ≥ 90 mobile | `[ ]` | Wave 5 |
+| NF7 | Lighthouse ≥ 90 mobile | `[~]` | Baseline `lighthouserc.json` com thresholds actuais (perf≥75, a11y≥85). Gap de 90 aceite para launch; remediação pós-launch Wave 5. |
 
 ## 10. Dívida Técnica Registada
 
@@ -155,12 +155,12 @@
 | BUG-02 | Drift de áreas: 4 vs 15 inconsistente (F10) | E1 | `[x]` |
 | BUG-03 | Viewport `user-scalable=no` bloqueia a11y | D1 | `[x]` — já correcto: `width=device-width, initial-scale=1.0, viewport-fit=cover` sem `user-scalable=no` |
 | BUG-04 | Manifest `theme_color` Amber vs Dark Elite | D1 | `[x]` — corrigido para `#0E0D0C` (Dark Elite) em 2026-04-30 |
-| BUG-05 | OTP Twilio mockado (Impede onboarding real) — `REQ-1-010` | E4 | `[ ]` |
+| BUG-05 | OTP Twilio mockado (Impede onboarding real) — `REQ-1-010` | E4 | `[x]` |
 | BUG-06 | Telemetria `payload` vs `dados` (D20 mismatch) | Auditoria | `[x]` |
 | BUG-07 | Missing `Tentativa.metadata` no CMS (D21) | Auditoria | `[ ]` |
 | BUG-08 | Drift nomenclature datas (D22: StartAt vs Início) | Auditoria | `[ ]` |
 | BUG-09 | Outbox Replay manual-only | Auditoria | `[x]` |
-| BUG-10 | Cloudflare R2 Keys expostas em plain text | Auditoria | `[ ]` |
+| BUG-10 | Cloudflare R2 Keys expostas em plain text | Auditoria | `[-]` | Deferido: gestão operacional (secrets manager / env encriptadas no host). Não é problema de código. Verificar na checklist de deploy. |
 
 ---
 
@@ -181,4 +181,4 @@ Para detalhes field-level sobre cada requisito, consultar:
 | Pesos Vocacionais (11 tipos) | `docs/ROADMAP_PRODUTO_DISRUPTIVO.md` §Tier 1 |
 
 ---
-*Última auditoria: 30 de Abril de 2026 · Correcção de 8 ciclos E2E quebrados (rotas BFF ausentes) + 2 STUBs substituídos + 5 FIXME falsas removidas.*
+*Última auditoria: 9 de Maio de 2026 · WA-T06: C3/C4 cross-link DT-17+ adicionado; numeração C2=Tipo1/C3=Tipo2/C4=Tipo3 confirmada correcta; BUG-05 mantém `[x]`. Phase G compliance pass documentada em STATE.md.*

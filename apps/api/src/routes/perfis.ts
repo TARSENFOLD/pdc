@@ -1,13 +1,15 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import pino from 'pino';
 import { UpdatePerfilPayloadSchema, DomainEventName, type UpdatePerfilPayload } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPut, strapiPutRaw } from '../modules/strapi/strapi.client.js';
 import { serializePublicProfile, serializePrivateProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
-import * as featureFlagService from '../modules/feature-flags/feature-flags.service.js';
 import { getTier } from '../modules/reputation/reputation.service.js';
 import { eventBus } from '../modules/events/event-bus.js';
+
+const log = pino({ name: 'perfis-routes' });
 
 type Vars = { Variables: AuthVariables };
 
@@ -91,11 +93,7 @@ perfilRoutes.get('/me', async (c) => {
       }
     }
 
-    // Fallback: buscar utilizador base (Mudar para lançar 404 futuramente se perfil for obrigatório)
-    const data = await strapiGet<StrapiPerfilRaw>(`/users/${id}`, {
-      populate: 'role,avatar',
-    });
-    return c.json(data.data[0]);
+    return c.json({ error: 'Perfil não encontrado' }, 404);
   } catch (err) {
     const message = (err as Error).message || 'Erro interno';
     return c.json({ error: message }, 502);
@@ -200,58 +198,47 @@ perfilRoutes.get('/estudantes-vinculados', checkRole(['instituicao', 'super_admi
   }
 });
 
-// GET /perfis/:id — perfil público (respeita PROFILE_V2_PUBLIC + visibilitySettings)
+// GET /perfis/:id — perfil público V2 field-filtered
 perfilRoutes.get('/:id', async (c) => {
   const userId = c.req.param('id');
   const requester = c.get('user');
   const requesterId = requester.id;
 
-  let useV2 = false;
   try {
-    const flags = await featureFlagService.getEffectiveFlags(requester.instituicaoId);
-    useV2 = flags['PROFILE_V2_PUBLIC'] === true;
-  } catch { /* ignore */ }
+    const resRaw = await strapiGet<StrapiPerfilRaw>('/perfis', {
+      'filters[userId][$eq]': userId,
+      'pagination[pageSize]': '1',
+      populate: 'foto,capa,conquistas',
+    });
+    const first = resRaw.data[0];
+    if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);
 
-  try {
-    if (useV2) {
-      const resRaw = await strapiGet<StrapiPerfilRaw>('/perfis', {
-        'filters[userId][$eq]': userId,
-        'pagination[pageSize]': '1',
-        populate: 'foto,capa,conquistas',
-      });
-      const first = resRaw.data[0];
-      if (!first) return c.json({ error: 'Perfil não encontrado' }, 404);
-
-      let isConnected = false;
-      if (requesterId && requesterId !== userId) {
-        try {
-          const [r1, r2] = await Promise.all([
-            strapiGet<StrapiVinculo>('/vinculos', {
-              'filters[solicitante][userId][$eq]': requesterId,
-              'filters[destinatario][userId][$eq]': userId,
-              'filters[status][$eq]': 'aprovado',
-              'pagination[limit]': '1',
-            }),
-            strapiGet<StrapiVinculo>('/vinculos', {
-              'filters[solicitante][userId][$eq]': userId,
-              'filters[destinatario][userId][$eq]': requesterId,
-              'filters[status][$eq]': 'aprovado',
-              'pagination[limit]': '1',
-            }),
-          ]);
-          isConnected = r1.data.length > 0 || r2.data.length > 0;
-        } catch { /* ignore vinculos fail */ }
+    let isConnected = false;
+    if (requesterId && requesterId !== userId) {
+      try {
+        const [r1, r2] = await Promise.all([
+          strapiGet<StrapiVinculo>('/vinculos', {
+            'filters[solicitante][userId][$eq]': requesterId,
+            'filters[destinatario][userId][$eq]': userId,
+            'filters[status][$eq]': 'aprovado',
+            'pagination[limit]': '1',
+          }),
+          strapiGet<StrapiVinculo>('/vinculos', {
+            'filters[solicitante][userId][$eq]': userId,
+            'filters[destinatario][userId][$eq]': requesterId,
+            'filters[status][$eq]': 'aprovado',
+            'pagination[limit]': '1',
+          }),
+        ]);
+        isConnected = r1.data.length > 0 || r2.data.length > 0;
+      } catch (err) {
+        log.warn({ err, userId, requesterId }, 'vinculos lookup failed — isConnected defaults to false');
       }
-
-      const profileData = first as unknown as StrapiPerfil;
-      profileData.reputacaoTier = getTier(profileData.reputacao ?? 0);
-      return c.json({ data: serializePublicProfile(profileData, isConnected) });
     }
 
-    const resUser = await strapiGet<unknown>(`/users/${userId}`, {
-      populate: 'role,avatar',
-    });
-    return c.json(resUser.data[0]);
+    const profileData = first as unknown as StrapiPerfil;
+    profileData.reputacaoTier = getTier(profileData.reputacao ?? 0);
+    return c.json({ data: serializePublicProfile(profileData, isConnected) });
   } catch (err) {
     const message = (err as Error).message || 'Erro interno';
     return c.json({ error: message }, 502);

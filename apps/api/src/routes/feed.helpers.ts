@@ -7,6 +7,7 @@ import { redis } from '../lib/redis.js';
 import { calcRecencyScore, calcScore, type FeedFeatures } from '../modules/feed/feed.scoring.js';
 import { AreaVocacionalSchema, type FeedItem, type FeedItemTipo } from '@pdc/shared';
 import { env } from '../lib/env.js';
+import { isPublicCatalogEstado } from './publication-state.js';
 
 // ── Strapi interfaces (Flat v5) ──────────────────────────────────────────────
 
@@ -54,7 +55,20 @@ export async function getOptionalUserId(c: Context): Promise<string | undefined>
   }
 }
 
-export interface ItemStats { likes: number; ratingMedia: number; ratingTotal: number }
+export interface ItemStats {
+  likes: number;
+  ratingMedia: number;
+  ratingTotal: number;
+}
+
+function titleFromContent(c: StrapiEntity & { tipo: FeedItemTipo }): string {
+  const explicit = c.titulo?.trim();
+  if (explicit) return explicit;
+
+  const text = (c.corpo ?? c.descricao ?? '').replace(/\s+/g, ' ').trim();
+  if (!text) return c.tipo;
+  return text.length <= 80 ? text : `${text.slice(0, 77)}...`;
+}
 
 export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<ItemStats> {
   const statsCacheKey = `feed:score:${tipo}:${id}`;
@@ -75,7 +89,7 @@ export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<Item
       }),
     ]);
 
-    const vals = ratings.data.map(r => r.valor);
+    const vals = ratings.data.map((r) => r.valor);
     const ratingTotal = vals.length;
     const ratingMedia = ratingTotal > 0 ? vals.reduce((a, b) => a + b, 0) / ratingTotal : 0;
 
@@ -88,7 +102,7 @@ export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<Item
 }
 
 export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: FeedItemTipo }>> {
-  const [cursos, simulacoes, experiencias, feedPosts] = await Promise.all([
+  const [cursos, simulacoes, experiencias, feedPosts, programas, projetos] = await Promise.all([
     strapiGet<StrapiEntity>('/cursos', {
       'pagination[pageSize]': '100',
       sort: 'publishedAt:desc',
@@ -110,26 +124,41 @@ export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: Fe
       sort: 'createdAt:desc',
       populate: 'autor.foto',
     }),
+    strapiGet<StrapiEntity>('/programas', {
+      'pagination[pageSize]': '100',
+      sort: 'publishedAt:desc',
+      populate: 'capa,instituicao,responsavel',
+    }),
+    strapiGet<StrapiEntity>('/projetos', {
+      'pagination[pageSize]': '100',
+      sort: 'createdAt:desc',
+      populate: 'autor,media',
+    }),
   ]);
 
   const all = [
-    ...cursos.data.map(d => ({ ...d, tipo: 'curso' as const })),
-    ...simulacoes.data.map(d => ({ ...d, tipo: 'simulacao' as const })),
-    ...experiencias.data.map(d => ({ ...d, tipo: 'experiencia' as const })),
-    ...feedPosts.data.map(d => ({ ...d, tipo: 'post' as const })),
+    ...cursos.data.map((d) => ({ ...d, tipo: 'curso' as const })),
+    ...simulacoes.data.map((d) => ({ ...d, tipo: 'simulacao' as const })),
+    ...experiencias.data.map((d) => ({ ...d, tipo: 'experiencia' as const })),
+    ...feedPosts.data.map((d) => ({ ...d, tipo: 'post' as const })),
+    ...programas.data.map((d) => ({ ...d, tipo: 'programa' as const })),
+    ...projetos.data.map((d) => ({ ...d, tipo: 'projeto' as const })),
   ] as Array<StrapiEntity & { tipo: FeedItemTipo }>;
 
-  return all.filter(c => {
+  return all.filter((c) => {
     if (c.tipo === 'post') return c.estado === 'aprovada';
-    const estado = c.estado ?? 'published';
     const vis = c.visibilidade ?? 'publico';
-    return estado === 'published' && vis === 'publico';
+    return isPublicCatalogEstado(c.estado) && vis === 'publico';
   });
 }
 
 export const HYDRATION_CONCURRENCY = 10;
 
-export async function mapConcurrent<T, R>(items: T[], fn: (item: T) => Promise<R>, concurrency: number): Promise<R[]> {
+export async function mapConcurrent<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  concurrency: number
+): Promise<R[]> {
   const results: R[] = [];
   for (let i = 0; i < items.length; i += concurrency) {
     const chunk = items.slice(i, i + concurrency);
@@ -143,16 +172,22 @@ export async function mapConcurrent<T, R>(items: T[], fn: (item: T) => Promise<R
  * toFeedItem (Sovereign Mapping)
  * Converte entidades Strapi para o FeedItem do Shared.
  */
-export function toFeedItem(c: StrapiEntity & { tipo: FeedItemTipo }, stats: ItemStats, score: number, recencyScore: number): FeedItem {
+export function toFeedItem(
+  c: StrapiEntity & { tipo: FeedItemTipo },
+  stats: ItemStats,
+  score: number,
+  recencyScore: number
+): FeedItem {
   const parsedArea = AreaVocacionalSchema.safeParse(c.area);
   const mediaUrls = Array.isArray(c.mediaUrls) ? c.mediaUrls : [];
-  const title = c.titulo ?? (c.tipo === 'post' ? 'Publicação' : '');
+  const title = titleFromContent(c);
   const body = c.corpo ?? c.descricao ?? '';
+  const authorId = c.autor?.userId ?? c.autorId ?? c.autor?.id ?? c.id;
 
   return {
     id: String(c.id),
     tipo: c.tipo,
-    userId: c.autor?.userId ?? c.autorId ?? 'system',
+    userId: String(authorId),
     timestamp: c.publishedAt ?? c.createdAt,
     titulo: title,
     corpo: body,
@@ -165,11 +200,16 @@ export function toFeedItem(c: StrapiEntity & { tipo: FeedItemTipo }, stats: Item
     autorNome: c.autor?.nome ?? c.autorNome ?? c.instituicaoNome ?? c.estudante?.nome,
     score,
     recencyScore,
-    stats: { likes: stats.likes, ratingMedia: stats.ratingMedia, ratingTotal: stats.ratingTotal }
+    stats: { likes: stats.likes, ratingMedia: stats.ratingMedia, ratingTotal: stats.ratingTotal },
   };
 }
 
-export function buildFeatures(stats: ItemStats, recency: number, affinityBoost = 0, authorReputation = 0): FeedFeatures {
+export function buildFeatures(
+  stats: ItemStats,
+  recency: number,
+  affinityBoost = 0,
+  authorReputation = 0
+): FeedFeatures {
   const engagementNorm = Math.min(1, (stats.likes * 2 + stats.ratingTotal * 5) / 100);
   const ratingNorm = stats.ratingMedia / 5;
   return {

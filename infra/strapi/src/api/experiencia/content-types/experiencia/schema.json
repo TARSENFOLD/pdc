@@ -60,12 +60,17 @@
     "gradeDestaque": { "type": "json" },
     "telemetriaConfig": { "type": "json" },
     "vagas": { "type": "integer" },
+    "duracaoEstimada": { "type": "integer", "description": "Duração estimada da experiência em horas" },
     "dataInicio": { "type": "datetime" },
     "dataFim": { "type": "datetime" },
     "localizacao": { "type": "string" },
     "modalidade": {
       "type": "enumeration",
       "enum": ["presencial", "online", "hibrido"]
-    }
+    },
+    "motivoRejeicao": { "type": "string", "maxLength": 500 },
+    "rejeitadoEm": { "type": "datetime" },
+    "rejeitadoPor": { "type": "string", "maxLength": 500 },
+    "isDemo": { "type": "boolean", "default": false }
   }
 }

@@ -63,7 +63,10 @@
     "validadoAcademicamente": { "type": "boolean", "default": false },
     "comiteValidacao": { "type": "text" },
     "dataValidacao": { "type": "datetime" },
-    "motivoRejeicao": { "type": "text" },
-    "historicoEstados": { "type": "json" }
+    "motivoRejeicao": { "type": "string", "maxLength": 500 },
+    "rejeitadoEm": { "type": "datetime" },
+    "rejeitadoPor": { "type": "string", "maxLength": 255 },
+    "historicoEstados": { "type": "json" },
+    "isDemo": { "type": "boolean", "default": false }
   }
 }

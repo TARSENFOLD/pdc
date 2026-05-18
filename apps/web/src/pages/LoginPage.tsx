@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { authApi } from '@/lib/api/auth';
 import { useTelemetry } from '@/hooks/useTelemetry';
 import { AsymmetricButton, PasswordInput } from '@/components/ui';

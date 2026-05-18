@@ -1,11 +1,22 @@
 import { z } from 'zod';
 import { AreaVocacionalSchema, EstadoEditorialSchema } from './schemas/enums.js';
 
+const OptionalUrlSchema = z.preprocess(
+  (value) => value === '' ? undefined : value,
+  z.string().url().optional(),
+);
+
+const OptionalNullableUrlSchema = z.preprocess(
+  (value) => value === '' ? undefined : value,
+  z.string().url().optional().nullable(),
+);
+
 export const ItemModuloSchema = z.object({
   id: z.string(),
   titulo: z.string(),
   tipo: z.enum(['video', 'pdf', 'texto', 'quiz', 'tarefa', 'iframe']),
   conteudo: z.string().optional(),
+  url: OptionalNullableUrlSchema,
   ordem: z.number(),
   duracaoMinutos: z.number().optional(),
 });
@@ -33,7 +44,7 @@ export const CursoSchema = z.object({
   gratuito: z.boolean().optional(),
   preco: z.number().optional(),
   moeda: z.string().optional(),
-  capaUrl: z.string().url().optional(),
+  capaUrl: OptionalUrlSchema,
   autorId: z.string(),
   totalHoras: z.number(),
   estado: EstadoEditorialSchema.optional().default('draft'),
@@ -64,14 +75,16 @@ export const CriarCursoPayloadSchema = z.object({
   descricao: z.string().min(10).max(2000),
   area: AreaVocacionalSchema,
   nivel: z.enum(['basico', 'medio', 'avancado']),
-  thumbnailUrl: z.string().url().optional(),
-  capaUrl: z.string().url().optional(),
+  thumbnailUrl: OptionalUrlSchema,
+  capaUrl: OptionalUrlSchema,
   visibilidade: z.enum(['publico', 'privado', 'institucional']).optional().default('publico'),
 
   // Pricing (Passo 4 do Wizard)
   gratuito: z.boolean().optional().default(true),
   preco: z.number().min(0).optional().default(0),
+  moeda: z.string().min(3).max(3).optional(),
   comissao: z.number().min(0).max(100).optional().default(0),
+  estado: z.enum(['draft', 'review', 'published']).optional(),
 
   // Comité Científico (opt-in)
   requerValidacaoComite: z.boolean().optional().default(false),
@@ -85,12 +98,15 @@ export const CriarCursoPayloadSchema = z.object({
 
   // Estrutura em Cascata (Mandatário para E2E)
   modulos: z.array(z.object({
+    persistedId: z.string().optional(),
     titulo: z.string().min(3),
     ordem: z.number(),
     itens: z.array(z.object({
+      persistedId: z.string().optional(),
       titulo: z.string().min(3),
       tipo: z.enum(['video', 'pdf', 'texto', 'quiz', 'tarefa', 'iframe']),
       conteudo: z.string().optional(),
+      url: OptionalUrlSchema,
       ordem: z.number(),
     })).min(1),
   })).min(1),
@@ -103,7 +119,7 @@ export const CursoMeuSchema = z.object({
   slug: z.string(),
   titulo: z.string(),
   descricao: z.string(),
-  capaUrl: z.string().url().optional(),
+  capaUrl: OptionalUrlSchema,
   area: AreaVocacionalSchema.optional(),
   nivel: z.string().optional(),
   idioma: z.string().optional(),
@@ -126,12 +142,18 @@ const StrapiRelationIdSchema = z.union([
 
 export const InscricaoSchema = z.object({
   id: StrapiIdSchema,
-  cursoId: StrapiRelationIdSchema,
-  estudanteId: StrapiRelationIdSchema,
-  dataInscricao: z.string().datetime(),
-  concluido: z.boolean(),
+  cursoId: StrapiRelationIdSchema.optional(),
+  estudanteId: StrapiRelationIdSchema.optional(),
+  perfilId: StrapiRelationIdSchema.optional(),
+  curso: z.unknown().optional(),
+  perfil: z.unknown().optional(),
+  dataInscricao: z.string(),
+  concluido: z.boolean().optional().default(false),
   dataConclusao: z.string().datetime().optional(),
-  progressoPercentagem: z.number().min(0).max(100),
+  concluidoEm: z.string().datetime().optional().nullable(),
+  progressoPercentual: z.number().min(0).max(100).optional().default(0),
+  progressoPercentagem: z.number().min(0).max(100).optional(),
+  modulosConcluidos: z.unknown().optional(),
 });
 
 export type Inscricao = z.infer<typeof InscricaoSchema>;
@@ -147,7 +169,7 @@ export const CursoPublicoSchema = z.object({
   slug: z.string(),
   titulo: z.string(),
   descricao: z.string(),
-  capaUrl: z.string().url().optional().nullable(),
+  capaUrl: OptionalNullableUrlSchema,
   area: AreaVocacionalSchema.optional().nullable(),
   nivel: z.string().optional().nullable(),
   idioma: z.string().optional(),

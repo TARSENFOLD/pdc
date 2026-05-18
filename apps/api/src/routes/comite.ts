@@ -4,6 +4,7 @@ import { zValidator } from '@hono/zod-validator';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPut, strapiPost } from '../modules/strapi/strapi.client.js';
+import { writeAuditLog } from '../middleware/audit.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -109,13 +110,13 @@ comiteRoutes.put(
       }
 
       // Audit trail
-      await strapiPost('/audit-logs', {
-        userId: user.id,
+      await writeAuditLog({
+        actor: user,
         accao: `comite_${acao}_${tipo}`,
         recurso: `/${colecionNome}/${id}`,
         ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
-        timestamp: new Date().toISOString(),
-        detalhes: parecer,
+        userAgent: c.req.header('user-agent'),
+        detalhes: { parecer },
       }).catch(() => {});
 
       return c.json({ success: true, estado: novoEstado });

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Search, X, BookOpen, Zap, Building, User, Loader2 } from 'lucide-react';
 import { catalogoApi } from '@/lib/api/catalogo';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import type { Role } from '@pdc/shared';
 
 interface CommandPaletteProps {

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { type StrapiListResponse } from '@pdc/shared';
+import { applyPublicCatalogStateFilter } from './publication-state.js';
 
 export const seoRoutes = new Hono();
 
@@ -21,10 +22,17 @@ const STATIC_URLS = [
 
 seoRoutes.get('/sitemap.xml', async (c) => {
   try {
+    const cursosParams: Record<string, string | string[]> = { 'pagination[pageSize]': '1000' };
+    const simulacoesParams: Record<string, string | string[]> = { 'pagination[pageSize]': '1000' };
+    const experienciasParams: Record<string, string | string[]> = { 'pagination[pageSize]': '1000' };
+    applyPublicCatalogStateFilter(cursosParams);
+    applyPublicCatalogStateFilter(simulacoesParams);
+    applyPublicCatalogStateFilter(experienciasParams);
+
     const [cursos, simulacoes, experiencias] = await Promise.all([
-      strapiGet<StrapiItemAttributes>('/cursos', { 'filters[estado][$eq]': 'published', 'pagination[pageSize]': '1000' }),
-      strapiGet<StrapiItemAttributes>('/simulacoes', { 'filters[estado][$eq]': 'published', 'pagination[pageSize]': '1000' }),
-      strapiGet<StrapiItemAttributes>('/experiencias', { 'filters[estado][$eq]': 'published', 'pagination[pageSize]': '1000' }),
+      strapiGet<StrapiItemAttributes>('/cursos', cursosParams),
+      strapiGet<StrapiItemAttributes>('/simulacoes', simulacoesParams),
+      strapiGet<StrapiItemAttributes>('/experiencias', experienciasParams),
     ]);
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>

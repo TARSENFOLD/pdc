@@ -3,11 +3,13 @@ import { redis } from '../../lib/redis.js';
 import { env } from '../../lib/env.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { type User, type Role, type Conquista, RoleSchema, normalizeTipo } from '@pdc/shared';
-import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost } from '../strapi/strapi.client.js';
+import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
 import { z } from 'zod';
+import pino from 'pino';
 
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
+const log = pino({ name: 'auth-service' });
 
 const RefreshPayloadSchema = z.object({
   sub: z.string().min(1),
@@ -35,6 +37,10 @@ interface StrapiPerfilData {
   foto?: { url?: string } | null;
   areasInteresse?: string[];
   conquistas?: Conquista[];
+  aprovado?: boolean;
+  oauthVerified?: boolean;
+  oauthProvider?: string;
+  onboardingCompleto?: boolean;
 }
 
 function resolveRole(strapiRoleName: string | undefined, perfilTipo: string | undefined): Role {
@@ -56,7 +62,9 @@ function hashToken(token: string): string {
 
 export const authService = {
   async generateTokens(user: User) {
-    const accessToken = await new SignJWT({ sub: user.id, role: user.role })
+    const claims: Record<string, unknown> = { sub: user.id, role: user.role };
+    claims.onboardingCompleto = user.onboardingCompleto;
+    const accessToken = await new SignJWT(claims)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('15m')
@@ -177,12 +185,28 @@ export const authService = {
       tipo: 'estudante',
       email: normalizedEmail,
       ativo: true,
+      onboardingCompleto: false,
     });
 
     return this.getUserById(userId);
   },
 
+  async setOauthProvider(userId: string, provider: 'google' | 'linkedin'): Promise<void> {
+    const res = await strapiGet<StrapiPerfilData>('/perfis', {
+      'filters[userId][$eq]': userId,
+    });
+    const perfil = res.data[0];
+    if (!perfil?.id) {
+      log.warn({ userId, provider }, 'Cannot set OAuth provider: perfil not found');
+      return;
+    }
+    if (!perfil.oauthProvider) {
+      await strapiPut(`/perfis/${perfil.id}`, { oauthProvider: provider });
+    }
+  },
+
   mapStrapiUser(u: StrapiUser, perfil: StrapiPerfilData | null, reputationScore = 0): User {
+    const oauthProvider = perfil?.oauthProvider;
     return {
       id: u.id.toString(),
       email: u.email,
@@ -198,6 +222,10 @@ export const authService = {
       bio: perfil?.bio,
       areasInteresse: perfil?.areasInteresse ?? [],
       conquistas: perfil?.conquistas ?? [],
+      aprovado: perfil?.aprovado,
+      oauthVerified: perfil?.oauthVerified,
+      oauthProvider: oauthProvider === 'google' || oauthProvider === 'linkedin' ? oauthProvider : undefined,
+      onboardingCompleto: perfil?.onboardingCompleto,
     };
   },
 };

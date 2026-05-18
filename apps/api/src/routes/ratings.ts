@@ -13,26 +13,44 @@ ratingRoutes.use('*', verifyJwt);
 
 interface StrapiRating {
   id: string;
-  userId: string;
-  valor: number;
+  documentId?: string;
+  userId?: string;
+  valor?: number;
+  estrelas?: number;
+  actor?: { id?: string | number; userId?: string };
 }
 
 interface StrapiInscricao {
   id: string;
   progressoPercentual?: number;
+  progressoPercentagem?: number;
 }
 
 const ELIGIBILITY_MIN_PROGRESS = 30;
 
+async function resolvePerfilId(userId: string): Promise<string | undefined> {
+  const resPerfil = await strapiGet<{ id: string | number }>('/perfis', {
+    'filters[userId][$eq]': userId,
+    'fields[0]': 'id',
+    'pagination[limit]': '1',
+  });
+  const perfilId = resPerfil.data[0]?.id;
+  return perfilId === undefined ? undefined : String(perfilId);
+}
+
+function ratingValue(rating: StrapiRating): number {
+  return rating.estrelas ?? rating.valor ?? 0;
+}
+
 async function checkRatingEligibility(
   userId: string,
-  targetType: 'curso' | 'simulacao' | 'mentor',
+  targetType: 'curso' | 'simulacao' | 'mentor' | 'experiencia',
   targetId: string
 ): Promise<boolean> {
-  // Mentors are always rateable (no progress gating)
-  if (targetType === 'mentor') return true;
+  // Mentors and experiencias are always rateable (no progress gating)
+  if (targetType === 'mentor' || targetType === 'experiencia') return true;
 
-  const strapiCollection = targetType === 'curso' ? '/inscricaos' : '/simulacoes';
+  const strapiCollection = targetType === 'curso' ? '/inscricoes' : '/simulacoes';
   const filterKey = targetType === 'curso' ? 'filters[curso][id][$eq]' : 'filters[id][$eq]';
   const filterVal = targetType === 'curso' ? targetId : targetId;
 
@@ -44,12 +62,12 @@ async function checkRatingEligibility(
   });
 
   const record = res.data[0];
-  return (record?.progressoPercentual ?? 0) >= ELIGIBILITY_MIN_PROGRESS;
+  return (record?.progressoPercentual ?? record?.progressoPercentagem ?? 0) >= ELIGIBILITY_MIN_PROGRESS;
 }
 
 // POST /ratings
 ratingRoutes.post('/', zValidator('json', z.object({
-  targetType: z.enum(['curso', 'simulacao', 'mentor']),
+  targetType: z.enum(['curso', 'simulacao', 'mentor', 'experiencia']),
   targetId: z.string(),
   valor: z.number().min(1).max(5),
 })), async (c) => {
@@ -62,42 +80,37 @@ ratingRoutes.post('/', zValidator('json', z.object({
       return c.json({ error: `Completa pelo menos ${String(ELIGIBILITY_MIN_PROGRESS)}% para poder avaliar` }, 403);
     }
 
+    const perfilId = await resolvePerfilId(userId);
+    if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
+
     const res = await strapiGet<StrapiRating>('/ratings', {
-      'filters[userId][$eq]': userId,
+      'filters[actor][id][$eq]': perfilId,
       'filters[targetType][$eq]': targetType,
       'filters[targetId][$eq]': targetId,
+      'pagination[limit]': '1',
     });
 
     if (res.data.length > 0) {
-      const idToUpdate = res.data[0]?.id;
-      await strapiPut(`/ratings/${String(idToUpdate)}`, { valor });
+      const idToUpdate = res.data[0]?.documentId ?? res.data[0]?.id;
+      await strapiPut(`/ratings/${String(idToUpdate)}`, { estrelas: valor, editadoEm: new Date().toISOString() });
       return c.json({ success: true, action: 'updated' });
     }
 
-    const resPost = await strapiPost<{ id: string | number }>('/ratings', {
-      userId,
+    await strapiPost<{ id: string | number }>('/ratings', {
+      actor: perfilId,
       targetType,
       targetId,
-      valor,
-      createdAt: new Date().toISOString(),
+      estrelas: valor,
+      criadoEm: new Date().toISOString(),
     });
 
     // G15: Impacto no Ecossistema
-    const resPerfil = await strapiGet<{ id: string }>('/perfis', {
-      'filters[userId][$eq]': userId,
-      'fields[0]': 'id',
+    await eventBus.publishWithOutbox(DomainEventName.RATING_CRIADO, {
+      autorId: userId,
+      targetType,
+      targetId,
+      score: valor
     });
-    const perfilId = resPerfil.data[0]?.id;
-
-    if (perfilId) {
-      await eventBus.publishWithOutbox(DomainEventName.RATING_CRIADO, {
-        ratingId: resPost.data.id,
-        perfilId,
-        targetType,
-        targetId,
-        valor
-      });
-    }
 
     return c.json({ success: true, action: 'created' }, 201);
   } catch {
@@ -107,7 +120,7 @@ ratingRoutes.post('/', zValidator('json', z.object({
 
 // GET /ratings/stats
 ratingRoutes.get('/stats', zValidator('query', z.object({
-  targetType: z.enum(['curso', 'simulacao', 'mentor']),
+  targetType: z.enum(['curso', 'simulacao', 'mentor', 'experiencia']),
   targetId: z.string(),
 })), async (c) => {
   const { targetType, targetId } = c.req.valid('query');
@@ -117,6 +130,7 @@ ratingRoutes.get('/stats', zValidator('query', z.object({
     const res = await strapiGet<StrapiRating>('/ratings', {
       'filters[targetType][$eq]': targetType,
       'filters[targetId][$eq]': targetId,
+      'populate[actor][fields][0]': 'userId',
       'pagination[limit]': '1000',
     });
 
@@ -125,9 +139,10 @@ ratingRoutes.get('/stats', zValidator('query', z.object({
     let userRating = 0;
 
     ratings.forEach(r => {
-      soma += r.valor;
-      if (userId && r.userId === userId) {
-        userRating = r.valor;
+      const value = ratingValue(r);
+      soma += value;
+      if (userId && (r.userId === userId || r.actor?.userId === userId)) {
+        userRating = value;
       }
     });
 

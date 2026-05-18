@@ -1,24 +1,17 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import pino from 'pino';
-
-const log = pino({ name: 'moderacao-routes' });
+import * as Sentry from '@sentry/node';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
-import { strapiGet, strapiPut } from '../modules/strapi/strapi.client.js';
+import { auditLog } from '../middleware/audit.js';
+import { ConteudoTipoSchema, moderacaoService, type ConteudoTipo } from '../modules/moderacao/moderacao.service.js';
+
+const log = pino({ name: 'moderacao-routes' });
 
 type Vars = { Variables: AuthVariables };
 
-interface StrapiItem {
-  id: string | number;
-  titulo?: string;
-  estado?: string;
-  createdAt?: string;
-  autor?: { nome?: string };
-  autorId?: { nome?: string };
-}
-
-const RejeitarPayloadSchema = z.object({
+const RejeitarBodySchema = z.object({
   motivo: z.string().min(10).max(500),
 });
 
@@ -30,112 +23,103 @@ moderacaoRoutes.use('*', checkRole(['moderador', 'comite_cientifico', 'super_adm
 // ─── GET /moderacao/fila ──────────────────────────────────────────────────────
 
 moderacaoRoutes.get('/fila', async (c) => {
+  const tipoRaw = c.req.query('tipo');
+  const pageRaw = c.req.query('page');
+  const pageSizeRaw = c.req.query('pageSize');
+
+  const parsePositiveInt = (value: string | undefined, fallback: number): number | null => {
+    if (value === undefined) return fallback;
+    if (!/^\d+$/.test(value)) return null;
+    const parsed = parseInt(value, 10);
+    return parsed >= 1 ? parsed : null;
+  };
+  const page = parsePositiveInt(pageRaw, 1);
+  const pageSize = parsePositiveInt(pageSizeRaw, 10);
+
+  if (page === null || pageSize === null) {
+    return c.json({ error: 'page e pageSize devem ser inteiros positivos' }, 400);
+  }
+
+  const tipoResult = ConteudoTipoSchema.safeParse(tipoRaw);
+  if (!tipoResult.success) {
+    return c.json({ error: 'Tipo inválido. Use: curso, simulacao, experiencia, programa, projeto, feed-post' }, 400);
+  }
+
   try {
-    const tipo = c.req.query('tipo');
-    const page = c.req.query('page') || '1';
-    const pageSize = c.req.query('pageSize') || '10';
-
-    if (!tipo || !['curso', 'simulacao', 'experiencia'].includes(tipo)) {
-      return c.json({ error: 'Tipo invalido' }, 400);
-    }
-
-    const colecionNome = `${tipo}s`;
-
-    // Fix: Generic type represents the item. Client flattens into StrapiListResponse<T>.
-    const [itemsRes, totalRes] = await Promise.all([
-      strapiGet<StrapiItem>(`/${colecionNome}`, {
-        'filters[estado][$eq]': 'review',
-        'pagination[page]': page,
-        'pagination[pageSize]': pageSize,
-        'fields': 'id,titulo,estado,createdAt',
-        'populate': 'autor,autorId',
-      }),
-      strapiGet<StrapiItem>(`/${colecionNome}`, {
-        'filters[estado][$eq]': 'review',
-        'pagination[pageSize]': '1',
-      }),
-    ]);
-
-    const lista = itemsRes.data.map((item) => ({
-      id: item.id,
-      titulo: item.titulo,
-      autorNome: item.autor?.nome || item.autorId?.nome || 'Desconhecido',
-      submittedAt: item.createdAt,
-      tipo,
-    }));
-
-    return c.json({
-      data: lista,
-      pagination: {
-        page: parseInt(page),
-        pageSize: parseInt(pageSize),
-        total: totalRes.meta.pagination.total,
-        pageCount: totalRes.meta.pagination.pageCount,
-      },
-    });
-  } catch (error) {
-    log.error({ err: error }, 'Erro ao buscar fila de moderacao');
+    const result = await moderacaoService.listarPendentes(tipoResult.data, String(page), String(pageSize));
+    return c.json(result);
+  } catch (err) {
+    log.error({ err }, '[moderacao] erro ao buscar fila');
     return c.json({ error: 'Erro ao buscar fila' }, 500);
   }
 });
 
-// ─── PUT /moderacao/:tipo/:id/aprovar ──────────────────────────────────────────
-
-moderacaoRoutes.put('/:tipo/:id/aprovar', async (c) => {
-  const tipo = c.req.param('tipo');
+async function handleAprovar(c: Context<Vars, '/:tipo/:id/aprovar'>) {
+  const tipoRaw = c.req.param('tipo');
   const id = c.req.param('id');
-
-  if (!['curso', 'simulacao', 'experiencia'].includes(tipo)) {
-    return c.json({ error: 'Tipo invalido' }, 400);
-  }
-
+  const tipoResult = ConteudoTipoSchema.safeParse(tipoRaw);
+  if (!tipoResult.success) return c.json({ error: 'Tipo inválido' }, 400);
+  const tipo: ConteudoTipo = tipoResult.data;
+  const user = c.get('user');
   try {
-    const colecionNome = `${tipo}s`;
-
-    const res = await strapiGet<StrapiItem>(`/${colecionNome}/${id}`);
-    if (!res.data[0]) {
-      return c.json({ error: 'Item nao encontrado' }, 404);
-    }
-
-    await strapiPut(`/${colecionNome}/${id}`, {
-      estado: 'approved',
-    });
-
-    return c.json({ success: true });
-  } catch (error) {
-    log.error({ err: error }, 'Erro ao aprovar item');
-    return c.json({ error: 'Erro ao aprovar' }, 500);
+    const result = await moderacaoService.aprovarConteudo(tipo, id, user.id);
+    return c.json({ success: true, tipo, id, eventId: result.eventId });
+  } catch (err) {
+    const status = (err as { status?: number }).status;
+    if (status === 404) return c.json({ error: 'Conteúdo não encontrado' }, 404);
+    log.error({ err, tipo, id }, '[moderacao] erro ao aprovar conteúdo');
+    return c.json({ error: 'Erro ao aprovar conteúdo' }, 500);
   }
+}
+
+async function handleRejeitar(c: Context<Vars, '/:tipo/:id/rejeitar'>) {
+  const tipoRaw = c.req.param('tipo');
+  const id = c.req.param('id');
+  const tipoResult = ConteudoTipoSchema.safeParse(tipoRaw);
+  if (!tipoResult.success) return c.json({ error: 'Tipo inválido' }, 400);
+  const tipo: ConteudoTipo = tipoResult.data;
+  const user = c.get('user');
+  let body: { motivo: string };
+  try {
+    body = RejeitarBodySchema.parse(await c.req.json());
+  } catch {
+    return c.json({ error: 'motivo é obrigatório (10–500 caracteres)' }, 400);
+  }
+  try {
+    const result = await moderacaoService.rejeitarConteudo(tipo, id, user.id, body.motivo);
+    return c.json({ success: true, tipo, id, eventId: result.eventId });
+  } catch (err) {
+    const status = (err as { status?: number }).status;
+    if (status === 404) return c.json({ error: 'Conteúdo não encontrado' }, 404);
+    log.error({ err, tipo, id }, '[moderacao] erro ao rejeitar conteúdo');
+    return c.json({ error: 'Erro ao rejeitar conteúdo' }, 500);
+  }
+}
+
+// ─── POST /moderacao/:tipo/:id/aprovar (canónico, alinha com KD-12) ──────────
+
+moderacaoRoutes.post('/:tipo/:id/aprovar', auditLog('conteudo_aprovar'), handleAprovar);
+
+// ─── POST /moderacao/:tipo/:id/rejeitar (canónico) ───────────────────────────
+
+moderacaoRoutes.post('/:tipo/:id/rejeitar', auditLog('conteudo_rejeitar'), handleRejeitar);
+
+// ─── PUT deprecated — grace period 30 dias (ADR-009 update 2026-05-09) ───────
+
+moderacaoRoutes.put('/:tipo/:id/aprovar', auditLog('conteudo_aprovar'), async (c: Context<Vars, '/:tipo/:id/aprovar'>) => {
+  Sentry.captureMessage('moderacao: PUT /:tipo/:id/aprovar deprecated — use POST', {
+    level: 'warning',
+    extra: { tipo: c.req.param('tipo'), id: c.req.param('id') },
+  });
+  return handleAprovar(c);
 });
 
-// ─── PUT /moderacao/:tipo/:id/rejeitar ────────────────────────────────────────
-
-moderacaoRoutes.put('/:tipo/:id/rejeitar', async (c) => {
-  const tipo = c.req.param('tipo');
-  const id = c.req.param('id');
-
-  if (!['curso', 'simulacao', 'experiencia'].includes(tipo)) {
-    return c.json({ error: 'Tipo invalido' }, 400);
-  }
-
-  try {
-    RejeitarPayloadSchema.parse(await c.req.json());
-    const colecionNome = `${tipo}s`;
-
-    const res = await strapiGet<StrapiItem>(`/${colecionNome}/${id}`);
-    if (!res.data[0]) {
-      return c.json({ error: 'Item nao encontrado' }, 404);
-    }
-
-    await strapiPut(`/${colecionNome}/${id}`, {
-      estado: 'draft',
-    });
-
-    return c.json({ success: true });
-  } catch (error) {
-    log.error({ err: error }, 'Erro ao rejeitar item');
-    return c.json({ error: 'Erro ao rejeitar' }, 500);
-  }
+moderacaoRoutes.put('/:tipo/:id/rejeitar', auditLog('conteudo_rejeitar'), async (c: Context<Vars, '/:tipo/:id/rejeitar'>) => {
+  Sentry.captureMessage('moderacao: PUT /:tipo/:id/rejeitar deprecated — use POST', {
+    level: 'warning',
+    extra: { tipo: c.req.param('tipo'), id: c.req.param('id') },
+  });
+  return handleRejeitar(c);
 });
 
 export { moderacaoRoutes };

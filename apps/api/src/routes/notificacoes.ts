@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { toPaginatedResponse } from './pagination.js';
 
 const DeviceTokenSchema = z.object({
   token: z.string().min(10),
@@ -26,7 +27,7 @@ notificacaoRoutes.get('/', async (c) => {
       'sort': 'createdAt:desc',
       'pagination[pageSize]': '50',
     });
-    return c.json(data);
+    return c.json(toPaginatedResponse(data));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);

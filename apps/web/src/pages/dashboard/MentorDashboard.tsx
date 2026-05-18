@@ -1,4 +1,4 @@
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/lib/auth/auth-context';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { dashboardApi } from '@/lib/api/dashboard';

@@ -18,12 +18,12 @@ export default function BuilderActionsBar({
   onPublish
 }: BuilderActionsBarProps): React.ReactElement {
   return (
-    <div className="sticky top-8 p-6 bg-recessed rounded-3xl border border-white/5 space-y-4">
+    <div className="sticky top-8 p-6 bg-recessed rounded-sm border border-white/5 space-y-4">
       <div className="space-y-2">
         <Button 
           disabled={isSubmitting} 
           onClick={onSaveDraft}
-          className="w-full h-14 rounded-2xl font-bold bg-white text-black hover:bg-white/90"
+          className="w-full h-14 rounded-sm font-semibold bg-white text-black hover:bg-white/90"
         >
           {isSubmitting ? 'Salvando...' : 'Salvar Rascunho'}
         </Button>
@@ -33,7 +33,7 @@ export default function BuilderActionsBar({
             variant="ghost"
             disabled={isSubmitting} 
             onClick={onSubmitReview}
-            className="w-full h-12 rounded-xl font-bold text-accent hover:bg-accent/10"
+            className="w-full h-12 rounded-sm font-semibold text-accent hover:bg-accent/10"
           >
             Submeter para Revisão
           </Button>
@@ -43,14 +43,14 @@ export default function BuilderActionsBar({
           <Button 
             disabled={isSubmitting} 
             onClick={onPublish}
-            className="w-full h-14 rounded-2xl font-bold bg-accent text-white"
+            className="w-full h-14 rounded-sm font-semibold bg-accent text-white"
           >
             Publicar Agora
           </Button>
         )}
       </div>
       
-      <p className="text-[10px] text-center text-ink-tertiary uppercase font-bold tracking-widest">
+      <p className="text-[10px] text-center text-ink-tertiary uppercase font-semibold tracking-wide">
         Estado: {state || 'draft'}
       </p>
     </div>

@@ -9,6 +9,8 @@ import {
 } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
+import { requireApproved } from '../middleware/requireApproved.js';
+import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
@@ -43,9 +45,12 @@ interface StrapiFeedPost {
   mediaUrls?: string[] | null;
   estado: FeedPost['estado'];
   motivoModeracao?: string | null;
+  motivoRejeicao?: string | null;
+  motivoOcultacao?: string | null;
   eventId?: string | null;
   likesCount?: number;
   comentariosCount?: number;
+  sharesCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -63,6 +68,14 @@ function postStateFromRisk(risk: ModerationRiskResult): FeedPost['estado'] {
   if (risk.decision === 'auto_hide') return 'hidden';
   if (risk.decision === 'needs_review') return 'pendente_moderacao';
   return 'aprovada';
+}
+
+function compactPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined));
+}
+
+function firstFeedPost(posts: StrapiFeedPost[]): StrapiFeedPost | null {
+  return posts[0] ?? null;
 }
 
 async function getPerfilByUserId(userId: string): Promise<StrapiPerfil | null> {
@@ -100,6 +113,7 @@ function mapFeedPost(post: StrapiFeedPost): FeedPost {
     estado: post.estado,
     likesCount: post.likesCount ?? 0,
     comentariosCount: post.comentariosCount ?? 0,
+    sharesCount: post.sharesCount ?? 0,
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
     autorId: post.autor?.id !== undefined ? String(post.autor.id) : 'unknown',
@@ -112,6 +126,8 @@ function mapFeedPost(post: StrapiFeedPost): FeedPost {
       : undefined,
   };
 
+  if (post.motivoRejeicao) mapped.motivoRejeicao = post.motivoRejeicao;
+  if (post.motivoOcultacao) mapped.motivoOcultacao = post.motivoOcultacao;
   if (post.motivoModeracao) mapped.motivoModeracao = post.motivoModeracao;
   if (post.eventId) mapped.eventId = post.eventId;
 
@@ -145,10 +161,37 @@ feedPostRoutes.get('/', zValidator('query', listQuerySchema), async (c) => {
   }
 });
 
+feedPostRoutes.get('/:id', verifyJwt, async (c) => {
+  const id = c.req.param('id');
+  if (!id) {
+    return c.json({ error: 'Id do post é obrigatório' }, 400);
+  }
+
+  try {
+    const res = await strapiGet<StrapiFeedPost>('/feed-posts', {
+      'filters[id][$eq]': id,
+      'populate': 'autor.foto',
+      'pagination[pageSize]': '1',
+    });
+    const post = firstFeedPost(res.data);
+
+    if (!post) {
+      return c.json({ error: 'Post não encontrado' }, 404);
+    }
+
+    return c.json(mapFeedPost(post));
+  } catch (err: unknown) {
+    log.error({ err, postId: id }, 'Erro ao carregar o post');
+    return c.json({ error: 'Erro ao carregar o post' }, 502);
+  }
+});
+
 feedPostRoutes.post(
   '/',
   verifyJwt,
   checkRole(['estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin']),
+  requireApproved(),
+  rateLimitContentCreate,
   zValidator('json', CriarPostPayloadSchema),
   async (c) => {
     const user = c.get('user');
@@ -167,16 +210,18 @@ feedPostRoutes.post(
         { hasDuplicateRecentPost },
       );
       const estado = postStateFromRisk(moderation);
-      const created = await strapiPost<StrapiFeedPost>('/feed-posts', {
+      const motivo = moderation.reasons.length > 0 ? moderation.reasons.join(',') : undefined;
+      const created = await strapiPost<StrapiFeedPost>('/feed-posts', compactPayload({
         autor: perfil.documentId ?? perfil.id,
         corpo: payload.corpo,
         mediaUrls: payload.mediaUrls ?? [],
         estado,
-        motivoModeracao: moderation.reasons.length > 0 ? moderation.reasons.join(',') : undefined,
+        motivoRejeicao: estado === 'rejeitada' ? motivo : undefined,
+        motivoOcultacao: estado === 'hidden' ? motivo : undefined,
         eventId,
         likesCount: 0,
         comentariosCount: 0,
-      });
+      }));
 
       if (moderation.decision === 'needs_review' || moderation.decision === 'auto_hide') {
         await eventBus.publishWithOutbox(
@@ -208,6 +253,9 @@ feedPostRoutes.patch(
   zValidator('json', ModerarPostSchema),
   async (c) => {
     const id = c.req.param('id');
+    if (!id) {
+      return c.json({ error: 'Id do post é obrigatório' }, 400);
+    }
     const payload = c.req.valid('json');
 
     try {
@@ -216,15 +264,21 @@ feedPostRoutes.patch(
         'populate': 'autor.foto',
         'pagination[pageSize]': '1',
       });
-      const post = lookup.data[0];
+      const post = firstFeedPost(lookup.data);
 
       if (!post) {
         return c.json({ error: 'Post não encontrado' }, 404);
       }
 
+      const motivoLegado = payload.motivoModeracao;
+      const updatePayload = compactPayload({
+        estado: payload.estado,
+        motivoRejeicao: payload.motivoRejeicao ?? (payload.estado === 'rejeitada' ? motivoLegado : undefined),
+        motivoOcultacao: payload.motivoOcultacao ?? (payload.estado === 'hidden' ? motivoLegado : undefined),
+      });
       const updated = await strapiPut<StrapiFeedPost>(
         `/feed-posts/${post.documentId ?? String(post.id)}`,
-        payload,
+        updatePayload,
       );
 
       if (payload.estado === 'aprovada' && post.estado !== 'aprovada') {
@@ -243,6 +297,82 @@ feedPostRoutes.patch(
     } catch (err: unknown) {
       log.error({ err, postId: id }, 'Erro ao moderar post do feed');
       return c.json({ error: 'Erro ao moderar post do feed' }, 502);
+    }
+  },
+);
+
+feedPostRoutes.put(
+  '/:id',
+  verifyJwt,
+  checkRole(['estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin']),
+  zValidator('json', CriarPostPayloadSchema),
+  async (c) => {
+    const id = c.req.param('id');
+    if (!id) {
+      return c.json({ error: 'Id do post é obrigatório' }, 400);
+    }
+    const user = c.get('user');
+    const payload = c.req.valid('json');
+
+    try {
+      const lookup = await strapiGet<StrapiFeedPost>('/feed-posts', {
+        'filters[id][$eq]': id,
+        'populate': 'autor.foto',
+        'pagination[pageSize]': '1',
+      });
+      const post = firstFeedPost(lookup.data);
+
+      if (!post) {
+        return c.json({ error: 'Post não encontrado' }, 404);
+      }
+
+      if (post.autor?.userId !== user.id && user.role !== 'super_admin' && user.role !== 'moderador') {
+        return c.json({ error: 'Não tem permissões para editar este post' }, 403);
+      }
+
+      const updated = await strapiPut<StrapiFeedPost>(
+        `/feed-posts/${post.documentId ?? String(post.id)}`,
+        { corpo: payload.corpo, mediaUrls: payload.mediaUrls ?? [] },
+      );
+
+      return c.json(mapFeedPost({ ...updated.data, autor: post.autor }));
+    } catch (err: unknown) {
+      log.error({ err, postId: id }, 'Erro ao editar post do feed');
+      return c.json({ error: 'Erro ao editar post do feed' }, 502);
+    }
+  },
+);
+
+feedPostRoutes.post(
+  '/:id/share',
+  verifyJwt,
+  async (c) => {
+    const id = c.req.param('id');
+    if (!id) {
+      return c.json({ error: 'Id do post é obrigatório' }, 400);
+    }
+
+    try {
+      const lookup = await strapiGet<StrapiFeedPost>('/feed-posts', {
+        'filters[id][$eq]': id,
+        'pagination[pageSize]': '1',
+      });
+      const post = firstFeedPost(lookup.data);
+
+      if (!post) {
+        return c.json({ error: 'Post não encontrado' }, 404);
+      }
+
+      const currentShares = post.sharesCount ?? 0;
+      await strapiPut<StrapiFeedPost>(
+        `/feed-posts/${post.documentId ?? String(post.id)}`,
+        { sharesCount: currentShares + 1 },
+      );
+
+      return c.json({ success: true, sharesCount: currentShares + 1 });
+    } catch (err: unknown) {
+      log.error({ err, postId: id }, 'Erro ao partilhar post do feed');
+      return c.json({ error: 'Erro ao partilhar post do feed' }, 502);
     }
   },
 );

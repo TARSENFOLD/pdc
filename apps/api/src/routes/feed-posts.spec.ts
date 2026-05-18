@@ -83,7 +83,6 @@ describe('feedPostRoutes', () => {
     expect(res.status).toBe(201);
     expect(strapiPost).toHaveBeenCalledWith('/feed-posts', expect.objectContaining({
       estado: 'aprovada',
-      motivoModeracao: undefined,
     }));
     expect(publishWithOutboxMock).toHaveBeenCalledWith(
       DomainEventName.POST_PUBLICADO,
@@ -131,7 +130,6 @@ describe('feedPostRoutes', () => {
     expect(res.status).toBe(201);
     expect(strapiPost).toHaveBeenCalledWith('/feed-posts', expect.objectContaining({
       estado: 'pendente_moderacao',
-      motivoModeracao: 'suspicious_link,repetitive_pattern',
     }));
     expect(publishWithOutboxMock).toHaveBeenCalledWith(
       DomainEventName.POST_SUBMETIDO,

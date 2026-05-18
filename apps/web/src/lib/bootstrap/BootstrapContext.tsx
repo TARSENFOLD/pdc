@@ -1,17 +1,9 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { http } from '@/lib/api/http';
 import type { BootstrapResponse } from '@pdc/shared';
 import BootstrapErrorScreen from '@/components/layout/BootstrapErrorScreen';
-
-interface BootstrapContextValue {
-  data: BootstrapResponse | null;
-  isLoading: boolean;
-  error: Error | null;
-  refresh: () => Promise<void>;
-}
-
-export const BootstrapContext = createContext<BootstrapContextValue | null>(null);
+import { BootstrapContext } from './bootstrap-context';
 
 async function fetchBootstrap(): Promise<BootstrapResponse> {
   return await http.get<BootstrapResponse>('/bootstrap');
@@ -61,10 +53,4 @@ export function BootstrapProvider({ children }: { children: ReactNode }) {
       {children}
     </BootstrapContext.Provider>
   );
-}
-
-export function useBootstrap(): BootstrapContextValue {
-  const ctx = useContext(BootstrapContext);
-  // Em vez de crashar, devolvemos um estado de "Loading" seguro para evitar erros de renderização
-  return ctx ?? { data: null, isLoading: true, error: null, refresh: async () => {} };
 }

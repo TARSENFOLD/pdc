@@ -16,12 +16,17 @@ export const FeatureRegistrySchema = z.record(z.string(), FeatureStatusSchema);
 // O Strapi apenas controla o estado ON/OFF em runtime.
 export const Features = {
   'DISCUSSIONS_ENABLED': 'STABLE',
-  'PROFILE_V2_PUBLIC': 'ROLLOUT',
+  // PROD-A-T06: preservado como STABLE por 30 dias para audit trail; remover em PROD-E.
+  'PROFILE_V2_PUBLIC': 'STABLE',
   'REPUTATION_VISIBLE': 'BETA',
   'AUTO_ACHIEVEMENTS': 'BETA',
   'TINA_GLOBAL_ASSISTANT': 'BETA',
+  'SIM_TIPO_2_PUBLISH_ENABLED': 'STABLE',
+  'SIM_TIPO_3_PUBLISH_ENABLED': 'STABLE',
   'SIM_TIPO_3': 'ALPHA',
   'MENSAGENS_INBOX': 'HIDDEN', // Fachada, não expor no bootstrap
+  'APPROVAL_ENFORCEMENT_ENABLED': 'BETA',
+  'OAUTH_ONBOARDING_REQUIRED': 'STABLE',
   
   // Wave 4 - Elite Hubs (Sovereign Infrastructure)
   'HUB_LEARN': 'STABLE',

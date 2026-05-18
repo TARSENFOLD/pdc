@@ -1,5 +1,6 @@
 import { env } from './lib/env.js';
-import { initSentry } from './middleware/sentry.js';
+import { initSentry, sentryUserContext } from './middleware/sentry.js';
+import { captureException } from '@sentry/node';
 import { serve } from '@hono/node-server';
 import type { Server } from 'node:http';
 import pino from 'pino';
@@ -14,6 +15,7 @@ import { logger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
 import { securityMiddleware as security } from './middleware/security.js';
 import { noStoreCache } from './middleware/cache.js';
+import { rateLimitGlobalIp } from './middleware/rateLimit.js';
 
 // Rotas
 import { authRoutes } from './routes/auth.js';
@@ -56,6 +58,8 @@ import { bootstrapRoutes } from './routes/bootstrap.js';
 import { dashboardRoutes } from './routes/dashboard/index.js';
 import { landingRoutes } from './routes/landing.js';
 import { healthRoutes } from './routes/health.js';
+import { adminAprovacoesRoutes } from './routes/admin/aprovacoes.js';
+import { homeRoutes } from './routes/home.js';
 
 import { socketService } from './modules/realtime/socket.service.js';
 import { tinaService } from './modules/tina/tina.service.js';
@@ -74,12 +78,32 @@ app.use('*', cors({
     : [env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:5174', 'capacitor://localhost', 'ionic://localhost'],
   credentials: true,
 }));
+app.use('*', rateLimitGlobalIp);
 app.use('*', logger());
 app.use('*', secureHeaders());
 app.use('*', noStoreCache);
+app.use('*', sentryUserContext);
 app.use('/auth/*', security);
 
+function resolveHttpErrorStatus(err: Error): 400 | 401 | 403 | 404 | 409 | 422 | 429 | 500 {
+  const candidate = err as Error & { status?: unknown; statusCode?: unknown };
+  const status = typeof candidate.status === 'number' ? candidate.status : candidate.statusCode;
+  if (typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599) {
+    return status as 400 | 401 | 403 | 404 | 409 | 422 | 429 | 500;
+  }
+  return 500;
+}
+
+app.onError((err, c) => {
+  captureException(err);
+  const status = resolveHttpErrorStatus(err);
+  log.error({ err, path: c.req.path, status }, 'Unhandled error');
+  const message = status === 500 ? 'Internal Server Error' : err.message || 'Erro na requisição';
+  return c.json({ error: message }, status);
+});
+
 // ─── ROTAS ───
+app.route('/app/home', homeRoutes);
 app.route('/bootstrap', bootstrapRoutes);
 app.route('/landing', landingRoutes);
 app.route('/health', healthRoutes);
@@ -127,6 +151,7 @@ app.route('/estudante', estudanteRoutes);
 app.route('/ratings', ratingRoutes);
 app.route('/comments', commentsRoutes);
 app.route('/moderacao', moderacaoRoutes);
+app.route('/admin/aprovacoes', adminAprovacoesRoutes);
 app.route('/admin', adminRoutes);
 app.route('/comite', comiteRoutes);
 app.route('/vinculos', vinculoRoutes);
@@ -172,6 +197,7 @@ import { achievementHook } from './modules/hooks/achievement.hook.js';
 import { notifyHook } from './modules/hooks/notify.hook.js';
 import { matchHook } from './modules/hooks/match.hook.js';
 import { behaviorHook } from './modules/hooks/behavior.hook.js';
+import { registerApprovalCacheInvalidator } from './middleware/requireApproved.js';
 
 // Registo de G15 Hooks (Músculo do Oráculo)
 eventBus.registerHook(rankingHook);
@@ -180,6 +206,8 @@ eventBus.registerHook(matchHook);
 eventBus.registerHook(behaviorHook);
 eventBus.registerHook(achievementHook);
 eventBus.registerHook(notifyHook);
+
+registerApprovalCacheInvalidator();
 
 socketService.init(server as Server);
 tinaService.indexarKnowledge().catch((err: unknown) => { 
