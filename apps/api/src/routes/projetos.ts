@@ -29,17 +29,25 @@ interface StrapiProjeto extends Omit<Projeto, 'autor'> {
 
 type OptionalUser = NonNullable<OptionalAuthVariables['user']>;
 
+function normalizeAutorId(projeto: StrapiProjeto): StrapiProjeto {
+  if (projeto.autor?.id !== undefined) {
+    return { ...projeto, autor: { ...projeto.autor, id: String(projeto.autor.id) } };
+  }
+  return projeto;
+}
+
 function filterCoreField(projeto: StrapiProjeto, perfilId: string | null): Partial<StrapiProjeto> {
-  const isAutor = perfilId !== null && String(projeto.autor?.id) === perfilId;
-  const hasApprovedAccess = perfilId && projeto.acessoCoreACL?.some(
+  const normalized = normalizeAutorId(projeto);
+  const isAutor = perfilId !== null && normalized.autor?.id === perfilId;
+  const hasApprovedAccess = perfilId && normalized.acessoCoreACL?.some(
     (entry) => entry.perfilId === perfilId && entry.estado === 'aprovado'
   );
 
   if (isAutor || hasApprovedAccess) {
-    return projeto;
+    return normalized;
   }
 
-  const { core, ...publicData } = projeto;
+  const { core, ...publicData } = normalized;
   void core;
   return publicData;
 }
