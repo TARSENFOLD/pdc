@@ -3,6 +3,7 @@ name: Deploy Edge Worker
 on:
   push:
     branches:
+      - principal
       - main
       - develop
     paths:

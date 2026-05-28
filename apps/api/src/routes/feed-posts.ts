@@ -159,18 +159,23 @@ feedPostRoutes.get('/', zValidator('query', listQuerySchema), async (c) => {
 
 feedPostRoutes.get('/:id', verifyJwt, async (c) => {
   const id = c.req.param('id');
+  if (!id) {
+    return c.json({ error: 'Post não encontrado' }, 404);
+  }
+
   try {
     const res = await strapiGet<StrapiFeedPost>('/feed-posts', {
       'filters[id][$eq]': id,
       'populate': 'autor.foto',
       'pagination[pageSize]': '1',
     });
-    
-    if (!res.data.length) {
+
+    const [post] = res.data;
+    if (!post) {
       return c.json({ error: 'Post não encontrado' }, 404);
     }
-    
-    return c.json(mapFeedPost(res.data[0]));
+
+    return c.json(mapFeedPost(post));
   } catch (err: unknown) {
     log.error({ err, postId: id }, 'Erro ao carregar o post');
     return c.json({ error: 'Erro ao carregar o post' }, 502);
@@ -333,6 +338,9 @@ feedPostRoutes.post(
   verifyJwt,
   async (c) => {
     const id = c.req.param('id');
+    if (!id) {
+      return c.json({ error: 'Post não encontrado' }, 404);
+    }
 
     try {
       const lookup = await strapiGet<StrapiFeedPost>('/feed-posts', {
