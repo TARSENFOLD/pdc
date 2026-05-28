@@ -17,7 +17,7 @@ enabled = true
 # ── Staging (branch: develop) ────────────────────────────────────────────────
 [env.staging]
 name = "pdc-v2-edge-ingestor-staging"
-routes = [{ pattern = "edge-staging.usepdc.com/*", custom_domain = true }]
+routes = [{ pattern = "edge-staging.usepdc.com", custom_domain = true }]
 
 [env.staging.vars]
 BFF_URL = "https://bff-staging.usepdc.com"
@@ -30,7 +30,7 @@ BFF_URL = "https://bff-staging.usepdc.com"
 # ── Production (branch: main) ────────────────────────────────────────────────
 [env.production]
 name = "pdc-v2-edge-ingestor"
-routes = [{ pattern = "edge.usepdc.com/*", custom_domain = true }]
+routes = [{ pattern = "edge.usepdc.com", custom_domain = true }]
 
 [env.production.vars]
 BFF_URL = "https://bff.usepdc.com"
