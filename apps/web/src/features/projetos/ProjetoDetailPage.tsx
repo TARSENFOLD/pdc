@@ -8,7 +8,7 @@ import { QuietCard } from '@/components/ui/quiet/QuietCard';
 import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 import { DenunciarButton } from '@/components/ui/DenunciarButton';
 import { SEOHead } from '@/components/layout/SEOHead';
-import { toast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/useToast';
 import { Spinner, Badge, Button, Avatar, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
 import {
   ThumbsUp, Star, ChevronRight, Layers,
@@ -36,6 +36,7 @@ export function ProjetoDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { toast } = useToast();
 
   const { data: raw, isLoading, isError } = useQuery({
     queryKey: ['projetos', id ?? ''],
