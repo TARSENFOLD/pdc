@@ -8,10 +8,11 @@ import { QuietCard } from '@/components/ui/quiet/QuietCard';
 import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 import { DenunciarButton } from '@/components/ui/DenunciarButton';
 import { SEOHead } from '@/components/layout/SEOHead';
+import { toast } from '@/hooks/useToast';
 import { Spinner, Badge, Button, Avatar, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
 import {
   ThumbsUp, Star, ChevronRight, Layers,
-  Users, GraduationCap, Banknote, MessageCircle, ExternalLink, GitBranch,
+  Users, GraduationCap, Banknote, MessageCircle, ExternalLink, GitBranch, Lock,
 } from 'lucide-react';
 import type { ProjetoModo } from '@pdc/shared';
 
@@ -284,7 +285,7 @@ export function ProjetoDetailPage() {
             </Link>
             {canDelete && (
               <Button
-                variant="destructive"
+                variant="danger"
                 className="rounded-sm"
                 isLoading={deleteMutation.isPending}
                 onClick={() => { if (confirm('Eliminar projeto?')) deleteMutation.mutate(); }}

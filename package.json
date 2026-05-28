@@ -18,6 +18,7 @@
   "scripts": {
     "prepare": "husky",
     "build": "npm run build --workspaces --if-present",
+    "build:web": "npm run build -w packages/shared && npm run build -w apps/web",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
