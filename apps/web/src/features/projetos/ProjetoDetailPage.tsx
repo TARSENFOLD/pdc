@@ -36,7 +36,7 @@ export function ProjetoDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { toast } = useToast();
+  const { toast: showToast } = useToast();
 
   const { data: raw, isLoading, isError } = useQuery({
     queryKey: ['projetos', id ?? ''],
@@ -65,10 +65,10 @@ export function ProjetoDetailPage() {
   const accessRequestMutation = useMutation({
     mutationFn: () => projetosApi.requestAccess(id ?? ''),
     onSuccess: () => {
-      toast({ title: 'Pedido de acesso enviado' });
+      showToast({ title: 'Pedido de acesso enviado' });
       void qc.invalidateQueries({ queryKey: ['projetos', id] });
     },
-    onError: () => toast({ title: 'Erro ao enviar pedido de acesso', variant: 'error' }),
+    onError: () => showToast({ title: 'Erro ao enviar pedido de acesso', variant: 'error' }),
   });
 
   const { data: likeStatus } = useQuery({
