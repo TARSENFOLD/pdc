@@ -55,6 +55,7 @@ export function CourseBaseInfo({ register, errors, onCapaUploaded }: Props) {
              onSuccess={onCapaUploaded} 
              accept="image/jpeg, image/png, image/webp" 
              maxSizeMB={5} 
+             entityType="curso-capa"
            />
            {/* Campo oculto que guardará a URL final */}
            <input type="hidden" {...register('capaUrl')} />

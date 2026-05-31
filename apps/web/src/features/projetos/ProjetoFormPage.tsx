@@ -13,6 +13,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
 
+function emptyStringToUndefined(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : trimmed;
+}
+
 export function ProjetoFormPage() {
   const { id } = useParams<{ id: string }>();
   const projetoId = id ?? '';
@@ -36,7 +42,6 @@ export function ProjetoFormPage() {
     defaultValues: {
       titulo: '',
       abstract: '',
-      core: '',
       area: 'TECNOLOGIA',
       modos: ['exposicao'],
       visibilidade: 'publico',
@@ -169,6 +174,7 @@ export function ProjetoFormPage() {
       }
     >
       <BuilderSection
+        value="identidade"
         title="Identidade do Projeto"
         description="Título, área e visibilidade." 
       >
@@ -201,6 +207,7 @@ export function ProjetoFormPage() {
       </BuilderSection>
 
       <BuilderSection
+        value="pitch"
         title="Pitch Público (Abstract)"
         description="Resumo visível a todos no catálogo. Capta a atenção do ecossistema."
       >
@@ -211,7 +218,7 @@ export function ProjetoFormPage() {
             {...register('abstract')}
           />
           {errors.abstract && <p className="text-xs text-accent-danger">{errors.abstract.message}</p>}
-          <BuilderUploadZone onUploadComplete={(urls) => {
+          <BuilderUploadZone entityType="projeto" onUploadComplete={(urls) => {
             if (urls.length > 0 && urls[0]) {
               setValue('capaUrl', urls[0]);
             }
@@ -220,6 +227,7 @@ export function ProjetoFormPage() {
       </BuilderSection>
 
       <BuilderSection
+        value="core"
         title="Núcleo Técnico (Core)"
         description="Documentação técnica e detalhes. Acesso controlado — só pessoas autorizadas verão esta secção."
       >
@@ -231,13 +239,14 @@ export function ProjetoFormPage() {
           <textarea 
             className="flex min-h-[200px] w-full rounded-sm border border-accent/20 bg-accent/5 px-4 py-3 text-sm focus:border-accent outline-none transition-all"
             placeholder="Documentação técnica, roadmap, ou links privados..."
-            {...register('core')}
+            {...register('core', { setValueAs: emptyStringToUndefined })}
           />
           {errors.core && <p className="text-xs text-accent-danger">{errors.core.message}</p>}
         </div>
       </BuilderSection>
 
       <BuilderSection
+        value="modos"
         title="Modos de Atuação"
         description="Como o projeto interage com outros talentos e mentores."
       >
@@ -267,6 +276,7 @@ export function ProjetoFormPage() {
 
       {isEdit && (
         <BuilderSection
+          value="acl"
           title="Gestão de Acessos (ACL)"
           description="Pedidos de acesso ao núcleo técnico do teu projeto."
         >
@@ -300,8 +310,8 @@ export function ProjetoFormPage() {
       >
         <div className="space-y-6">
            <div className="grid grid-cols-2 gap-4">
-              <Input label="URL Repositório" {...register('repoUrl')} placeholder="ex: github.com/..." />
-              <Input label="URL Demo" {...register('demoUrl')} placeholder="ex: ver-demo.vercel.app" />
+              <Input label="URL Repositório" {...register('repoUrl', { setValueAs: emptyStringToUndefined })} placeholder="https://github.com/..." />
+              <Input label="URL Demo" {...register('demoUrl', { setValueAs: emptyStringToUndefined })} placeholder="https://demo.exemplo.ao" />
            </div>
            <div className="p-4 rounded-sm bg-recessed/30 border border-ink-tertiary/10 italic text-sm text-ink-secondary">
              Seletor de Tags avançado disponível em breve.
@@ -335,5 +345,3 @@ export function ProjetoFormPage() {
     </>
   );
 }
-
-

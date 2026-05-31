@@ -166,14 +166,18 @@ describe('GET /app/home', () => {
     expect(redis.set).not.toHaveBeenCalled();
   });
 
-  it('Strapi /perfis 502: retorna 502 com erro semântico', async () => {
+  it('Strapi down: degradação graceful — retorna 200 com estrutura vazia', async () => {
+    // A rota usa .catch() individuais em cada Promise.all para resiliência.
+    // Quando Strapi está inacessível, o home retorna 200 com dados vazios
+    // em vez de 502, evitando erro visível ao utilizador (graceful degradation).
     vi.mocked(strapiGet).mockRejectedValue(new Error('Strapi 502'));
 
     const res = await homeRoutes.request(authRequest());
 
-    expect(res.status).toBe(502);
-    const body = await res.json() as { error: string };
-    expect(body.error).toMatch(/indisponível|unavailable|serviço/i);
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body).toHaveProperty('recentActivitiesCursos');
+    expect(body).toHaveProperty('recentActivitiesSimulacoes');
   });
 
   it('user novo sem inscrições/tentativas: retorna 200 com arrays vazios', async () => {

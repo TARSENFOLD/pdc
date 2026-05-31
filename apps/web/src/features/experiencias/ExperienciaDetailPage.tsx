@@ -1,14 +1,14 @@
-import { useParams, Navigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { experienciasApi } from '@/lib/api/experiencias';
 import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
 import { Spinner, Badge, LikeButton, BookmarkButton, RatingStars, Card, Button, EmptyState } from '@/components/ui';
 import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 import { SEOHead } from '@/components/layout/SEOHead';
-import { 
-  Building2, 
-  Calendar, 
-  BookOpen, 
+import {
+  Building2,
+  Calendar,
+  BookOpen,
   ChevronRight,
   AlertCircle
 } from 'lucide-react';
@@ -16,6 +16,8 @@ import { motion } from 'motion/react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { APPLE_SPRING } from '@/lib/animations';
 import { useTelemetry } from '@/hooks/useTelemetry';
+import { useAuth } from '@/lib/auth/auth-context';
+import { toast } from '@/hooks/useToast';
 import type { Experiencia } from '@pdc/shared';
 
 // ─── Sub-component: Curriculum Section ──────────────────────────────────────────
@@ -66,6 +68,8 @@ function CurriculumSection({ discipline, index, onDwell }: {
 export function ExperienciaDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { track } = useTelemetry();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   
   const { data: exp, isLoading, isError } = useQuery<Experiencia>({
     queryKey: ['experiencias', id ?? ''],
@@ -101,9 +105,27 @@ export function ExperienciaDetailPage() {
     track('experiencia.timeline_click', { experienceId: id, discipline: discId, dwellTime: ms });
   }, [id, track]);
 
+  // BUG-009: botão "Inscrever Agora" não tinha handler nem mutação
+  const inscricaoMutation = useMutation({
+    mutationFn: () => experienciasApi.inscrever(id ?? ''),
+    onSuccess: () => {
+      toast({ title: 'Inscrição realizada com sucesso!' });
+    },
+    onError: () => toast({ title: 'Falha ao inscrever. Tenta novamente.', variant: 'error' }),
+  });
+
+  const handleInscrever = () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    inscricaoMutation.mutate();
+  };
+
   if (!id) return <Navigate to="/explorar" replace />;
   if (isLoading) return <div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>;
-  if (isError || !exp) return <div className="p-20 text-center"><EmptyState icon={AlertCircle} variant="error" title="Não encontrado" description="Esta experiência curricular não foi localizada no Oráculo." /></div>;
+  // BUG-010: "Oráculo" é copy interna banida pela CLAUDE.md § 6
+  if (isError || !exp) return <div className="p-20 text-center"><EmptyState icon={AlertCircle} variant="error" title="Não encontrado" description="Esta experiência curricular não foi encontrada." /></div>;
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 pb-20 animate-in fade-in duration-1000">
@@ -150,7 +172,14 @@ export function ExperienciaDetailPage() {
                      <p className="text-sm font-bold">{exp.dataInicio ? new Date(exp.dataInicio).toLocaleDateString('pt-AO') : 'Data a anunciar'}</p>
                   </div>
                </div>
-               <Button className="w-full h-14 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs">Inscrever Agora</Button>
+               {/* BUG-009: onClick e estado de loading adicionados */}
+               <Button
+                 className="w-full h-14 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs"
+                 onClick={handleInscrever}
+                 disabled={inscricaoMutation.isPending || inscricaoMutation.isSuccess}
+               >
+                 {inscricaoMutation.isPending ? 'A inscrever...' : inscricaoMutation.isSuccess ? 'Inscrito' : 'Inscrever Agora'}
+               </Button>
             </Card>
          </aside>
       </div>

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import type React from 'react';
@@ -168,12 +168,21 @@ function RecomendacoesSidebar() {
 function StarRatingWidget({ expId }: { expId: string }) {
   const [hover, setHover] = useState(0);
   const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: stats } = useQuery({
     queryKey: ['rating-stats', 'experiencia', expId],
     queryFn: () => ratingsApi.getStats('experiencia', expId),
     enabled: isAuthenticated,
     staleTime: 2 * 60 * 1000,
+  });
+
+  // BUG-006: mutação de rating em falta — stars sem onClick não registavam nada
+  const ratingMutation = useMutation({
+    mutationFn: (valor: number) => ratingsApi.create({ targetType: 'experiencia', targetId: expId, valor }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['rating-stats', 'experiencia', expId] });
+    },
   });
 
   if (!isAuthenticated || !stats) return null;
@@ -191,6 +200,7 @@ function StarRatingWidget({ expId }: { expId: string }) {
           }`}
           onMouseEnter={() => { setHover(star); }}
           onMouseLeave={() => { setHover(0); }}
+          onClick={() => { ratingMutation.mutate(star); }}
         />
       ))}
     </div>

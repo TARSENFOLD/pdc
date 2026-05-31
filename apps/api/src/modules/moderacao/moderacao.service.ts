@@ -24,6 +24,7 @@ const RejeitarPayloadSchema = z.object({
 
 interface StrapiConteudoItem {
   id: string | number;
+  documentId?: string;
   titulo?: string;
   estado?: string;
   createdAt?: string;
@@ -92,7 +93,8 @@ export const moderacaoService = {
     const res = await strapiGet<StrapiConteudoItem>(`/${col}`, {
       'filters[id][$eq]': id,
       'fields[0]': 'id',
-      'fields[1]': 'estado',
+      'fields[1]': 'documentId',
+      'fields[2]': 'estado',
       'pagination[pageSize]': '1',
     });
 
@@ -101,7 +103,7 @@ export const moderacaoService = {
       throw Object.assign(new Error('Conteúdo não encontrado'), { status: 404 });
     }
 
-    await strapiPut<unknown>(`/${col}/${id}`, {
+    await strapiPut<unknown>(`/${col}/${String(item.documentId ?? item.id)}`, {
       estado: 'approved',
     });
 
@@ -128,7 +130,8 @@ export const moderacaoService = {
     const res = await strapiGet<StrapiConteudoItem>(`/${col}`, {
       'filters[id][$eq]': id,
       'fields[0]': 'id',
-      'fields[1]': 'estado',
+      'fields[1]': 'documentId',
+      'fields[2]': 'estado',
       'pagination[pageSize]': '1',
     });
 
@@ -137,7 +140,7 @@ export const moderacaoService = {
       throw Object.assign(new Error('Conteúdo não encontrado'), { status: 404 });
     }
 
-    await strapiPut<unknown>(`/${col}/${id}`, {
+    await strapiPut<unknown>(`/${col}/${String(item.documentId ?? item.id)}`, {
       estado: 'draft',
       motivoRejeicao: motivo,
       rejeitadoEm: new Date().toISOString(),

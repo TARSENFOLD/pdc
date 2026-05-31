@@ -1,11 +1,12 @@
-import { UploadResultSchema, type UploadResult } from '@pdc/shared';
+import { UploadResultSchema, type MediaEntityType, type UploadResult } from '@pdc/shared';
 
 const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
 
 export const mediaApi = {
-  upload: async (file: File): Promise<UploadResult> => {
+  upload: async (file: File, entityType: MediaEntityType = 'generic'): Promise<UploadResult> => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('entityType', entityType);
 
     const response = await fetch(`${BASE_URL}/media/upload`, {
       method: 'POST',

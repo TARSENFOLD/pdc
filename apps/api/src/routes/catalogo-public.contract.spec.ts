@@ -20,6 +20,10 @@ vi.mock('../modules/auth/auth.middleware.js', () => ({
   optionalJwt: async (_c: Context, next: Next) => {
     await next();
   },
+  verifyJwt: async (c: Context, next: Next) => {
+    c.set('user', { id: 'user-1', role: 'estudante' });
+    await next();
+  },
 }));
 
 vi.mock('../middleware/cache.js', () => ({
@@ -67,6 +71,17 @@ describe('Catálogo público contracts', () => {
     await expect(res.json()).resolves.toMatchObject({
       data: [{ id: 'curso-approved', titulo: 'Curso aprovado' }],
     });
+  });
+
+  it('aplica busca textual do catálogo de cursos no BFF', async () => {
+    vi.mocked(strapiGet).mockResolvedValue(listResponse([]));
+
+    const res = await app.request('/catalogo/cursos?q=engenharia&page=1&pageSize=12');
+
+    expect(res.status).toBe(200);
+    expect(strapiGet).toHaveBeenCalledWith('/cursos', expect.objectContaining({
+      'filters[titulo][$containsi]': 'engenharia',
+    }));
   });
 
   it('devolve 502 sem mascarar falha de persistência do catálogo', async () => {

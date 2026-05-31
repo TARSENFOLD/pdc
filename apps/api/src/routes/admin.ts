@@ -3,9 +3,10 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
-import { strapiGet, strapiPost, strapiPutRaw } from '../modules/strapi/strapi.client.js';
+import { strapiGet, strapiPutRaw } from '../modules/strapi/strapi.client.js';
 import { RoleSchema } from '@pdc/shared';
 import { toPaginatedResponse } from './pagination.js';
+import { writeAuditLog } from '../middleware/audit.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -52,12 +53,13 @@ adminRoutes.put(
     try {
       const data = await strapiPutRaw<unknown>(`/users/${id}`, { role });
       
-      await strapiPost('/audit-logs', { 
-        userId: c.get('user').id, 
+      await writeAuditLog({
+        actor: c.get('user'),
         accao: 'admin_alterar_role', 
         recurso: `/users/${id}`, 
-        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown', 
-        timestamp: new Date().toISOString() 
+        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
+        userAgent: c.req.header('user-agent'),
+        detalhes: { role },
       }).catch(() => {});
       
       return c.json(data);
@@ -144,12 +146,12 @@ adminRoutes.put(
         bloqueado: false,
         suspendidoEm: null,
       });
-      await strapiPost('/audit-logs', {
-        userId: c.get('user').id,
+      await writeAuditLog({
+        actor: c.get('user'),
         accao: 'admin_reativar_utilizador',
         recurso: `/users/${String(id)}`,
         ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
-        timestamp: new Date().toISOString(),
+        userAgent: c.req.header('user-agent'),
       }).catch(() => {});
       return c.json(data);
     } catch (err) {

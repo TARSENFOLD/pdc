@@ -23,23 +23,47 @@ const projetoQuerySchema = z.object({
 });
 
 interface StrapiProjeto extends Omit<Projeto, 'autor'> {
-  autor?: { id: string; userId: string };
+  autor?: { id: string | number; userId: string };
   acessoCoreACL?: ACLEntry[];
 }
 
+type OptionalUser = NonNullable<OptionalAuthVariables['user']>;
+
+function normalizeAutorId(projeto: StrapiProjeto): StrapiProjeto {
+  if (projeto.autor?.id !== undefined) {
+    return { ...projeto, autor: { ...projeto.autor, id: String(projeto.autor.id) } };
+  }
+  return projeto;
+}
+
 function filterCoreField(projeto: StrapiProjeto, perfilId: string | null): Partial<StrapiProjeto> {
-  const isAutor = perfilId !== null && projeto.autor?.id === perfilId;
-  const hasApprovedAccess = perfilId && projeto.acessoCoreACL?.some(
+  const normalized = normalizeAutorId(projeto);
+  const isAutor = perfilId !== null && normalized.autor?.id === perfilId;
+  const hasApprovedAccess = perfilId && normalized.acessoCoreACL?.some(
     (entry) => entry.perfilId === perfilId && entry.estado === 'aprovado'
   );
 
   if (isAutor || hasApprovedAccess) {
-    return projeto;
+    return normalized;
   }
 
-  const { core, ...publicData } = projeto;
+  const { core, ...publicData } = normalized;
   void core;
   return publicData;
+}
+
+function firstProjeto(data: StrapiProjeto[] | StrapiProjeto): StrapiProjeto | null {
+  return Array.isArray(data) ? data[0] ?? null : data;
+}
+
+function canModerateProjetos(user: OptionalUser | undefined): boolean {
+  return user?.role === 'moderador' || user?.role === 'super_admin';
+}
+
+function canViewProjeto(projeto: StrapiProjeto, perfilId: string | null, user: OptionalUser | undefined): boolean {
+  const isOwner = perfilId !== null && String(projeto.autor?.id) === perfilId;
+  if (isOwner || canModerateProjetos(user)) return true;
+  return projeto.estado === 'published' && projeto.visibilidade !== 'privado';
 }
 
 async function resolvePerfilId(userId: string | undefined): Promise<string | null> {
@@ -55,20 +79,22 @@ async function resolvePerfilId(userId: string | undefined): Promise<string | nul
 projetoRoutes.get('/', optionalJwt, zValidator('query', projetoQuerySchema), async (c) => {
   try {
     const q = c.req.valid('query');
-    const userId = c.get('user')?.id;
-    const perfilId = await resolvePerfilId(userId);
+    const user = c.get('user');
+    const perfilId = await resolvePerfilId(user?.id);
+    const canModerate = canModerateProjetos(user);
 
     const params: Record<string, string> = {
-      populate: 'autor,media',
+      populate: 'autor.foto,media',
       sort: 'createdAt:desc',
     };
     if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
     if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
-    if (q.estado) {
+    if (q.estado && canModerate) {
       params['filters[estado][$eq]'] = q.estado;
     } else {
       params['filters[estado][$eq]'] = 'published';
     }
+    if (!canModerate) params['filters[visibilidade][$eq]'] = 'publico';
     if (q.area) params['filters[area][$eq]'] = q.area;
     if (q.modos) params['filters[modos][$containsi]'] = q.modos;
 
@@ -103,15 +129,16 @@ projetoRoutes.get('/:id', optionalJwt, async (c) => {
   const id = c.req.param('id');
   if (!id) return c.json({ error: 'Projeto não encontrado' }, 404);
   try {
-    const userId = c.get('user')?.id;
-    const perfilId = await resolvePerfilId(userId);
+    const user = c.get('user');
+    const perfilId = await resolvePerfilId(user?.id);
 
     const res = await strapiGet<StrapiProjeto>(`/projetos/${id}`, {
-      populate: 'autor,media',
+      populate: 'autor.foto,media',
     });
 
-    const project = Array.isArray(res.data) ? res.data[0] : res.data;
+    const project = firstProjeto(res.data);
     if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
+    if (!canViewProjeto(project, perfilId, user)) return c.json({ error: 'Projeto não encontrado' }, 404);
 
     return c.json({ data: [filterCoreField(project, perfilId)] });
   } catch {
@@ -182,7 +209,7 @@ projetoRoutes.put('/:id',
       if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
 
       const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-      const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+      const project = firstProjeto(resGet.data);
       if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
       if (project.autor?.userId !== userId) {
@@ -208,7 +235,7 @@ projetoRoutes.post('/:id/solicitar-acesso', verifyJwt, async (c) => {
     if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
 
     const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-    const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+    const project = firstProjeto(resGet.data);
     if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
     const acl = project.acessoCoreACL ?? [];
@@ -253,7 +280,7 @@ projetoRoutes.patch('/:id/acl',
 
     try {
       const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-      const project = resGet.data[0];
+      const project = firstProjeto(resGet.data);
       if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
       if (project.autor?.userId !== userId) {
@@ -267,7 +294,7 @@ projetoRoutes.patch('/:id/acl',
       const entry = acl[entryIdx];
       if (!entry) return c.json({ error: 'Erro interno' }, 500);
 
-      const autorId = project.autor.id;
+      const autorId = String(project.autor.id);
       if (!autorId) {
         return c.json({ error: 'Autor do projeto não identificado' }, 502);
       }
@@ -301,7 +328,7 @@ projetoRoutes.get('/:id/votos', optionalJwt, async (c) => {
 
   try {
     const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, {});
-    const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+    const project = firstProjeto(resGet.data);
     if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
     const votos: Voto[] = project.votos ?? [];
@@ -333,7 +360,7 @@ projetoRoutes.post('/:id/votos',
       if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
 
       const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-      const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+      const project = firstProjeto(resGet.data);
       if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
       if (project.autor?.userId === userId) {
@@ -350,10 +377,15 @@ projetoRoutes.post('/:id/votos',
       await strapiPut(`/projetos/${id}`, { votos });
 
       if (tipo === 'endorsement') {
+        const targetId = project.autor?.id;
+        if (targetId === undefined) {
+          return c.json({ error: 'Autor do projeto não identificado' }, 502);
+        }
+
         await eventBus.publishWithOutbox(DomainEventName.PROJETO_ENDORSEMENT_RECEBIDO, {
           projetoId: id,
           autorId: perfilId,
-          targetId: project.autor?.id ?? '',
+          targetId: String(targetId),
         });
       }
 
@@ -379,7 +411,7 @@ projetoRoutes.delete('/:id/votos', verifyJwt, async (c) => {
     if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
 
     const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, {});
-    const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+    const project = firstProjeto(resGet.data);
     if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
     const votos: Voto[] = project.votos ?? [];
@@ -404,7 +436,7 @@ projetoRoutes.delete('/:id', verifyJwt, async (c) => {
 
   try {
     const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-    const existing = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+    const existing = firstProjeto(resGet.data);
 
     if (!existing) return c.json({ error: 'Projeto não identificado' }, 404);
 
@@ -448,7 +480,7 @@ projetoRoutes.patch('/:id/estado',
       if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
 
       const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
-      const project = Array.isArray(resGet.data) ? resGet.data[0] : resGet.data;
+      const project = firstProjeto(resGet.data);
       if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
       const estadoActual = project.estado;
@@ -485,7 +517,14 @@ projetoRoutes.patch('/:id/estado',
       const eventName = eventMap[novoEstado];
       if (eventName) {
         const basePayload = { projetoId: id, titulo: project.titulo, area: project.area };
-        const payload = novoEstado === 'approved'
+        const projectAuthorId = project.autor?.id;
+        if (novoEstado === 'published' && projectAuthorId === undefined) {
+          return c.json({ error: 'Autor do projeto não identificado' }, 502);
+        }
+
+        const payload = novoEstado === 'published'
+          ? { ...basePayload, autorId: String(projectAuthorId) }
+          : novoEstado === 'approved'
           ? { ...basePayload, aprovadorId: perfilId }
           : novoEstado === 'review' || novoEstado === 'archived'
             ? { ...basePayload, autorId: perfilId }

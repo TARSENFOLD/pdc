@@ -34,7 +34,7 @@ export function InstituicaoExperienciasPage() {
             <Link to={`/app/instituicao/editar-experiencia/${exp.id}`}>Editar</Link>
           </Button>
           <Button asChild size="sm" variant="secondary">
-            <Link to={`/experiencias/${exp.id}`}>Ver</Link>
+            <Link to={`/app/experiencias/${exp.id}`}>Ver</Link>
           </Button>
         </div>
       )

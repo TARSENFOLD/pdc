@@ -63,6 +63,7 @@ export const SIDEBAR_CONFIG: SidebarItem[] = [
       { type: 'leaf', slug: 'projetos', to: '/app/projetos', icon: Rocket, roles: ALL_ROLES },
       { type: 'leaf', slug: 'experiencias', to: '/app/experiencias', icon: MapPin, roles: ['estudante'] },
       { type: 'leaf', slug: 'programas', to: '/app/programas', icon: GraduationCap, roles: ['estudante'] },
+      { type: 'leaf', slug: 'meus_programas', to: '/app/meus-programas', icon: GraduationCap, roles: ['estudante'] },
       { type: 'leaf', slug: 'catalogo', to: '/app/explorar', icon: ScrollText, roles: ['estudante'] },
     ],
   },
