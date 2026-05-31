@@ -164,7 +164,7 @@ npm run dev
 
 ```bash
 # Build de todos os pacotes
-npm run build --workspaces
+npm run build:all
 
 # TypeScript check (sem emit)
 node node_modules/typescript/bin/tsc -p apps/api/tsconfig.json --noEmit

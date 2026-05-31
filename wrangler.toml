@@ -1,5 +1,5 @@
 name = "pdc"
-main = "src/index.ts"
+main = "apps/edge/src/index.ts"
 compatibility_date = "2024-04-03"
 compatibility_flags = ["nodejs_compat"]
 
@@ -14,7 +14,10 @@ BFF_URL = "http://localhost:3000"
 [observability]
 enabled = true
 
-# ── Staging (branch: develop) ────────────────────────────────────────────────
+# Cloudflare Workers Builds esta ligado ao root do monorepo.
+# Manter este ficheiro alinhado com apps/edge/wrangler.toml.
+
+# Staging (branch: develop)
 [env.staging]
 name = "pdc-staging"
 routes = [{ pattern = "edge-staging.usepdc.com", custom_domain = true }]
@@ -27,7 +30,7 @@ BFF_URL = "https://bff-staging.usepdc.com"
 #   wrangler secret put UPSTASH_REDIS_REST_TOKEN --env staging
 #   wrangler secret put UPSTASH_REDIS_REST_URL --env staging
 
-# ── Production (branch: main) ────────────────────────────────────────────────
+# Production (branch: main)
 [env.production]
 name = "pdc"
 routes = [{ pattern = "edge.usepdc.com", custom_domain = true }]

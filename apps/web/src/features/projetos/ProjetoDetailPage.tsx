@@ -8,8 +8,8 @@ import { QuietCard } from '@/components/ui/quiet/QuietCard';
 import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 import { DenunciarButton } from '@/components/ui/DenunciarButton';
 import { SEOHead } from '@/components/layout/SEOHead';
+import { useToast } from '@/hooks/useToast';
 import { Spinner, Badge, Button, Avatar, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
-import { toast } from '@/hooks/useToast';
 import {
   ThumbsUp, Star, ChevronRight, Layers,
   Users, GraduationCap, Banknote, MessageCircle, ExternalLink, GitBranch, Lock,
@@ -36,6 +36,7 @@ export function ProjetoDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { toast: showToast } = useToast();
 
   const { data: raw, isLoading, isError } = useQuery({
     queryKey: ['projetos', id ?? ''],
@@ -64,10 +65,10 @@ export function ProjetoDetailPage() {
   const accessRequestMutation = useMutation({
     mutationFn: () => projetosApi.requestAccess(id ?? ''),
     onSuccess: () => {
-      toast({ title: 'Pedido de acesso enviado' });
+      showToast({ title: 'Pedido de acesso enviado' });
       void qc.invalidateQueries({ queryKey: ['projetos', id] });
     },
-    onError: () => toast({ title: 'Erro ao enviar pedido de acesso', variant: 'error' }),
+    onError: () => showToast({ title: 'Erro ao enviar pedido de acesso', variant: 'error' }),
   });
 
   const { data: likeStatus } = useQuery({
