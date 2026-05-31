@@ -15,7 +15,7 @@ on:
 
 env:
   NODE_VERSION: "24"
-  PAGES_PROJECT_NAME: ${{ vars.CF_PAGES_PROJECT_NAME || github.event.repository.name }}
+  PAGES_PROJECT_NAME: ${{ vars.CF_PAGES_PROJECT_NAME }}
 
 jobs:
   deploy:
@@ -42,8 +42,12 @@ jobs:
       - name: Build web app
         run: npm run build -w apps/web
 
+      - name: Skip Cloudflare Pages deploy when project is not configured
+        if: vars.CF_PAGES_PROJECT_NAME == ''
+        run: echo "::notice title=Cloudflare Pages deploy skipped::Set repository variable CF_PAGES_PROJECT_NAME to enable Pages deploy."
+
       - name: Deploy preview to Cloudflare Pages
-        if: github.ref == 'refs/heads/develop'
+        if: vars.CF_PAGES_PROJECT_NAME != '' && github.ref == 'refs/heads/develop'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -52,7 +56,7 @@ jobs:
           command: pages deploy apps/web/dist --project-name=${{ env.PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
 
       - name: Deploy production to Cloudflare Pages
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/principal'
+        if: vars.CF_PAGES_PROJECT_NAME != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/principal')
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

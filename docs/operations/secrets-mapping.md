@@ -25,6 +25,8 @@ Valores reais ficam apenas em secret stores dos providers ou no gestor local aut
 | `VITE_EDGE_URL`                     | web                  | per-environment   | never            | Railway or Cloudflare Pages env            |
 | `VITE_SENTRY_DSN`                   | web                  | per-environment   | on-incident      | Sentry project settings                    |
 | `VITE_APP_VERSION`                  | web                  | per-deploy        | never            | CI release metadata                        |
+| `CF_PAGES_PROJECT_NAME`             | GitHub Actions       | cross-environment | never            | Cloudflare Pages project settings          |
+| `CLOUDFLARE_ACCOUNT_ID`             | GitHub Actions       | cross-environment | on-incident      | Cloudflare dashboard account overview      |
 | `STRAPI_URL`                        | api, scripts         | per-environment   | never            | Railway env                                |
 | `STRAPI_API_TOKEN`                  | api, scripts         | per-environment   | 90d              | Strapi admin panel and Railway env         |
 | `STRAPI_TIMEOUT`                    | api                  | cross-environment | never            | Railway env                                |
@@ -112,3 +114,9 @@ wrangler secret put UPSTASH_REDIS_REST_TOKEN --env production
 O frontend consome o BFF através de `VITE_API_URL`, definida no service `web`.
 
 Importante: `API_URL` é variável interna do service `api` e não altera chamadas de backend feitas pelo browser.
+
+## Cloudflare Pages CI
+
+O workflow `Deploy Web (Cloudflare Pages)` só publica quando a repository variable `CF_PAGES_PROJECT_NAME` está configurada. Não há fallback para o nome do repositório, porque isso mascara um projeto Pages ausente e transforma configuração incompleta em falha de deploy na `main`.
+
+`CLOUDFLARE_ACCOUNT_ID` deve ser o Account ID hexadecimal da Cloudflare, nunca um API token. O token de deploy permanece apenas em `CLOUDFLARE_API_TOKEN`.
