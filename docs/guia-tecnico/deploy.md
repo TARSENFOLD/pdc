@@ -9,7 +9,7 @@ O PDC v2 utiliza uma arquitectura distribuída multi-provider para garantir lat�
 | Componente | Provider | Estratégia | Domínio Prod |
 |------------|----------|------------|--------------|
 | **Frontend (PWA)** | **Cloudflare Pages** | Build Automático (Vite 6) | `usepdc.com` |
-| **Edge (Factos)** | **Cloudflare Workers** | Wrangler / Global Edge (`pdc`) | `edge.usepdc.com` |
+| **Edge (Factos)** | **Cloudflare Workers** | Wrangler / Global Edge (`pdc`, root `wrangler.toml`) | `edge.usepdc.com` |
 | **BFF (Cérebro)** | **Railway** | Dockerfile (Root Context) | `api.usepdc.com` |
 | **CMS (Strapi v5)** | **Railway** | Node.js (Infra Context) | `cms.usepdc.com` |
 | **Base de Dados** | **Neon** | Serverless PostgreSQL 16 | `neon.tech` (Proxy) |

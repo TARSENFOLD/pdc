@@ -1,0 +1,44 @@
+name = "pdc"
+main = "apps/edge/src/index.ts"
+compatibility_date = "2024-04-03"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+BFF_URL = "http://localhost:3000"
+
+# Secrets configurados EXCLUSIVAMENTE via:
+#   wrangler secret put TELEMETRY_SECRET
+#   wrangler secret put UPSTASH_REDIS_REST_TOKEN
+#   wrangler secret put UPSTASH_REDIS_REST_URL
+
+[observability]
+enabled = true
+
+# Cloudflare Workers Builds esta ligado ao root do monorepo.
+# Manter este ficheiro alinhado com apps/edge/wrangler.toml.
+
+# Staging (branch: develop)
+[env.staging]
+name = "pdc-staging"
+routes = [{ pattern = "edge-staging.usepdc.com", custom_domain = true }]
+
+[env.staging.vars]
+BFF_URL = "https://bff-staging.usepdc.com"
+
+# Secrets for staging (set via):
+#   wrangler secret put TELEMETRY_SECRET --env staging
+#   wrangler secret put UPSTASH_REDIS_REST_TOKEN --env staging
+#   wrangler secret put UPSTASH_REDIS_REST_URL --env staging
+
+# Production (branch: main)
+[env.production]
+name = "pdc"
+routes = [{ pattern = "edge.usepdc.com", custom_domain = true }]
+
+[env.production.vars]
+BFF_URL = "https://bff.usepdc.com"
+
+# Secrets for production (set via):
+#   wrangler secret put TELEMETRY_SECRET --env production
+#   wrangler secret put UPSTASH_REDIS_REST_TOKEN --env production
+#   wrangler secret put UPSTASH_REDIS_REST_URL --env production
