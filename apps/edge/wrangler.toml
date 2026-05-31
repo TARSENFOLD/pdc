@@ -4,7 +4,7 @@ compatibility_date = "2024-04-03"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-BFF_URL = "http://localhost:3000"
+BFF_URL = "https://api.usepdc.com"
 
 # Secrets configurados EXCLUSIVAMENTE via:
 #   wrangler secret put TELEMETRY_SECRET
@@ -20,7 +20,7 @@ name = "pdc-staging"
 routes = [{ pattern = "edge-staging.usepdc.com", custom_domain = true }]
 
 [env.staging.vars]
-BFF_URL = "https://bff-staging.usepdc.com"
+BFF_URL = "https://api-staging.usepdc.com"
 
 # Secrets for staging (set via):
 #   wrangler secret put TELEMETRY_SECRET --env staging
@@ -33,7 +33,7 @@ name = "pdc"
 routes = [{ pattern = "edge.usepdc.com", custom_domain = true }]
 
 [env.production.vars]
-BFF_URL = "https://bff.usepdc.com"
+BFF_URL = "https://api.usepdc.com"
 
 # Secrets for production (set via):
 #   wrangler secret put TELEMETRY_SECRET --env production

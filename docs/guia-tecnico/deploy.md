@@ -62,6 +62,35 @@ O PDC v2 é distribuído como PWA, mas possui "invólucros" nativos para presen�
 
 ---
 
+## Cloudflare Pages
+
+O projecto Pages `pdc` serve exclusivamente o frontend/PWA. O `wrangler.toml` da raiz pertence ao Edge Worker; não adicionar `pages_build_output_dir` nele, para não misturar os contratos de deploy.
+
+Configuração canónica no Cloudflare Pages:
+
+| Campo | Valor |
+|-------|-------|
+| **Build command** | `npm run build:web` |
+| **Build output directory** | `apps/web/dist` |
+| **Production branch** | `main` |
+| **Environment variable** | `VITE_API_URL=https://api.usepdc.com` |
+| **Environment variable** | `VITE_EDGE_URL=https://edge.usepdc.com` |
+
+Domínios canónicos do Pages:
+
+- `usepdc.com`
+- `www.usepdc.com`
+
+Estes domínios não devem estar associados ao Worker `pdc`. O Worker de telemetria deve responder apenas em `edge.usepdc.com` e `edge-staging.usepdc.com`.
+
+Deploy manual equivalente ao CI:
+
+```bash
+npm run deploy:web
+```
+
+---
+
 ## 🏥 Health Checks Pós-Deploy
 
 Após cada deploy, o responsável de Operações (Ops) deve validar:

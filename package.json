@@ -21,6 +21,7 @@
     "build:all": "npm run build --workspaces --if-present",
     "build:deploy": "npm run build -w packages/shared && npm run build -w apps/web && npm run build -w apps/api && npm run build -w apps/edge",
     "build:web": "npm run build -w packages/shared && npm run build -w apps/web",
+    "deploy:web": "npm run build:web && npx wrangler pages deploy apps/web/dist --project-name=${CF_PAGES_PROJECT_NAME:-pdc}",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "typecheck": "npm run build -w @pdc/shared && npm run typecheck --workspaces --if-present",
