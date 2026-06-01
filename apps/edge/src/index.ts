@@ -221,7 +221,7 @@ app.post('/landing/pulse', async (c) => {
 
 app.all('*', async (c) => {
   const url = new URL(c.req.url);
-  if (url.hostname !== 'api.usepdc.com') {
+  if (url.hostname !== 'api.usepdc.com' && url.hostname !== 'edge.usepdc.com') {
     return c.json({ error: 'Not found' }, 404);
   }
 
