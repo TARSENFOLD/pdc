@@ -17,6 +17,9 @@ on:
 env:
   NODE_VERSION: "24"
   PAGES_PROJECT_NAME: ${{ vars.CF_PAGES_PROJECT_NAME }}
+  VITE_API_URL: ${{ vars.VITE_API_URL }}
+  VITE_EDGE_URL: ${{ vars.VITE_EDGE_URL }}
+  VITE_APP_VERSION: ${{ github.sha }}
 
 jobs:
   deploy:

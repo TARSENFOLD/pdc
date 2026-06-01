@@ -4,6 +4,7 @@ import pino from 'pino';
 import { env } from '../../lib/env.js';
 
 const log = pino({ name: 'otp-service' });
+const DEFAULT_RESEND_FROM_EMAIL = 'PDC <no-reply@usepdc.com>';
 
 function maskPhone(phone: string): string {
   if (!phone) return 'unknown';
@@ -63,7 +64,32 @@ export const otpService = {
   async sendOtpEmail(email: string, otp: string): Promise<void> {
     const apiKey = env.SENDGRID_API_KEY;
     if (!apiKey) {
-      throw new Error('SENDGRID_API_KEY não configurada');
+      const resendApiKey = env.RESEND_API_KEY;
+      if (!resendApiKey) {
+        throw new Error('SENDGRID_API_KEY ou RESEND_API_KEY não configurada');
+      }
+
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${resendApiKey}`,
+        },
+        body: JSON.stringify({
+          from: env.RESEND_FROM_EMAIL ?? DEFAULT_RESEND_FROM_EMAIL,
+          to: [email],
+          subject: 'Código de verificação PDC',
+          text: `O seu código de verificação PDC é: ${otp}. Válido por 10 minutos.`,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        log.error({ err: error }, 'Resend error');
+        throw new Error('Falha ao enviar email de OTP');
+      }
+
+      return;
     }
 
     const fromEmail = env.SENDGRID_FROM_EMAIL;
