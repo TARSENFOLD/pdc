@@ -219,5 +219,25 @@ app.post('/landing/pulse', async (c) => {
   }
 });
 
+app.all('*', async (c) => {
+  const url = new URL(c.req.url);
+  if (url.hostname !== 'api.usepdc.com') {
+    return c.json({ error: 'Not found' }, 404);
+  }
+
+  const target = new URL(url.pathname + url.search, c.env.BFF_URL);
+  const headers = new Headers(c.req.raw.headers);
+  headers.set('host', target.hostname);
+  headers.set('x-forwarded-host', url.hostname);
+  headers.set('x-forwarded-proto', url.protocol.replace(':', ''));
+
+  return fetch(target.toString(), {
+    method: c.req.method,
+    headers,
+    body: c.req.raw.body,
+    redirect: 'manual',
+  });
+});
+
 
 export default app;

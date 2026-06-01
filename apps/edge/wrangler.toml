@@ -30,7 +30,10 @@ BFF_URL = "https://api-staging.usepdc.com"
 # ── Production (branch: main) ────────────────────────────────────────────────
 [env.production]
 name = "pdc"
-routes = [{ pattern = "edge.usepdc.com", custom_domain = true }]
+routes = [
+  { pattern = "edge.usepdc.com", custom_domain = true },
+  { pattern = "api.usepdc.com", custom_domain = true },
+]
 
 [env.production.vars]
 BFF_URL = "https://api-production-482b.up.railway.app"

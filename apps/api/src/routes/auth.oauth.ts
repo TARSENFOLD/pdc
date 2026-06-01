@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { randomUUID } from 'node:crypto';
 import pino from 'pino';
 import { zValidator } from '@hono/zod-validator';
@@ -22,12 +22,27 @@ function extractErrorDetails(err: unknown): { status: number; message: string } 
   return { status, message };
 }
 
+function getRequestOrigin(c: Context<{ Variables: AuthVariables }>): string {
+  const forwardedHost = c.req.header('x-forwarded-host');
+  const forwardedProto = c.req.header('x-forwarded-proto') ?? 'https';
+  if (forwardedHost) return `${forwardedProto}://${forwardedHost}`;
+  return new URL(c.req.url).origin;
+}
+
+function getOAuthRedirectUri(c: Context<{ Variables: AuthVariables }>, provider: 'google' | 'linkedin'): string {
+  const configured = provider === 'google' ? env.GOOGLE_REDIRECT_URI : env.LINKEDIN_REDIRECT_URI;
+  const origin = getRequestOrigin(c);
+  if (origin === env.API_URL) return configured ?? `${origin}/auth/${provider}/callback`;
+  return `${origin}/auth/${provider}/callback`;
+}
+
 oauthRoutes.get('/google', async (c) => {
   const state = randomUUID();
   await redis.set(`oauth_state:${state}`, 'true', { ex: 600 });
+  const redirectUri = getOAuthRedirectUri(c, 'google');
   const params = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID || '',
-    redirect_uri: env.GOOGLE_REDIRECT_URI || '',
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'openid email profile',
     state,
@@ -42,6 +57,7 @@ oauthRoutes.get('/google/callback', async (c) => {
   await redis.del(`oauth_state:${state ?? ''}`);
 
   try {
+    const redirectUri = getOAuthRedirectUri(c, 'google');
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -49,7 +65,7 @@ oauthRoutes.get('/google/callback', async (c) => {
         code: code || '',
         client_id: env.GOOGLE_CLIENT_ID || '',
         client_secret: env.GOOGLE_CLIENT_SECRET || '',
-        redirect_uri: env.GOOGLE_REDIRECT_URI || '',
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code',
       }),
     });
@@ -83,9 +99,10 @@ oauthRoutes.get('/google/callback', async (c) => {
 oauthRoutes.get('/linkedin', async (c) => {
   const state = randomUUID();
   await redis.set(`oauth_state:${state}`, 'true', { ex: 600 });
+  const redirectUri = getOAuthRedirectUri(c, 'linkedin');
   const params = new URLSearchParams({
     client_id: env.LINKEDIN_CLIENT_ID || '',
-    redirect_uri: env.LINKEDIN_REDIRECT_URI || '',
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'openid email profile',
     state,
@@ -107,7 +124,7 @@ oauthRoutes.get('/linkedin/callback', async (c) => {
       code: code || '',
       client_id: env.LINKEDIN_CLIENT_ID || '',
       client_secret: env.LINKEDIN_CLIENT_SECRET || '',
-      redirect_uri: env.LINKEDIN_REDIRECT_URI || '',
+      redirect_uri: getOAuthRedirectUri(c, 'linkedin'),
     }),
   });
   const tokens = await tokenRes.json() as { access_token: string };
