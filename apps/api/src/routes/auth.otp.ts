@@ -39,7 +39,13 @@ export async function initiate2faChallenge(c: Context<{ Variables: AuthVariables
     }
     await otpService.sendOtpEmail(user.email, otp);
   } catch (err) {
-    log.error({ err }, 'Failed to auto-send OTP');
+    await Promise.allSettled([
+      hasRedis ? redis.del(`auth_challenge:${challengeId}`) : Promise.resolve(),
+      otpService.deleteOtp(user.id, 'email'),
+    ]);
+    deleteCookie(c, 'auth_challenge', { path: '/' });
+    log.error({ err, userId: user.id }, 'Failed to auto-send OTP');
+    return c.json({ error: 'Falha ao enviar código de verificação' }, 502);
   }
   return c.json({ requiresOtp: true, canal: 'email' });
 }

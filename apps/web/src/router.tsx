@@ -11,6 +11,7 @@ import { EscolhaTipoContaPage } from '@/features/auth/EscolhaTipoContaPage';
 import { RegistoEstudantePage } from '@/features/auth/RegistoEstudantePage';
 import { RegistoMentorPage } from '@/features/auth/RegistoMentorPage';
 import { RegistoInstituicaoPage } from '@/features/auth/RegistoInstituicaoPage';
+import { FinalizarOAuthPage } from '@/features/auth/FinalizarOAuthPage';
 import { Spinner } from '@/components/ui';
 import { TermosPage } from '@/pages/TermosPage';
 import { PrivacidadePage } from '@/pages/PrivacidadePage';
@@ -330,6 +331,7 @@ export const router = createBrowserRouter([
   { path: '/instituicoes/:slug', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><InstituicaoPublicoPerfilPage /></Suspense> },
   { path: '/perfil/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><PerfilPublicoPage /></Suspense> },
   { path: '/criar-conta', element: <EscolhaTipoContaPage /> },
+  { path: '/criar-conta/finalizar', element: <FinalizarOAuthPage /> },
   { path: '/criar-conta/estudante', element: <RegistoEstudantePage /> },
   { path: '/criar-conta/mentor', element: <RegistoMentorPage /> },
   { path: '/criar-conta/instituicao', element: <RegistoInstituicaoPage /> },

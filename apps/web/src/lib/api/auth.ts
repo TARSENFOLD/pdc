@@ -1,5 +1,11 @@
 import { http } from './http';
-import type { User, RegistoEstudantePayload, RegistoMentorPayload, RegistoInstituicaoPayload } from '@pdc/shared';
+import type {
+  User,
+  OAuthFinalizarRoleChoice,
+  RegistoEstudantePayload,
+  RegistoMentorPayload,
+  RegistoInstituicaoPayload,
+} from '@pdc/shared';
 
 export interface LoginPayload {
   email: string;
@@ -36,4 +42,8 @@ export const authApi = {
     const baseUrl: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
     window.location.href = `${baseUrl}/auth/linkedin`;
   },
+  finalizarOAuthRole: (payload: OAuthFinalizarRoleChoice) =>
+    http.post<{ success: boolean }>('/auth/finalizar/escolher-role', payload),
+  verificarOAuthOtp: (otp: string) =>
+    http.post<User>('/auth/finalizar/verificar-otp', { otp }),
 };
