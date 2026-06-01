@@ -2,14 +2,14 @@
 // Strategies: NetworkFirst (API), CacheFirst (assets), StaleWhileRevalidate (fonts/manifest)
 // Background sync for offline telemetry queue via IndexedDB
 
-const CACHE_VERSION = 'pdc-v2.1';
+const CACHE_VERSION = 'pdc-v2.2';
 const CACHES = {
   static: `pdc-static-${CACHE_VERSION}`,
   assets: `pdc-assets-${CACHE_VERSION}`,
   api: `pdc-api-${CACHE_VERSION}`,
 };
 
-const PRECACHE_URLS = ['/', '/index.html', '/manifest.webmanifest', '/offline.html'];
+const PRECACHE_URLS = ['/manifest.webmanifest', '/offline.html'];
 const NETWORK_TIMEOUT_MS = 5000;
 
 // ─── IndexedDB for offline telemetry queue ───────────────────────────────────
@@ -241,9 +241,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML navigation — NetworkFirst with offline fallback
+  // HTML navigation — never serve stale app shell while online.
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request, CACHES.static));
+    event.respondWith(fetch(request).catch(async () => {
+      const offline = await caches.match('/offline.html');
+      return offline ?? new Response('offline', { status: 503 });
+    }));
     return;
   }
 
