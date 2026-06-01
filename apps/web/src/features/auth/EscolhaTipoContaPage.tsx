@@ -3,6 +3,7 @@ import { GraduationCap, UserCheck, Building2, Check } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslation as useI18nTranslation } from 'react-i18next';
 import { useTranslation } from '@/hooks/useTranslation';
+import { AuthDivider, OAuthButtons } from './OAuthButtons';
 
 export function EscolhaTipoContaPage() {
   const { t } = useTranslation('common');
@@ -118,6 +119,11 @@ export function EscolhaTipoContaPage() {
                   </Link>
                 </motion.div>
               ))}
+            </div>
+
+            <div className="mx-auto mt-8 max-w-md">
+              <AuthDivider />
+              <OAuthButtons />
             </div>
 
             <motion.p

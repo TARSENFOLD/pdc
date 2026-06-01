@@ -5,6 +5,7 @@ import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/http';
 import { Button, Input, PasswordInput } from '@/components/ui';
 import AuthSplitLayout from './AuthSplitLayout';
+import { AuthDivider, OAuthButtons } from './OAuthButtons';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import type { NeuralState } from '@/components/auth/NeuralConstellation';
 import type { RegistoInstituicaoPayload } from '@pdc/shared';
@@ -181,6 +182,11 @@ export function RegistoInstituicaoPage() {
 
           <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600" isLoading={mutation.isPending}>Registar Instituição →</Button>
         </form>
+
+        <div className="mt-6">
+          <AuthDivider />
+          <OAuthButtons />
+        </div>
 
         <p className="mt-6 text-center text-sm text-ink-tertiary">
           Não é uma instituição?{' '}

@@ -5,6 +5,7 @@ import { authApi, type LoginResponse } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/http';
 import { Button, Input, PasswordInput } from '@/components/ui';
 import AuthSplitLayout from './AuthSplitLayout';
+import { AuthDivider, OAuthButtons } from './OAuthButtons';
 import type { RegistoEstudantePayload, AreaVocacional } from '@pdc/shared';
 import type { NeuralState } from '@/components/auth/NeuralConstellation';
 
@@ -145,6 +146,11 @@ export function RegistoEstudantePage() {
 
           <Button type="submit" className="w-full" isLoading={mutation.isPending}>Registar e Continuar →</Button>
         </form>
+
+        <div className="mt-6">
+          <AuthDivider />
+          <OAuthButtons />
+        </div>
 
         <p className="mt-6 text-center text-sm text-ink-tertiary">
           Não és estudante?{' '}
