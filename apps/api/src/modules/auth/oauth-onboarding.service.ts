@@ -6,10 +6,15 @@ import { type OAuthFinalizarRoleChoice } from '@pdc/shared';
 const log = pino({ name: 'oauth-onboarding-service' });
 
 interface StrapiPerfilItem {
-  id: string;
+  id: string | number;
+  documentId?: string;
   userId?: string;
   tipo?: string;
   aprovado?: boolean;
+}
+
+function perfilPersistedId(perfil: StrapiPerfilItem): string {
+  return perfil.documentId ?? String(perfil.id);
 }
 
 export const oauthOnboardingService = {
@@ -19,6 +24,8 @@ export const oauthOnboardingService = {
   ): Promise<void> {
     const res = await strapiGet<StrapiPerfilItem>('/perfis', {
       'filters[userId][$eq]': userId,
+      'fields[0]': 'id',
+      'fields[1]': 'documentId',
     });
     const perfil = res.data[0];
     if (!perfil) {
@@ -47,8 +54,9 @@ export const oauthOnboardingService = {
       }
     }
 
-    await strapiPut<StrapiPerfilItem>(`/perfis/${perfil.id}`, strapiPayload);
-    log.info({ userId, perfilId: perfil.id, role: payload.role }, 'OAuth onboarding concluído sem OTP');
+    const perfilId = perfilPersistedId(perfil);
+    await strapiPut<StrapiPerfilItem>(`/perfis/${perfilId}`, strapiPayload);
+    log.info({ userId, perfilId, role: payload.role }, 'OAuth onboarding concluído sem OTP');
   },
 
   async verificarOtp(userId: string, otp: string): Promise<void> {
@@ -59,13 +67,15 @@ export const oauthOnboardingService = {
 
     const res = await strapiGet<StrapiPerfilItem>('/perfis', {
       'filters[userId][$eq]': userId,
+      'fields[0]': 'id',
+      'fields[1]': 'documentId',
     });
     const perfil = res.data[0];
     if (!perfil) {
       throw Object.assign(new Error('Perfil não encontrado'), { status: 404 });
     }
 
-    await strapiPut<StrapiPerfilItem>(`/perfis/${perfil.id}`, {
+    await strapiPut<StrapiPerfilItem>(`/perfis/${perfilPersistedId(perfil)}`, {
       oauthVerified: true,
       onboardingCompleto: true,
     });

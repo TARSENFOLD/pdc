@@ -24,6 +24,7 @@ vi.mock('pino', () => ({
 import { oauthOnboardingService } from './oauth-onboarding.service.js';
 
 const MOCK_PERFIL = { id: 'perfil-1', userId: 'user-42' };
+const MOCK_PERFIL_V5 = { id: '2', documentId: 'perfil-doc-1', userId: 'user-42' };
 
 describe('oauthOnboardingService.escolherRole', () => {
   beforeEach(() => {
@@ -35,6 +36,11 @@ describe('oauthOnboardingService.escolherRole', () => {
   it('updates perfil tipo and completes OAuth onboarding for estudante without OTP', async () => {
     await oauthOnboardingService.escolherRole('user-42', { role: 'estudante' });
 
+    expect(strapiGetMock).toHaveBeenCalledWith('/perfis', {
+      'filters[userId][$eq]': 'user-42',
+      'fields[0]': 'id',
+      'fields[1]': 'documentId',
+    });
     expect(strapiPutMock).toHaveBeenCalledWith('/perfis/perfil-1', expect.objectContaining({
       tipo: 'estudante',
       aprovado: true,
@@ -42,6 +48,19 @@ describe('oauthOnboardingService.escolherRole', () => {
       onboardingCompleto: true,
     }));
     expect(otpServiceMock.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it('uses Strapi documentId for v5 profile updates', async () => {
+    strapiGetMock.mockResolvedValue({ data: [MOCK_PERFIL_V5] });
+
+    await oauthOnboardingService.escolherRole('user-42', { role: 'estudante' });
+
+    expect(strapiPutMock).toHaveBeenCalledWith('/perfis/perfil-doc-1', expect.objectContaining({
+      tipo: 'estudante',
+      aprovado: true,
+      oauthVerified: true,
+      onboardingCompleto: true,
+    }));
   });
 
   it('sets aprovado=false and saves uploaded documents for mentor', async () => {
@@ -101,6 +120,11 @@ describe('oauthOnboardingService.verificarOtp', () => {
   it('marks perfil oauthVerified=true and onboardingCompleto=true on success', async () => {
     await oauthOnboardingService.verificarOtp('user-42', '123456');
 
+    expect(strapiGetMock).toHaveBeenCalledWith('/perfis', {
+      'filters[userId][$eq]': 'user-42',
+      'fields[0]': 'id',
+      'fields[1]': 'documentId',
+    });
     expect(strapiPutMock).toHaveBeenCalledWith('/perfis/perfil-1', {
       oauthVerified: true,
       onboardingCompleto: true,
