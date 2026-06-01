@@ -45,7 +45,7 @@
     "roles": {
       "student": {
         "title": "Estudante",
-        "desc": "Descobre a tua vocação e explora carreiras com reais.",
+        "desc": "Descobre a tua vocação e explora carreiras reais.",
         "features": [
           "Simulações vocacionais",
           "Perfil vocacional",
@@ -97,7 +97,7 @@
       "linkedin_cta": "Entrar com LinkedIn",
       "recover_password_link": "Recuperar palavra-passe",
       "panel_headline": "Por Dentro do Curso",
-      "panel_subline": "Descobre um universo acadêmico inteiro a tua medidaS.",
+      "panel_subline": "Descobre um universo acadêmico inteiro feito a tua medida.",
       "register_link": "Criar conta",
       "error_generic": "Credenciais inválidas. Tenta novamente."
     }
