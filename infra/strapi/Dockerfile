@@ -21,4 +21,4 @@ COPY --from=build /opt/app/public ./public
 COPY --from=build /opt/app/favicon.png ./favicon.png
 RUN mkdir -p ./public/uploads
 EXPOSE 1337
-CMD ["npm", "run", "start"]
+CMD ["node", "--max-old-space-size=384", "./node_modules/.bin/strapi", "start"]
