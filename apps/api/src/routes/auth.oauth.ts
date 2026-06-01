@@ -1,10 +1,10 @@
 import { Hono, type Context } from 'hono';
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import pino from 'pino';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { OAuthFinalizarRoleChoiceSchema } from '@pdc/shared';
-import { redis } from '../lib/redis.js';
+import { hasRedis, redis } from '../lib/redis.js';
 import { env } from '../lib/env.js';
 import { authService } from '../modules/auth/auth.service.js';
 import { setAuthCookies } from '../modules/auth/auth.helper.js';
@@ -13,6 +13,59 @@ import { oauthOnboardingService } from '../modules/auth/oauth-onboarding.service
 
 const log = pino({ name: 'oauth-routes' });
 export const oauthRoutes = new Hono<{ Variables: AuthVariables }>();
+const OAUTH_STATE_TTL_SECONDS = 600;
+
+function signOAuthStatePayload(payload: string): string {
+  return createHmac('sha256', env.JWT_SECRET).update(payload).digest('base64url');
+}
+
+function createOAuthState(): string {
+  const nonce = randomUUID();
+  const issuedAt = Math.floor(Date.now() / 1000).toString();
+  const payload = `${nonce}.${issuedAt}`;
+  const signature = signOAuthStatePayload(payload);
+  return `v1.${payload}.${signature}`;
+}
+
+function isValidOAuthState(state: string | undefined): state is string {
+  if (!state) return false;
+  const parts = state.split('.');
+  if (parts.length !== 4 || parts[0] !== 'v1') return false;
+
+  const [, nonce, issuedAtRaw, signature] = parts;
+  if (!nonce || !issuedAtRaw || !signature) return false;
+
+  const issuedAt = Number.parseInt(issuedAtRaw, 10);
+  if (!Number.isFinite(issuedAt)) return false;
+
+  const now = Math.floor(Date.now() / 1000);
+  if (issuedAt > now + 30 || now - issuedAt > OAUTH_STATE_TTL_SECONDS) return false;
+
+  const expected = signOAuthStatePayload(`${nonce}.${issuedAtRaw}`);
+  const expectedBuffer = Buffer.from(expected);
+  const actualBuffer = Buffer.from(signature);
+  if (expectedBuffer.length !== actualBuffer.length) return false;
+  return timingSafeEqual(expectedBuffer, actualBuffer);
+}
+
+async function persistOAuthState(state: string): Promise<void> {
+  if (!hasRedis) {
+    log.warn('Redis ausente; OAuth state assinado será validado sem proteção one-time.');
+    return;
+  }
+  await redis.set(`oauth_state:${state}`, 'true', { ex: OAUTH_STATE_TTL_SECONDS });
+}
+
+async function consumeOAuthState(state: string | undefined): Promise<boolean> {
+  if (!isValidOAuthState(state)) return false;
+  if (!hasRedis) return true;
+
+  const key = `oauth_state:${state}`;
+  const exists = await redis.get(key);
+  if (!exists) return false;
+  await redis.del(key);
+  return true;
+}
 
 function extractErrorDetails(err: unknown): { status: number; message: string } {
   const status = (err !== null && typeof err === 'object' && 'status' in err)
@@ -41,8 +94,8 @@ function getOAuthRedirectUri(c: Context<{ Variables: AuthVariables }>, provider:
 }
 
 oauthRoutes.get('/google', async (c) => {
-  const state = randomUUID();
-  await redis.set(`oauth_state:${state}`, 'true', { ex: 600 });
+  const state = createOAuthState();
+  await persistOAuthState(state);
   const redirectUri = getOAuthRedirectUri(c, 'google');
   const params = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID || '',
@@ -56,9 +109,8 @@ oauthRoutes.get('/google', async (c) => {
 
 oauthRoutes.get('/google/callback', async (c) => {
   const { code, state } = c.req.query();
-  const exists = await redis.get(`oauth_state:${state ?? ''}`);
-  if (!exists) return c.json({ error: 'Invalid state' }, 400);
-  await redis.del(`oauth_state:${state ?? ''}`);
+  const isValidState = await consumeOAuthState(state);
+  if (!isValidState) return c.json({ error: 'Invalid state' }, 400);
 
   try {
     const redirectUri = getOAuthRedirectUri(c, 'google');
@@ -101,8 +153,8 @@ oauthRoutes.get('/google/callback', async (c) => {
 });
 
 oauthRoutes.get('/linkedin', async (c) => {
-  const state = randomUUID();
-  await redis.set(`oauth_state:${state}`, 'true', { ex: 600 });
+  const state = createOAuthState();
+  await persistOAuthState(state);
   const redirectUri = getOAuthRedirectUri(c, 'linkedin');
   const params = new URLSearchParams({
     client_id: env.LINKEDIN_CLIENT_ID || '',
@@ -116,9 +168,8 @@ oauthRoutes.get('/linkedin', async (c) => {
 
 oauthRoutes.get('/linkedin/callback', async (c) => {
   const { code, state } = c.req.query();
-  const exists = await redis.get(`oauth_state:${state ?? ''}`);
-  if (!exists) return c.json({ error: 'Invalid state' }, 400);
-  await redis.del(`oauth_state:${state ?? ''}`);
+  const isValidState = await consumeOAuthState(state);
+  if (!isValidState) return c.json({ error: 'Invalid state' }, 400);
 
   const tokenRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
     method: 'POST',

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { SignJWT } from 'jose';
+import { createHmac } from 'node:crypto';
 
 const redisMock = vi.hoisted(() => ({
   get: vi.fn(),
@@ -33,7 +34,7 @@ vi.mock('../lib/env.js', () => ({
   },
 }));
 
-vi.mock('../lib/redis.js', () => ({ redis: redisMock }));
+vi.mock('../lib/redis.js', () => ({ hasRedis: true, redis: redisMock }));
 
 vi.mock('../modules/auth/auth.service.js', () => ({
   authService: authServiceMock,
@@ -61,6 +62,7 @@ const escolherRoleMock = vi.mocked(oauthOnboardingService)['escolherRole'];
 const verificarOtpMock = vi.mocked(oauthOnboardingService)['verificarOtp'];
 
 const TEST_SECRET = new TextEncoder().encode('test-secret-at-least-32-chars-long!!');
+const TEST_SECRET_RAW = 'test-secret-at-least-32-chars-long!!';
 
 async function makeTestToken(payload: Record<string, unknown>) {
   return new SignJWT(payload)
@@ -68,6 +70,14 @@ async function makeTestToken(payload: Record<string, unknown>) {
     .setIssuedAt()
     .setExpirationTime('15m')
     .sign(TEST_SECRET);
+}
+
+function makeOAuthState(overrides: { issuedAt?: number; nonce?: string } = {}): string {
+  const nonce = overrides.nonce ?? 'test-nonce';
+  const issuedAt = (overrides.issuedAt ?? Math.floor(Date.now() / 1000)).toString();
+  const payload = `${nonce}.${issuedAt}`;
+  const signature = createHmac('sha256', TEST_SECRET_RAW).update(payload).digest('base64url');
+  return `v1.${payload}.${signature}`;
 }
 
 const MOCK_USER_ONBOARDED = {
@@ -141,7 +151,8 @@ describe('Google OAuth happy path — onboarded user', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    const res = await oauthRoutes.request('/google/callback?code=auth-code&state=valid-state');
+    const state = makeOAuthState();
+    const res = await oauthRoutes.request(`/google/callback?code=auth-code&state=${encodeURIComponent(state)}`);
 
     expect(authServiceMock.findOrCreateUser).toHaveBeenCalledWith('user@pdc.ao', 'Test User');
     expect(authServiceMock.saveRefreshToken).toHaveBeenCalledWith(MOCK_USER_ONBOARDED.id, MOCK_TOKENS.refreshToken);
@@ -161,7 +172,8 @@ describe('Google OAuth happy path — onboarded user', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    const res = await oauthRoutes.request('/google/callback?code=auth-code&state=valid-state');
+    const state = makeOAuthState();
+    const res = await oauthRoutes.request(`/google/callback?code=auth-code&state=${encodeURIComponent(state)}`);
 
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: expect.stringContaining('Email') as string });
@@ -179,9 +191,10 @@ describe('Google OAuth happy path — onboarded user', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    await oauthRoutes.request('/google/callback?code=auth-code&state=valid-state');
+    const state = makeOAuthState();
+    await oauthRoutes.request(`/google/callback?code=auth-code&state=${encodeURIComponent(state)}`);
 
-    expect(redisMock.del).toHaveBeenCalledWith('oauth_state:valid-state');
+    expect(redisMock.del).toHaveBeenCalledWith(`oauth_state:${state}`);
   });
 });
 
@@ -211,7 +224,8 @@ describe('Google OAuth — new user redirects to onboarding', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    const res = await oauthRoutes.request('/google/callback?code=auth-code&state=valid-state');
+    const state = makeOAuthState();
+    const res = await oauthRoutes.request(`/google/callback?code=auth-code&state=${encodeURIComponent(state)}`);
 
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/criar-conta/finalizar?upgrade=true');
@@ -233,7 +247,8 @@ describe('Google OAuth — new user redirects to onboarding', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    const res = await oauthRoutes.request('/google/callback?code=auth-code&state=valid-state');
+    const state = makeOAuthState();
+    const res = await oauthRoutes.request(`/google/callback?code=auth-code&state=${encodeURIComponent(state)}`);
 
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/criar-conta/finalizar?upgrade=true');
@@ -266,7 +281,8 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    const res = await oauthRoutes.request('/linkedin/callback?code=auth-code&state=valid-state');
+    const state = makeOAuthState();
+    const res = await oauthRoutes.request(`/linkedin/callback?code=auth-code&state=${encodeURIComponent(state)}`);
 
     expect(authServiceMock.findOrCreateUser).toHaveBeenCalledWith('user@pdc.ao', 'LinkedIn User');
     expect(authServiceMock.saveRefreshToken).toHaveBeenCalledWith(MOCK_USER_ONBOARDED.id, MOCK_TOKENS.refreshToken);
@@ -286,7 +302,8 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
 
-    const res = await oauthRoutes.request('/linkedin/callback?code=auth-code&state=valid-state');
+    const state = makeOAuthState();
+    const res = await oauthRoutes.request(`/linkedin/callback?code=auth-code&state=${encodeURIComponent(state)}`);
 
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: expect.stringContaining('Email') as string });
