@@ -230,6 +230,7 @@ app.all('*', async (c) => {
   headers.set('host', target.hostname);
   headers.set('x-forwarded-host', url.hostname);
   headers.set('x-forwarded-proto', url.protocol.replace(':', ''));
+  headers.set('x-pdc-public-origin', url.origin);
 
   return fetch(target.toString(), {
     method: c.req.method,

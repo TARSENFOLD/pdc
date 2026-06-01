@@ -23,6 +23,8 @@ function extractErrorDetails(err: unknown): { status: number; message: string } 
 }
 
 function getRequestOrigin(c: Context<{ Variables: AuthVariables }>): string {
+  const publicOrigin = c.req.header('x-pdc-public-origin');
+  if (publicOrigin) return publicOrigin;
   const forwardedHost = c.req.header('x-forwarded-host');
   const forwardedProto = c.req.header('x-forwarded-proto') ?? 'https';
   if (forwardedHost) return `${forwardedProto}://${forwardedHost}`;
@@ -32,6 +34,7 @@ function getRequestOrigin(c: Context<{ Variables: AuthVariables }>): string {
 function getOAuthRedirectUri(c: Context<{ Variables: AuthVariables }>, provider: 'google' | 'linkedin'): string {
   const configured = provider === 'google' ? env.GOOGLE_REDIRECT_URI : env.LINKEDIN_REDIRECT_URI;
   const origin = getRequestOrigin(c);
+  if (c.req.header('x-pdc-public-origin')) return `${origin}/auth/${provider}/callback`;
   if (c.req.header('x-forwarded-host')) return `${origin}/auth/${provider}/callback`;
   if (origin === env.API_URL) return configured ?? `${origin}/auth/${provider}/callback`;
   return `${origin}/auth/${provider}/callback`;
