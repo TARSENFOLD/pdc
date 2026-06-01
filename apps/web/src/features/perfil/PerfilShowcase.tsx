@@ -97,7 +97,7 @@ function CTAButtons({ role, isOwner, profileId }: { role: string; isOwner: boole
       <div className="flex items-center justify-center gap-2 flex-wrap w-full">
         <Link
           to="/app/perfil/editar"
-          className="flex-1 inline-flex justify-center items-center gap-2 h-10 rounded-lg bg-chrome-active text-white text-sm font-bold hover:opacity-90 transition-opacity"
+          className="flex-1 inline-flex justify-center items-center gap-2 h-10 rounded-lg border border-accent/25 bg-accent/15 text-accent text-sm font-bold hover:bg-accent/25 transition-colors"
         >
           <Edit3 size={14} /> Editar Perfil
         </Link>
@@ -118,7 +118,7 @@ function CTAButtons({ role, isOwner, profileId }: { role: string; isOwner: boole
         <button
           type="button"
           onClick={() => { navigate('/app/vinculos'); }}
-          className="flex-1 inline-flex justify-center items-center gap-2 h-10 rounded-lg bg-chrome-active text-white font-bold text-sm hover:opacity-90 transition-opacity shadow-sm"
+          className="flex-1 inline-flex justify-center items-center gap-2 h-10 rounded-lg border border-accent/25 bg-accent/15 text-accent font-bold text-sm hover:bg-accent/25 transition-colors shadow-sm"
         >
           <UserPlus size={14} /> Vincular
         </button>
@@ -277,7 +277,9 @@ export default function PerfilShowcase(): React.JSX.Element {
   const { user } = useAuth();
   const qc = useQueryClient();
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [activeTab, setActiveTab] = useState<'visao_geral' | 'experiencia' | 'educacao' | 'certificacoes'>('visao_geral');
 
   const { data: perfil, isLoading, isError } = useQuery({
@@ -297,16 +299,41 @@ export default function PerfilShowcase(): React.JSX.Element {
     }
     setIsUploadingBanner(true);
     try {
-      const uploadRes = await mediaApi.upload(file);
+      const uploadRes = await mediaApi.upload(file, 'capa');
       await perfisApi.update({ bannerUrl: uploadRes.url });
       void qc.invalidateQueries({ queryKey: ['perfil'] });
       void qc.invalidateQueries({ queryKey: ['perfis', 'me'] });
+      void qc.invalidateQueries({ queryKey: ['auth', 'me'] });
       toast({ title: 'Banner atualizado!' });
     } catch (error) {
       console.error('Erro ao atualizar banner', error);
       toast({ title: 'Erro ao atualizar banner', variant: 'error' });
     } finally {
       setIsUploadingBanner(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Ficheiro demasiado grande', description: 'A foto deve ter menos de 2MB.', variant: 'error' });
+      return;
+    }
+    setIsUploadingAvatar(true);
+    try {
+      const uploadRes = await mediaApi.upload(file, 'avatar');
+      await perfisApi.update({ avatarUrl: uploadRes.url });
+      void qc.invalidateQueries({ queryKey: ['perfil'] });
+      void qc.invalidateQueries({ queryKey: ['perfis', 'me'] });
+      void qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+      toast({ title: 'Foto atualizada!' });
+    } catch (error) {
+      console.error('Erro ao atualizar foto de perfil', error);
+      toast({ title: 'Erro ao atualizar foto', variant: 'error' });
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -409,6 +436,27 @@ export default function PerfilShowcase(): React.JSX.Element {
                   className="h-full w-full border-0 ring-0"
                 />
               </div>
+              {isOwner && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { avatarInputRef.current?.click(); }}
+                    disabled={isUploadingAvatar}
+                    className="absolute bottom-2 right-2 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/75 text-white shadow-lg transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-wait disabled:opacity-70"
+                    aria-label="Alterar foto de perfil"
+                    title="Alterar foto de perfil"
+                  >
+                    {isUploadingAvatar ? <Spinner size="sm" className="text-white" /> : <Camera size={16} />}
+                  </button>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => { void handleAvatarUpload(event); }}
+                  />
+                </>
+              )}
             </div>
 
             <h1 className="text-2xl font-black tracking-tight text-ink-primary font-display leading-tight mb-1">
