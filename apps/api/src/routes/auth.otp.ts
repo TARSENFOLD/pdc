@@ -7,7 +7,7 @@ import { otpService } from '../modules/auth/otp.service.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { redis, hasRedis } from '../lib/redis.js';
 import pino from 'pino';
-import { setAuthCookies } from '../modules/auth/auth.helper.js';
+import { getAuthCookieOptions, setAuthCookies } from '../modules/auth/auth.helper.js';
 import { env } from '../lib/env.js';
 import { randomUUID } from 'node:crypto';
 import type { User } from '@pdc/shared';
@@ -16,7 +16,6 @@ const log = pino({ name: 'otp-routes' });
 export const otpRoutes = new Hono<{ Variables: AuthVariables }>();
 
 export async function initiate2faChallenge(c: Context<{ Variables: AuthVariables }>, user: User) {
-  const isProd = env.NODE_ENV === 'production';
   const allowOtpBypass = env.NODE_ENV === 'development' || env.NODE_ENV === 'test';
 
   // E2E / dev: skip OTP entirely when DEV_SKIP_OTP=true (only in development/test)
@@ -30,7 +29,7 @@ export async function initiate2faChallenge(c: Context<{ Variables: AuthVariables
 
   const challengeId = randomUUID();
   if (hasRedis) await redis.set(`auth_challenge:${challengeId}`, user.id, { ex: 600 });
-  setCookie(c, 'auth_challenge', challengeId, { httpOnly: true, secure: isProd, sameSite: 'Strict', maxAge: 600, path: '/' });
+  setCookie(c, 'auth_challenge', challengeId, getAuthCookieOptions(600));
   try {
     const otp = otpService.generateOtp();
     await otpService.storeOtp(user.id, otp, 'email');

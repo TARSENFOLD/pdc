@@ -27,6 +27,14 @@ Dois tokens separados:
 - `access_token`: JWT, 15 minutos, httpOnly, Secure, SameSite=Strict
 - `refresh_token`: JWT, 7 dias, httpOnly, Secure, SameSite=Strict, rotação automática
 
+**Emenda operacional de produção (2026-06-01):** enquanto o frontend público
+corre em `www.usepdc.com` e o BFF em `api-production-482b.up.railway.app`,
+os cookies de autenticação e o cookie transitório `auth_challenge` precisam de
+`SameSite=None; Secure`. Sem isso, o browser bloqueia o POST credentialed do
+fluxo OTP e o BFF responde `Sessão inválida` antes de validar o código. Esta
+exceção deve ser revista quando o BFF estiver em subdomínio first-party
+canónico, por exemplo `api.usepdc.com`.
+
 ---
 
 ## Justificação
@@ -58,7 +66,7 @@ Dois tokens separados:
 setCookie(c, 'access_token', accessToken, {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'Strict',
+  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
   maxAge: 15 * 60,      // 15 min
   path: '/',
 });
