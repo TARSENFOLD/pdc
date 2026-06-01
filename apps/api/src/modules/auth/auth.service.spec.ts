@@ -25,6 +25,7 @@ vi.mock('../reputation/reputation.service.js', () => ({
 }));
 
 import { authService } from './auth.service.js';
+import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost } from '../strapi/strapi.client.js';
 
 const BASE_USER = {
   id: 42,
@@ -96,5 +97,28 @@ describe('authService.mapStrapiUser — new fields', () => {
     expect(user.nome).toBe('Ana Ferreira');
     expect(user.role).toBe('estudante');
     expect(user.perfilId).toBe('perfil-1');
+  });
+});
+
+describe('authService.findOrCreateUser', () => {
+  it('creates OAuth users with a generated password for Strapi users-permissions', async () => {
+    vi.mocked(strapiGetRaw)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(BASE_USER);
+    vi.mocked(strapiPostRaw).mockResolvedValueOnce(BASE_USER);
+    vi.mocked(strapiPost).mockResolvedValueOnce({ data: { ...BASE_PERFIL }, meta: {} });
+    vi.mocked(strapiGet).mockResolvedValueOnce({
+      data: [{ ...BASE_PERFIL }],
+      meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 } },
+    });
+
+    await authService.findOrCreateUser('USER@PDC.AO', 'Ana Ferreira');
+
+    expect(strapiPostRaw).toHaveBeenCalledWith('/users', expect.objectContaining({
+      email: 'user@pdc.ao',
+      username: 'user@pdc.ao',
+      confirmed: true,
+      password: expect.any(String) as string,
+    }));
   });
 });

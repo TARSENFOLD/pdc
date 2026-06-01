@@ -175,6 +175,7 @@ export const authService = {
     const newUser = await strapiPostRaw<StrapiUser>('/users', {
       email: normalizedEmail,
       username: normalizedEmail,
+      password: randomUUID(),
       confirmed: true,
     });
     const userId = newUser.id.toString();
