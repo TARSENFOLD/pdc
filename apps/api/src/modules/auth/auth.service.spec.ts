@@ -104,6 +104,7 @@ describe('authService.findOrCreateUser', () => {
   it('creates OAuth users with a generated password for Strapi users-permissions', async () => {
     vi.mocked(strapiGetRaw)
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce({ roles: [{ id: 1, name: 'Authenticated', type: 'authenticated' }] })
       .mockResolvedValueOnce(BASE_USER);
     vi.mocked(strapiPostRaw).mockResolvedValueOnce(BASE_USER);
     vi.mocked(strapiPost).mockResolvedValueOnce({ data: { ...BASE_PERFIL }, meta: {} });
@@ -118,6 +119,7 @@ describe('authService.findOrCreateUser', () => {
       email: 'user@pdc.ao',
       username: 'user@pdc.ao',
       confirmed: true,
+      role: 1,
       password: expect.any(String) as string,
     }));
   });

@@ -27,6 +27,16 @@ interface StrapiUser {
   updatedAt?: string;
 }
 
+interface StrapiUsersPermissionsRole {
+  id: number | string;
+  name: string;
+  type: string;
+}
+
+interface StrapiUsersPermissionsRolesResponse {
+  roles: StrapiUsersPermissionsRole[];
+}
+
 interface StrapiPerfilData {
   id?: string;
   userId: string;
@@ -58,6 +68,15 @@ function resolveRole(strapiRoleName: string | undefined, perfilTipo: string | un
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
+}
+
+async function getAuthenticatedRoleId(): Promise<number | string> {
+  const roles = await strapiGetRaw<StrapiUsersPermissionsRolesResponse>('/users-permissions/roles');
+  const authenticatedRole = roles.roles.find((role) => role.type === 'authenticated');
+  if (!authenticatedRole) {
+    throw new Error('Strapi Authenticated role not found');
+  }
+  return authenticatedRole.id;
 }
 
 export const authService = {
@@ -176,6 +195,7 @@ export const authService = {
       email: normalizedEmail,
       username: normalizedEmail,
       password: randomUUID(),
+      role: await getAuthenticatedRoleId(),
       confirmed: true,
     });
     const userId = newUser.id.toString();
