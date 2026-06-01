@@ -10,9 +10,9 @@ export function setAuthCookies(
   accessToken: string,
   refreshToken: string
 ) {
-  // Em desenvolvimento, usamos 'Lax' mas sem 'Secure' para localhost.
-  // Se o problema persistir, mudamos para 'None' com 'Secure: true'.
-  const sameSite: 'Strict' | 'Lax' = isProd ? 'Strict' : 'Lax';
+  // Production web and API are on different sites until api.usepdc.com is active.
+  // Cross-site credentialed fetch requires SameSite=None with Secure.
+  const sameSite: 'None' | 'Lax' = isProd ? 'None' : 'Lax';
   
   setCookie(c, 'access_token', accessToken, {
     httpOnly: true,
