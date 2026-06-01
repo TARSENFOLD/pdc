@@ -32,7 +32,6 @@ BFF_URL = "https://api-staging.usepdc.com"
 name = "pdc"
 routes = [
   { pattern = "edge.usepdc.com", custom_domain = true },
-  { pattern = "api.usepdc.com", custom_domain = true },
 ]
 
 [env.production.vars]
