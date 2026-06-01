@@ -3,14 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const strapiGetMock = vi.hoisted(() => vi.fn());
 const strapiPutMock = vi.hoisted(() => vi.fn());
 const otpServiceMock = vi.hoisted(() => ({
-  generateOtp: vi.fn(),
-  storeOtp: vi.fn(),
   verifyOtp: vi.fn(),
-  deleteOtp: vi.fn(),
-  sendOtpEmail: vi.fn(),
-}));
-const authServiceMock = vi.hoisted(() => ({
-  getUserById: vi.fn(),
 }));
 
 vi.mock('../strapi/strapi.client.js', () => ({
@@ -19,8 +12,6 @@ vi.mock('../strapi/strapi.client.js', () => ({
 }));
 
 vi.mock('./otp.service.js', () => ({ otpService: otpServiceMock }));
-
-vi.mock('./auth.service.js', () => ({ authService: authServiceMock }));
 
 vi.mock('../../lib/env.js', () => ({
   env: { NODE_ENV: 'test' },
@@ -33,27 +24,24 @@ vi.mock('pino', () => ({
 import { oauthOnboardingService } from './oauth-onboarding.service.js';
 
 const MOCK_PERFIL = { id: 'perfil-1', userId: 'user-42' };
-const MOCK_USER = { id: 'user-42', email: 'user@pdc.ao' };
 
 describe('oauthOnboardingService.escolherRole', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     strapiGetMock.mockResolvedValue({ data: [MOCK_PERFIL] });
     strapiPutMock.mockResolvedValue({ data: MOCK_PERFIL });
-    otpServiceMock.generateOtp.mockReturnValue('123456');
-    otpServiceMock.storeOtp.mockResolvedValue(undefined);
-    otpServiceMock.deleteOtp.mockResolvedValue(undefined);
-    otpServiceMock.sendOtpEmail.mockResolvedValue(undefined);
-    authServiceMock.getUserById.mockResolvedValue(MOCK_USER);
   });
 
-  it('updates perfil tipo + sets aprovado=true for estudante', async () => {
+  it('updates perfil tipo and completes OAuth onboarding for estudante without OTP', async () => {
     await oauthOnboardingService.escolherRole('user-42', { role: 'estudante' });
 
     expect(strapiPutMock).toHaveBeenCalledWith('/perfis/perfil-1', expect.objectContaining({
       tipo: 'estudante',
       aprovado: true,
+      oauthVerified: true,
+      onboardingCompleto: true,
     }));
+    expect(otpServiceMock.verifyOtp).not.toHaveBeenCalled();
   });
 
   it('sets aprovado=false and saves uploaded documents for mentor', async () => {
@@ -92,14 +80,6 @@ describe('oauthOnboardingService.escolherRole', () => {
     }));
   });
 
-  it('generates and sends OTP via email', async () => {
-    await oauthOnboardingService.escolherRole('user-42', { role: 'estudante' });
-
-    expect(otpServiceMock.generateOtp).toHaveBeenCalled();
-    expect(otpServiceMock.storeOtp).toHaveBeenCalledWith('user-42', '123456', 'email');
-    expect(otpServiceMock.sendOtpEmail).toHaveBeenCalledWith('user@pdc.ao', '123456');
-  });
-
   it('throws 404 when perfil not found', async () => {
     strapiGetMock.mockResolvedValue({ data: [] });
 
@@ -108,20 +88,6 @@ describe('oauthOnboardingService.escolherRole', () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 
-  it('rolls back perfil and removes OTP when OTP email delivery fails', async () => {
-    strapiGetMock.mockResolvedValue({ data: [{ ...MOCK_PERFIL, tipo: 'estudante', aprovado: false }] });
-    otpServiceMock.sendOtpEmail.mockRejectedValue(new Error('email down'));
-
-    await expect(
-      oauthOnboardingService.escolherRole('user-42', { role: 'mentor', areaEspecialidade: 'TECNOLOGIA', documentos: [] })
-    ).rejects.toMatchObject({ status: 500 });
-
-    expect(strapiPutMock).toHaveBeenLastCalledWith('/perfis/perfil-1', {
-      tipo: 'estudante',
-      aprovado: false,
-    });
-    expect(otpServiceMock.deleteOtp).toHaveBeenCalledWith('user-42', 'email');
-  });
 });
 
 describe('oauthOnboardingService.verificarOtp', () => {

@@ -20,13 +20,11 @@ export function FinalizarOAuthPage() {
   const [searchParams] = useSearchParams();
   const isUpgrade = searchParams.get('upgrade') === 'true';
 
-  const [step, setStep] = useState<'role' | 'otp'>('role');
   const [role, setRole] = useState<OnboardingRole>('estudante');
   const [areaEspecialidade, setAreaEspecialidade] = useState('');
   const [nomeInstituicao, setNomeInstituicao] = useState('');
   const [tipoInstituicao, setTipoInstituicao] = useState('');
   const [documentoUrl, setDocumentoUrl] = useState('');
-  const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -42,26 +40,6 @@ export function FinalizarOAuthPage() {
     try {
       const payload = buildPayload();
       await authApi.finalizarOAuthRole(payload);
-      setStep('otp');
-    } catch (err: unknown) {
-      setError(getErrorMessage(err));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleVerifyOtp(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (otp.length !== 6) {
-      setError('O código deve ter 6 dígitos.');
-      return;
-    }
-
-    setError('');
-    setIsSubmitting(true);
-
-    try {
-      await authApi.verificarOAuthOtp(otp);
       navigate('/app', { replace: true });
     } catch (err: unknown) {
       setError(getErrorMessage(err));
@@ -105,7 +83,7 @@ export function FinalizarOAuthPage() {
           <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-secondary">
             {isUpgrade
               ? 'Completa o perfil institucional para ativar o papel correto no PDC.'
-              : 'Escolhe o teu papel e confirma o código enviado para o email da conta.'}
+              : 'Escolhe o teu papel para ativar a conta no PDC.'}
           </p>
         </div>
 
@@ -115,8 +93,7 @@ export function FinalizarOAuthPage() {
           </div>
         )}
 
-        {step === 'role' ? (
-          <form onSubmit={(event) => { void handleChooseRole(event); }} className="space-y-7">
+        <form onSubmit={(event) => { void handleChooseRole(event); }} className="space-y-7">
             <div className="grid gap-4 md:grid-cols-3">
               {[
                 { id: 'estudante' as const, label: 'Estudante', icon: GraduationCap },
@@ -159,38 +136,9 @@ export function FinalizarOAuthPage() {
               disabled={isSubmitting}
               className="h-14 w-full rounded-lg bg-ink-primary px-6 text-xs font-black uppercase tracking-widest text-canvas transition hover:bg-accent hover:text-ink-on-accent disabled:opacity-50"
             >
-              {isSubmitting ? 'A enviar código...' : 'Enviar código OTP'}
+              {isSubmitting ? 'A finalizar...' : 'Finalizar e entrar'}
             </button>
           </form>
-        ) : (
-          <form onSubmit={(event) => { void handleVerifyOtp(event); }} className="max-w-sm space-y-7">
-            <div>
-              <label htmlFor="oauth-otp" className="mb-3 block text-xs font-bold uppercase tracking-widest text-ink-tertiary">
-                Código de verificação
-              </label>
-              <input
-                id="oauth-otp"
-                type="text"
-                required
-                maxLength={6}
-                pattern="[0-9]*"
-                inputMode="numeric"
-                autoFocus
-                value={otp}
-                onChange={(event) => { setOtp(event.target.value.replace(/[^0-9]/g, '')); }}
-                className="w-full rounded-lg border border-ink-tertiary/10 bg-recessed p-5 text-center font-mono text-4xl tracking-[0.35em] text-ink-primary outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
-                placeholder="000000"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={isSubmitting || otp.length !== 6}
-              className="h-14 w-full rounded-lg bg-ink-primary px-6 text-xs font-black uppercase tracking-widest text-canvas transition hover:bg-accent hover:text-ink-on-accent disabled:opacity-50"
-            >
-              {isSubmitting ? 'A verificar...' : 'Verificar e entrar'}
-            </button>
-          </form>
-        )}
       </section>
     </main>
   );

@@ -43,7 +43,7 @@ export const authApi = {
     window.location.href = `${baseUrl}/auth/linkedin`;
   },
   finalizarOAuthRole: (payload: OAuthFinalizarRoleChoice) =>
-    http.post<{ success: boolean }>('/auth/finalizar/escolher-role', payload),
+    http.post<User>('/auth/finalizar/escolher-role', payload),
   verificarOAuthOtp: (otp: string) =>
     http.post<User>('/auth/finalizar/verificar-otp', { otp }),
 };

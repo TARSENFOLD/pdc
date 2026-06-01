@@ -162,7 +162,11 @@ oauthRoutes.post('/finalizar/escolher-role', verifyJwt, zValidator('json', OAuth
   const payload = c.req.valid('json');
   try {
     await oauthOnboardingService.escolherRole(user.id, payload);
-    return c.json({ success: true });
+    const updatedUser = await authService.getUserById(user.id);
+    const { accessToken, refreshToken } = await authService.generateTokens(updatedUser);
+    await authService.saveRefreshToken(updatedUser.id, refreshToken);
+    setAuthCookies(c, accessToken, refreshToken);
+    return c.json(updatedUser);
   } catch (err: unknown) {
     const { status, message } = extractErrorDetails(err);
     log.error({ err, userId: user.id }, 'escolherRole error');

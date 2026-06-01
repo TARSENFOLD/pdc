@@ -57,6 +57,7 @@ vi.mock('pino', () => ({
 import { oauthRoutes } from './auth.oauth.js';
 import { oauthOnboardingService } from '../modules/auth/oauth-onboarding.service.js';
 
+const escolherRoleMock = vi.mocked(oauthOnboardingService)['escolherRole'];
 const verificarOtpMock = vi.mocked(oauthOnboardingService)['verificarOtp'];
 
 const TEST_SECRET = new TextEncoder().encode('test-secret-at-least-32-chars-long!!');
@@ -292,7 +293,63 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
   });
 });
 
-describe('POST /finalizar/verificar-otp — role upgrade after OTP', () => {
+describe('POST /finalizar/escolher-role — OAuth role finalization without OTP', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    escolherRoleMock.mockResolvedValue(undefined);
+    authServiceMock.saveRefreshToken.mockResolvedValue(undefined);
+  });
+
+  it('mints fresh tokens immediately after choosing mentor role', async () => {
+    const provisionalToken = await makeTestToken({
+      sub: 'user-42',
+      role: 'estudante',
+      onboardingCompleto: false,
+    });
+    const mentorUser = {
+      id: 'user-42',
+      email: 'mentor@pdc.ao',
+      role: 'mentor',
+      oauthVerified: true,
+      onboardingCompleto: true,
+    };
+    authServiceMock.getUserById.mockResolvedValue(mentorUser);
+    authServiceMock.generateTokens.mockResolvedValue(MOCK_TOKENS_FRESH);
+
+    const res = await oauthRoutes.request('/finalizar/escolher-role', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `access_token=${provisionalToken}`,
+      },
+      body: JSON.stringify({
+        role: 'mentor',
+        areaEspecialidade: 'TECNOLOGIA',
+        documentos: [{ tipo: 'comprovativo', url: 'https://www.usepdc.com/docs/mentor.pdf' }],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(escolherRoleMock).toHaveBeenCalledWith('user-42', {
+      role: 'mentor',
+      areaEspecialidade: 'TECNOLOGIA',
+      documentos: [{ tipo: 'comprovativo', url: 'https://www.usepdc.com/docs/mentor.pdf' }],
+    });
+    expect(verificarOtpMock).not.toHaveBeenCalled();
+    expect(authServiceMock.getUserById).toHaveBeenCalledWith('user-42');
+    expect(authServiceMock.generateTokens).toHaveBeenCalledWith(mentorUser);
+    expect(authServiceMock.saveRefreshToken).toHaveBeenCalledWith('user-42', MOCK_TOKENS_FRESH.refreshToken);
+    expect(setAuthCookiesMock).toHaveBeenCalledWith(
+      expect.anything(),
+      MOCK_TOKENS_FRESH.accessToken,
+      MOCK_TOKENS_FRESH.refreshToken,
+    );
+    const body = await res.json() as typeof mentorUser;
+    expect(body.onboardingCompleto).toBe(true);
+  });
+});
+
+describe('POST /finalizar/verificar-otp — legacy role upgrade after OTP', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     verificarOtpMock.mockResolvedValue(undefined);

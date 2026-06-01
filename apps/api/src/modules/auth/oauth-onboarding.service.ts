@@ -1,8 +1,6 @@
 import pino from 'pino';
 import { otpService } from './otp.service.js';
 import { strapiGet, strapiPut } from '../strapi/strapi.client.js';
-import { authService } from './auth.service.js';
-import { env } from '../../lib/env.js';
 import { type OAuthFinalizarRoleChoice } from '@pdc/shared';
 
 const log = pino({ name: 'oauth-onboarding-service' });
@@ -12,15 +10,6 @@ interface StrapiPerfilItem {
   userId?: string;
   tipo?: string;
   aprovado?: boolean;
-}
-
-function restorePerfilPayload(perfil: StrapiPerfilItem): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries({
-      tipo: perfil.tipo,
-      aprovado: perfil.aprovado,
-    }).filter(([, value]) => value !== undefined),
-  );
 }
 
 export const oauthOnboardingService = {
@@ -41,6 +30,8 @@ export const oauthOnboardingService = {
     const strapiPayload: Record<string, unknown> = {
       tipo: payload.role,
       aprovado,
+      oauthVerified: true,
+      onboardingCompleto: true,
     };
 
     if (payload.role === 'mentor') {
@@ -57,25 +48,7 @@ export const oauthOnboardingService = {
     }
 
     await strapiPut<StrapiPerfilItem>(`/perfis/${perfil.id}`, strapiPayload);
-
-    const otp = otpService.generateOtp();
-    await otpService.storeOtp(userId, otp, 'email');
-
-    if (env.NODE_ENV === 'development') {
-      log.info({ userId, otpPresent: true }, '[DEV] OAuth onboarding OTP gerado');
-    }
-
-    try {
-      const user = await authService.getUserById(userId);
-      await otpService.sendOtpEmail(user.email, otp);
-    } catch (err) {
-      await Promise.allSettled([
-        strapiPut<StrapiPerfilItem>(`/perfis/${perfil.id}`, restorePerfilPayload(perfil)),
-        otpService.deleteOtp(userId, 'email'),
-      ]);
-      log.error({ err, userId, perfilId: perfil.id }, 'Falha ao enviar OTP de onboarding OAuth');
-      throw Object.assign(new Error('Falha ao enviar código de verificação'), { status: 500 });
-    }
+    log.info({ userId, perfilId: perfil.id, role: payload.role }, 'OAuth onboarding concluído sem OTP');
   },
 
   async verificarOtp(userId: string, otp: string): Promise<void> {
