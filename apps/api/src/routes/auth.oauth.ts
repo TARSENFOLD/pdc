@@ -32,6 +32,7 @@ function getRequestOrigin(c: Context<{ Variables: AuthVariables }>): string {
 function getOAuthRedirectUri(c: Context<{ Variables: AuthVariables }>, provider: 'google' | 'linkedin'): string {
   const configured = provider === 'google' ? env.GOOGLE_REDIRECT_URI : env.LINKEDIN_REDIRECT_URI;
   const origin = getRequestOrigin(c);
+  if (c.req.header('x-forwarded-host')) return `${origin}/auth/${provider}/callback`;
   if (origin === env.API_URL) return configured ?? `${origin}/auth/${provider}/callback`;
   return `${origin}/auth/${provider}/callback`;
 }
