@@ -125,4 +125,17 @@ describe('mediaRoutes', () => {
     expect(res.status).toBe(201);
     expect(uploadToR2).toHaveBeenCalledOnce();
   });
+
+  it('não falha o upload quando a publicação do evento falha', async () => {
+    publishWithOutboxMock.mockRejectedValueOnce(new Error('outbox indisponível'));
+    const file = new File([fileBuffer(1024)], 'avatar.jpg', { type: 'image/jpeg' });
+
+    const res = await app.request('/media/upload', {
+      method: 'POST',
+      body: formWithFile(file, 'avatar'),
+    });
+
+    expect(res.status).toBe(201);
+    expect(uploadToR2).toHaveBeenCalledOnce();
+  });
 });

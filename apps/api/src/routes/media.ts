@@ -128,6 +128,8 @@ mediaRoutes.post('/upload', rateLimitMediaUpload, async (c) => {
       mediaId,
       uploaderId: user.id,
       url: publicUrl,
+    }).catch((err: unknown) => {
+      log.warn({ err, mediaId, uploaderId: user.id }, 'Falha ao publicar MEDIA_UPLOADED; upload preservado');
     });
 
     const uploadResult = UploadResultSchema.parse({

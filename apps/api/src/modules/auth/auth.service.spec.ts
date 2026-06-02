@@ -124,3 +124,22 @@ describe('authService.findOrCreateUser', () => {
     }));
   });
 });
+
+describe('authService.registerWithRole', () => {
+  it('rejects duplicate email before calling Strapi local register', async () => {
+    vi.mocked(strapiGetRaw).mockResolvedValueOnce([BASE_USER]);
+
+    await expect(
+      authService.registerWithRole('USER@PDC.AO', 'SenhaTeste123', 'Ana Ferreira', 'estudante', {})
+    ).rejects.toMatchObject({
+      status: 409,
+      message: 'Já existe uma conta com este email. Inicia sessão ou usa recuperação de palavra-passe.',
+    });
+
+    expect(strapiGetRaw).toHaveBeenCalledWith('/users', {
+      'filters[email][$eq]': 'user@pdc.ao',
+      'pagination[pageSize]': '1',
+    });
+    expect(strapiPostRaw).not.toHaveBeenCalledWith('/auth/local/register', expect.anything());
+  });
+});

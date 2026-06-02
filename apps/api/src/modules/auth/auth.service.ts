@@ -141,10 +141,19 @@ export const authService = {
     role: Role,
     extra: Record<string, unknown>,
   ): Promise<User> {
+    const normalizedEmail = email.toLowerCase().trim();
+    const existingUsers = await strapiGetRaw<StrapiUser[]>('/users', {
+      'filters[email][$eq]': normalizedEmail,
+      'pagination[pageSize]': '1',
+    });
+    if (existingUsers[0]) {
+      throw Object.assign(new Error('Já existe uma conta com este email. Inicia sessão ou usa recuperação de palavra-passe.'), { status: 409 });
+    }
+
     const data = await strapiPostRaw<{ user: StrapiUser }>('/auth/local/register', {
-      email,
+      email: normalizedEmail,
       password,
-      username: email,
+      username: normalizedEmail,
     });
     const userId = data.user.id.toString();
 
@@ -152,7 +161,7 @@ export const authService = {
       userId,
       nome,
       tipo: role,
-      email,
+      email: normalizedEmail,
       ativo: true,
       ...extra,
     });

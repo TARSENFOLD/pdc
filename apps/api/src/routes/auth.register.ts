@@ -14,6 +14,14 @@ export const registerRoutes = new Hono<{ Variables: AuthVariables }>();
 
 registerRoutes.use('/*', rateLimitRegisto);
 
+function getRegisterErrorStatus(err: unknown): 400 | 409 | 500 {
+  const status = err !== null && typeof err === 'object' && 'status' in err
+    ? (err as { status?: unknown }).status
+    : undefined;
+  if (status === 409) return 409;
+  return 400;
+}
+
 registerRoutes.post('/estudante', zValidator('json', RegistoEstudantePayloadSchema), async (c) => {
   const { email, password, nome, areaInteresse, nivelEnsino } = c.req.valid('json');
   try {
@@ -24,7 +32,7 @@ registerRoutes.post('/estudante', zValidator('json', RegistoEstudantePayloadSche
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido';
-    return c.json({ error: message }, 400);
+    return c.json({ error: message }, getRegisterErrorStatus(err));
   }
 });
 
@@ -39,7 +47,7 @@ registerRoutes.post('/mentor', zValidator('json', RegistoMentorPayloadSchema), a
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido';
-    return c.json({ error: message }, 400);
+    return c.json({ error: message }, getRegisterErrorStatus(err));
   }
 });
 
@@ -55,6 +63,6 @@ registerRoutes.post('/instituicao', zValidator('json', RegistoInstituicaoPayload
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido';
-    return c.json({ error: message }, 400);
+    return c.json({ error: message }, getRegisterErrorStatus(err));
   }
 });
