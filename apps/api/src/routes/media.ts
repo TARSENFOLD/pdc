@@ -14,6 +14,7 @@ import { ALLOWED_MEDIA_MIME_TYPES, validateMagicBytes } from '../modules/media/f
 import { formatBytes, getMediaSizeLimit } from '../modules/media/limits.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
+import { applyCorsHeaders } from '../lib/cors.js';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import pino from 'pino';
@@ -71,6 +72,7 @@ mediaRoutes.post('/presigned', rateLimitMediaUpload, zValidator('json', Presigne
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
+    applyCorsHeaders(c);
     return c.json({ error: message }, 502);
   }
 });
@@ -144,6 +146,7 @@ mediaRoutes.post('/upload', rateLimitMediaUpload, async (c) => {
     return c.json(uploadResult, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
+    applyCorsHeaders(c);
     return c.json({ error: message }, 502);
   }
 });

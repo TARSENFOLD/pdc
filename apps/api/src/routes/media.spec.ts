@@ -138,4 +138,20 @@ describe('mediaRoutes', () => {
     expect(res.status).toBe(201);
     expect(uploadToR2).toHaveBeenCalledOnce();
   });
+
+  it('mantém CORS quando o upload falha com erro interno', async () => {
+    vi.mocked(uploadToR2).mockRejectedValueOnce(new Error('R2 down'));
+    const file = new File([fileBuffer(1024)], 'avatar.jpg', { type: 'image/jpeg' });
+
+    const res = await app.request('/media/upload', {
+      method: 'POST',
+      headers: {
+        Origin: 'http://localhost:5173',
+      },
+      body: formWithFile(file, 'avatar'),
+    });
+
+    expect(res.status).toBe(502);
+    expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:5173');
+  });
 });

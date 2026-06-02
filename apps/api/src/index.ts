@@ -65,6 +65,7 @@ import { socketService } from './modules/realtime/socket.service.js';
 import { tinaService } from './modules/tina/tina.service.js';
 import { strapiGet } from './modules/strapi/strapi.client.js';
 import { getPublicJwks } from './modules/lti/lti.jwks.js';
+import { ALLOWED_ORIGINS, applyCorsHeaders } from './lib/cors.js';
 
 const app = new Hono();
 
@@ -73,9 +74,7 @@ const app = new Hono();
 // production origin as the web PWA — no extra entry needed in prod. The
 // capacitor://localhost entry covers local Capacitor dev builds.
 app.use('*', cors({
-  origin: env.NODE_ENV === 'production'
-    ? ['https://usepdc.com', 'https://www.usepdc.com']
-    : [env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:5174', 'capacitor://localhost', 'ionic://localhost'],
+  origin: ALLOWED_ORIGINS,
   credentials: true,
 }));
 app.use('*', rateLimitGlobalIp);
@@ -98,6 +97,7 @@ app.onError((err, c) => {
   captureException(err);
   const status = resolveHttpErrorStatus(err);
   log.error({ err, path: c.req.path, status }, 'Unhandled error');
+  applyCorsHeaders(c);
   const message = status === 500 ? 'Internal Server Error' : err.message || 'Erro na requisição';
   return c.json({ error: message }, status);
 });
