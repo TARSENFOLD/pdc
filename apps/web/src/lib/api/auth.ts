@@ -27,6 +27,10 @@ export const authApi = {
   login: (payload: LoginPayload) => http.post<LoginResponse>('/auth/login', payload),
   register: (payload: RegisterPayload) => http.post<LoginResponse>('/auth/register', payload),
   logout: () => http.post<undefined>('/auth/logout', {}),
+  forgotPassword: (email: string) =>
+    http.post<{ success: boolean; message: string }>('/auth/forgot-password', { email }),
+  resetPassword: (token: string, password: string) =>
+    http.post<{ success: boolean }>('/auth/reset-password', { token, password }),
   registarEstudante: (payload: RegistoEstudantePayload) => http.post<LoginResponse>('/auth/register/estudante', payload),
   registarMentor: (payload: RegistoMentorPayload) => http.post<LoginResponse>('/auth/register/mentor', payload),
   registarInstituicao: (payload: RegistoInstituicaoPayload) => http.post<LoginResponse>('/auth/register/instituicao', payload),

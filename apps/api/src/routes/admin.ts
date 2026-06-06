@@ -3,16 +3,23 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
-import { strapiGet, strapiPutRaw } from '../modules/strapi/strapi.client.js';
-import { RoleSchema } from '@pdc/shared';
+import { strapiGet, strapiGetRaw, strapiPutRaw } from '../modules/strapi/strapi.client.js';
+import { DomainEventName, RoleSchema, normalizeTipo, type User } from '@pdc/shared';
 import { toPaginatedResponse } from './pagination.js';
 import { writeAuditLog } from '../middleware/audit.js';
+import { setCanonicalUserRole } from '../modules/auth/internal-account.service.js';
+import { authService } from '../modules/auth/auth.service.js';
+import { eventBus } from '../modules/events/event-bus.js';
+import pino from 'pino';
 
 type Vars = { Variables: AuthVariables };
+const log = pino({ name: 'admin-routes' });
 
 const paginacaoSchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  search: z.string().trim().optional(),
+  role: RoleSchema.optional(),
 });
 
 const roleBodySchema = z.object({
@@ -23,6 +30,23 @@ export const adminRoutes = new Hono<Vars>();
 
 adminRoutes.use('*', verifyJwt);
 
+interface AdminStrapiUser {
+  id: string | number;
+  email: string;
+  username?: string;
+  nome?: string;
+  blocked?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface AdminPerfil {
+  id: string | number;
+  userId?: string;
+  nome?: string;
+  tipo?: string;
+}
+
 // GET /admin/utilizadores — super_admin
 adminRoutes.get(
   '/utilizadores',
@@ -30,12 +54,54 @@ adminRoutes.get(
   zValidator('query', paginacaoSchema),
   async (c) => {
     const q = c.req.valid('query');
-    const params: Record<string, string> = { populate: 'perfil' };
-    if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
-    if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
     try {
-      const res = await strapiGet<unknown>('/users', params);
-      return c.json(toPaginatedResponse(res));
+      const [users, perfis] = await Promise.all([
+        strapiGetRaw<AdminStrapiUser[]>('/users'),
+        strapiGet<AdminPerfil>('/perfis', { 'pagination[pageSize]': '1000' }),
+      ]);
+      const perfilByUserId = new Map(
+        perfis.data
+          .filter((perfil): perfil is AdminPerfil & { userId: string } => typeof perfil.userId === 'string')
+          .map((perfil) => [perfil.userId, perfil]),
+      );
+
+      let mapped: User[] = users.map((user) => {
+        const perfil = perfilByUserId.get(String(user.id));
+        return {
+          id: String(user.id),
+          email: user.email,
+          nome: perfil?.nome ?? user.nome ?? user.username ?? user.email,
+          role: normalizeTipo(perfil?.tipo ?? 'estudante'),
+          perfilId: perfil ? String(perfil.id) : null,
+          reputacaoTier: 'BRONZE',
+          xp: 0,
+          reputacao: 0,
+          createdAt: user.createdAt ?? new Date(0).toISOString(),
+          updatedAt: user.updatedAt ?? user.createdAt ?? new Date(0).toISOString(),
+          areasInteresse: [],
+          conquistas: [],
+          ...(user.blocked !== undefined ? { bloqueado: user.blocked } : {}),
+        } as User;
+      });
+
+      if (q.role) mapped = mapped.filter((user) => user.role === q.role);
+      if (q.search) {
+        const search = q.search.toLowerCase();
+        mapped = mapped.filter(
+          (user) => user.nome.toLowerCase().includes(search) || user.email.toLowerCase().includes(search),
+        );
+      }
+
+      const page = q.page ?? 1;
+      const pageSize = q.pageSize ?? 10;
+      const total = mapped.length;
+      const pageCount = Math.max(1, Math.ceil(total / pageSize));
+      const start = (page - 1) * pageSize;
+
+      return c.json({
+        data: mapped.slice(start, start + pageSize),
+        pagination: { total, page, pageSize, pageCount },
+      });
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
@@ -51,7 +117,8 @@ adminRoutes.put(
     const id = c.req.param('id');
     const { role } = c.req.valid('json');
     try {
-      const data = await strapiPutRaw<unknown>(`/users/${id}`, { role });
+      const roleUpdate = await setCanonicalUserRole(id, role);
+      const data = await authService.getUserById(id);
       
       await writeAuditLog({
         actor: c.get('user'),
@@ -59,8 +126,16 @@ adminRoutes.put(
         recurso: `/users/${id}`, 
         ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
         userAgent: c.req.header('user-agent'),
-        detalhes: { role },
+        detalhes: { oldRole: roleUpdate.oldRole, role },
       }).catch(() => {});
+
+      void eventBus.publishWithOutbox(DomainEventName.PERFIL_ROLE_ALTERADO, {
+        perfilId: roleUpdate.perfilId,
+        oldRole: roleUpdate.oldRole,
+        newRole: roleUpdate.newRole,
+      }).catch((err: unknown) => {
+        log.error({ err, userId: id, role }, 'Falha ao publicar alteração de role');
+      });
       
       return c.json(data);
     } catch (err) {

@@ -2,20 +2,31 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthLeftPanel } from '@/components/auth/AuthLeftPanel';
 import { AsymmetricButton } from '@/components/ui';
+import { authApi } from '@/lib/api/auth';
+import { getErrorBody } from '@/lib/api/http';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  function handleSubmit(e: React.FormEvent): void {
+  async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
     setError('');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('Email inválido');
       return;
     }
-    setIsSubmitted(true);
+    setIsLoading(true);
+    try {
+      await authApi.forgotPassword(email);
+      setIsSubmitted(true);
+    } catch (err: unknown) {
+      setError(getErrorBody(err)?.error ?? 'Não foi possível enviar o email. Tenta novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -54,7 +65,7 @@ export default function ForgotPasswordPage() {
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} noValidate className="space-y-6">
+            <form onSubmit={(event) => { void handleSubmit(event); }} noValidate className="space-y-6">
               {error && (
                 <div role="alert" className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm font-medium text-red-500">
                   {error}
@@ -77,9 +88,10 @@ export default function ForgotPasswordPage() {
 
               <AsymmetricButton
                 type="submit"
+                disabled={isLoading}
                 className="w-full h-14 bg-ink-primary text-canvas font-black uppercase tracking-widest text-[11px] hover:bg-accent hover:text-ink-on-accent transition-all shadow-xl"
               >
-                Enviar link
+                {isLoading ? 'A enviar...' : 'Enviar link'}
               </AsymmetricButton>
 
               <p className="text-center text-sm text-ink-tertiary font-medium">

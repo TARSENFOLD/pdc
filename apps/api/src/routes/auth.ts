@@ -13,6 +13,7 @@ import { initiate2faChallenge } from './auth.otp.js';
 import { otpRoutes } from './auth.otp.js';
 import { oauthRoutes } from './auth.oauth.js';
 import { registerRoutes } from './auth.register.js';
+import { passwordResetService } from '../modules/auth/password-reset.service.js';
 
 export const authRoutes = new Hono<{ Variables: AuthVariables }>();
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
@@ -37,9 +38,20 @@ const registerSchema = z.object({
   nome: z.string().min(2).max(100),
 });
 
+const forgotPasswordSchema = z.object({
+  email: normalizedEmailSchema,
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(32).max(256),
+  password: z.string().min(12).max(128),
+});
+
 authRoutes.use('/login', rateLimit);
 authRoutes.use('/register', rateLimit);
 authRoutes.use('/refresh', rateLimit);
+authRoutes.use('/forgot-password', rateLimit);
+authRoutes.use('/reset-password', rateLimit);
 
 authRoutes.post('/register', zValidator('json', registerSchema), async (c) => {
   const { email, password, nome } = c.req.valid('json');
@@ -62,6 +74,30 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
       return c.json({ error: 'Credenciais inválidas' }, 401);
     }
     return c.json({ error: 'Serviço de autenticação indisponível' }, 502);
+  }
+});
+
+authRoutes.post('/forgot-password', zValidator('json', forgotPasswordSchema), async (c) => {
+  const { email } = c.req.valid('json');
+  try {
+    await passwordResetService.request(email);
+  } catch {
+    return c.json({ error: 'Não foi possível enviar o email de recuperação' }, 502);
+  }
+  return c.json({
+    success: true,
+    message: 'Se existir uma conta associada a este email, receberás instruções em breve.',
+  });
+});
+
+authRoutes.post('/reset-password', zValidator('json', resetPasswordSchema), async (c) => {
+  const { token, password } = c.req.valid('json');
+  try {
+    const reset = await passwordResetService.reset(token, password);
+    if (!reset) return c.json({ error: 'Link inválido ou expirado' }, 400);
+    return c.json({ success: true });
+  } catch {
+    return c.json({ error: 'Não foi possível alterar a palavra-passe' }, 502);
   }
 });
 

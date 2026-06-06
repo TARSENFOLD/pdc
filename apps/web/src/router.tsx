@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import LoginPage from '@/pages/LoginPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import TwoFactorPage from '@/features/auth/TwoFactorPage';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { LandingPage } from '@/pages/LandingPage';
@@ -314,6 +315,7 @@ export const router = createBrowserRouter([
   { path: '/verificar', element: <TwoFactorPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/auth/recuperar', element: <ForgotPasswordPage /> },
+  { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/projetos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoListPage /></Suspense> },
   { path: '/projetos/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoDetailPage /></Suspense> },
   { path: '/experiencias', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExperienciaListPage /></Suspense> },

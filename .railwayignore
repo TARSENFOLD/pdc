@@ -26,5 +26,6 @@ public
 
 *.log
 *.tsbuildinfo
+secrets.txt
 .env
 .env.*

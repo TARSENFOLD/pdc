@@ -11,7 +11,22 @@ export class ApiError extends Error {
   }
 }
 
-const SKIP_REFRESH_PATHS = new Set(['/auth/me', '/auth/refresh', '/auth/login', '/auth/register', '/auth/logout']);
+export function getErrorBody(error: unknown): { error?: string } | undefined {
+  if (!(error instanceof ApiError)) return undefined;
+  if (typeof error.body !== 'object' || error.body === null) return undefined;
+  const body = error.body as Record<string, unknown>;
+  return typeof body['error'] === 'string' ? { error: body['error'] } : undefined;
+}
+
+const SKIP_REFRESH_PATHS = new Set([
+  '/auth/me',
+  '/auth/refresh',
+  '/auth/login',
+  '/auth/register',
+  '/auth/logout',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+]);
 
 let refreshPromise: Promise<boolean> | null = null;
 

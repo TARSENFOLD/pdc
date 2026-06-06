@@ -14,7 +14,7 @@ export const mailService = {
 
     try {
       const { data, error } = await resend.emails.send({
-        from: 'PDC <no-reply@pdc.ao>', // TODO: Update to real domain once verified
+        from: env.RESEND_FROM_EMAIL ?? 'PDC <no-reply@usepdc.com>',
         to,
         subject,
         html,
