@@ -14,7 +14,7 @@
     "worker:telemetry:dev": "tsx watch --env-file=.env src/workers/telemetry-worker.ts",
     "start:outbox-worker": "node dist/modules/outbox/outbox-worker.js",
     "replay-outbox": "node dist/modules/outbox/outbox-worker.js",
-    "provision:internal-account": "node dist/cli/provision-internal-account.js",
+    "provision:internal-account": "node dist/src/cli/provision-internal-account.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit"
