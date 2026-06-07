@@ -94,10 +94,10 @@ export const SIDEBAR_CONFIG: SidebarItem[] = [
   {
     type: 'group', slug: 'gestao_institucional', icon: Building2, roles: ['instituicao'], domain: 'HUB_INSTITUTION',
     children: [
-      { type: 'leaf', slug: 'gestao_cursos', to: '/app/instituicao/cursos', icon: BookOpen, roles: ['instituicao'] },
-      { type: 'leaf', slug: 'laboratorios', to: '/app/instituicao/simulacoes', icon: FlaskConical, roles: ['instituicao'] },
-      { type: 'leaf', slug: 'vitrinas_curriculares', to: '/app/instituicao/experiencias', icon: MapPin, roles: ['instituicao'] },
-      { type: 'leaf', slug: 'roteiros', to: '/app/instituicao/programas', icon: GraduationCap, roles: ['instituicao'] },
+      { type: 'leaf', slug: 'cursos', to: '/app/instituicao/cursos', icon: BookOpen, roles: ['instituicao'] },
+      { type: 'leaf', slug: 'simulacoes', to: '/app/instituicao/simulacoes', icon: FlaskConical, roles: ['instituicao'] },
+      { type: 'leaf', slug: 'experiencias', to: '/app/instituicao/experiencias', icon: MapPin, roles: ['instituicao'] },
+      { type: 'leaf', slug: 'programas', to: '/app/instituicao/programas', icon: GraduationCap, roles: ['instituicao'] },
       { type: 'leaf', slug: 'estudantes_vinculados', to: '/app/instituicao/estudantes-vinculados', icon: Users, roles: ['instituicao'] },
       { type: 'leaf', slug: 'propostas', to: '/app/instituicao/propostas', icon: Search, roles: ['instituicao'] },
       { type: 'leaf', slug: 'relatorios', to: '/app/instituicao/relatorios', icon: FileText, roles: ['instituicao'] },

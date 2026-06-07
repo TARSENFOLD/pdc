@@ -195,7 +195,7 @@ export const NavItems: Record<NavItemSlug, NavItemLabel> = {
   meu_futuro: { 'pt-PT': 'Meu Futuro', 'pt-BR': 'Meu Futuro', en: 'My Future' },
   comunidade: { 'pt-PT': 'Comunidade', 'pt-BR': 'Comunidade', en: 'Community' },
   estudio_mentor: { 'pt-PT': 'Estúdio Mentor', 'pt-BR': 'Estúdio Mentor', en: 'Mentor Studio' },
-  gestao_institucional: { 'pt-PT': 'Gestão Institucional', 'pt-BR': 'Gestão Institucional', en: 'Institutional Management' },
+  gestao_institucional: { 'pt-PT': 'Conteúdos', 'pt-BR': 'Conteúdos', en: 'Content' },
   autoridade: { 'pt-PT': 'Autoridade', 'pt-BR': 'Autoridade', en: 'Authority' },
   feed: { 'pt-PT': 'Feed', 'pt-BR': 'Feed', en: 'Feed' },
   ranking: { 'pt-PT': 'Ranking', 'pt-BR': 'Ranking', en: 'Ranking' },

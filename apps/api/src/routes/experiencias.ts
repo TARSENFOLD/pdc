@@ -17,8 +17,14 @@ type Vars = { Variables: AuthVariables };
 interface StrapiExperiencia {
   id: string | number;
   titulo: string;
-  instituicaoId: string;
   estado: string;
+  autor?: {
+    id?: string | number;
+    userId?: string;
+  };
+  instituicao?: {
+    id?: string | number;
+  };
 }
 
 export const experienciaRoutes = new Hono<Vars>();
@@ -54,8 +60,9 @@ experienciaRoutes.get('/minhas', verifyJwt, checkRole(['instituicao', 'mentor', 
   const { id } = c.get('user');
   try {
     const res = await strapiGet<Experiencia>('/experiencias', {
-      'filters[instituicaoId][$eq]': id,
-      populate: 'capa',
+      'filters[autor][userId][$eq]': id,
+      populate: 'autor,instituicao',
+      sort: 'createdAt:desc',
     });
     return c.json(toPaginatedResponse(res));
   } catch {
@@ -69,17 +76,17 @@ experienciaRoutes.get('/stats', verifyJwt, checkRole(['instituicao', 'super_admi
   try {
     const [experiencias, programas, inscricoes] = await Promise.all([
       strapiGet<{ id: string }>('/experiencias', {
-        'filters[instituicaoId][$eq]': userId,
+        'filters[autor][userId][$eq]': userId,
         'filters[estado][$in]': ['approved', 'published'],
         'pagination[pageSize]': '1',
       }),
       strapiGet<{ id: string }>('/programas', {
-        'filters[instituicaoId][$eq]': userId,
+        'filters[responsavel][userId][$eq]': userId,
         'filters[estado][$eq]': 'activo',
         'pagination[pageSize]': '1',
       }),
       strapiGet<{ id: string }>('/inscricoes', {
-        'filters[experiencia][instituicaoId][$eq]': userId,
+        'filters[experiencia][autor][userId][$eq]': userId,
         'pagination[pageSize]': '1',
       }),
     ]);
@@ -123,12 +130,20 @@ experienciaRoutes.post('/',
   zValidator('json', CriarExperienciaPayloadSchema),
   async (c) => {
     const body = c.req.valid('json');
-    const { id } = c.get('user');
+    const { id, perfilId } = c.get('user');
 
     try {
+      const resolvedPerfilId = perfilId ?? (await strapiGet<{ id: string | number }>('/perfis', {
+        'filters[userId][$eq]': id,
+        'fields[0]': 'id',
+        'pagination[pageSize]': '1',
+      })).data[0]?.id;
+      if (resolvedPerfilId === undefined) {
+        return c.json({ error: 'Perfil do autor não encontrado' }, 404);
+      }
       const res = await strapiPost<Experiencia>('/experiencias', {
         ...body,
-        instituicaoId: id,
+        autor: String(resolvedPerfilId),
         estado: 'draft',
         slug: body.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
       });
@@ -215,12 +230,13 @@ experienciaRoutes.put('/:id',
       const resGet = await strapiGet<StrapiExperiencia>('/experiencias', {
         'filters[id][$eq]': id,
         'pagination[pageSize]': '1',
+        populate: 'autor',
       });
       const existing = resGet.data[0];
 
       if (!existing) return c.json({ error: 'Experiência não identificada' }, 404);
 
-      if (existing.instituicaoId !== userId && role !== 'super_admin') {
+      if (existing.autor?.userId !== userId && role !== 'super_admin') {
         return c.json({ error: 'Autoridade insuficiente' }, 403);
       }
 
@@ -247,6 +263,7 @@ experienciaRoutes.patch('/:id/estado',
       const resGet = await strapiGet<StrapiExperiencia>('/experiencias', {
         'filters[id][$eq]': id,
         'pagination[pageSize]': '1',
+        populate: 'autor',
       });
       const existing = resGet.data[0];
 
@@ -257,7 +274,7 @@ experienciaRoutes.patch('/:id/estado',
 
         if ((role === 'instituicao' || role === 'mentor') &&
             existing.estado === 'draft' && estado === 'review') {
-          return existing.instituicaoId === userId;
+          return existing.autor?.userId === userId;
         }
 
         if (role === 'comite_cientifico') {
@@ -280,7 +297,7 @@ experienciaRoutes.patch('/:id/estado',
       if (estado === 'published' || estado === 'approved') {
         await eventBus.publishWithOutbox(DomainEventName.EXPERIENCIA_PUBLICADA, {
           experienciaId: id,
-          autorId: existing.instituicaoId,
+          autorId: existing.autor?.userId ?? userId,
           titulo: existing.titulo
         });
       }

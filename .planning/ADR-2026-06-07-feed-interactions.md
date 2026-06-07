@@ -40,3 +40,10 @@
 - A instituição recebe navegação operacional completa para cursos, simulações, experiências,
   programas, estudantes, propostas, relatórios e branding, reutilizando builders e RBAC já
   partilhados com mentores.
+- A navegação institucional usa nomes literais do domínio (`Cursos`, `Simulações`,
+  `Experiências` e `Programas`); metáforas como “vitrinas”, “roteiros” e “laboratórios” não
+  substituem os tipos de conteúdo canónicos na interface operacional.
+- Experiências pertencem ao perfil criador pela relação Strapi `autor`; consultas e ownership
+  usam `autor.userId`. O campo inexistente `instituicaoId` não integra o contrato persistido.
+- Consultas de experiências e simulações só pedem relações existentes no schema Strapi; media
+  inexistente não pode derrubar a área de gestão.

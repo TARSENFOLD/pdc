@@ -40,6 +40,7 @@ vi.mock('../modules/auth/auth.middleware.js', () => ({
   verifyJwt: async (c: Context, next: Next) => {
     c.set('user', {
       id: c.req.header('x-test-user') ?? 'user-1',
+      perfilId: c.req.header('x-test-perfil') ?? c.req.header('x-test-user') ?? 'user-1',
       role: c.req.header('x-test-role') ?? 'estudante',
     });
     await next();
@@ -69,7 +70,7 @@ describe('experienciaRoutes E2E contracts', () => {
     nivel: 'medio',
     modalidade: 'presencial',
     estado: 'published',
-    instituicaoId: 'inst-1',
+    autor: { id: 'inst-1', userId: 'inst-1' },
   };
 
   // ─── GET / — catálogo público ─────────────────────────────────────────────
@@ -132,7 +133,7 @@ describe('experienciaRoutes E2E contracts', () => {
 
     expect(res.status).toBe(200);
     expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      'filters[instituicaoId][$eq]': 'inst-1',
+      'filters[autor][userId][$eq]': 'inst-1',
     }));
   });
 
@@ -166,7 +167,7 @@ describe('experienciaRoutes E2E contracts', () => {
     expect(res.status).toBe(201);
     expect(strapiPost).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
       estado: 'draft',
-      instituicaoId: 'inst-1',
+      autor: 'inst-1',
     }));
     expect(publishWithOutboxMock).toHaveBeenCalledWith(
       DomainEventName.EXPERIENCIA_CRIADA,

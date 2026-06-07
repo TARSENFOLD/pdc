@@ -63,7 +63,6 @@ simulacaoRoutes.get('/minhas', checkRole(['mentor', 'instituicao', 'super_admin'
   try {
     const res = await strapiGet<StrapiSimulacao>('/simulacoes', {
       'filters[autorId][$eq]': id,
-      populate: 'capa',
     });
     return c.json(toPaginatedResponse(res));
   } catch (err) {
