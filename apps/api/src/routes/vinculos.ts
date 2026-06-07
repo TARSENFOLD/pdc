@@ -6,6 +6,11 @@ import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.clien
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
+import {
+  findStrapiEntity,
+  persistedEntityId,
+  type StrapiEntityReference,
+} from '../modules/strapi/strapi-entity.js';
 
 const log = pino({ name: 'routes:vinculos' });
 type Vars = { Variables: AuthVariables };
@@ -25,8 +30,9 @@ interface StrapiPerfilMini {
   foto?: { url?: string } | null;
 }
 
-interface StrapiVinculo {
+interface StrapiVinculo extends StrapiEntityReference {
   id: string | number;
+  documentId?: string;
   solicitante: StrapiPerfilMini;
   destinatario: StrapiPerfilMini;
   status: string;
@@ -189,8 +195,9 @@ vinculoRoutes.patch('/:id/resolver', zValidator('json', z.object({ status: z.enu
   const { id: userId } = c.get('user');
 
   try {
-    const resExisting = await strapiGet<StrapiVinculo>(`/vinculos/${vinculoId}`, { populate: 'solicitante,destinatario' });
-    const existing = resExisting.data[0];
+    const existing = await findStrapiEntity<StrapiVinculo>('vinculos', vinculoId, {
+      populate: 'solicitante,destinatario',
+    });
 
     if (!existing) {
       return c.json({ error: 'Vínculo não encontrado' }, 404);
@@ -200,7 +207,7 @@ vinculoRoutes.patch('/:id/resolver', zValidator('json', z.object({ status: z.enu
       return c.json({ error: 'Não tens permissão para resolver este vínculo' }, 403);
     }
 
-    const resPut = await strapiPut<StrapiVinculo>(`/vinculos/${vinculoId}`, { 
+    const resPut = await strapiPut<StrapiVinculo>(`/vinculos/${persistedEntityId(existing)}`, {
       status,
       resolvidoEm: new Date().toISOString()
     });

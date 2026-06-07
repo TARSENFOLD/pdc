@@ -25,3 +25,7 @@
 - O access token transporta `perfilId`; rotas não precisam inferir ou inventar identidade.
 - A expiração do access token não elimina um refresh token ainda válido.
 - Telemetria nunca é assinada com perfil desconhecido.
+- Entidades Strapi v5 são localizadas pelo ID público ou `documentId`, mas mutações usam sempre
+  o `documentId` persistido quando disponível.
+- A leitura de notificações valida o `userId` proprietário antes da mutação, impedindo acesso
+  horizontal por IDs previsíveis.

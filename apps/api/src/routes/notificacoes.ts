@@ -2,6 +2,11 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import {
+  findStrapiEntity,
+  persistedEntityId,
+  type StrapiEntityReference,
+} from '../modules/strapi/strapi-entity.js';
 import { toPaginatedResponse } from './pagination.js';
 
 const DeviceTokenSchema = z.object({
@@ -92,8 +97,20 @@ notificacaoRoutes.get('/contador', async (c) => {
 // PUT /notificacoes/:id/lida — marcar como lida
 notificacaoRoutes.put('/:id/lida', async (c) => {
   const notifId = c.req.param('id');
+  const { id: userId } = c.get('user');
   try {
-    const data = await strapiPut<unknown>(`/notificacoes/${notifId}`, { lida: true });
+    const notificacao = await findStrapiEntity<StrapiEntityReference>(
+      'notificacoes',
+      notifId,
+      { 'filters[userId][$eq]': userId },
+    );
+    if (!notificacao) {
+      return c.json({ error: 'Notificação não encontrada' }, 404);
+    }
+    const data = await strapiPut<unknown>(
+      `/notificacoes/${persistedEntityId(notificacao)}`,
+      { lida: true },
+    );
     return c.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';

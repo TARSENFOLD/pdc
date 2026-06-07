@@ -6,6 +6,11 @@ import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.clien
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { toPaginatedResponse } from './pagination.js';
+import {
+  findStrapiEntity,
+  persistedEntityId,
+  type StrapiEntityReference,
+} from '../modules/strapi/strapi-entity.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -27,16 +32,18 @@ interface StrapiParticipante {
   nome: string;
 }
 
-interface StrapiMensagem {
+interface StrapiMensagem extends StrapiEntityReference {
   id: string;
+  documentId?: string;
   conteudo: string;
   lida: boolean;
   remetenteId: string;
   createdAt: string;
 }
 
-interface StrapiConversa {
+interface StrapiConversa extends StrapiEntityReference {
   id: string;
+  documentId?: string;
   participant1Id: string;
   participant2Id: string;
   participant1?: StrapiParticipante;
@@ -145,11 +152,9 @@ mensagensRoutes.get('/conversas/:conversaId', zValidator('query', mensagensQuery
   const { page, pageSize } = c.req.valid('query');
 
   try {
-    const resConversa = await strapiGet<StrapiConversa>(`/conversas/${conversaId}`, {
+    const conversa = await findStrapiEntity<StrapiConversa>('conversas', conversaId, {
       populate: 'participant1,participant2,mensagens',
     });
-
-    const conversa = resConversa.data[0];
     if (!conversa) {
       return c.json({ error: 'Conversa não encontrada' }, 404);
     }
@@ -168,7 +173,7 @@ mensagensRoutes.get('/conversas/:conversaId', zValidator('query', mensagensQuery
 
     for (const msg of mensagens.data) {
       if (!msg.lida && msg.remetenteId !== userId) {
-        await strapiPut<unknown>(`/mensagens/${msg.id}`, { lida: true });
+        await strapiPut<unknown>(`/mensagens/${persistedEntityId(msg)}`, { lida: true });
       }
     }
 
@@ -188,11 +193,9 @@ mensagensRoutes.post(
     const { conteudo } = c.req.valid('json');
 
     try {
-      const resConversa = await strapiGet<StrapiConversa>(`/conversas/${conversaId}`, {
+      const conversa = await findStrapiEntity<StrapiConversa>('conversas', conversaId, {
         populate: 'participant1,participant2',
       });
-
-      const conversa = resConversa.data[0];
       if (!conversa) {
         return c.json({ error: 'Conversa não encontrada' }, 404);
       }
@@ -224,7 +227,7 @@ mensagensRoutes.post(
         lida: false,
       });
 
-      await strapiPut<unknown>(`/conversas/${conversaId}`, {
+      await strapiPut<unknown>(`/conversas/${persistedEntityId(conversa)}`, {
         ultimaMensagem: resMsg.data.id,
         updatedAt: new Date().toISOString(),
       });
