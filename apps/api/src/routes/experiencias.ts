@@ -6,7 +6,7 @@ import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { requireApproved } from '../middleware/requireApproved.js';
 import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
-import { CriarExperienciaPayloadSchema, type Experiencia } from '@pdc/shared';
+import { CriarExperienciaPayloadSchema, type Experiencia, type ExperienciaSecao } from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { applyPublicCatalogStateFilter } from './publication-state.js';
@@ -25,6 +25,23 @@ interface StrapiExperiencia {
   instituicao?: {
     id?: string | number;
   };
+  secoes?: ExperienciaSecao[];
+}
+
+const REQUIRED_SECTION_GROUPS = [
+  ['boas_vindas'],
+  ['realidade'],
+  ['ano_fase', 'curriculo'],
+  ['depoimentos'],
+  ['infraestrutura'],
+  ['proximos_passos'],
+] as const;
+
+function missingRequiredSections(secoes: ExperienciaSecao[] | undefined): string[] {
+  const tipos = new Set((secoes ?? []).map((secao) => secao.tipo));
+  return REQUIRED_SECTION_GROUPS
+    .filter((group) => !group.some((tipo) => tipos.has(tipo)))
+    .map((group) => group.join('|'));
 }
 
 export const experienciaRoutes = new Hono<Vars>();
@@ -42,7 +59,7 @@ experienciaRoutes.get('/', zValidator('query', experienciaQuerySchema), async (c
   try {
     const q = c.req.valid('query');
     const params: Record<string, string | string[]> = {
-      populate: 'capa,instituicao',
+      populate: 'instituicao',
       sort: 'createdAt:desc',
     };
     if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
@@ -67,6 +84,27 @@ experienciaRoutes.get('/minhas', verifyJwt, checkRole(['instituicao', 'mentor', 
     return c.json(toPaginatedResponse(res));
   } catch {
     return c.json({ error: 'Erro ao recuperar as tuas experiências' }, 502);
+  }
+});
+
+experienciaRoutes.get('/minhas/:id', verifyJwt, checkRole(['instituicao', 'mentor', 'super_admin']), async (c) => {
+  const user = c.get('user');
+  const id = c.req.param('id');
+  if (!id) return c.json({ error: 'Experiência não identificada' }, 400);
+  try {
+    const res = await strapiGet<Experiencia & StrapiExperiencia>('/experiencias', {
+      'filters[id][$eq]': id,
+      'pagination[pageSize]': '1',
+      populate: 'autor,instituicao',
+    });
+    const experiencia = res.data[0];
+    if (!experiencia) return c.json({ error: 'Experiência não encontrada' }, 404);
+    if (experiencia.autor?.userId !== user.id && user.role !== 'super_admin') {
+      return c.json({ error: 'Autoridade insuficiente' }, 403);
+    }
+    return c.json(experiencia);
+  } catch {
+    return c.json({ error: 'Falha ao carregar a experiência para edição' }, 502);
   }
 });
 
@@ -109,7 +147,7 @@ experienciaRoutes.get('/:id', async (c) => {
     const params: Record<string, string | string[]> = {
       'filters[id][$eq]': id,
       'pagination[pageSize]': '1',
-      populate: 'capa,instituicao',
+      populate: 'instituicao',
     };
     applyPublicCatalogStateFilter(params);
     const res = await strapiGet<Experiencia>('/experiencias', params);
@@ -290,6 +328,16 @@ experienciaRoutes.patch('/:id/estado',
 
       if (!podeTransicionar()) {
         return c.json({ error: 'Transição de estado não permitida para esta role' }, 403);
+      }
+
+      if (estado === 'review') {
+        const missing = missingRequiredSections(existing.secoes);
+        if (missing.length > 0) {
+          return c.json({
+            error: 'A Experiência ainda não cumpre a estrutura mínima para revisão',
+            missingSections: missing,
+          }, 422);
+        }
       }
 
       await strapiPut(`/experiencias/${id}`, { estado });

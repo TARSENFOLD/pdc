@@ -1064,6 +1064,7 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
       Schema.Attribute.SetMinMaxLength<{
         maxLength: 500;
       }>;
+    secoes: Schema.Attribute.JSON;
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
     telemetriaConfig: Schema.Attribute.JSON;

@@ -13,6 +13,9 @@ export const experienciasApi = {
   getById: (id: string) =>
     http.get<Experiencia>(`/experiencias/${id}`),
 
+  getMineById: (id: string) =>
+    http.get<Experiencia>(`/experiencias/minhas/${id}`),
+
   getBySlug: (slug: string) =>
     http.get<Experiencia>(`/experiencias/slug/${slug}`),
 

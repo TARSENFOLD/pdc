@@ -11,6 +11,8 @@ import { BuilderShell, BuilderSection, BuilderUploadZone, BuilderActionsBar } fr
 import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/lib/auth/auth-context';
+import { ExperienceSectionsBuilder } from './components/ExperienceSectionsBuilder';
+import { newExperienceSection } from './components/experience-section-factory';
 
 const STORAGE_KEY = 'pdc_builder_experiencia_draft';
 
@@ -49,6 +51,14 @@ export function CriarExperienciaPage() {
       painelRealidade: { principaisEmpregadores: [] },
       muralVozes: [],
       guiaInstitucional: { fotosCampus: [], timelineCurricular: [] },
+      secoes: [
+        newExperienceSection('boas_vindas', 0, 'Boas-vindas'),
+        newExperienceSection('realidade', 1, 'Realidade da área'),
+        newExperienceSection('curriculo', 2, 'Percurso e currículo'),
+        newExperienceSection('depoimentos', 3, 'Vozes da comunidade'),
+        newExperienceSection('infraestrutura', 4, 'Infraestrutura'),
+        newExperienceSection('proximos_passos', 5, 'Próximos passos'),
+      ],
     }
   });
 
@@ -59,14 +69,14 @@ export function CriarExperienciaPage() {
   // BUG-005: carregar dados existentes em modo edição
   const { data: existingExp, isLoading: isLoadingExp } = useQuery({
     queryKey: ['experiencias', editId],
-    queryFn: () => experienciasApi.getById(editId ?? ''),
+    queryFn: () => experienciasApi.getMineById(editId ?? ''),
     enabled: isEditMode,
   });
 
   // BUG-005: hidratar o formulário com os dados carregados
   useEffect(() => {
     if (!existingExp || !isEditMode) return;
-    const { titulo, descricao, area, nivel, modalidade, duracaoEstimada, painelRealidade, muralVozes, guiaInstitucional } = existingExp;
+    const { titulo, descricao, area, nivel, modalidade, duracaoEstimada, painelRealidade, muralVozes, guiaInstitucional, secoes } = existingExp;
     if (titulo) setValue('titulo', titulo);
     if (descricao) setValue('descricao', descricao);
     if (area) setValue('area', area);
@@ -76,6 +86,7 @@ export function CriarExperienciaPage() {
     if (painelRealidade) setValue('painelRealidade', painelRealidade);
     if (muralVozes) setValue('muralVozes', muralVozes);
     if (guiaInstitucional) setValue('guiaInstitucional', guiaInstitucional);
+    if (secoes) setValue('secoes', secoes);
   }, [existingExp, isEditMode, setValue]);
 
   // Autosave em localStorage — apenas no modo criação
@@ -97,6 +108,7 @@ export function CriarExperienciaPage() {
           if (data.painelRealidade !== undefined) setValue('painelRealidade', data.painelRealidade);
           if (data.muralVozes !== undefined) setValue('muralVozes', data.muralVozes);
           if (data.guiaInstitucional !== undefined) setValue('guiaInstitucional', data.guiaInstitucional);
+          if (data.secoes !== undefined) setValue('secoes', data.secoes);
         }
       } catch (e) {
         console.error('Falha ao recuperar draft', e);
@@ -214,7 +226,8 @@ export function CriarExperienciaPage() {
           { label: isEditMode ? 'Editar' : 'Nova Experiência' }
         ]}
         sections={[
-          { id: 'identidade', label: 'Identidade' },
+          { id: 'identidade', label: 'Dados principais' },
+          { id: 'estrutura', label: 'Módulos da experiência' },
           { id: 'realidade', label: 'Mercado' },
           { id: 'vozes', label: 'Depoimentos' },
           { id: 'guia', label: 'Instituição' },
@@ -291,6 +304,19 @@ export function CriarExperienciaPage() {
         </BuilderSection>
 
         <BuilderSection
+          value="estrutura"
+          title="Módulos da Experiência"
+          description="Escolhe, ordena e combina seções de storytelling. Estes módulos não são unidades pedagógicas de Curso."
+        >
+          <ExperienceSectionsBuilder
+            control={control}
+            register={register}
+            watch={watch}
+            setValue={setValue}
+          />
+        </BuilderSection>
+
+        <BuilderSection
           value="realidade"
           title="Painel de Realidade"
           description="Dados de mercado e empregabilidade (Spec 04)."
@@ -341,11 +367,36 @@ export function CriarExperienciaPage() {
               <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest mb-4">Fotos do Campus / Laboratórios</p>
               <BuilderUploadZone
                 multiple
+                accept="image/*"
                 onUploadComplete={(urls) => {
                   const current = watch('guiaInstitucional.fotosCampus') || [];
                   setValue('guiaInstitucional.fotosCampus', [...current, ...urls]);
                 }}
               />
+              {(watch('guiaInstitucional.fotosCampus') ?? []).length > 0 && (
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {(watch('guiaInstitucional.fotosCampus') ?? []).map((url, index) => (
+                    <div key={url} className="relative border border-ink-tertiary/15 bg-recessed">
+                      <img src={url} alt={`Campus ${String(index + 1)}`} className="aspect-video w-full object-cover" />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-1 bg-canvas/90"
+                        onClick={() => {
+                          setValue(
+                            'guiaInstitucional.fotosCampus',
+                            (watch('guiaInstitucional.fotosCampus') ?? []).filter((_, currentIndex) => currentIndex !== index),
+                            { shouldDirty: true },
+                          );
+                        }}
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">

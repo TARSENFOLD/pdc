@@ -40,7 +40,7 @@
 
 **Objetivo:** dar ao estudante uma visão visceral e honesta de *"como é REALMENTE estudar X na instituição Y"* — antes de gastar um cêntimo ou um semestre.
 
-**Para a equipa de devs:** é **conteúdo de marketing/orientação**, não conteúdo pedagógico. Schema dedicado `experiencia` (sem módulos/itens), com `validadoAcademicamente`, `area`, `nivel`, `instituicao`, `autorPerfilId`.
+**Para a equipa de devs:** é **conteúdo de marketing/orientação**, não conteúdo pedagógico. Schema dedicado `experiencia`, com `validadoAcademicamente`, `area`, `nivel`, `instituicao`, `autorPerfilId` e `secoes` de storytelling. As seções não reutilizam a hierarquia pedagógica `Curso → Módulos → Itens`; são blocos editoriais próprios da Experiência.
 
 **Quem cria:** Instituições e Mentores. Validação obrigatória do Comité Científico e ou moderadores para garantir autenticidade dos depoimentos.
 
@@ -53,6 +53,10 @@
 | **Guia Institucional** | Fotos do campus, laboratórios, biblioteca, corpo docente, infraestrutura, timeline curricular | Sentido de lugar |
 
 Mais: **Q&A da comunidade** (perguntas vocacionais), **bloco vocacional IA** (interpretação Tina) só para autenticados.
+
+**Builder modular:** a instituição pode criar e ordenar livremente seções de boas-vindas, ano/fase, depoimentos, realidade, infraestrutura, currículo, carreira, materiais, FAQ, próximos passos e conteúdo personalizado. Cada seção aceita itens de texto, vídeo, imagem, galeria, PDF, link, iframe, áudio, depoimento, FAQ, CTA e estatística.
+
+**Mínimo editorial para submissão:** dados principais completos e pelo menos uma seção de boas-vindas, realidade, percurso (`ano_fase` ou `curriculo`), depoimentos, infraestrutura e próximos passos.
 
 **Regra de ouro inegociável:** **Experiências são SEMPRE gratuitas.** É marketing institucional — nunca cobram. Alterar esta regra requer aprovação do Super Admin + ADR formal.
 

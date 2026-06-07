@@ -19,6 +19,51 @@ import { useTelemetry } from '@/hooks/useTelemetry';
 import { useAuth } from '@/lib/auth/auth-context';
 import { toast } from '@/hooks/useToast';
 import type { Experiencia } from '@pdc/shared';
+import type { ExperienciaItem, ExperienciaSecao } from '@pdc/shared';
+
+function ExperienceItemView({ item }: { item: ExperienciaItem }) {
+  if ((item.tipo === 'imagem' || item.tipo === 'galeria') && item.mediaUrl) {
+    return <img src={item.mediaUrl} alt={item.titulo} className="max-h-[560px] w-full object-cover" />;
+  }
+  if (item.tipo === 'video' && item.mediaUrl) {
+    return <video src={item.mediaUrl} controls className="max-h-[560px] w-full bg-black" />;
+  }
+  if (item.tipo === 'audio' && item.mediaUrl) {
+    return <audio src={item.mediaUrl} controls className="w-full" />;
+  }
+  if (item.tipo === 'pdf' && (item.arquivoUrl ?? item.mediaUrl)) {
+    return <a href={item.arquivoUrl ?? item.mediaUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-accent underline">Abrir documento</a>;
+  }
+  if (item.tipo === 'cta' && item.cta) {
+    return <a href={item.cta.url} className="inline-flex bg-accent px-5 py-3 text-sm font-bold text-white">{item.cta.label}</a>;
+  }
+  return item.conteudo ? <p className="whitespace-pre-wrap text-base leading-7 text-ink-secondary">{item.conteudo}</p> : null;
+}
+
+function ExperienceSectionView({ section, index }: { section: ExperienciaSecao; index: number }) {
+  return (
+    <section id={section.id} className="border-t border-border py-10">
+      <div className="grid gap-8 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div>
+          <span className="text-xs font-bold text-accent">{String(index + 1).padStart(2, '0')}</span>
+          <p className="mt-2 text-xs uppercase text-ink-tertiary">{section.tipo.replaceAll('_', ' ')}</p>
+        </div>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold text-ink-primary">{section.titulo}</h2>
+            {section.descricao && <p className="mt-2 text-sm leading-6 text-ink-secondary">{section.descricao}</p>}
+          </div>
+          {section.itens.sort((a, b) => a.ordem - b.ordem).map((item) => (
+            <article key={item.id} className="space-y-3">
+              <h3 className="text-lg font-semibold text-ink-primary">{item.titulo}</h3>
+              <ExperienceItemView item={item} />
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 // ─── Sub-component: Curriculum Section ──────────────────────────────────────────
 
@@ -127,8 +172,10 @@ export function ExperienciaDetailPage() {
   // BUG-010: "Oráculo" é copy interna banida pela CLAUDE.md § 6
   if (isError || !exp) return <div className="p-20 text-center"><EmptyState icon={AlertCircle} variant="error" title="Não encontrado" description="Esta experiência curricular não foi encontrada." /></div>;
 
+  const orderedSections = [...(exp.secoes ?? [])].sort((a, b) => a.ordem - b.ordem);
+
   return (
-    <div className="mx-auto max-w-6xl space-y-10 pb-20 animate-in fade-in duration-1000">
+    <div className="mx-auto max-w-6xl space-y-10 px-5 pb-20 animate-in fade-in duration-1000">
       <SEOHead title={`${exp.titulo} | PDC`} description={exp.descricao} />
 
       <section className="relative h-[300px] rounded-[32px] overflow-hidden border border-white/5">
@@ -147,7 +194,13 @@ export function ExperienciaDetailPage() {
          </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {orderedSections.length > 0 ? (
+        <div>
+          {orderedSections.map((section, index) => (
+            <ExperienceSectionView key={section.id} section={section} index={index} />
+          ))}
+        </div>
+      ) : <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
          <div className="lg:col-span-2 space-y-8">
             <h3 className="text-2xl font-black text-ink-primary tracking-tight flex items-center gap-3">
               <BookOpen className="text-accent" /> Grade Curricular
@@ -182,7 +235,7 @@ export function ExperienciaDetailPage() {
                </Button>
             </Card>
          </aside>
-      </div>
+      </div>}
     </div>
   );
 }

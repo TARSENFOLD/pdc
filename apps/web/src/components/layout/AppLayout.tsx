@@ -18,6 +18,7 @@ const FOCUS_MODE_ROUTES = [
   /^\/app\/instituicao\/(?:criar-experiencia|editar-experiencia\/[^/]+)\/?$/,
   /^\/app\/instituicao\/(?:criar-programa|editar-programa\/[^/]+)\/?$/,
   /^\/app\/cursos\/[^/]+\/itens\/[^/]+\/?$/,
+  /^\/app\/experiencias\/[^/]+\/?$/,
   /^\/app\/simulacoes\/[^/]+\/play\/?$/,
 ];
 

@@ -62,6 +62,23 @@ describe('experienciaRoutes E2E contracts', () => {
 
   beforeEach(() => { vi.clearAllMocks(); });
 
+  const requiredSections = [
+    'boas_vindas',
+    'realidade',
+    'curriculo',
+    'depoimentos',
+    'infraestrutura',
+    'proximos_passos',
+  ].map((tipo, ordem) => ({
+    id: `sec-${String(ordem)}`,
+    titulo: tipo,
+    tipo,
+    ordem,
+    obrigatoria: true,
+    visibilidade: 'publico',
+    itens: [],
+  }));
+
   const expPublicada = {
     id: 'exp-1',
     titulo: 'Medicina Clínica — Imersão',
@@ -71,6 +88,7 @@ describe('experienciaRoutes E2E contracts', () => {
     modalidade: 'presencial',
     estado: 'published',
     autor: { id: 'inst-1', userId: 'inst-1' },
+    secoes: requiredSections,
   };
 
   // ─── GET / — catálogo público ─────────────────────────────────────────────
@@ -137,6 +155,24 @@ describe('experienciaRoutes E2E contracts', () => {
     }));
   });
 
+  it('GET /minhas/:id permite ao autor reabrir um draft para edição', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
+      ...expPublicada,
+      id: 'exp-draft',
+      estado: 'draft',
+    }]));
+
+    const res = await app.request('/experiencias/minhas/exp-draft', {
+      headers: { 'x-test-user': 'inst-1', 'x-test-role': 'instituicao' },
+    });
+
+    expect(res.status).toBe(200);
+    expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
+      'filters[id][$eq]': 'exp-draft',
+      populate: 'autor,instituicao',
+    }));
+  });
+
   // ─── POST / — criação protegida ───────────────────────────────────────────
 
   it('POST / cria experiência como draft e dispara evento G15', async () => {
@@ -152,6 +188,7 @@ describe('experienciaRoutes E2E contracts', () => {
       area: expPublicada.area,
       nivel: expPublicada.nivel,
       modalidade: expPublicada.modalidade,
+      secoes: requiredSections,
     };
 
     const res = await app.request('/experiencias', {
@@ -184,6 +221,27 @@ describe('experienciaRoutes E2E contracts', () => {
 
     expect(res.status).toBe(403);
     expect(strapiPost).not.toHaveBeenCalled();
+  });
+
+  it('PATCH /:id/estado bloqueia revisão sem estrutura editorial mínima', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
+      ...expPublicada,
+      estado: 'draft',
+      secoes: [],
+    }]));
+
+    const res = await app.request('/experiencias/exp-1/estado', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-user': 'inst-1',
+        'x-test-role': 'instituicao',
+      },
+      body: JSON.stringify({ estado: 'review' }),
+    });
+
+    expect(res.status).toBe(422);
+    expect(strapiPut).not.toHaveBeenCalled();
   });
 
   // ─── POST /:id/inscrever — inscrição com schema correto ───────────────────

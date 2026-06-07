@@ -10,9 +10,10 @@ interface BuilderUploadZoneProps {
   onUploadComplete: (urls: string[]) => void;
   multiple?: boolean;
   entityType?: MediaEntityType;
+  accept?: string;
 }
 
-export default function BuilderUploadZone({ onUploadComplete, multiple, entityType = 'generic' }: BuilderUploadZoneProps): React.ReactElement {
+export default function BuilderUploadZone({ onUploadComplete, multiple, entityType = 'generic', accept }: BuilderUploadZoneProps): React.ReactElement {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +64,7 @@ export default function BuilderUploadZone({ onUploadComplete, multiple, entityTy
         ref={fileInputRef} 
         className="hidden" 
         multiple={multiple} 
+        accept={accept}
         onChange={handleFileChange}
       />
       <p className="text-sm text-ink-tertiary">

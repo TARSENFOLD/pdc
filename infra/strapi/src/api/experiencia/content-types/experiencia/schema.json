@@ -56,6 +56,10 @@
     "painelRealidade": { "type": "json" },
     "muralVozes": { "type": "json" },
     "guiaInstitucional": { "type": "json" },
+    "secoes": {
+      "type": "json",
+      "description": "Seções modulares de storytelling da Experiência; não são módulos pedagógicos de Curso"
+    },
     "tags": { "type": "json" },
     "gradeDestaque": { "type": "json" },
     "telemetriaConfig": { "type": "json" },

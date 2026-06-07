@@ -30,6 +30,64 @@ export type PainelRealidade = z.infer<typeof PainelRealidadeSchema>;
 export type MuralVozesItem = z.infer<typeof MuralVozesItemSchema>;
 export type GuiaInstitucional = z.infer<typeof GuiaInstitucionalSchema>;
 
+export const ExperienciaSecaoTipoSchema = z.enum([
+  'boas_vindas',
+  'ano_fase',
+  'depoimentos',
+  'realidade',
+  'infraestrutura',
+  'curriculo',
+  'carreira',
+  'materiais',
+  'faq',
+  'proximos_passos',
+  'personalizado',
+]);
+
+export const ExperienciaItemTipoSchema = z.enum([
+  'video',
+  'texto',
+  'imagem',
+  'galeria',
+  'pdf',
+  'link',
+  'iframe',
+  'depoimento',
+  'faq',
+  'cta',
+  'estatistica',
+  'audio',
+]);
+
+export const ExperienciaItemSchema = z.object({
+  id: z.string(),
+  tipo: ExperienciaItemTipoSchema,
+  ordem: z.number().int().min(0),
+  titulo: z.string().min(1).max(200),
+  conteudo: z.string().optional(),
+  mediaUrl: z.string().url().optional(),
+  arquivoUrl: z.string().url().optional(),
+  metadata: z.record(z.unknown()).optional(),
+  cta: z.object({
+    label: z.string().min(1),
+    url: z.string().url(),
+  }).optional(),
+});
+
+export const ExperienciaSecaoSchema = z.object({
+  id: z.string(),
+  titulo: z.string().min(1).max(200),
+  tipo: ExperienciaSecaoTipoSchema,
+  ordem: z.number().int().min(0),
+  obrigatoria: z.boolean(),
+  visibilidade: z.enum(['publico', 'autenticado']),
+  descricao: z.string().optional(),
+  itens: z.array(ExperienciaItemSchema),
+});
+
+export type ExperienciaSecao = z.infer<typeof ExperienciaSecaoSchema>;
+export type ExperienciaItem = z.infer<typeof ExperienciaItemSchema>;
+
 // ─── Schema Canónico da Experiência (SSOT G3-T1) ────────────────────────────
 
 export const ExperienciaSchema = z.object({
@@ -63,6 +121,7 @@ export const ExperienciaSchema = z.object({
   painelRealidade: PainelRealidadeSchema.optional(),
   muralVozes: z.array(MuralVozesItemSchema).optional(),
   guiaInstitucional: GuiaInstitucionalSchema.optional(),
+  secoes: z.array(ExperienciaSecaoSchema).optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
@@ -87,6 +146,7 @@ export const CriarExperienciaPayloadSchema = z.object({
   painelRealidade: PainelRealidadeSchema.optional(),
   muralVozes: z.array(MuralVozesItemSchema).optional(),
   guiaInstitucional: GuiaInstitucionalSchema.optional(),
+  secoes: z.array(ExperienciaSecaoSchema),
 });
 
 export type CriarExperienciaPayload = z.infer<typeof CriarExperienciaPayloadSchema>;
