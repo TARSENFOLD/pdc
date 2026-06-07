@@ -50,6 +50,8 @@ interface StrapiPerfilData {
   bio?: string;
   reputacao?: number;
   foto?: { url?: string } | null;
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
   areasInteresse?: string[];
   conquistas?: Conquista[];
   aprovado?: boolean;
@@ -181,7 +183,7 @@ export const authService = {
 
     const resPerfil = await strapiGet<StrapiPerfilData>('/perfis', {
       'filters[userId][$eq]': id,
-      'populate': ['foto', 'conquistas'],
+      'populate': ['foto', 'capa', 'conquistas'],
     });
 
     const perfilData = resPerfil.data[0] ?? null;
@@ -250,7 +252,8 @@ export const authService = {
       nome: perfil?.nome ?? u.nome ?? u.username,
       role: resolveRole(u.role?.name, perfil?.tipo),
       perfilId: perfil?.id,
-      avatarUrl: perfil?.foto?.url ?? u.avatar?.url,
+      avatarUrl: perfil?.foto?.url ?? perfil?.avatarUrl ?? u.avatar?.url,
+      bannerUrl: perfil?.bannerUrl,
       reputacaoTier: getTier(reputationScore),
       xp: 0,
       reputacao: reputationScore,

@@ -193,7 +193,7 @@ export const NavItems: Record<NavItemSlug, NavItemLabel> = {
   estudio_mentor: { 'pt-PT': 'Estúdio Mentor', 'pt-BR': 'Estúdio Mentor', en: 'Mentor Studio' },
   gestao_institucional: { 'pt-PT': 'Gestão Institucional', 'pt-BR': 'Gestão Institucional', en: 'Institutional Management' },
   autoridade: { 'pt-PT': 'Autoridade', 'pt-BR': 'Autoridade', en: 'Authority' },
-  feed: { 'pt-PT': 'Feed de Mérito', 'pt-BR': 'Feed de Mérito', en: 'Merit Feed' },
+  feed: { 'pt-PT': 'Feed', 'pt-BR': 'Feed', en: 'Feed' },
   ranking: { 'pt-PT': 'Ranking', 'pt-BR': 'Ranking', en: 'Ranking' },
   vinculos: { 'pt-PT': 'Rede e Vínculos', 'pt-BR': 'Rede e Vínculos', en: 'Network & Bonds' },
   projetos: { 'pt-PT': 'Projetos', 'pt-BR': 'Projetos', en: 'Projects' },

@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Card, Avatar, Badge, Modal, ModalHeader, ModalTitle, Button } from '@/components/ui';
-import { Heart, MessageSquare, Share2, Award, Bookmark, MoreHorizontal, Smile, Image as ImageIcon, Send } from 'lucide-react';
+import { Heart, MessageSquare, Share2, Award, Bookmark, MoreHorizontal, Smile, Image as ImageIcon, Send, Copy, Mail } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -39,6 +39,7 @@ export function FeedCard({ item }: FeedCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [editCorpo, setEditCorpo] = useState(item.corpo || item.descricao || '');
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [commentText, setCommentText] = useState('');
@@ -46,10 +47,21 @@ export function FeedCard({ item }: FeedCardProps) {
 
   // Sync like status from server when query resolves
   const likeData = likeStatusQuery.data;
-  if (likeData && likeData.liked !== liked) {
+  useEffect(() => {
+    if (!likeData) return;
     setLiked(likeData.liked);
     setLikesCount(likeData.count);
-  }
+  }, [likeData]);
+
+  const bookmarkStatusQuery = useQuery({
+    queryKey: ['bookmark-status', targetType, item.id],
+    queryFn: () => bookmarkApi.getStatus(targetType, item.id),
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (bookmarkStatusQuery.data) setBookmarked(bookmarkStatusQuery.data.bookmarked);
+  }, [bookmarkStatusQuery.data]);
 
   // ─── Comments: real API ──────────────────────────────────────────────────
   const commentsQuery = useQuery({
@@ -118,6 +130,8 @@ export function FeedCard({ item }: FeedCardProps) {
     },
     onSuccess: (res) => {
       setBookmarked(res.bookmarked);
+      void queryClient.invalidateQueries({ queryKey: ['bookmark-status', targetType, item.id] });
+      void queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
     },
     onError: () => {
       setBookmarked((prev) => !prev);
@@ -145,11 +159,16 @@ export function FeedCard({ item }: FeedCardProps) {
         console.error('Error sharing:', err);
       }
     } else {
-      // Fallback
-      void navigator.clipboard.writeText(`${window.location.origin}/app/feed-posts/${item.id}`);
-      toast({ variant: 'success', title: t('common.copied', 'Copiado'), description: t('feed.linkCopied', 'O link foi copiado para a tua área de transferência.') });
-      shareMutation.mutate();
+      setIsShareModalOpen(true);
     }
+  };
+
+  const shareUrl = `${window.location.origin}/app/feed-posts/${item.id}`;
+  const shareText = item.descricao || item.corpo || item.titulo;
+
+  const registerShare = () => {
+    shareMutation.mutate();
+    setIsShareModalOpen(false);
   };
 
   const editMutation = useMutation({
@@ -242,10 +261,18 @@ export function FeedCard({ item }: FeedCardProps) {
           </div>
         </div>
 
-        {item.imagem && (
-           <Link to={`/app/feed-posts/${item.id}`} className="block rounded-sm overflow-hidden border border-[var(--chrome-border)] bg-[var(--surface-elevated)] mt-4">
-              <img src={item.imagem} alt="" className="w-full h-auto max-h-[500px] object-cover group-hover:scale-[1.02] transition-transform duration-1000" />
-           </Link>
+        {(item.mediaUrls?.length ?? 0) > 0 && (
+          <div className={`grid gap-2 overflow-hidden rounded-sm border border-[var(--chrome-border)] bg-black ${item.mediaUrls && item.mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {item.mediaUrls?.map((url) => (
+              /\.mp4(?:$|\?)/i.test(url) ? (
+                <video key={url} src={url} controls preload="metadata" className="max-h-[500px] w-full object-contain" />
+              ) : (
+                <Link key={url} to={`/app/feed-posts/${item.id}`} className="block overflow-hidden">
+                  <img src={url} alt="" className="max-h-[500px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]" />
+                </Link>
+              )
+            ))}
+          </div>
         )}
       </div>
 
@@ -425,6 +452,40 @@ export function FeedCard({ item }: FeedCardProps) {
           >
             {t('common.save', 'Guardar')}
           </Button>
+        </div>
+      </Modal>
+      <Modal open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
+        <ModalHeader className="mb-4">
+          <ModalTitle className="text-xl font-bold font-serif">Partilhar publicação</ModalTitle>
+        </ModalHeader>
+        <div className="grid gap-2">
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={registerShare}
+            className="flex min-h-11 items-center gap-3 border border-[var(--chrome-border)] px-4 text-sm font-semibold text-[var(--ink-primary)] hover:bg-[var(--surface-elevated)]"
+          >
+            <Share2 size={18} /> WhatsApp
+          </a>
+          <a
+            href={`mailto:?subject=${encodeURIComponent(item.titulo)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`}
+            onClick={registerShare}
+            className="flex min-h-11 items-center gap-3 border border-[var(--chrome-border)] px-4 text-sm font-semibold text-[var(--ink-primary)] hover:bg-[var(--surface-elevated)]"
+          >
+            <Mail size={18} /> Email
+          </a>
+          <button
+            type="button"
+            onClick={() => {
+              void navigator.clipboard.writeText(shareUrl);
+              toast({ variant: 'success', title: 'Link copiado', description: 'O link está pronto para partilhar.' });
+              registerShare();
+            }}
+            className="flex min-h-11 items-center gap-3 border border-[var(--chrome-border)] px-4 text-sm font-semibold text-[var(--ink-primary)] hover:bg-[var(--surface-elevated)]"
+          >
+            <Copy size={18} /> Copiar link
+          </button>
         </div>
       </Modal>
     </Card>

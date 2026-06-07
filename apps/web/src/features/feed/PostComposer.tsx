@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Image as ImageIcon, Video } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, LoaderCircle, Video, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { CriarPostPayloadSchema, type CriarPostPayload } from '@pdc/shared';
 import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { feedApi } from '@/lib/api/feed';
+import { mediaApi } from '@/lib/api/media';
 import { toast } from '@/hooks/useToast';
 
 interface PostComposerFormProps {
@@ -25,6 +26,9 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
   const [corpo, setCorpo] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
   const [lastEventId, setLastEventId] = useState<string | null>(null);
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isInline = variant === 'inline';
@@ -34,6 +38,7 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
     onSuccess: (post) => {
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
       setCorpo('');
+      setMediaUrls([]);
       if (post.estado === 'aprovada' && post.eventId) {
         setLastEventId(post.eventId);
       }
@@ -56,11 +61,24 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
       });
     },
   });
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => mediaApi.upload(file, 'post-media'),
+    onSuccess: (result) => {
+      setMediaUrls((current) => [...current, result.url].slice(0, 10));
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: 'Falha no anexo',
+        description: errorMessage(error),
+        variant: 'error',
+      });
+    },
+  });
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const parsed = CriarPostPayloadSchema.safeParse({ corpo, mediaUrls: [] });
+    const parsed = CriarPostPayloadSchema.safeParse({ corpo, mediaUrls });
     if (!parsed.success) {
       setValidationError(parsed.error.issues[0]?.message ?? 'Publicação inválida.');
       return;
@@ -68,6 +86,11 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
 
     setValidationError(null);
     mutation.mutate(parsed.data);
+  }
+
+  function handleFile(file: File | undefined) {
+    if (!file || mediaUrls.length >= 10 || uploadMutation.isPending) return;
+    uploadMutation.mutate(file);
   }
 
   const form = (
@@ -94,15 +117,42 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
           </div>
         </div>
 
+        {mediaUrls.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {mediaUrls.map((url) => {
+              const isVideo = /\.mp4(?:$|\?)/i.test(url);
+              return (
+                <div key={url} className="relative aspect-video overflow-hidden rounded-sm border border-[var(--chrome-border)] bg-black">
+                  {isVideo ? (
+                    <video src={url} className="h-full w-full object-cover" controls preload="metadata" />
+                  ) : (
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                  )}
+                  <button
+                    type="button"
+                    aria-label="Remover anexo"
+                    onClick={() => { setMediaUrls((current) => current.filter((item) => item !== url)); }}
+                    className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-sm bg-black/80 text-white"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex justify-between items-center mt-2">
           {isInline ? (
             <div className="flex items-center gap-2 bg-[var(--surface-elevated)] border border-[var(--chrome-border)] rounded-md px-1 py-1">
-              <button type="button" onClick={() => toast({ title: 'Em breve', description: 'Funcionalidade de anexo em desenvolvimento.', variant: 'info' })} className="text-[var(--ink-tertiary)] hover:text-[var(--ink-primary)] hover:bg-[var(--chrome-surface)] transition-colors flex items-center gap-2 px-3 py-1.5 rounded-sm text-[11px] font-bold tracking-widest uppercase">
-                <ImageIcon size={14} />
-                {t('feed.addPhoto', 'Add Photo')}
+              <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(event) => { handleFile(event.target.files?.[0]); event.target.value = ''; }} />
+              <input ref={videoInputRef} type="file" accept="video/mp4" className="hidden" onChange={(event) => { handleFile(event.target.files?.[0]); event.target.value = ''; }} />
+              <button type="button" onClick={() => { imageInputRef.current?.click(); }} disabled={uploadMutation.isPending || mediaUrls.length >= 10} className="text-[var(--ink-tertiary)] hover:text-[var(--ink-primary)] hover:bg-[var(--chrome-surface)] transition-colors flex items-center gap-2 px-3 py-1.5 rounded-sm text-[11px] font-bold tracking-widest uppercase disabled:opacity-50">
+                {uploadMutation.isPending ? <LoaderCircle size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+                {t('feed.addPhoto', 'Foto')}
               </button>
               <div className="w-[1px] h-4 bg-[var(--chrome-border)]"></div>
-              <button type="button" onClick={() => toast({ title: 'Em breve', description: 'Funcionalidade de anexo em desenvolvimento.', variant: 'info' })} className="text-[var(--ink-tertiary)] hover:text-[var(--ink-primary)] hover:bg-[var(--chrome-surface)] transition-colors flex items-center justify-center px-3 py-1.5 rounded-sm" title={t('feed.addVideo', 'Adicionar Vídeo')}>
+              <button type="button" onClick={() => { videoInputRef.current?.click(); }} disabled={uploadMutation.isPending || mediaUrls.length >= 10} className="text-[var(--ink-tertiary)] hover:text-[var(--ink-primary)] hover:bg-[var(--chrome-surface)] transition-colors flex items-center justify-center px-3 py-1.5 rounded-sm disabled:opacity-50" title={t('feed.addVideo', 'Adicionar vídeo')}>
                 <Video size={14} />
               </button>
             </div>
@@ -110,7 +160,7 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
           <Button 
             type="submit" 
             isLoading={mutation.isPending} 
-            disabled={corpo.trim().length === 0}
+            disabled={corpo.trim().length === 0 || uploadMutation.isPending}
             className="rounded-md bg-[var(--accent-terracotta)] hover:bg-[var(--accent-terracotta-soft)] text-white h-8 px-6 text-[11px] font-bold uppercase tracking-widest shadow-sm"
           >
             {t('feed.postButton', 'POST')}

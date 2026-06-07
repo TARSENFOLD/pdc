@@ -75,9 +75,8 @@ describe('Sidebar Render by Role', () => {
     const comunidadeBtn = await screen.findByText(/Comunidade/i);
     expect(comunidadeBtn).toBeDefined();
     
-    // Clicar para abrir Comunidade
-    comunidadeBtn.click();
-    expect(await screen.findByText(/Feed de Mérito/i)).toBeDefined();
+    // Comunidade vem aberta por defeito.
+    expect(await screen.findByText(/^Feed$/i)).toBeDefined();
     
     // Grupo Aprender já vem aberto por defeito para estudantes
     expect(await screen.findByText(/Simulações/i)).toBeDefined();

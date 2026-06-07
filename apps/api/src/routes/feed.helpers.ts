@@ -27,6 +27,7 @@ export interface StrapiEntity {
     userId?: string;
     nome?: string;
     foto?: { url?: string } | null;
+    avatarUrl?: string | null;
   } | null;
   instituicaoNome?: string;
   estudante?: { nome: string };
@@ -194,8 +195,9 @@ export function toFeedItem(
     createdAt: c.publishedAt ?? c.createdAt,
     slug: c.slug,
     capaUrl: c.capaUrl,
-    avatar: c.autor?.foto?.url ?? undefined,
+    avatar: c.autor?.foto?.url ?? c.autor?.avatarUrl ?? undefined,
     imagem: mediaUrls[0],
+    mediaUrls,
     area: parsedArea.success ? parsedArea.data : undefined,
     autorNome: c.autor?.nome ?? c.autorNome ?? c.instituicaoNome ?? c.estudante?.nome,
     score,

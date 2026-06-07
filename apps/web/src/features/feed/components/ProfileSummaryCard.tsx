@@ -18,7 +18,7 @@ export function ProfileSummaryCard() {
   // dado que a página de feed deve estar protegida por auth.
   if (!user) return null;
 
-  const totalVinculos = vinculosData?.pagination.total ?? 0;
+  const totalVinculos = vinculosData?.meta?.pagination?.total ?? vinculosData?.data.length ?? 0;
   
   // Lógica RBAC para Métricas
   const showConquistas = ['estudante', 'mentor'].includes(user.role);

@@ -34,6 +34,7 @@ export const FeedItemSchema = z.object({
   userId: z.string(),
   avatar: z.string().nullable().optional(),
   imagem: z.string().nullable().optional(),
+  mediaUrls: z.array(z.string().url()).max(10).optional(),
   capaUrl: z.string().optional(),
   createdAt: z.string(),
   timestamp: z.string().optional(),

@@ -39,7 +39,7 @@ const TIPO_ROUTE: Record<string, (slug: string) => string> = {
 function getNavCommands(role: Role | undefined): NavCommand[] {
   const base: NavCommand[] = [
     { label: 'Início', to: '/app/home' },
-    { label: 'Feed de Mérito', to: '/app/feed' },
+    { label: 'Feed', to: '/app/feed' },
     { label: 'Simulações', to: '/app/simulacoes' },
     { label: 'Reputação', to: '/app/reputacao' },
     { label: 'Perfil', to: '/app/perfil' },

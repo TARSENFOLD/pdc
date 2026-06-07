@@ -30,6 +30,9 @@ export const bookmarkApi = {
   list: async () => {
     return http.get<{ data: Bookmark[] }>('/interactions/bookmarks');
   },
+  getStatus: async (targetType: InteractionTargetType, targetId: string) => {
+    return http.get<BookmarkStatus>(`/interactions/bookmark/status?targetType=${targetType}&targetId=${targetId}`);
+  },
 };
 
 // ─── Ratings ──────────────────────────────────────────────────────────────────

@@ -12,8 +12,10 @@ import {
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { rateLimitComments } from '../middleware/rateLimit.js';
+import pino from 'pino';
 
 export const commentsRoutes = new Hono<{ Variables: AuthVariables }>();
+const log = pino({ name: 'comments-routes' });
 
 interface StrapiEntity {
   id: number;
@@ -50,12 +52,21 @@ commentsRoutes.post('/', verifyJwt, rateLimitComments, zValidator('json', Create
   });
   const perfilId = resPerfil.data[0]?.id;
 
-  await eventBus.publishWithOutbox(DomainEventName.COMENTARIO_CRIADO, {
-    comentarioId: res.data.id,
-    perfilId: String(perfilId),
-    targetType,
-    targetId
-  });
+  if (perfilId) {
+    await eventBus.publishWithOutbox(DomainEventName.COMENTARIO_CRIADO, {
+      comentarioId: res.data.id,
+      perfilId,
+      targetType,
+      targetId
+    }).catch((err: unknown) => {
+      log.error(
+        { err, userId: user.id, comentarioId: res.data.id, targetType, targetId },
+        'Comentário persistido; falha ao publicar evento no outbox',
+      );
+    });
+  } else {
+    log.error({ userId: user.id, comentarioId: res.data.id }, 'Comentário persistido sem perfil associado; evento não publicado');
+  }
 
   const bodyResponse: Comment = {
     id: res.data.id.toString(),

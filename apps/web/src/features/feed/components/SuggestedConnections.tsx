@@ -1,16 +1,32 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Card, Avatar } from '@/components/ui';
 import { FeedCardSkeleton } from '@/components/ui/Skeleton';
 import { vinculosApi } from '@/lib/api/vinculos';
 import { UserPlus, Compass } from 'lucide-react';
+import { toast } from '@/hooks/useToast';
 
 export function SuggestedConnections() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['vinculos', 'sugestoes'],
     queryFn: vinculosApi.sugestoes,
+  });
+  const connectMutation = useMutation({
+    mutationFn: (perfilId: string) => vinculosApi.criar(perfilId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['vinculos'] });
+      toast({ title: 'Pedido enviado', description: 'O pedido de vínculo foi enviado.', variant: 'success' });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: 'Não foi possível vincular',
+        description: error instanceof Error ? error.message : 'Tenta novamente.',
+        variant: 'error',
+      });
+    },
   });
 
   if (isLoading) {
@@ -65,6 +81,8 @@ export function SuggestedConnections() {
                 </div>
               </div>
               <button 
+                onClick={() => { connectMutation.mutate(perfil.id); }}
+                disabled={connectMutation.isPending}
                 className="shrink-0 ml-2 w-7 h-7 flex items-center justify-center rounded-sm text-[var(--ink-tertiary)] hover:text-[var(--accent-terracotta)] hover:bg-[var(--surface-elevated)] transition-colors"
                 title={t('common.conectar', 'Conectar')}
               >

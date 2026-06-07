@@ -15,8 +15,14 @@ vinculoRoutes.use('*', verifyJwt);
 
 interface StrapiPerfilMini {
   id: string | number;
+  documentId?: string;
   nome: string;
   userId: string;
+  tipo?: string;
+  bio?: string;
+  headline?: string;
+  avatarUrl?: string | null;
+  foto?: { url?: string } | null;
 }
 
 interface StrapiVinculo {
@@ -60,12 +66,66 @@ vinculoRoutes.get('/pendentes', async (c) => {
   }
 });
 
+// GET /vinculos/sugestoes
+vinculoRoutes.get('/sugestoes', async (c) => {
+  const { id: userId } = c.get('user');
+  try {
+    const [perfis, vinculos] = await Promise.all([
+      strapiGet<StrapiPerfilMini>('/perfis', {
+        'filters[userId][$ne]': userId,
+        'filters[ativo][$eq]': 'true',
+        'pagination[pageSize]': '20',
+        populate: 'foto',
+        sort: 'createdAt:desc',
+      }),
+      strapiGet<StrapiVinculo>('/vinculos', {
+        'filters[$or][0][solicitante][userId][$eq]': userId,
+        'filters[$or][1][destinatario][userId][$eq]': userId,
+        'filters[status][$in][0]': 'pendente',
+        'filters[status][$in][1]': 'aprovado',
+        'pagination[pageSize]': '100',
+        populate: 'solicitante,destinatario',
+      }),
+    ]);
+
+    const excluded = new Set<string>();
+    for (const vinculo of vinculos.data) {
+      excluded.add(String(vinculo.solicitante.id));
+      excluded.add(String(vinculo.destinatario.id));
+    }
+
+    const data = perfis.data
+      .filter((perfil) => !excluded.has(String(perfil.id)))
+      .slice(0, 5)
+      .map((perfil) => ({
+        id: String(perfil.id),
+        nome: perfil.nome,
+        role: perfil.tipo ?? 'estudante',
+        bio: perfil.bio,
+        headline: perfil.headline,
+        avatarUrl: perfil.foto?.url ?? perfil.avatarUrl ?? null,
+        reputacaoTier: 'BRONZE',
+        areasInteresse: [],
+        socialLinks: [],
+      }));
+
+    return c.json({ data });
+  } catch (err) {
+    log.error({ err, userId }, 'Erro ao carregar sugestões de vínculo');
+    return c.json({ error: 'Erro ao carregar sugestões de vínculo' }, 502);
+  }
+});
+
 // POST /vinculos/:id/pedir
 vinculoRoutes.post('/:id/pedir', async (c) => {
   const destinatarioPerfilId = c.req.param('id');
+  const { id: userId } = c.get('user');
 
   try {
-    const solicitanteRes = await strapiGet<StrapiPerfilMini>('/perfis/me');
+    const solicitanteRes = await strapiGet<StrapiPerfilMini>('/perfis', {
+      'filters[userId][$eq]': userId,
+      'pagination[pageSize]': '1',
+    });
     const solicitantePerfil = solicitanteRes.data[0];
 
     if (!solicitantePerfil) {
@@ -73,7 +133,7 @@ vinculoRoutes.post('/:id/pedir', async (c) => {
     }
 
     const resPost = await strapiPost<StrapiVinculo>('/vinculos', {
-      solicitante: solicitantePerfil.id,
+      solicitante: solicitantePerfil.documentId ?? solicitantePerfil.id,
       destinatario: destinatarioPerfilId,
       status: 'pendente',
       criadoEm: new Date().toISOString()

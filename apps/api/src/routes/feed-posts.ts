@@ -33,6 +33,7 @@ interface StrapiPerfil {
   userId: string;
   nome?: string;
   foto?: { url?: string } | null;
+  avatarUrl?: string | null;
   createdAt?: string;
   reputacao?: number | null;
 }
@@ -121,7 +122,7 @@ function mapFeedPost(post: StrapiFeedPost): FeedPost {
       ? {
           id: String(post.autor.id),
           nome: post.autor.nome ?? 'Autor PDC',
-          avatarUrl: post.autor.foto?.url,
+          avatarUrl: post.autor.foto?.url ?? post.autor.avatarUrl ?? undefined,
       }
       : undefined,
   };

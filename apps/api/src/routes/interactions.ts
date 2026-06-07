@@ -19,6 +19,7 @@ interactionRoutes.use('*', verifyJwt);
 
 interface StrapiEntity {
   id: number;
+  documentId?: string;
   userId: string;
   targetType: InteractionTargetType;
   targetId: string;
@@ -42,8 +43,9 @@ interactionRoutes.post('/like', rateLimitInteractions, zValidator('json', Toggle
 
   if (res.data.length > 0) {
     // Apaga se já existe
-    const idToDelete = res.data[0]?.id;
-    if (idToDelete) await strapiDelete(`/likes/${idToDelete.toString()}`);
+    const existing = res.data[0];
+    const idToDelete = existing?.documentId ?? existing?.id;
+    if (idToDelete) await strapiDelete(`/likes/${String(idToDelete)}`);
     return c.json({ liked: false });
   } else {
     // Cria novo
@@ -100,8 +102,9 @@ interactionRoutes.post('/bookmark', rateLimitInteractions, zValidator('json', To
   const res = await strapiGet<StrapiEntity>('/bookmarks', p);
 
   if (res.data.length > 0) {
-    const idToDelete = res.data[0]?.id;
-    if (idToDelete) await strapiDelete(`/bookmarks/${idToDelete.toString()}`);
+    const existing = res.data[0];
+    const idToDelete = existing?.documentId ?? existing?.id;
+    if (idToDelete) await strapiDelete(`/bookmarks/${String(idToDelete)}`);
     return c.json({ bookmarked: false });
   } else {
     await strapiPost('/bookmarks', {
@@ -112,6 +115,21 @@ interactionRoutes.post('/bookmark', rateLimitInteractions, zValidator('json', To
     });
     return c.json({ bookmarked: true });
   }
+});
+
+interactionRoutes.get('/bookmark/status', zValidator('query', z.object({
+  targetType: InteractionTargetTypeSchema,
+  targetId: z.string(),
+})), async (c) => {
+  const user = c.get('user');
+  const { targetType, targetId } = c.req.valid('query');
+  const existing = await strapiGet<StrapiEntity>('/bookmarks', {
+    'filters[userId][$eq]': user.id,
+    'filters[targetType][$eq]': targetType,
+    'filters[targetId][$eq]': targetId,
+    'pagination[pageSize]': '1',
+  });
+  return c.json({ bookmarked: existing.data.length > 0 });
 });
 
 interactionRoutes.get('/bookmarks', async (c) => {

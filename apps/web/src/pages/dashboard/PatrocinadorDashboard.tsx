@@ -32,7 +32,7 @@ export function PatrocinadorDashboard() {
             <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent mb-4 group-hover:scale-110 transition-transform">
               <Zap size={20} />
             </div>
-            <h3 className="font-bold text-ink-primary group-hover:text-accent transition-colors">Feed de Mérito</h3>
+            <h3 className="font-bold text-ink-primary group-hover:text-accent transition-colors">Feed</h3>
             <p className="text-xs text-ink-tertiary mt-1 leading-relaxed">Vê o que se passa na comunidade educativa.</p>
             <div className="flex items-center text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mt-4 group-hover:text-accent transition-colors">
               Abrir <ChevronRight size={12} className="ml-1" />

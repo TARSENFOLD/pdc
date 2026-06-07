@@ -11,10 +11,10 @@ export const notificacoesApi = {
   },
 
   marcarLida: (id: string) => 
-    http.patch<Notificacao>(`/notificacoes/${id}/lida`, { lida: true }),
+    http.put<Notificacao>(`/notificacoes/${id}/lida`, { lida: true }),
 
   marcarTodasLidas: () => 
-    http.post<{ success: boolean }>('/notificacoes/marcar-todas-lidas', {}),
+    http.put<{ success: boolean }>('/notificacoes/lidas/todas', {}),
 
   getContador: () => 
     http.get<ContadorNotificacoes>('/notificacoes/contador'),

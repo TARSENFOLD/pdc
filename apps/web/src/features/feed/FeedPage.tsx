@@ -53,7 +53,7 @@ export function FeedPage() {
             {items.length === 0 ? (
               <Card className="p-20 text-center bg-[var(--chrome-surface)] border-[var(--chrome-border)] rounded-sm">
                 <Zap size={48} className="mx-auto text-[var(--ink-tertiary)] mb-4 opacity-20" />
-                <p className="text-sm text-[var(--ink-tertiary)] uppercase font-black tracking-widest">{t('feed.emptyState', 'O pulso social está silencioso...')}</p>
+                <p className="text-sm text-[var(--ink-tertiary)] font-semibold">{t('feed.emptyState', 'Ainda não há publicações.')}</p>
               </Card>
             ) : (
               items.map((item: FeedItem, idx: number) => (
@@ -72,7 +72,7 @@ export function FeedPage() {
           <footer className="pt-6 pb-12 flex justify-center opacity-30 group hover:opacity-100 transition-opacity">
              <p className="text-[10px] font-bold text-[var(--ink-tertiary)] uppercase tracking-[0.3em] flex items-center gap-2">
                <Zap size={14} className="text-[var(--accent-terracotta)]" />
-               {t('feed.endOfFeed', 'Fim do fluxo. Actualizado agora.')}
+               {t('feed.endOfFeed', 'Não há mais publicações.')}
              </p>
           </footer>
         </div>

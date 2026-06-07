@@ -32,9 +32,10 @@ export function useNotificacoes() {
         description: notif.mensagem,
         variant: VARIANT_MAP[notif.tipo],
       });
+      void queryClient.invalidateQueries({ queryKey: ['notificacoes'] });
     });
     return cleanup;
-  }, [on, toast]);
+  }, [on, toast, queryClient]);
 
   useEffect(() => {
     const cleanup = on<{ slug: string; titulo: string; descricao: string }>('conquista_desbloqueada', (conquista) => {
