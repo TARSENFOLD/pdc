@@ -29,3 +29,5 @@
   o `documentId` persistido quando disponível.
 - A leitura de notificações valida o `userId` proprietário antes da mutação, impedindo acesso
   horizontal por IDs previsíveis.
+- `avatarUrl` e `bannerUrl` apontando para R2 são a identidade visual canónica; relações
+  `foto` e `capa` do Strapi permanecem somente como fallback de migração.

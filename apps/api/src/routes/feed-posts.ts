@@ -15,6 +15,7 @@ import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.clien
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { assessPostModerationRisk, type ModerationProfile, type ModerationRiskResult } from '../modules/moderation/moderation-risk.engine.js';
+import { resolvePerfilAvatar } from '../modules/perfil/perfil-media.js';
 import pino from 'pino';
 
 type Vars = { Variables: AuthVariables };
@@ -122,7 +123,7 @@ function mapFeedPost(post: StrapiFeedPost): FeedPost {
       ? {
           id: String(post.autor.id),
           nome: post.autor.nome ?? 'Autor PDC',
-          avatarUrl: post.autor.foto?.url ?? post.autor.avatarUrl ?? undefined,
+          avatarUrl: resolvePerfilAvatar(post.autor.avatarUrl, post.autor.foto),
       }
       : undefined,
   };

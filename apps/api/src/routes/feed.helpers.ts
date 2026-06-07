@@ -8,6 +8,7 @@ import { calcRecencyScore, calcScore, type FeedFeatures } from '../modules/feed/
 import { AreaVocacionalSchema, type FeedItem, type FeedItemTipo } from '@pdc/shared';
 import { env } from '../lib/env.js';
 import { isPublicCatalogEstado } from './publication-state.js';
+import { resolvePerfilAvatar } from '../modules/perfil/perfil-media.js';
 
 // ── Strapi interfaces (Flat v5) ──────────────────────────────────────────────
 
@@ -195,7 +196,7 @@ export function toFeedItem(
     createdAt: c.publishedAt ?? c.createdAt,
     slug: c.slug,
     capaUrl: c.capaUrl,
-    avatar: c.autor?.foto?.url ?? c.autor?.avatarUrl ?? undefined,
+    avatar: resolvePerfilAvatar(c.autor?.avatarUrl, c.autor?.foto),
     imagem: mediaUrls[0],
     mediaUrls,
     area: parsedArea.success ? parsedArea.data : undefined,

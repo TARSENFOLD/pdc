@@ -10,6 +10,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { type User, type Role, type Conquista, RoleSchema, normalizeTipo } from '@pdc/shared';
 import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
+import { resolvePerfilAvatar } from '../perfil/perfil-media.js';
 import { z } from 'zod';
 import pino from 'pino';
 
@@ -254,7 +255,7 @@ export const authService = {
       nome: perfil?.nome ?? u.nome ?? u.username,
       role: resolveRole(u.role?.name, perfil?.tipo),
       perfilId: perfil?.id,
-      avatarUrl: perfil?.foto?.url ?? perfil?.avatarUrl ?? u.avatar?.url,
+      avatarUrl: resolvePerfilAvatar(perfil?.avatarUrl, perfil?.foto, u.avatar?.url),
       bannerUrl: perfil?.bannerUrl,
       reputacaoTier: getTier(reputationScore),
       xp: 0,

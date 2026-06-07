@@ -11,6 +11,7 @@ import {
   persistedEntityId,
   type StrapiEntityReference,
 } from '../modules/strapi/strapi-entity.js';
+import { resolvePerfilAvatar } from '../modules/perfil/perfil-media.js';
 
 const log = pino({ name: 'routes:vinculos' });
 type Vars = { Variables: AuthVariables };
@@ -109,7 +110,7 @@ vinculoRoutes.get('/sugestoes', async (c) => {
         role: perfil.tipo ?? 'estudante',
         bio: perfil.bio,
         headline: perfil.headline,
-        avatarUrl: perfil.foto?.url ?? perfil.avatarUrl ?? null,
+        avatarUrl: resolvePerfilAvatar(perfil.avatarUrl, perfil.foto) ?? null,
         reputacaoTier: 'BRONZE',
         areasInteresse: [],
         socialLinks: [],
@@ -141,7 +142,7 @@ vinculoRoutes.get('/partilha', async (c) => {
         id: String(perfil.id),
         userId: perfil.userId,
         nome: perfil.nome,
-        avatarUrl: perfil.foto?.url ?? perfil.avatarUrl ?? null,
+        avatarUrl: resolvePerfilAvatar(perfil.avatarUrl, perfil.foto) ?? null,
       };
     });
     return c.json({ data });

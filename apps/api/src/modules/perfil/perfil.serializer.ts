@@ -1,5 +1,6 @@
 import type { VisibilitySettings, FieldVisibility, ReputacaoTier } from '@pdc/shared';
 import { normalizeTipo } from '@pdc/shared';
+import { resolvePerfilAvatar, resolvePerfilBanner } from './perfil-media.js';
 
 export interface StrapiPerfil {
   id: string | number;
@@ -82,8 +83,8 @@ export function serializePublicProfile(
     nome: perfil.nome ?? '',
     role: normalizeTipo(perfil.tipo ?? 'estudante'),
     reputacaoTier: perfil.reputacaoTier,
-    avatarUrl: perfil.foto?.url ?? perfil.avatarUrl,
-    bannerUrl: perfil.capa?.url ?? perfil.bannerUrl,
+    avatarUrl: resolvePerfilAvatar(perfil.avatarUrl, perfil.foto),
+    bannerUrl: resolvePerfilBanner(perfil.bannerUrl, perfil.capa),
     headline: perfil.headline,
     regiao: perfil.regiao,
     bio: isVisible(vis.bio, isConnected) ? perfil.bio : undefined,
@@ -120,8 +121,8 @@ export function serializePrivateProfile(perfil: StrapiPerfil) {
     website: perfil.website,
     regiao: perfil.regiao,
     socialLinks: perfil.socialLinks,
-    avatarUrl: perfil.foto?.url ?? perfil.avatarUrl,
-    bannerUrl: perfil.capa?.url ?? perfil.bannerUrl,
+    avatarUrl: resolvePerfilAvatar(perfil.avatarUrl, perfil.foto),
+    bannerUrl: resolvePerfilBanner(perfil.bannerUrl, perfil.capa),
     role: normalizeTipo(perfil.tipo ?? 'estudante'),
     reputacao: perfil.reputacao ?? 0,
     reputacaoTier: perfil.reputacaoTier,

@@ -15,6 +15,7 @@ import {
   type Role,
 } from '@pdc/shared';
 import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
+import { resolvePerfilAvatar } from '../modules/perfil/perfil-media.js';
 
 const log = pino({ name: 'catalogo-pessoas' });
 
@@ -120,7 +121,7 @@ function mapMentor(d: StrapiMentor): MentorPublico {
   return {
     id: sid(d.id), 
     nome: d.nome ?? '',
-    avatarUrl: d.foto?.url ?? d.avatarUrl,
+    avatarUrl: resolvePerfilAvatar(d.avatarUrl, d.foto),
     bio: d.bio,
     areaEspecialidade: d.areaEspecialidade ?? d.areaFormacao ?? 'Especialista',
     reputacaoTier: 'BRONZE',
@@ -238,7 +239,7 @@ function mapPessoa(d: StrapiPessoaCatalogo): PerfilPublicoBasico & { area?: stri
   const pessoa: PerfilPublicoBasico & { area?: string } = {
     id: sid(d.id),
     nome: d.nome ?? 'Perfil PDC',
-    avatarUrl: d.foto?.url ?? d.avatarUrl ?? null,
+    avatarUrl: resolvePerfilAvatar(d.avatarUrl, d.foto) ?? null,
     role,
     reputacaoTier: 'BRONZE',
   };

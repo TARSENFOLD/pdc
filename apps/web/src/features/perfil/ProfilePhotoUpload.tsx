@@ -36,7 +36,7 @@ export function ProfilePhotoUpload({ currentUrl, onSuccess }: Props) {
     setIsUploading(true);
     try {
       // 1. Upload para R2/Strapi
-      const uploadRes = await mediaApi.upload(file);
+      const uploadRes = await mediaApi.upload(file, 'avatar');
       
       // 2. Atualizar perfil com a URL pública do R2.
       await perfisApi.update({ avatarUrl: uploadRes.url });
