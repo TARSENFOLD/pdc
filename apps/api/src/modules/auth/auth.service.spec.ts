@@ -114,6 +114,14 @@ describe('authService.generateTokens', () => {
       perfilId: 'perfil-1',
     });
   });
+
+  it('normalizes numeric Strapi profile ids before signing access tokens', async () => {
+    const user = authService.mapStrapiUser(BASE_USER, { ...BASE_PERFIL, id: 42 });
+    const { accessToken } = await authService.generateTokens(user);
+
+    expect(user.perfilId).toBe('42');
+    expect(decodeJwt(accessToken)).toMatchObject({ perfilId: '42' });
+  });
 });
 
 describe('authService.setOauthProvider', () => {

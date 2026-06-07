@@ -44,7 +44,7 @@ interface StrapiUsersPermissionsRolesResponse {
 }
 
 interface StrapiPerfilData {
-  id?: string;
+  id?: string | number;
   documentId?: string;
   userId: string;
   nome?: string;
@@ -190,7 +190,9 @@ export const authService = {
     });
 
     const perfilData = resPerfil.data[0] ?? null;
-    const reputationScore = perfilData === null ? 0 : await getReputacao(perfilData.id);
+    const reputationScore = perfilData?.id === undefined
+      ? 0
+      : await getReputacao(String(perfilData.id));
 
     return this.mapStrapiUser(user, perfilData, reputationScore);
   },
@@ -243,7 +245,8 @@ export const authService = {
       return;
     }
     if (!perfil.oauthProvider) {
-      await strapiPut(`/perfis/${perfil.documentId ?? perfil.id}`, { oauthProvider: provider });
+      const perfilId = perfil.documentId ?? String(perfil.id);
+      await strapiPut(`/perfis/${perfilId}`, { oauthProvider: provider });
     }
   },
 
@@ -254,7 +257,7 @@ export const authService = {
       email: u.email,
       nome: perfil?.nome ?? u.nome ?? u.username,
       role: resolveRole(u.role?.name, perfil?.tipo),
-      perfilId: perfil?.id,
+      perfilId: perfil?.id === undefined ? undefined : String(perfil.id),
       avatarUrl: resolvePerfilAvatar(perfil?.avatarUrl, perfil?.foto, u.avatar?.url),
       bannerUrl: perfil?.bannerUrl,
       reputacaoTier: getTier(reputationScore),
