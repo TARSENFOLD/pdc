@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { AreaVocacionalSchema } from '@pdc/shared';
+import { AreaVocacionalSchema, LandingVereditoSchema } from '@pdc/shared';
 import { Ratelimit } from '@upstash/ratelimit';
 import { redis } from '../lib/redis.js';
 import { pulseService } from '../modules/landing/pulse.service.js';
@@ -17,6 +17,12 @@ const questionsSchema = z.object({
   regiao: z.string().optional(),
 });
 
+const verdictSchema = z.object({
+  area: AreaVocacionalSchema,
+  contexto: z.string().trim().min(3).max(500),
+  respostas: z.array(z.string().trim().min(1).max(300)).length(5),
+});
+
 const pulseLimiter = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(10, '1 m'),
@@ -30,6 +36,21 @@ const questionsLimiter = new Ratelimit({
   analytics: true,
   prefix: 'ratelimit:landing-questions',
 });
+
+function fallbackVerdict(area: string, respostas: string[]) {
+  const score = Math.min(92, 68 + new Set(respostas).size * 4);
+  return LandingVereditoSchema.parse({
+    area,
+    score,
+    arquetipo: 'Explorador Pragmático',
+    proximoPasso: 'Experimenta uma simulação curta e compara o que te deu energia com o que exigiu mais esforço.',
+    simulacoes: [
+      `Desafio introdutório de ${area}`,
+      `Um dia profissional em ${area}`,
+      `Decisão prática em ${area}`,
+    ],
+  });
+}
 
 export const landingRoutes = new Hono();
 
@@ -54,6 +75,16 @@ landingRoutes.post(
     const { sessionId, area } = c.req.valid('json');
     pulseService.recordActivity(sessionId, area);
     return c.json({ ok: true });
+  },
+);
+
+landingRoutes.post(
+  '/veredito',
+  zValidator('json', verdictSchema),
+  async (c) => {
+    const input = c.req.valid('json');
+    const veredito = await tinaService.gerarVereditoDesafio(input);
+    return c.json(veredito ?? fallbackVerdict(input.area, input.respostas));
   },
 );
 

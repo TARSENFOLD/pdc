@@ -24,6 +24,7 @@ vi.mock('@upstash/ratelimit', () => {
 });
 
 import { Hono } from 'hono';
+import { LandingVereditoSchema } from '@pdc/shared';
 import { catalogoRoutes } from './catalogo.js';
 import { landingRoutes } from './landing.js';
 
@@ -36,6 +37,13 @@ vi.mock('../modules/strapi/strapi.client.js', () => ({
 vi.mock('../modules/landing/pulse.service.js', () => ({
   pulseService: {
     recordActivity: vi.fn(),
+  },
+}));
+
+vi.mock('../modules/tina/tina.service.js', () => ({
+  tinaService: {
+    gerarPerguntasDesafio: vi.fn().mockResolvedValue([]),
+    gerarVereditoDesafio: vi.fn().mockResolvedValue(null),
   },
 }));
 
@@ -117,4 +125,35 @@ describe('AreaVocacional Enum Contract', () => {
       expect(res.status).toBe(200);
     },
   );
+
+  it('POST /landing/veredito devolve um diagnóstico público válido', async () => {
+    const res = await app.request('/landing/veredito', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        area: 'TECNOLOGIA',
+        contexto: 'Gosto de programação e de resolver problemas.',
+        respostas: ['A', 'B', 'C', 'D', 'A'],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const parsed = LandingVereditoSchema.parse(await res.json());
+    expect(parsed.area).toBe('TECNOLOGIA');
+    expect(parsed.simulacoes).toHaveLength(3);
+  });
+
+  it('POST /landing/veredito rejeita um desafio incompleto', async () => {
+    const res = await app.request('/landing/veredito', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        area: 'TECNOLOGIA',
+        contexto: 'Gosto de programação.',
+        respostas: ['A'],
+      }),
+    });
+
+    expect(res.status).toBe(400);
+  });
 });

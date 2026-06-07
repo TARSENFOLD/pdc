@@ -3,7 +3,11 @@ import { aiService } from '../ai/ai.service.js';
 import { TINA_KNOWLEDGE, type TinaKnowledgeItem } from './tina.knowledge.js';
 import { validarMensagem } from './tina.guardrails.js';
 import { verificarLimite } from './tina.ratelimit.js';
-import type { ChatMessage } from '@pdc/shared';
+import {
+  LandingVereditoSchema,
+  type ChatMessage,
+  type LandingVeredito,
+} from '@pdc/shared';
 import { env } from '../../lib/env.js';
 
 const redis = env.UPSTASH_REDIS_REST_URL
@@ -27,6 +31,17 @@ function isPerguntasResponse(value: unknown): value is { perguntas: unknown[] } 
     'perguntas' in value &&
     Array.isArray(value.perguntas)
   );
+}
+
+function extractAiContent(data: AiChatResponse): string {
+  return data.choices?.[0]?.message.content ?? data.message?.content ?? '';
+}
+
+function extractJsonObject(content: string): unknown {
+  const normalized = content.replace(/```json|```/g, '').trim();
+  const match = normalized.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  return JSON.parse(match[0]) as unknown;
 }
 
 export const tinaService = {
@@ -113,18 +128,41 @@ Retorna APENAS um JSON no formato:
     const res = await aiService.chat([{ role: 'user', content: prompt }], 'Geração de Desafio Vocacional', false);
     const data = await res.json() as AiChatResponse;
     
-    let content = '';
-    if (data.choices) {
-      content = data.choices[0]?.message.content || '{}';
-    } else if (data.message) {
-      content = data.message.content;
-    }
+    const content = extractAiContent(data);
 
     try {
       const parsed: unknown = JSON.parse(content.replace(/```json|```/g, ''));
       return isPerguntasResponse(parsed) ? parsed.perguntas : [];
     } catch {
       return [];
+    }
+  },
+
+  async gerarVereditoDesafio(input: {
+    area: string;
+    contexto: string;
+    respostas: string[];
+  }): Promise<LandingVeredito | null> {
+    const prompt = `Analisa este micro-desafio vocacional.
+Área de interesse: ${input.area}
+Contexto do participante: ${input.contexto}
+Respostas: ${input.respostas.join('; ')}
+
+Retorna APENAS JSON válido:
+{"area":"string","score":60,"arquetipo":"string curto","proximoPasso":"frase curta","simulacoes":["simulação 1","simulação 2","simulação 3"]}`;
+
+    const res = await aiService.chat(
+      [{ role: 'user', content: prompt }],
+      'Diagnóstico vocacional público do PDC. Não inclua markdown.',
+      false,
+    );
+    if (!res.ok) return null;
+
+    const data = await res.json() as AiChatResponse;
+    try {
+      return LandingVereditoSchema.parse(extractJsonObject(extractAiContent(data)));
+    } catch {
+      return null;
     }
   },
 

@@ -3,12 +3,13 @@ import { useSocket } from '../../lib/realtime/useSocket';
 import { telemetriaService } from '../../lib/telemetria/telemetria.service';
 import {
   type Area, type MicroDesafioState, type PerguntaData,
-  detectarArea, AREA_LABEL, PERGUNTAS_FALLBACK,
+  detectarArea, PERGUNTAS_FALLBACK,
 } from './microDesafioData';
 import { type LandingQuestionsResponse, LandingVereditoSchema } from '@pdc/shared';
 
 const API_URL: string =
-  (import.meta.env['VITE_API_URL'] as string | undefined) ?? '/api';
+  (import.meta.env['VITE_API_URL'] as string | undefined)
+  ?? (import.meta.env.PROD ? 'https://api.usepdc.com' : '/api');
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -111,32 +112,20 @@ export function useMicroDesafio() {
       .filter(Boolean)
       .join('; ');
 
-    const prompt = [
-      'Analisa o perfil vocacional deste estudante.',
-      `Área de interesse: ${AREA_LABEL[area]}`,
-      `Contexto: "${textoLivre}"`,
-      `Respostas ao desafio: ${respostasTexto}`,
-      'Retorna APENAS JSON válido:',
-      '{"area":"string","score":60-99,"arquetipo":"string curto","proximoPasso":"frase curta","simulacoes":["sim1","sim2","sim3"]}',
-    ].join('\n');
-
     try {
-      const res = await fetch(`${API_URL}/tina/chat`, {
+      const res = await fetch(`${API_URL}/landing/veredito`, {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: prompt, stream: false }),
+        body: JSON.stringify({
+          area,
+          contexto: textoLivre,
+          respostas: respostasTexto.split('; ').filter(Boolean),
+        }),
       });
 
       if (!res.ok) throw new Error(`HTTP ${String(res.status)}`);
 
-      const data = (await res.json()) as { text: string };
-      const text = data.text;
-
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('No JSON');
-
-      const v = LandingVereditoSchema.parse(JSON.parse(jsonMatch[0]));
+      const v = LandingVereditoSchema.parse(await res.json());
 
       setState((s) => ({ ...s, fase: 'veredito', veredito: v }));
       void telemetriaService
