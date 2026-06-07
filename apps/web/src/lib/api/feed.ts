@@ -17,6 +17,9 @@ export const feedApi = {
   getPost: (id: string) =>
     http.get<FeedPost>(`/feed-posts/${id}`),
 
+  getProfilePosts: (perfilId: string) =>
+    http.get<{ data: FeedPost[] }>(`/feed-posts/perfil/${perfilId}`),
+
   createPost: (payload: CriarPostPayload) =>
     http.post<FeedPost>('/feed-posts', payload),
 

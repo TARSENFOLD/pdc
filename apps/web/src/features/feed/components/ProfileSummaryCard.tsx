@@ -3,6 +3,8 @@ import { Card, Avatar } from '@/components/ui';
 import { useQuery } from '@tanstack/react-query';
 import { vinculosApi } from '@/lib/api/vinculos';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
+import { UserRound } from 'lucide-react';
 
 export function ProfileSummaryCard() {
   const { user } = useAuth();
@@ -47,6 +49,14 @@ export function ProfileSummaryCard() {
         <p className="text-xs text-[var(--ink-secondary)] text-center capitalize mb-3">
           {user.role.replace('_', ' ')}
         </p>
+
+        <Link
+          to="/app/perfil"
+          className="mb-3 inline-flex min-h-10 w-full items-center justify-center gap-2 border border-[var(--chrome-border)] text-xs font-semibold text-[var(--ink-primary)] transition-colors hover:border-[var(--accent-terracotta)] hover:text-[var(--accent-terracotta)]"
+        >
+          <UserRound size={15} />
+          Ver perfil
+        </Link>
 
         <div className={`w-full grid ${showConquistas ? 'grid-cols-2' : 'grid-cols-1'} gap-4 border-t border-[var(--chrome-border)] pt-3 mt-1`}>
           <div className="text-center">

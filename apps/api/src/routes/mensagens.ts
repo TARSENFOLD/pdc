@@ -101,12 +101,11 @@ mensagensRoutes.post(
       }
 
       const vinculoData = await strapiGet<{ id: string }>('/vinculos', {
-        'filters[$or][0][senderId][$eq]': userId,
-        'filters[$or][0][receiverId][$eq]': destinatarioId,
-        'filters[$or][0][estado][$eq]': 'connected',
-        'filters[$or][1][senderId][$eq]': destinatarioId,
-        'filters[$or][1][receiverId][$eq]': userId,
-        'filters[$or][1][estado][$eq]': 'connected',
+        'filters[$or][0][solicitante][userId][$eq]': userId,
+        'filters[$or][0][destinatario][userId][$eq]': destinatarioId,
+        'filters[$or][1][solicitante][userId][$eq]': destinatarioId,
+        'filters[$or][1][destinatario][userId][$eq]': userId,
+        'filters[status][$eq]': 'aprovado',
         'pagination[pageSize]': '1',
       });
 

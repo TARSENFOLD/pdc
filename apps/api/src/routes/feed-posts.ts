@@ -162,6 +162,23 @@ feedPostRoutes.get('/', zValidator('query', listQuerySchema), async (c) => {
   }
 });
 
+feedPostRoutes.get('/perfil/:perfilId', async (c) => {
+  const perfilId = c.req.param('perfilId');
+  try {
+    const res = await strapiGet<StrapiFeedPost>('/feed-posts', {
+      'filters[autor][id][$eq]': perfilId,
+      'filters[estado][$eq]': 'aprovada',
+      'populate': 'autor.foto',
+      'sort': 'createdAt:desc',
+      'pagination[pageSize]': '10',
+    });
+    return c.json({ data: res.data.map(mapFeedPost) });
+  } catch (err: unknown) {
+    log.error({ err, perfilId }, 'Erro ao carregar mini feed do perfil');
+    return c.json({ error: 'Erro ao carregar mini feed do perfil' }, 502);
+  }
+});
+
 feedPostRoutes.get('/:id', verifyJwt, async (c) => {
   const id = c.req.param('id');
   if (!id) {

@@ -16,4 +16,7 @@ export const vinculosApi = {
 
   sugestoes: () =>
     http.get<{ data: PerfilPublicoBasico[] }>('/vinculos/sugestoes'),
+
+  destinosPartilha: () =>
+    http.get<{ data: Array<{ id: string; userId: string; nome: string; avatarUrl: string | null }> }>('/vinculos/partilha'),
 };

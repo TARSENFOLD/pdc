@@ -8,6 +8,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { feedApi } from '@/lib/api/feed';
 import { likeApi, bookmarkApi, commentsApi } from '@/lib/api/interactions';
+import { mensagensApi } from '@/lib/api/mensagens';
+import { vinculosApi } from '@/lib/api/vinculos';
 import { toast } from '@/hooks/useToast';
 import { useAuth } from '@/lib/auth/auth-context';
 import type { FeedItem, Comment, InteractionTargetType } from '@pdc/shared';
@@ -40,6 +42,7 @@ export function FeedCard({ item }: FeedCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isInternalShareOpen, setIsInternalShareOpen] = useState(false);
   const [editCorpo, setEditCorpo] = useState(item.corpo || item.descricao || '');
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [commentText, setCommentText] = useState('');
@@ -57,6 +60,11 @@ export function FeedCard({ item }: FeedCardProps) {
     queryKey: ['bookmark-status', targetType, item.id],
     queryFn: () => bookmarkApi.getStatus(targetType, item.id),
     staleTime: 30_000,
+  });
+  const shareTargetsQuery = useQuery({
+    queryKey: ['vinculos', 'partilha'],
+    queryFn: vinculosApi.destinosPartilha,
+    enabled: isInternalShareOpen,
   });
 
   useEffect(() => {
@@ -170,6 +178,25 @@ export function FeedCard({ item }: FeedCardProps) {
     shareMutation.mutate();
     setIsShareModalOpen(false);
   };
+  const internalShareMutation = useMutation({
+    mutationFn: async (destinatarioId: string) => {
+      const conversa = await mensagensApi.criarConversa(destinatarioId);
+      await mensagensApi.enviar(conversa.id, `Partilhou uma publicação contigo:\n${shareUrl}`);
+    },
+    onSuccess: () => {
+      registerShare();
+      setIsInternalShareOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ['mensagens', 'conversas'] });
+      toast({ title: 'Partilhado no PDC', description: 'A publicação foi enviada por mensagem.', variant: 'success' });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: 'Não foi possível partilhar',
+        description: error instanceof Error ? error.message : 'Tenta novamente.',
+        variant: 'error',
+      });
+    },
+  });
 
   const editMutation = useMutation({
     mutationFn: () => feedApi.updatePost(item.id, { corpo: editCorpo }),
@@ -188,7 +215,7 @@ export function FeedCard({ item }: FeedCardProps) {
       {/* Feed Header */}
       <div className="p-6 flex items-start justify-between border-b border-[var(--chrome-border)]">
         <div className="flex items-center gap-4">
-          <Link to={`/app/rede/${item.userId}`} className="shrink-0">
+          <Link to={`/app/perfil/${item.userId}`} className="shrink-0">
             <Avatar 
               src={item.avatar || undefined} 
               fallback={(item.autorNome || 'U').substring(0, 2)} 
@@ -196,7 +223,7 @@ export function FeedCard({ item }: FeedCardProps) {
             />
           </Link>
           <div>
-            <Link to={`/app/rede/${item.userId}`} className="hover:underline">
+            <Link to={`/app/perfil/${item.userId}`} className="hover:underline">
               <h3 className="text-sm font-bold text-[var(--ink-primary)] leading-none mb-1.5">
                 {item.autorNome || 'Utilizador PDC'}
               </h3>
@@ -459,6 +486,13 @@ export function FeedCard({ item }: FeedCardProps) {
           <ModalTitle className="text-xl font-bold font-serif">Partilhar publicação</ModalTitle>
         </ModalHeader>
         <div className="grid gap-2">
+          <button
+            type="button"
+            onClick={() => { setIsInternalShareOpen(true); }}
+            className="flex min-h-11 items-center gap-3 border border-[var(--accent-terracotta)] px-4 text-sm font-semibold text-[var(--accent-terracotta)] hover:bg-[var(--accent-terracotta)]/10"
+          >
+            <Send size={18} /> Partilhar no PDC
+          </button>
           <a
             href={`https://wa.me/?text=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`}
             target="_blank"
@@ -486,6 +520,32 @@ export function FeedCard({ item }: FeedCardProps) {
           >
             <Copy size={18} /> Copiar link
           </button>
+        </div>
+      </Modal>
+      <Modal open={isInternalShareOpen} onOpenChange={setIsInternalShareOpen}>
+        <ModalHeader className="mb-4">
+          <ModalTitle className="text-xl font-bold font-serif">Enviar para um vínculo</ModalTitle>
+        </ModalHeader>
+        <div className="max-h-80 space-y-2 overflow-y-auto">
+          {shareTargetsQuery.isLoading && <p className="py-5 text-center text-sm text-[var(--ink-secondary)]">A carregar vínculos...</p>}
+          {!shareTargetsQuery.isLoading && (shareTargetsQuery.data?.data.length ?? 0) === 0 && (
+            <div className="py-6 text-center">
+              <p className="text-sm text-[var(--ink-secondary)]">Ainda não tens vínculos confirmados.</p>
+              <Link to="/app/vinculos" className="mt-3 inline-block text-sm font-semibold text-[var(--accent-terracotta)]">Gerir vínculos</Link>
+            </div>
+          )}
+          {shareTargetsQuery.data?.data.map((perfil) => (
+            <button
+              key={perfil.id}
+              type="button"
+              disabled={internalShareMutation.isPending}
+              onClick={() => { internalShareMutation.mutate(perfil.userId); }}
+              className="flex min-h-14 w-full items-center gap-3 border border-[var(--chrome-border)] px-3 text-left hover:bg-[var(--surface-elevated)] disabled:opacity-50"
+            >
+              <Avatar src={perfil.avatarUrl ?? undefined} fallback={perfil.nome.substring(0, 2)} className="h-9 w-9" />
+              <span className="text-sm font-semibold text-[var(--ink-primary)]">{perfil.nome}</span>
+            </button>
+          ))}
         </div>
       </Modal>
     </Card>

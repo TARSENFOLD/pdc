@@ -11,6 +11,8 @@
 - Comentários e posts normais são publicados diretamente, preservando os eventos do ecossistema.
 - Media de posts usa o pipeline validado `POST /media/upload` com `entityType=post-media`.
 - O feed lê `avatarUrl` persistido em R2 quando não existe media Strapi em `foto`.
+- A partilha interna reutiliza conversas entre vínculos aprovados; não cria cópias ou “reposts” sem contrato.
+- O mini feed do perfil combina posts aprovados do autor e conquistas; posts ocultos ou pendentes nunca são expostos.
 
 ## Consequências
 

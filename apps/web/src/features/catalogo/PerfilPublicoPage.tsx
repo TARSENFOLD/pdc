@@ -12,6 +12,7 @@ import { Avatar, Spinner } from '@/components/ui';
 import { AspirationalEmpty } from '@/components/ui/AspirationalEmpty';
 import { SEOHead } from '@/components/layout/SEOHead';
 import { catalogoApi } from '@/lib/api/catalogo';
+import { feedApi } from '@/lib/api/feed';
 import { useAuth } from '@/lib/auth/auth-context';
 import { cn } from '@/lib/utils';
 import type { PerfilCompleto, HistoricoProfissional, FormacaoAcademica } from '@pdc/shared';
@@ -281,6 +282,11 @@ export default function PerfilPublicoPage(): React.JSX.Element {
     queryFn: () => catalogoApi.getPerfilPublico(id ?? ''),
     enabled: !!id,
   });
+  const profilePostsQuery = useQuery({
+    queryKey: ['feed-posts', 'perfil', perfil?.id],
+    queryFn: () => feedApi.getProfilePosts(perfil?.id ?? ''),
+    enabled: !!perfil?.id,
+  });
 
   if (isLoading) {
     return <div className="flex min-h-screen items-center justify-center bg-canvas"><Spinner size="lg" /></div>;
@@ -308,11 +314,23 @@ export default function PerfilPublicoPage(): React.JSX.Element {
   const experiencias: HistoricoProfissional[] = Array.isArray(p.historicoProfissional) ? p.historicoProfissional : [];
   const educacao: FormacaoAcademica[] = Array.isArray(p.formacaoAcademica) ? p.formacaoAcademica : [];
 
-  const feedItems = conquistas.map((c) => ({
-    id: c.id,
-    titulo: c.titulo,
-    tags: allTags.slice(0, 2),
-  }));
+  const feedItems = [
+    ...(profilePostsQuery.data?.data ?? []).map((post) => ({
+      id: `post-${post.id}`,
+      type: 'post' as const,
+      postId: post.id,
+      titulo: post.corpo,
+      createdAt: post.createdAt,
+      tags: [] as string[],
+    })),
+    ...conquistas.map((c) => ({
+      id: `conquista-${c.id}`,
+      type: 'conquista' as const,
+      titulo: c.titulo,
+      createdAt: '',
+      tags: allTags.slice(0, 2),
+    })),
+  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const tabs = [
     { id: 'visao_geral', label: 'Visão Geral' },
@@ -497,10 +515,16 @@ export default function PerfilPublicoPage(): React.JSX.Element {
                                 className="shrink-0 mt-1"
                               />
                               <div className="flex-1 bg-recessed/50 rounded-lg p-4 border border-ink-tertiary/5">
-                                <p className="text-sm text-ink-secondary leading-snug mb-2">
-                                  desbloqueou a conquista{' '}
-                                  <strong className="text-ink-primary font-semibold">"{item.titulo}"</strong>
-                                </p>
+                                {item.type === 'post' ? (
+                                  <Link to={`/app/feed-posts/${item.postId}`} className="block text-sm text-ink-secondary leading-relaxed hover:text-accent">
+                                    {item.titulo}
+                                  </Link>
+                                ) : (
+                                  <p className="text-sm text-ink-secondary leading-snug mb-2">
+                                    desbloqueou a conquista{' '}
+                                    <strong className="text-ink-primary font-semibold">"{item.titulo}"</strong>
+                                  </p>
+                                )}
                                 {item.tags.length > 0 && (
                                   <div className="flex flex-wrap gap-1.5 mb-3">
                                     {item.tags.map((tag) => (

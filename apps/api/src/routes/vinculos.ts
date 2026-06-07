@@ -116,6 +116,35 @@ vinculoRoutes.get('/sugestoes', async (c) => {
   }
 });
 
+// GET /vinculos/partilha — destinos internos autorizados
+vinculoRoutes.get('/partilha', async (c) => {
+  const { id: userId } = c.get('user');
+  try {
+    const res = await strapiGet<StrapiVinculo>('/vinculos', {
+      'filters[$or][0][solicitante][userId][$eq]': userId,
+      'filters[$or][1][destinatario][userId][$eq]': userId,
+      'filters[status][$eq]': 'aprovado',
+      'pagination[pageSize]': '100',
+      populate: 'solicitante.foto,destinatario.foto',
+    });
+    const data = res.data.map((vinculo) => {
+      const perfil = vinculo.solicitante.userId === userId
+        ? vinculo.destinatario
+        : vinculo.solicitante;
+      return {
+        id: String(perfil.id),
+        userId: perfil.userId,
+        nome: perfil.nome,
+        avatarUrl: perfil.foto?.url ?? perfil.avatarUrl ?? null,
+      };
+    });
+    return c.json({ data });
+  } catch (err) {
+    log.error({ err, userId }, 'Erro ao carregar destinos de partilha');
+    return c.json({ error: 'Erro ao carregar destinos de partilha' }, 502);
+  }
+});
+
 // POST /vinculos/:id/pedir
 vinculoRoutes.post('/:id/pedir', async (c) => {
   const destinatarioPerfilId = c.req.param('id');
