@@ -176,6 +176,7 @@ describe('experienciaRoutes E2E contracts', () => {
   // ─── POST / — criação protegida ───────────────────────────────────────────
 
   it('POST / cria experiência como draft e dispara evento G15', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([]));
     vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({
       ...expPublicada,
       id: 41,
@@ -212,6 +213,48 @@ describe('experienciaRoutes E2E contracts', () => {
     );
     const responseBody = await res.json() as { id: string };
     expect(responseBody.id).toBe('41');
+  });
+
+  it('POST / atualiza rascunho existente do mesmo autor em vez de duplicar slug', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
+      ...expPublicada,
+      id: 41,
+      documentId: 'draft-document',
+      estado: 'draft',
+    }]));
+    vi.mocked(strapiPut).mockResolvedValueOnce(singleResponse({
+      ...expPublicada,
+      id: 41,
+      estado: 'draft',
+    }));
+
+    const res = await app.request('/experiencias', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-user': 'inst-1',
+        'x-test-role': 'instituicao',
+      },
+      body: JSON.stringify({
+        titulo: expPublicada.titulo,
+        descricao: expPublicada.descricao,
+        area: expPublicada.area,
+        nivel: expPublicada.nivel,
+        modalidade: expPublicada.modalidade,
+        secoes: requiredSections,
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(strapiPost).not.toHaveBeenCalledWith('/experiencias', expect.anything());
+    expect(strapiPut).toHaveBeenCalledWith('/experiencias/draft-document', expect.objectContaining({
+      estado: 'draft',
+      autor: 'inst-1',
+    }));
+    expect(publishWithOutboxMock).toHaveBeenCalledWith(
+      DomainEventName.EXPERIENCIA_CRIADA,
+      expect.objectContaining({ experienciaId: '41' }),
+    );
   });
 
   it('POST / rejeita estudante com 403', async () => {

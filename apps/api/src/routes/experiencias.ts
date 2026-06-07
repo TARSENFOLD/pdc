@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import pino from 'pino';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
@@ -13,9 +14,11 @@ import { applyPublicCatalogStateFilter } from './publication-state.js';
 import { toPaginatedResponse } from './pagination.js';
 
 type Vars = { Variables: AuthVariables };
+const log = pino({ name: 'routes:experiencias' });
 
 interface StrapiExperiencia {
   id: string | number;
+  documentId?: string;
   titulo: string;
   estado: string;
   autor?: {
@@ -179,12 +182,25 @@ experienciaRoutes.post('/',
       if (resolvedPerfilId === undefined) {
         return c.json({ error: 'Perfil do autor não encontrado' }, 404);
       }
-      const res = await strapiPost<Experiencia>('/experiencias', {
+      const slug = body.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+      const draftPayload = {
         ...body,
         autor: String(resolvedPerfilId),
         estado: 'draft',
-        slug: body.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
-      });
+        slug,
+      };
+      const existingDraft = (await strapiGet<StrapiExperiencia>('/experiencias', {
+        'filters[slug][$eq]': slug,
+        'filters[autor][id][$eq]': String(resolvedPerfilId),
+        'filters[estado][$eq]': 'draft',
+        'pagination[pageSize]': '1',
+      })).data[0];
+      const res = existingDraft
+        ? await strapiPut<Experiencia>(
+          `/experiencias/${existingDraft.documentId ?? String(existingDraft.id)}`,
+          draftPayload,
+        )
+        : await strapiPost<Experiencia>('/experiencias', draftPayload);
       const experienciaId = normalizeExternalId(res.data.id);
 
       const event = await eventBus.publishWithOutbox(DomainEventName.EXPERIENCIA_CRIADA, {
@@ -198,8 +214,9 @@ experienciaRoutes.post('/',
         ...res.data,
         id: experienciaId,
         eventId: event.id
-      }, 201);
-    } catch {
+      }, existingDraft ? 200 : 201);
+    } catch (err) {
+      log.error({ err }, 'Falha ao guardar rascunho da experiência');
       return c.json({ error: 'Falha na persistência da experiência' }, 502);
     }
   }
