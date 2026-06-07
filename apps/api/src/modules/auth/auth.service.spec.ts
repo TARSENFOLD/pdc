@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { decodeJwt } from 'jose';
 
 vi.mock('../../lib/env.js', () => ({
   env: {
@@ -17,6 +18,7 @@ vi.mock('../strapi/strapi.client.js', () => ({
   strapiPostRaw: vi.fn(),
   strapiGet: vi.fn(),
   strapiPost: vi.fn(),
+  strapiPut: vi.fn(),
 }));
 
 vi.mock('../reputation/reputation.service.js', () => ({
@@ -25,7 +27,7 @@ vi.mock('../reputation/reputation.service.js', () => ({
 }));
 
 import { authService } from './auth.service.js';
-import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost } from '../strapi/strapi.client.js';
+import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
 
 const BASE_USER = {
   id: 42,
@@ -38,6 +40,7 @@ const BASE_USER = {
 
 const BASE_PERFIL = {
   id: 'perfil-1',
+  documentId: 'perfil-doc-1',
   userId: '42',
   nome: 'Ana Ferreira',
   tipo: 'estudante',
@@ -97,6 +100,32 @@ describe('authService.mapStrapiUser — new fields', () => {
     expect(user.nome).toBe('Ana Ferreira');
     expect(user.role).toBe('estudante');
     expect(user.perfilId).toBe('perfil-1');
+  });
+});
+
+describe('authService.generateTokens', () => {
+  it('includes the canonical perfilId in the access token', async () => {
+    const user = authService.mapStrapiUser(BASE_USER, BASE_PERFIL);
+    const { accessToken } = await authService.generateTokens(user);
+
+    expect(decodeJwt(accessToken)).toMatchObject({
+      sub: '42',
+      role: 'estudante',
+      perfilId: 'perfil-1',
+    });
+  });
+});
+
+describe('authService.setOauthProvider', () => {
+  it('updates a Strapi v5 profile through documentId', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce({
+      data: [{ ...BASE_PERFIL }],
+      meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 } },
+    });
+
+    await authService.setOauthProvider('42', 'linkedin');
+
+    expect(strapiPut).toHaveBeenCalledWith('/perfis/perfil-doc-1', { oauthProvider: 'linkedin' });
   });
 });
 

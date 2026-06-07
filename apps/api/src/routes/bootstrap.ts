@@ -44,10 +44,14 @@ bootstrapRoutes.get('/', async (c) => {
       instituicaoId = parsedPayload.instituicaoId;
 
       // 2. Emissão Soberana do Telemetry Token assinado por RS256 (W1-T2)
-      telemetryToken = await signTelemetryToken(
-        userPayload.id,
-        userPayload.perfilId || 'unknown'
-      );
+      if (userPayload.perfilId) {
+        telemetryToken = await signTelemetryToken(userPayload.id, userPayload.perfilId);
+      } else {
+        log.error(
+          { userId: userPayload.id },
+          'Perfil ausente numa sessão autenticada; token de telemetria não emitido',
+        );
+      }
     } catch {
       // Ignoramos falhas de assinatura aqui, tratamo-los como utilizador não autenticado
     }

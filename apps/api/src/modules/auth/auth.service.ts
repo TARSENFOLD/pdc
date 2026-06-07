@@ -44,6 +44,7 @@ interface StrapiUsersPermissionsRolesResponse {
 
 interface StrapiPerfilData {
   id?: string;
+  documentId?: string;
   userId: string;
   nome?: string;
   tipo?: string;
@@ -89,6 +90,7 @@ async function getAuthenticatedRoleId(): Promise<number | string> {
 export const authService = {
   async generateTokens(user: User) {
     const claims: Record<string, unknown> = { sub: user.id, role: user.role };
+    if (user.perfilId) claims.perfilId = user.perfilId;
     claims.onboardingCompleto = user.onboardingCompleto;
     const accessToken = await new SignJWT(claims)
       .setProtectedHeader({ alg: 'HS256' })
@@ -240,7 +242,7 @@ export const authService = {
       return;
     }
     if (!perfil.oauthProvider) {
-      await strapiPut(`/perfis/${perfil.id}`, { oauthProvider: provider });
+      await strapiPut(`/perfis/${perfil.documentId ?? perfil.id}`, { oauthProvider: provider });
     }
   },
 

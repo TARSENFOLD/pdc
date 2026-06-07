@@ -19,3 +19,9 @@
 - Clientes antigos deixam de inventar endpoints paralelos.
 - Falhas dos hooks continuam observáveis em logs e outbox.
 - Imagens e vídeos permanecem limitados pelos contratos e validação de magic bytes existentes.
+
+## Correção de identidade observada na auditoria
+
+- O access token transporta `perfilId`; rotas não precisam inferir ou inventar identidade.
+- A expiração do access token não elimina um refresh token ainda válido.
+- Telemetria nunca é assinada com perfil desconhecido.

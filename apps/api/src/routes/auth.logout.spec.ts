@@ -34,6 +34,17 @@ describe('GET /auth/me', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toBeNull();
   });
+
+  it('clears only an invalid access token and preserves a renewable refresh token', async () => {
+    const res = await authRoutes.request('/me', {
+      headers: { cookie: 'access_token=invalid; refresh_token=renewable' },
+    });
+
+    expect(res.status).toBe(200);
+    const setCookie = res.headers.get('set-cookie') ?? '';
+    expect(setCookie).toContain('access_token=');
+    expect(setCookie).not.toContain('refresh_token=');
+  });
 });
 
 describe('POST /auth/logout', () => {

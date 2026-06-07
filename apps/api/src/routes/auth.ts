@@ -137,14 +137,12 @@ authRoutes.get('/me', async (c) => {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
       deleteCookie(c, 'access_token');
-      deleteCookie(c, 'refresh_token');
       return c.json(null);
     }
     const user = await authService.getUserById(payload.sub);
     return c.json(user);
   } catch {
     deleteCookie(c, 'access_token');
-    deleteCookie(c, 'refresh_token');
     return c.json(null);
   }
 });
