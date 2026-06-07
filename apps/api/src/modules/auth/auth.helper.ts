@@ -3,6 +3,10 @@ import { setCookie } from 'hono/cookie';
 import type { CookieOptions } from 'hono/utils/cookie';
 import type { AuthVariables } from './auth.middleware.js';
 import { env } from '../../lib/env.js';
+import {
+  ACCESS_TOKEN_MAX_AGE_SECONDS,
+  REFRESH_TOKEN_MAX_AGE_SECONDS,
+} from './auth.constants.js';
 
 const isProd = env.NODE_ENV === 'production';
 type SameSite = NonNullable<CookieOptions['sameSite']>;
@@ -25,8 +29,6 @@ export function setAuthCookies(
   accessToken: string,
   refreshToken: string
 ) {
-  // Production web and API are on different sites until api.usepdc.com is active.
-  // Cross-site credentialed fetch requires SameSite=None with Secure.
-  setCookie(c, 'access_token', accessToken, getAuthCookieOptions(15 * 60));
-  setCookie(c, 'refresh_token', refreshToken, getAuthCookieOptions(7 * 24 * 60 * 60));
+  setCookie(c, 'access_token', accessToken, getAuthCookieOptions(ACCESS_TOKEN_MAX_AGE_SECONDS));
+  setCookie(c, 'refresh_token', refreshToken, getAuthCookieOptions(REFRESH_TOKEN_MAX_AGE_SECONDS));
 }

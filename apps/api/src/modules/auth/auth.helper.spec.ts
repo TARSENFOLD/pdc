@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ACCESS_TOKEN_MAX_AGE_SECONDS, REFRESH_TOKEN_MAX_AGE_SECONDS } from './auth.constants.js';
 
 async function loadHelperWithNodeEnv(nodeEnv: string) {
   vi.resetModules();
@@ -17,6 +18,11 @@ afterEach(() => {
 });
 
 describe('auth cookie options', () => {
+  it('uses a browser-persistent sliding refresh window', () => {
+    expect(ACCESS_TOKEN_MAX_AGE_SECONDS).toBe(15 * 60);
+    expect(REFRESH_TOKEN_MAX_AGE_SECONDS).toBe(400 * 24 * 60 * 60);
+  });
+
   it('allows credentialed cross-site auth requests in production', async () => {
     const { getAuthCookieOptions } = await loadHelperWithNodeEnv('production');
 

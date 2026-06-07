@@ -1,6 +1,11 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { redis } from '../../lib/redis.js';
 import { env } from '../../lib/env.js';
+import {
+  ACCESS_TOKEN_TTL,
+  REFRESH_TOKEN_MAX_AGE_SECONDS,
+  REFRESH_TOKEN_TTL,
+} from './auth.constants.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { type User, type Role, type Conquista, RoleSchema, normalizeTipo } from '@pdc/shared';
 import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
@@ -86,12 +91,12 @@ export const authService = {
     const accessToken = await new SignJWT(claims)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
-      .setExpirationTime('15m')
+      .setExpirationTime(ACCESS_TOKEN_TTL)
       .sign(JWT_SECRET);
     const refreshToken = await new SignJWT({ sub: user.id })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
-      .setExpirationTime('7d')
+      .setExpirationTime(REFRESH_TOKEN_TTL)
       .setJti(randomUUID())
       .sign(JWT_SECRET);
     return { accessToken, refreshToken };
@@ -99,7 +104,9 @@ export const authService = {
 
   async saveRefreshToken(userId: string, token: string) {
     const hash = hashToken(token);
-    await redis.set(`refresh_token:${userId}:${hash}`, 'true', { ex: 7 * 24 * 60 * 60 });
+    await redis.set(`refresh_token:${userId}:${hash}`, 'true', {
+      ex: REFRESH_TOKEN_MAX_AGE_SECONDS,
+    });
   },
 
   async revokeRefreshToken(userId: string, token: string) {

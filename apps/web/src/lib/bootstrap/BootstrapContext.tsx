@@ -6,7 +6,15 @@ import BootstrapErrorScreen from '@/components/layout/BootstrapErrorScreen';
 import { BootstrapContext } from './bootstrap-context';
 
 async function fetchBootstrap(): Promise<BootstrapResponse> {
-  return await http.get<BootstrapResponse>('/bootstrap');
+  const bootstrap = await http.get<BootstrapResponse>('/bootstrap');
+  if (bootstrap.session.isAuthenticated) return bootstrap;
+
+  try {
+    await http.post<{ success: boolean }>('/auth/refresh', {});
+    return await http.get<BootstrapResponse>('/bootstrap');
+  } catch {
+    return bootstrap;
+  }
 }
 
 function exponentialBackoff(failureCount: number): number {
