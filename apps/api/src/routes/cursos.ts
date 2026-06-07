@@ -47,7 +47,7 @@ cursoRoutes.get('/', optionalJwt, zValidator('query', cursoQuerySchema), async (
   const q = c.req.valid('query');
   const user = c.get('user');
 
-  const params: Record<string, string | string[]> = { populate: 'capa,autor' };
+  const params: Record<string, string | string[]> = { populate: 'autor' };
   applyPublicCatalogStateFilter(params);
   if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
   if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
@@ -85,7 +85,7 @@ cursoRoutes.get('/meus', verifyJwt, checkRole(['mentor', 'instituicao', 'super_a
   try {
     const res = await strapiGet<Curso>('/cursos', {
       'filters[autorId][$eq]': user.id,
-      populate: 'capa',
+      populate: 'autor',
       'pagination[page]': c.req.query('page') || '1',
     });
     return c.json(toPaginatedResponse(res));
@@ -99,7 +99,7 @@ cursoRoutes.get('/me/inscricoes', verifyJwt, async (c) => {
   const user = c.get('user');
   try {
     const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
-    const res = await strapiGet<Inscricao>('/inscricoes', { 'filters[perfil][id][$eq]': perfilId, populate: 'curso.capa' });
+    const res = await strapiGet<Inscricao>('/inscricoes', { 'filters[perfil][id][$eq]': perfilId, populate: 'curso' });
     return c.json(res);
   } catch (err: unknown) {
     return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);

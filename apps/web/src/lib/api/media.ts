@@ -1,6 +1,7 @@
 import { UploadResultSchema, type MediaEntityType, type UploadResult } from '@pdc/shared';
 
-const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)
+  ?? (import.meta.env.PROD ? 'https://api.usepdc.com' : '/api');
 
 export const mediaApi = {
   upload: async (file: File, entityType: MediaEntityType = 'generic'): Promise<UploadResult> => {
@@ -15,11 +16,11 @@ export const mediaApi = {
     });
 
     if (!response.ok) {
-      const body: unknown = await response.json().catch(() => ({}));
+      const body: unknown = await response.json().catch(() => null);
       const errorMessage =
         body && typeof body === 'object' && 'error' in body && typeof (body as Record<string, unknown>).error === 'string'
           ? (body as { error: string }).error
-          : `Upload failed: ${response.statusText}`;
+          : `Falha no upload (${String(response.status)})`;
       throw new Error(errorMessage);
     }
 

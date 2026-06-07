@@ -28,7 +28,7 @@ notificacaoRoutes.get('/', async (c) => {
   const { id } = c.get('user');
   try {
     const data = await strapiGet<unknown>('/notificacoes', {
-      'filters[userId][$eq]': id,
+      'filters[perfil][userId][$eq]': id,
       'sort': 'createdAt:desc',
       'pagination[pageSize]': '50',
     });
@@ -44,7 +44,7 @@ notificacaoRoutes.get('/agrupadas', async (c) => {
   const { id } = c.get('user');
   try {
     const data = await strapiGet<{ tipo: string; lida: boolean }>('/notificacoes', {
-      'filters[userId][$eq]': id,
+      'filters[perfil][userId][$eq]': id,
       'fields[0]': 'tipo',
       'fields[1]': 'lida',
       'pagination[pageSize]': '500',
@@ -75,11 +75,11 @@ notificacaoRoutes.get('/contador', async (c) => {
   try {
     const [all, unread] = await Promise.all([
       strapiGet<unknown>('/notificacoes', {
-        'filters[userId][$eq]': id,
+        'filters[perfil][userId][$eq]': id,
         'pagination[pageSize]': '1',
       }),
       strapiGet<unknown>('/notificacoes', {
-        'filters[userId][$eq]': id,
+        'filters[perfil][userId][$eq]': id,
         'filters[lida][$eq]': 'false',
         'pagination[pageSize]': '1',
       }),
@@ -102,7 +102,7 @@ notificacaoRoutes.put('/:id/lida', async (c) => {
     const notificacao = await findStrapiEntity<StrapiEntityReference>(
       'notificacoes',
       notifId,
-      { 'filters[userId][$eq]': userId },
+      { 'filters[perfil][userId][$eq]': userId },
     );
     if (!notificacao) {
       return c.json({ error: 'Notificação não encontrada' }, 404);

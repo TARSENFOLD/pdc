@@ -29,7 +29,11 @@ export function useUpload() {
 
       return await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        const apiUrl = typeof import.meta.env.VITE_API_URL === 'string' ? import.meta.env.VITE_API_URL : '/api';
+        const apiUrl = typeof import.meta.env.VITE_API_URL === 'string'
+          ? import.meta.env.VITE_API_URL
+          : import.meta.env.PROD
+            ? 'https://api.usepdc.com'
+            : '/api';
         xhr.open('POST', `${apiUrl}/media/upload`);
         xhr.withCredentials = true;
 
@@ -49,7 +53,7 @@ export function useUpload() {
             }
             reject(new Error('Resposta inválida do servidor de upload'));
           } else {
-            const err = parseJson(xhr.responseText);
+            const err = xhr.responseText ? parseJson(xhr.responseText) : null;
             const message = getUploadErrorMessage(err);
             setError(message);
             reject(new Error(message));
