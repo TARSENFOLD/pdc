@@ -12,6 +12,19 @@ const SIDEBAR_WIDTH = 260;
 const SIDEBAR_COLLAPSED_WIDTH = 64;
 const SIDEBAR_STORAGE_KEY = 'sidebar:collapsed';
 
+const FOCUS_MODE_ROUTES = [
+  /^\/app\/(?:mentor|instituicao)\/cursos\/(?:criar|[^/]+\/editar)\/?$/,
+  /^\/app\/(?:mentor|instituicao)\/simulacoes\/(?:criar|[^/]+\/editar|editar\/[^/]+)\/?$/,
+  /^\/app\/instituicao\/(?:criar-experiencia|editar-experiencia\/[^/]+)\/?$/,
+  /^\/app\/instituicao\/(?:criar-programa|editar-programa\/[^/]+)\/?$/,
+  /^\/app\/cursos\/[^/]+\/itens\/[^/]+\/?$/,
+  /^\/app\/simulacoes\/[^/]+\/play\/?$/,
+];
+
+function isFocusMode(pathname: string): boolean {
+  return FOCUS_MODE_ROUTES.some((pattern) => pattern.test(pathname));
+}
+
 function loadCollapsed(): boolean {
   try { return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'; } catch { return false; }
 }
@@ -36,6 +49,7 @@ export default function AppLayout(): React.JSX.Element {
   }, []);
   const location = useLocation();
   const reduced = useReducedMotion();
+  const focusMode = isFocusMode(location.pathname);
 
   useNotificacoes();
 
@@ -43,6 +57,16 @@ export default function AppLayout(): React.JSX.Element {
   useEffect(() => {
     setDrawerOpen(false);
   }, [location.pathname]);
+
+  if (focusMode) {
+    return (
+      <div className="min-h-screen bg-[var(--surface-canvas)] text-[var(--ink-primary)] antialiased">
+        <AppErrorBoundary>
+          <Outlet />
+        </AppErrorBoundary>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--chrome-surface)] text-[var(--ink-primary)] antialiased">

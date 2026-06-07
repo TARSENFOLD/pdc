@@ -55,5 +55,7 @@
   contratos e payloads existentes permanecem inalterados.
 - O consumo de cursos usa currículo persistente, progresso visível e navegação sequencial entre
   conteúdos. O estudante não regressa ao detalhe do curso após cada lição.
+- Rotas de criação, edição e consumo imersivo entram em modo de foco: não renderizam sidebar
+  global, topbar, drawer ou Tina. A saída e a navegação pertencem ao builder ou player ativo.
 - Tutor LMS e Springpod são referências de arquitetura de informação; cores, componentes e
   linguagem continuam regidos pelo design system Soul & Elite do PDC.
