@@ -312,8 +312,7 @@ O autor escolhe **um ou mais modos** para o seu projeto:
 
 #### Aprovação
 
-- Auto-aprovado se autor tem 7+ dias de conta
-- Senão, vai para fila do Moderador
+- Publicado diretamente por qualquer perfil autenticado e aprovado
 - Auto-hide aos 5+ denúncias válidas
 
 #### Páginas necessárias
@@ -352,7 +351,7 @@ O autor escolhe **um ou mais modos** para o seu projeto:
 
 - Posts são publicados diretamente, independentemente da idade da conta
 - Links suspeitos, padrões repetitivos, duplicações e linguagem abusiva podem encaminhar o post para revisão ou ocultação automática
-- Comentários de utilizadores com **menos de 7 dias** de conta continuam em **fila de moderação**
+- Comentários são publicados diretamente
 - Posts marcados como `aprovada: false` no schema Strapi não aparecem no feed público
 - Conquistas auto-geradas pelo sistema (via Event Bus) entram já aprovadas
 
@@ -398,9 +397,9 @@ stateDiagram-v2
 | Simulação | Comité Científico | 5+ denúncias válidas |
 | Curso | Moderador (Super Admin pode forçar) | 10+ denúncias válidas |
 | Programa | Moderador | 10+ denúncias válidas |
-| Projeto | Auto-aprovado se autor tem 7+ dias; senão Moderador | 5+ denúncias |
+| Projeto | Publicação direta | 5+ denúncias |
 | Post / Conquista | Publicação direta; fila apenas por sinais concretos de risco | 3+ denúncias |
-| Comentário | Auto-aprovado se autor tem 7+ dias; senão fila | 3+ denúncias |
+| Comentário | Publicação direta | 3+ denúncias |
 
 ## 6. Features Transversais Aplicáveis (recap)
 
@@ -450,7 +449,7 @@ graph TD
 2. **Field-level filtering server-side** — a visibilidade é aplicada pelo backend antes de devolver dados. Frontend é UX, não autoridade.
 3. **Telemetria é direito do sistema, não negociável** — todos os tipos geram eventos comportamentais (com consentimento documentado nos Termos).
 4. **Single source of truth para telemetria** — eventos inválidos são **etiquetados** (não eliminados) para forensics completos. *(Ver dívida técnica D5–D7 na spec 02.)*
-5. **Moderação proporcional ao risco** — posts são publicados diretamente; comentários e projetos de utilizadores recentes mantêm fila, e sinais concretos de abuso podem encaminhar qualquer UGC para revisão.
+5. **Publicação direta de UGC comunitário** — posts, comentários e projetos são publicados diretamente; sinais concretos de abuso e denúncias podem encaminhar conteúdo para revisão ou ocultação.
 6. **Experiências são sempre gratuitas** — qualquer alteração desta regra requer aprovação do Super Admin e ADR formal.
 
 ## 10. Gap de Implementação Identificado em Auditoria (DC-01)

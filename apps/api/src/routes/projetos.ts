@@ -165,13 +165,13 @@ projetoRoutes.post('/',
 
       const now = new Date().toISOString();
       const historicoEstados: HistoricoEstado[] = [
-        { estado: 'draft', timestamp: now, autorId: perfilId },
+        { estado: 'published', timestamp: now, autorId: perfilId },
       ];
 
       const res = await strapiPost<StrapiProjeto>('/projetos', {
         ...body,
         autor: perfilId,
-        estado: 'draft',
+        estado: 'published',
         slug,
         acessoCoreACL: [],
         votos: [],
@@ -180,7 +180,7 @@ projetoRoutes.post('/',
 
       const projetoId = res.data.id;
 
-      const event = await eventBus.publishWithOutbox(DomainEventName.PROJETO_CRIADO, {
+      const event = await eventBus.publishWithOutbox(DomainEventName.PROJETO_PUBLICADO, {
         projetoId,
         autorId: perfilId,
         titulo: body.titulo,

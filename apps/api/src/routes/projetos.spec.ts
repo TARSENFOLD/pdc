@@ -234,12 +234,12 @@ describe('projetoRoutes E2E contracts', () => {
       tags: [],
     };
 
-    it('estudante cria projeto em draft — PROJETO_CRIADO emitido', async () => {
+    it('estudante publica projeto diretamente — PROJETO_PUBLICADO emitido', async () => {
       vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{ id: 'perfil-est' }]));
       vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({
         id: 'proj-new',
         ...createPayload,
-        estado: 'draft',
+        estado: 'published',
         autor: { id: 'perfil-est', userId: 'user-est', nome: 'Estudante' },
       }));
 
@@ -256,22 +256,22 @@ describe('projetoRoutes E2E contracts', () => {
       expect(res.status).toBe(201);
       expect(strapiPost).toHaveBeenCalledWith('/projetos', expect.objectContaining({
         autor: 'perfil-est',
-        estado: 'draft',
+        estado: 'published',
         acessoCoreACL: [],
         votos: [],
       }));
-      expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.PROJETO_CRIADO, expect.objectContaining({
+      expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.PROJETO_PUBLICADO, expect.objectContaining({
         projetoId: 'proj-new',
         autorId: 'perfil-est',
       }));
     });
 
-    it('estado inicial é sempre draft — nunca published direto', async () => {
+    it('estado inicial é sempre published', async () => {
       vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{ id: 'perfil-inst' }]));
       vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({
         id: 'proj-2',
         ...createPayload,
-        estado: 'draft',
+        estado: 'published',
       }));
 
       const res = await app.request('/projetos', {
@@ -286,7 +286,7 @@ describe('projetoRoutes E2E contracts', () => {
 
       expect(res.status).toBe(201);
       expect(strapiPost).toHaveBeenCalledWith('/projetos', expect.objectContaining({
-        estado: 'draft',
+        estado: 'published',
       }));
     });
 

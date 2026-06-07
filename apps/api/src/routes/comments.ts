@@ -38,7 +38,7 @@ commentsRoutes.post('/', verifyJwt, rateLimitComments, zValidator('json', Create
     targetType,
     targetId,
     conteudo,
-    estado: 'pendente',
+    estado: 'aprovado',
     createdAt: new Date().toISOString(),
   });
 

@@ -1,4 +1,4 @@
-# ADR-035 — Publicação direta de posts
+# ADR-035 — Publicação direta de conteúdo comunitário
 
 **Status:** Aceite  
 **Data:** 2026-06-07
@@ -11,18 +11,20 @@ quando o conteúdo não apresentava qualquer sinal concreto de risco.
 
 ## Decisão
 
-Posts de perfis autenticados e aprovados são publicados diretamente,
-independentemente da idade da conta.
+Posts, comentários e projetos de perfis autenticados e aprovados são publicados
+diretamente, independentemente da idade da conta.
 
 O motor de risco continua a encaminhar para revisão conteúdo com sinais
 concretos, incluindo links suspeitos, repetição excessiva, duplicação recente,
 linguagem abusiva ou reputação negativa. Risco alto continua sujeito a ocultação
 automática.
 
-Esta decisão não altera as regras de moderação de comentários ou projetos.
+Pedidos de acesso ao núcleo privado de um projeto continuam pendentes até
+aprovação do autor, porque representam autorização de acesso e não moderação de
+conteúdo.
 
 ## Consequências
 
-- Novos utilizadores podem participar imediatamente no feed.
+- Novos utilizadores podem participar imediatamente no feed e publicar projetos.
 - A fila de moderação passa a refletir risco observável, não idade da conta.
 - Denúncias e auto-hide continuam a proteger o feed após a publicação.
