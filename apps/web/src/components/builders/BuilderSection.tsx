@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBuilderStep } from './builder-step-context';
 
 interface BuilderSectionProps {
   title: string;
@@ -8,11 +9,14 @@ interface BuilderSectionProps {
 }
 
 export default function BuilderSection({ title, description, children, value }: BuilderSectionProps): React.ReactElement {
+  const { activeSection } = useBuilderStep();
+  if (activeSection && value && activeSection !== value) return <></>;
+
   return (
-    <section id={value} className="scroll-mt-28 space-y-6">
-      <div>
-        <h2 className="text-xl font-bold">{title}</h2>
-        <p className="text-sm text-ink-tertiary">{description}</p>
+    <section id={value} className="space-y-7">
+      <div className="border-b border-border pb-5">
+        <h2 className="text-xl font-bold text-ink-primary">{title}</h2>
+        <p className="mt-2 text-sm leading-6 text-ink-secondary">{description}</p>
       </div>
       {children}
     </section>

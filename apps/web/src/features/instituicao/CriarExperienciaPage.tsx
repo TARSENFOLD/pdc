@@ -201,10 +201,10 @@ export function CriarExperienciaPage() {
   return (
     <>
       <BuilderShell
-        title={isEditMode ? 'Editar Experiência' : 'Gerador de Experiência Premium'}
+        title={isEditMode ? 'Editar experiência' : 'Criar experiência'}
         description={isEditMode
           ? 'Actualiza os dados da tua experiência curricular.'
-          : 'Materializa o impacto da tua instituição através de dados reais e vozes autênticas.'
+          : 'Apresenta o curso, o mercado, as pessoas e a vida na instituição de forma clara.'
         }
         state={currentState}
         breadcrumbs={[
@@ -215,9 +215,9 @@ export function CriarExperienciaPage() {
         ]}
         sections={[
           { id: 'identidade', label: 'Identidade' },
-          { id: 'realidade', label: 'Painel de Realidade' },
-          { id: 'vozes', label: 'Mural de Vozes' },
-          { id: 'guia', label: 'Guia Institucional' },
+          { id: 'realidade', label: 'Mercado' },
+          { id: 'vozes', label: 'Depoimentos' },
+          { id: 'guia', label: 'Instituição' },
         ]}
         actions={
           <BuilderActionsBar
@@ -291,6 +291,7 @@ export function CriarExperienciaPage() {
         </BuilderSection>
 
         <BuilderSection
+          value="realidade"
           title="Painel de Realidade"
           description="Dados de mercado e empregabilidade (Spec 04)."
         >
@@ -307,6 +308,7 @@ export function CriarExperienciaPage() {
         </BuilderSection>
 
         <BuilderSection
+          value="vozes"
           title="Mural de Vozes"
           description="Depoimentos reais de quem já viveu a experiência."
         >
@@ -330,6 +332,7 @@ export function CriarExperienciaPage() {
         </BuilderSection>
 
         <BuilderSection
+          value="guia"
           title="Guia Institucional"
           description="Vitrinas do campus e jornada curricular."
         >

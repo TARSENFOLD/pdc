@@ -153,10 +153,10 @@ export default function CriarProgramaPage() {
   return (
     <>
       <BuilderShell
-        title={isEditMode ? 'Editar Programa' : 'Arquitetura de Programa de Acesso'}
+        title={isEditMode ? 'Editar programa' : 'Criar programa'}
         description={isEditMode
           ? 'Actualiza os dados do programa de acesso ao ecossistema.'
-          : 'Agrupa ativos educativos, define o propósito e governa o acesso ao talento.'
+          : 'Define o objetivo, a metodologia, os conteúdos e as regras de inscrição.'
         }
         state={currentState}
         breadcrumbs={[
@@ -182,6 +182,7 @@ export default function CriarProgramaPage() {
         }
       >
         <BuilderSection
+          value="proposito"
           title="Propósito e Identidade"
           description="O valor diferenciador e objetivo pedagógico central."
         >
@@ -274,6 +275,7 @@ export default function CriarProgramaPage() {
         </BuilderSection>
 
         <BuilderSection
+          value="conteudos"
           title="Conteúdos Agrupados"
           description="Integração de cursos, simulações e experiências práticas."
         >

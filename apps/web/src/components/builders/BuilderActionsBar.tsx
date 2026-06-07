@@ -18,12 +18,16 @@ export default function BuilderActionsBar({
   onPublish
 }: BuilderActionsBarProps): React.ReactElement {
   return (
-    <div className="sticky top-8 p-6 bg-recessed rounded-sm border border-white/5 space-y-4">
+    <div className="sticky top-6 space-y-5">
+      <div>
+        <p className="text-sm font-semibold text-ink-primary">Publicação</p>
+        <p className="mt-1 text-xs leading-5 text-ink-tertiary">Guarda o progresso ou envia o conteúdo para revisão.</p>
+      </div>
       <div className="space-y-2">
         <Button 
           disabled={isSubmitting} 
           onClick={onSaveDraft}
-          className="w-full h-14 rounded-sm font-semibold bg-white text-black hover:bg-white/90"
+          className="h-11 w-full rounded-sm font-semibold"
         >
           {isSubmitting ? 'Salvando...' : 'Salvar Rascunho'}
         </Button>
@@ -33,7 +37,7 @@ export default function BuilderActionsBar({
             variant="ghost"
             disabled={isSubmitting} 
             onClick={onSubmitReview}
-            className="w-full h-12 rounded-sm font-semibold text-accent hover:bg-accent/10"
+            className="h-11 w-full rounded-sm font-semibold text-accent hover:bg-accent/10"
           >
             Submeter para Revisão
           </Button>
@@ -43,16 +47,17 @@ export default function BuilderActionsBar({
           <Button 
             disabled={isSubmitting} 
             onClick={onPublish}
-            className="w-full h-14 rounded-sm font-semibold bg-accent text-white"
+            className="h-11 w-full rounded-sm font-semibold bg-accent text-white"
           >
             Publicar Agora
           </Button>
         )}
       </div>
       
-      <p className="text-[10px] text-center text-ink-tertiary uppercase font-semibold tracking-wide">
-        Estado: {state || 'draft'}
-      </p>
+      <div className="border-t border-border pt-4">
+        <p className="text-xs text-ink-tertiary">Estado atual</p>
+        <p className="mt-1 text-sm font-semibold capitalize text-ink-primary">{state || 'draft'}</p>
+      </div>
     </div>
   );
 }

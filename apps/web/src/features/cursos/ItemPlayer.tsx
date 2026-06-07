@@ -6,6 +6,9 @@ import { cursosApi } from '@/lib/api/cursos';
 import { aiApi } from '@/lib/api/ai';
 import { QuizPlayer } from '@/features/ai/QuizPlayer';
 import type { ItemModulo } from '@pdc/shared';
+import { BookOpen, Check, ChevronLeft, ChevronRight, Circle, Menu } from 'lucide-react';
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 function ExternalLink({ url, label }: { url: string; label: string }) {
   return (
@@ -76,6 +79,7 @@ export function ItemPlayer() {
   const { cursoId, itemId } = useParams<{ cursoId: string; itemId: string }>();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const [curriculumOpen, setCurriculumOpen] = useState(false);
 
   const { data: curso, isLoading } = useQuery({
     queryKey: ['cursos', cursoId ?? ''],
@@ -121,26 +125,128 @@ export function ItemPlayer() {
   }
 
   const concluido = progresso.some((p) => p.itemId === itemId && p.concluido);
+  const allItems = curso.modulos?.flatMap((modulo) =>
+    modulo.itens.map((moduleItem) => ({ item: moduleItem, modulo }))
+  ) ?? [];
+  const currentIndex = allItems.findIndex(({ item: moduleItem }) => routeId(moduleItem.id) === itemId);
+  const previousItem = currentIndex > 0 ? allItems[currentIndex - 1]?.item : undefined;
+  const nextItem = currentIndex >= 0 ? allItems[currentIndex + 1]?.item : undefined;
+  const completedCount = progresso.filter((entry) => entry.concluido).length;
+  const progressPercent = allItems.length > 0 ? Math.round((completedCount / allItems.length) * 100) : 0;
+
+  const openItem = (targetId: string | number) => {
+    setCurriculumOpen(false);
+    navigate(`/app/cursos/${cursoId}/itens/${routeId(targetId)}`);
+  };
 
   return (
-    <div className="max-w-3xl">
-      <h1 className="mb-1 text-xl font-bold text-ink-primary">{item.titulo}</h1>
-      <p className="mb-6 text-xs uppercase tracking-wider text-ink-tertiary">{item.tipo}</p>
-      <div className="mb-8">
-        {item.tipo === 'quiz' ? (
-          <QuizSection cursoId={cursoId} moduloId={moduloId ?? ''} />
-        ) : (
-          renderItem(item)
-        )}
-      </div>
-      <Button
-        onClick={() => { marcarMutation.mutate(); }}
-        isLoading={marcarMutation.isPending}
-        disabled={concluido}
-        variant={concluido ? 'secondary' : 'primary'}
-      >
-        {concluido ? '✓ Concluído' : 'Marcar como concluído'}
-      </Button>
+    <div className="flex min-h-[calc(100vh-53px)] bg-canvas">
+      <aside className={cn(
+        'absolute inset-y-0 left-0 z-30 w-[310px] border-r border-border bg-recessed transition-transform lg:relative lg:translate-x-0',
+        curriculumOpen ? 'translate-x-0' : '-translate-x-full',
+      )}>
+        <div className="border-b border-border p-5">
+          <button type="button" onClick={() => { navigate(`/app/cursos/${cursoId}`); }} className="mb-4 flex items-center gap-2 text-xs text-ink-tertiary hover:text-ink-primary">
+            <ChevronLeft size={14} />
+            Voltar ao curso
+          </button>
+          <h2 className="line-clamp-2 font-semibold text-ink-primary">{curso.titulo}</h2>
+          <div className="mt-4 flex items-center justify-between text-xs text-ink-secondary">
+            <span>{completedCount} de {allItems.length} concluídos</span>
+            <span>{progressPercent}%</span>
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border">
+            <div className="h-full bg-accent transition-all" style={{ width: `${String(progressPercent)}%` }} />
+          </div>
+        </div>
+
+        <nav className="h-[calc(100vh-220px)] overflow-y-auto p-3" aria-label="Currículo do curso">
+          {curso.modulos?.map((module, moduleIndex) => (
+            <section key={module.id} className="mb-5">
+              <div className="px-3 pb-2">
+                <p className="text-xs font-semibold text-ink-primary">Módulo {moduleIndex + 1}</p>
+                <p className="mt-1 text-xs text-ink-tertiary">{module.titulo}</p>
+              </div>
+              <div className="space-y-1">
+                {module.itens.map((moduleItem, itemIndex) => {
+                  const moduleItemId = routeId(moduleItem.id);
+                  const isCurrent = moduleItemId === itemId;
+                  const isComplete = progresso.some((entry) => entry.itemId === moduleItemId && entry.concluido);
+                  return (
+                    <button
+                      key={moduleItemId}
+                      type="button"
+                      onClick={() => { openItem(moduleItem.id); }}
+                      className={cn(
+                        'flex min-h-12 w-full items-start gap-3 rounded-sm px-3 py-2 text-left transition-colors',
+                        isCurrent ? 'bg-accent/10 text-accent' : 'text-ink-secondary hover:bg-elevated hover:text-ink-primary',
+                      )}
+                    >
+                      {isComplete ? <Check className="mt-0.5 h-4 w-4 shrink-0" /> : <Circle className="mt-0.5 h-4 w-4 shrink-0" />}
+                      <span>
+                        <span className="block text-xs text-ink-tertiary">{moduleIndex + 1}.{itemIndex + 1} · {moduleItem.tipo}</span>
+                        <span className="mt-0.5 block text-sm font-medium">{moduleItem.titulo}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </nav>
+      </aside>
+
+      {curriculumOpen && (
+        <button type="button" aria-label="Fechar currículo" className="absolute inset-0 z-20 bg-black/50 lg:hidden" onClick={() => { setCurriculumOpen(false); }} />
+      )}
+
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex min-h-16 items-center justify-between gap-4 border-b border-border px-4 md:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button type="button" onClick={() => { setCurriculumOpen(true); }} className="rounded-sm p-2 text-ink-secondary hover:bg-elevated lg:hidden" aria-label="Abrir currículo">
+              <Menu size={20} />
+            </button>
+            <BookOpen className="hidden h-5 w-5 text-accent sm:block" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-ink-primary">{item.titulo}</p>
+              <p className="text-xs capitalize text-ink-tertiary">{item.tipo}</p>
+            </div>
+          </div>
+          <Button
+            onClick={() => { marcarMutation.mutate(); }}
+            isLoading={marcarMutation.isPending}
+            disabled={concluido}
+            variant={concluido ? 'secondary' : 'primary'}
+            size="sm"
+          >
+            {concluido ? 'Concluído' : 'Marcar como concluído'}
+          </Button>
+        </header>
+
+        <div className="flex-1 overflow-y-auto">
+          <article className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8 md:py-10">
+            {item.tipo === 'quiz' ? (
+              <QuizSection cursoId={cursoId} moduloId={moduloId ?? ''} />
+            ) : (
+              renderItem(item)
+            )}
+          </article>
+        </div>
+
+        <footer className="flex min-h-16 items-center justify-between border-t border-border bg-canvas px-4 md:px-6">
+          <Button type="button" variant="ghost" disabled={!previousItem} onClick={() => { if (previousItem) openItem(previousItem.id); }}>
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Anterior
+          </Button>
+          <span className="hidden text-xs text-ink-tertiary sm:block">
+            Conteúdo {currentIndex + 1} de {allItems.length}
+          </span>
+          <Button type="button" variant="secondary" disabled={!nextItem} onClick={() => { if (nextItem) openItem(nextItem.id); }}>
+            Seguinte
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </footer>
+      </main>
     </div>
   );
 }

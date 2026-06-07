@@ -121,8 +121,8 @@ export function CriarSimulacaoPage() {
   return (
     <>
       <BuilderShell
-        title={isEditing ? "Editor de Simulação Soberana" : "Novo Laboratório de Simulação"}
-        description="Define os parâmetros biomecânicos e o cenário de decisão para auditar talentos."
+        title={isEditing ? 'Editar simulação' : 'Criar simulação'}
+        description="Configura o cenário, os materiais e os critérios usados durante a simulação."
         state={currentEstado}      breadcrumbs={[
         { label: 'Início', to: '/app' },
         { label: 'Simulações', to: '/app/mentor/simulacoes' },
@@ -130,8 +130,8 @@ export function CriarSimulacaoPage() {
       ]}
       sections={[
         { id: 'identidade', label: 'Identidade' },
-        { id: 'setup', label: 'Setup do Lab' },
-        { id: 'criteria', label: 'Critérios' },
+        { id: 'setup', label: 'Conteúdo' },
+        { id: 'criteria', label: 'Avaliação' },
       ]}
       actions={
         <BuilderActionsBar
@@ -156,8 +156,9 @@ export function CriarSimulacaoPage() {
       }
     >
       <BuilderSection
-        title="Identidade do Laboratório"
-        description="Título, narrativa e área de atuação vocacional."
+        value="identidade"
+        title="Apresentação"
+        description="Título, descrição e área da simulação."
       >
         <div className="space-y-6">
           <Input label="Título da Simulação" {...register('titulo')} error={errors.titulo?.message} />
@@ -188,8 +189,8 @@ export function CriarSimulacaoPage() {
 
       <BuilderSection
         value="setup"
-        title="Setup do Laboratório"
-        description="Configurações biomecânicas e motor de execução."
+        title="Conteúdo da simulação"
+        description="Escolhe o formato, os materiais e o número de tentativas."
       >
         <div className="space-y-8">
            <div className="grid grid-cols-2 gap-4">

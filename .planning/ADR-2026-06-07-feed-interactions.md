@@ -50,3 +50,10 @@
 - O frontend em Cloudflare Pages usa `https://api.usepdc.com` como origem de produção quando
   `VITE_API_URL` não é injetada no build. O caminho relativo `/api` fica restrito ao proxy de
   desenvolvimento; Pages não deve devolver o shell HTML para chamadas BFF.
+- Os builders de Curso, Simulação, Experiência e Programa usam uma estrutura comum por etapas:
+  navegação à esquerda, formulário focado ao centro e publicação persistente à direita. Os
+  contratos e payloads existentes permanecem inalterados.
+- O consumo de cursos usa currículo persistente, progresso visível e navegação sequencial entre
+  conteúdos. O estudante não regressa ao detalhe do curso após cada lição.
+- Tutor LMS e Springpod são referências de arquitetura de informação; cores, componentes e
+  linguagem continuam regidos pelo design system Soul & Elite do PDC.

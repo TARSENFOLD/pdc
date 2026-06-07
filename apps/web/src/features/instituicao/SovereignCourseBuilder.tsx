@@ -145,8 +145,9 @@ export function SovereignCourseBuilder() {
   return (
   <>
     <BuilderShell
-      title="Sovereign Course Builder"
-      description="Define o currículo, impõe as regras de mérito e domina o ecossistema."        state={cursoQuery.data?.estado ?? 'draft'}
+      title={isEditing ? 'Editar curso' : 'Criar curso'}
+      description="Organiza a apresentação, os requisitos e o currículo que os estudantes irão percorrer."
+      state={cursoQuery.data?.estado ?? 'draft'}
       breadcrumbs={[
         { label: 'Início', to: '/app' },
         { label: 'Cursos', to: user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/dashboard/instituicao' },
@@ -154,8 +155,8 @@ export function SovereignCourseBuilder() {
       ]}
       sections={[
         { id: 'info', label: 'Identidade' },
-        { id: 'merit', label: 'Regras de Mérito' },
-        { id: 'curriculum', label: 'Currículo Soberano' },
+        { id: 'merit', label: 'Requisitos' },
+        { id: 'curriculum', label: 'Currículo' },
       ]}
       actions={
         <BuilderActionsBar
@@ -181,15 +182,16 @@ export function SovereignCourseBuilder() {
       </BuilderSection>
 
       <BuilderSection
-        title="Regras de Mérito"
-        description="Define os pré-requisitos biomecânicos para aceder ao curso."
+        value="merit"
+        title="Requisitos de acesso"
+        description="Define os requisitos mínimos para o estudante iniciar este curso."
       >
         <CourseMeritGuard register={register} watch={watch} />
       </BuilderSection>
 
       <BuilderSection
         value="curriculum"
-        title="Currículo Soberano"
+        title="Currículo"
         description="Estrutura de módulos e itens de aprendizagem."
       >
         <CourseCurriculum register={register} control={control} setValue={setValue} modulosArray={modulosArray} />
