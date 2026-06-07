@@ -37,9 +37,9 @@ export function EcosystemImpactPanel({
   });
 
   const defaultImpacts: ImpactMetric[] = [
-    { label: 'Integrados', icon: Activity, value: impactQuery.data?.impact.success ?? 0 },
-    { label: 'Ignorados', icon: CircleSlash, value: impactQuery.data?.impact.skipped ?? 0 },
-    { label: 'Total', icon: ListChecks, value: impactQuery.data?.impact.totalHooks ?? 0 },
+    { label: 'Aplicadas', icon: Activity, value: impactQuery.data?.impact.success ?? 0 },
+    { label: 'Não aplicáveis', icon: CircleSlash, value: impactQuery.data?.impact.skipped ?? 0 },
+    { label: 'Verificações', icon: ListChecks, value: impactQuery.data?.impact.totalHooks ?? 0 },
   ];
 
   const displayImpacts = impacts || defaultImpacts;
@@ -59,7 +59,7 @@ export function EcosystemImpactPanel({
       <div className="space-y-2">
         <h2 className="text-2xl font-black text-ink-primary">Impacto Registado</h2>
         <p className="text-sm text-ink-secondary max-w-xs mx-auto">
-          O Oráculo está a processar a tua ação. O ecossistema foi notificado da tua contribuição.
+          A tua publicação foi integrada. As áreas relevantes da plataforma já foram atualizadas.
         </p>
       </div>
 

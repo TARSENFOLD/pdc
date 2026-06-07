@@ -41,8 +41,17 @@ tinaRoutes.post('/chat', zValidator('json', ChatPayloadSchema), async (c) => {
   const res = await tinaService.chat(messages ?? [{ role: 'user', content: prompt }], userId, ip, stream);
 
   if (!res.ok) {
-    const errorData = await res.json() as { error: string };
-    return c.json(errorData, res.status as ContentfulStatusCode);
+    const providerError: unknown = await res.json().catch(() => null);
+    log.warn({ providerStatus: res.status }, 'Tina provider rejected request');
+    return c.json(
+      {
+        error: res.status === 401
+          ? 'A Tina está temporariamente indisponível por falha de autenticação do provedor.'
+          : 'A Tina está temporariamente indisponível.',
+        providerError: providerError === null ? undefined : 'provider_request_rejected',
+      },
+      (res.status === 401 ? 503 : res.status) as ContentfulStatusCode,
+    );
   }
 
   if (stream) {

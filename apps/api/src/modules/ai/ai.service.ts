@@ -67,7 +67,7 @@ export const aiService = {
 
       clearTimeout(timeoutId);
 
-      if (!res.ok || res.status >= 500) {
+      if (res.status >= 500) {
         return await this.fallbackOllama(fullMessages, stream);
       }
 

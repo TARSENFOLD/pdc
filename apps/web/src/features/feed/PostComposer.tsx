@@ -34,7 +34,9 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
     onSuccess: (post) => {
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
       setCorpo('');
-      if (post.eventId) setLastEventId(post.eventId);
+      if (post.estado === 'aprovada' && post.eventId) {
+        setLastEventId(post.eventId);
+      }
       toast({
         title: post.estado === 'aprovada' ? 'Publicação no feed' : 'Publicação em revisão',
         description: post.estado === 'aprovada'
@@ -42,7 +44,9 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
           : 'A tua publicação será revista antes de aparecer no feed.',
         variant: 'success',
       });
-      if (!isInline && !post.eventId) navigate('/app/feed', { replace: true });
+      if (!isInline && (post.estado !== 'aprovada' || !post.eventId)) {
+        navigate('/app/feed', { replace: true });
+      }
     },
     onError: (error: unknown) => {
       toast({
