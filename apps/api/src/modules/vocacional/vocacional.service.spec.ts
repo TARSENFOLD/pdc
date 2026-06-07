@@ -40,4 +40,23 @@ describe('VocacionalService', () => {
     expect(res).toHaveLength(1);
     expect(res[0]?.titulo).toBe('Curso de Teste');
   });
+
+  it('requests only canonical profile fields when calculating a profile', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ id: 'perfil-1', xp: 0, areasInteresse: ['TECNOLOGIA'] }]))
+      .mockResolvedValueOnce(listResponse([]));
+
+    for (let index = 0; index < 13; index += 1) {
+      vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([]));
+    }
+
+    await vocacionalService.calcularPerfil('user-1');
+
+    expect(strapiGet).toHaveBeenNthCalledWith(1, '/perfis', {
+      'filters[userId][$eq]': 'user-1',
+      'fields[0]': 'id',
+      'fields[1]': 'xp',
+      'fields[2]': 'areasInteresse',
+    });
+  });
 });

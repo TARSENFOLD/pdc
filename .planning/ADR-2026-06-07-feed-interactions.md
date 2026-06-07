@@ -35,3 +35,5 @@
   contrato canónico da Tina (`role=assistant`, `content`) antes de chegar ao BFF.
 - IDs numéricos devolvidos pelo Strapi são normalizados para string antes de entrarem no JWT,
   garantindo que refresh, middleware e bootstrap validam a mesma identidade.
+- O contexto vocacional da Tina consulta `areasInteresse`, conforme o schema Strapi atual;
+  o campo legado singular `areaInteresse` não é enviado ao CMS.

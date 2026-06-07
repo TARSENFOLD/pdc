@@ -3,7 +3,6 @@ import {
   type CertezaVocacional,
   type Curso,
   type BehaviorPattern,
-  type PerfilCompleto,
   AreaVocacionalSchema,
 } from '@pdc/shared';
 import { type Recomendacao } from './vocacional.types.js';
@@ -23,6 +22,16 @@ interface TentativaStrapiRecord {
 interface TelemetriaCountMeta {
   data: unknown[];
   meta: { pagination: { total: number } };
+}
+
+interface PerfilVocacionalSource {
+  id: string;
+  xp?: number;
+  areasInteresse?: unknown;
+}
+
+function firstAreaInteresse(value: unknown): unknown {
+  return Array.isArray(value) ? value[0] : undefined;
 }
 
 async function countTelemetria(perfilId: string, tipo: string): Promise<number> {
@@ -135,11 +144,11 @@ function calcularCerteza(totalEventos: number, patternsCount: number): CertezaVo
 
 async function calcularPerfil(userId: string): Promise<PerfilVocacional> {
   const [resPerfil, resPatterns] = await Promise.all([
-    strapiGet<PerfilCompleto>('/perfis', {
+    strapiGet<PerfilVocacionalSource>('/perfis', {
       'filters[userId][$eq]': userId,
       'fields[0]': 'id',
       'fields[1]': 'xp',
-      'fields[2]': 'areaInteresse'
+      'fields[2]': 'areasInteresse',
     }),
     strapiGet<BehaviorPattern>('/behavior-patterns', {
       'filters[perfil][userId][$eq]': userId,
@@ -174,7 +183,9 @@ async function calcularPerfil(userId: string): Promise<PerfilVocacional> {
 
   const certeza = calcularCerteza(totalEventos, patterns.length);
 
-  const parsedArea = AreaVocacionalSchema.safeParse(patterns[0]?.domainId ?? perfil.areaInteresse);
+  const parsedArea = AreaVocacionalSchema.safeParse(
+    patterns[0]?.domainId ?? firstAreaInteresse(perfil.areasInteresse),
+  );
   const areaMatch = parsedArea.success ? parsedArea.data : 'TECNOLOGIA';
   const now = new Date().toISOString();
 
@@ -186,7 +197,7 @@ async function calcularPerfil(userId: string): Promise<PerfilVocacional> {
     totalEventos,
     areaMatch,
     aptidao: scoreEventos / 100,
-    dedicacao: Math.min(1, perfil.xp / 10000),
+    dedicacao: Math.min(1, (perfil.xp ?? 0) / 10000),
     createdAt: now,
     updatedAt: now,
     dimensoes: {
