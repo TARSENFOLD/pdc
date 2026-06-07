@@ -48,7 +48,7 @@ describe('ModerationRiskEngine', () => {
     expect(result.reasons).toEqual(['suspicious_link', 'repetitive_pattern']);
   });
 
-  it('considera conta recente e duplicado como risco de revisão', async () => {
+  it('considera duplicado recente como risco de revisão', async () => {
     const duplicateChecker = vi.fn().mockResolvedValue(true);
 
     const result = await assessPostModerationRisk(
@@ -64,10 +64,10 @@ describe('ModerationRiskEngine', () => {
 
     expect(duplicateChecker).toHaveBeenCalledOnce();
     expect(result.decision).toBe('needs_review');
-    expect(result.reasons).toEqual(['new_account', 'duplicate_recent']);
+    expect(result.reasons).toEqual(['duplicate_recent']);
   });
 
-  it('envia conta com menos de 7 dias para revisão mesmo sem outros sinais', async () => {
+  it('auto-aprova publicação normal mesmo quando a conta é recente', async () => {
     const result = await assessPostModerationRisk(
       {
         corpo: 'Estou a explorar opções de curso e gostei da experiência.',
@@ -80,10 +80,10 @@ describe('ModerationRiskEngine', () => {
     );
 
     expect(result).toEqual({
-      decision: 'needs_review',
-      severity: 'medium',
-      score: 0.35,
-      reasons: ['new_account'],
+      decision: 'auto_approve',
+      severity: 'low',
+      score: 0,
+      reasons: [],
     });
   });
 
@@ -106,7 +106,6 @@ describe('ModerationRiskEngine', () => {
       'suspicious_link',
       'abusive_language',
       'repetitive_pattern',
-      'new_account',
       'low_reputation',
       'duplicate_recent',
     ]);

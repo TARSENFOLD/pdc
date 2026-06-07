@@ -30,7 +30,7 @@
 | **Simulação** | ✅ Catálogo + descrição | ✅ + executa | Mentor, Instituição (com validação Comité e moderacao)  | Estudante (executa) | Comité Científico + Moderador | Estudante após completar |
 | **Programa** | ✅ Catálogo + descrição | ✅ + inscreve-se ou recebe convite | **Mentores e Instituições** | Por **inscrição** OU **convite** — **o criador decide** (alunos individuais E/OU instituições inteiras) | Moderador (**aprova antes de listar**) | — *(herda dos conteúdos contidos)* |
 | **Projeto** | ✅ Camada Pública (abstract) + feed público | ✅ + colabora / pede mentoria / patrocínio | **Estudantes, Mentores E Instituições** | — *(não há inscrição; há ****colaboração****, ****mentoria****, ****patrocínio**** ou ****feedback opcional**** da comunidade)* | Moderador | Mentor, Comité Científico ou comunidade (opcional) |
-| **Post / Conquista** | ✅ (após moderação) | ✅ + interage | Todos os autenticados | — | Moderador (auto-fila <7 dias de conta) | — *(usa Like, não Rating)* |
+| **Post / Conquista** | ✅ | ✅ + interage | Todos os autenticados | — | Publicação direta; fila apenas por sinais concretos de risco | — *(usa Like, não Rating)* |
 
 ## 3. Definições Detalhadas
 
@@ -350,7 +350,9 @@ O autor escolhe **um ou mais modos** para o seu projeto:
 
 **Moderação:**
 
-- Posts/comentários de utilizadores com **menos de 7 dias** de conta entram em **fila de moderação**
+- Posts são publicados diretamente, independentemente da idade da conta
+- Links suspeitos, padrões repetitivos, duplicações e linguagem abusiva podem encaminhar o post para revisão ou ocultação automática
+- Comentários de utilizadores com **menos de 7 dias** de conta continuam em **fila de moderação**
 - Posts marcados como `aprovada: false` no schema Strapi não aparecem no feed público
 - Conquistas auto-geradas pelo sistema (via Event Bus) entram já aprovadas
 
@@ -397,7 +399,7 @@ stateDiagram-v2
 | Curso | Moderador (Super Admin pode forçar) | 10+ denúncias válidas |
 | Programa | Moderador | 10+ denúncias válidas |
 | Projeto | Auto-aprovado se autor tem 7+ dias; senão Moderador | 5+ denúncias |
-| Post / Conquista | Auto-aprovado se autor tem 7+ dias; senão fila Moderador | 3+ denúncias |
+| Post / Conquista | Publicação direta; fila apenas por sinais concretos de risco | 3+ denúncias |
 | Comentário | Auto-aprovado se autor tem 7+ dias; senão fila | 3+ denúncias |
 
 ## 6. Features Transversais Aplicáveis (recap)
@@ -448,7 +450,7 @@ graph TD
 2. **Field-level filtering server-side** — a visibilidade é aplicada pelo backend antes de devolver dados. Frontend é UX, não autoridade.
 3. **Telemetria é direito do sistema, não negociável** — todos os tipos geram eventos comportamentais (com consentimento documentado nos Termos).
 4. **Single source of truth para telemetria** — eventos inválidos são **etiquetados** (não eliminados) para forensics completos. *(Ver dívida técnica D5–D7 na spec 02.)*
-5. **Moderação por defeito para UGC** — comentários, posts, conquistas e projetos de utilizadores recentes (< 7 dias) passam por fila.
+5. **Moderação proporcional ao risco** — posts são publicados diretamente; comentários e projetos de utilizadores recentes mantêm fila, e sinais concretos de abuso podem encaminhar qualquer UGC para revisão.
 6. **Experiências são sempre gratuitas** — qualquer alteração desta regra requer aprovação do Super Admin e ADR formal.
 
 ## 10. Gap de Implementação Identificado em Auditoria (DC-01)

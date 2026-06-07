@@ -5,7 +5,6 @@ export type ModerationReason =
   | 'suspicious_link'
   | 'abusive_language'
   | 'repetitive_pattern'
-  | 'new_account'
   | 'duplicate_recent'
   | 'low_reputation';
 
@@ -44,17 +43,8 @@ const RISKY_TERMS = [
 ];
 
 const URL_PATTERN = /https?:\/\/|www\.|bit\.ly|tinyurl\.com|t\.me\/|wa\.me\/|whatsapp\.com\/|discord\.gg\//i;
-const NEW_ACCOUNT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-
 function clampScore(score: number): number {
   return Math.min(1, Math.max(0, Number(score.toFixed(2))));
-}
-
-function isNewAccount(profile: ModerationProfile, now: Date): boolean {
-  if (!profile.createdAt) return false;
-  const createdAt = Date.parse(profile.createdAt);
-  if (Number.isNaN(createdAt)) return false;
-  return now.getTime() - createdAt < NEW_ACCOUNT_WINDOW_MS;
 }
 
 function hasExcessiveRepetition(corpo: string): boolean {
@@ -93,8 +83,6 @@ export async function assessPostModerationRisk(
   let score = 0;
   const corpo = input.corpo.trim();
   const lower = corpo.toLowerCase();
-  const now = dependencies.now?.() ?? new Date();
-
   if (URL_PATTERN.test(corpo)) {
     reasons.push('suspicious_link');
     score += 0.3;
@@ -108,11 +96,6 @@ export async function assessPostModerationRisk(
   if (hasExcessiveRepetition(corpo)) {
     reasons.push('repetitive_pattern');
     score += 0.3;
-  }
-
-  if (isNewAccount(input.profile, now)) {
-    reasons.push('new_account');
-    score += 0.35;
   }
 
   if ((input.profile.reputacao ?? 0) < 0) {

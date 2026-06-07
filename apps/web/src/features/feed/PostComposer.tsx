@@ -86,7 +86,7 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
             rows={isInline ? 2 : 8}
             maxLength={2000}
             className="min-h-[90px] w-full resize-y rounded-md border border-[var(--chrome-border)] bg-[var(--surface-elevated)] p-4 pb-8 text-sm text-[var(--ink-primary)] outline-none transition-colors placeholder:text-[var(--ink-tertiary)] focus:border-[var(--accent-terracotta)] focus:ring-1 focus:ring-[var(--accent-terracotta)]"
-            placeholder={t('feed.composerPlaceholder', 'Are you looking for a service? Ask the community...')}
+            placeholder={t('feed.composerPlaceholder', 'Partilha uma experiência, conquista ou reflexão com a comunidade...')}
           />
           <div className="absolute bottom-3 right-4 flex items-center gap-4 text-[10px] font-bold text-[var(--ink-tertiary)] tracking-widest">
             {validationError && <span className="text-red-500 uppercase">{validationError}</span>}

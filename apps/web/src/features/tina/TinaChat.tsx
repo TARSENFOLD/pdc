@@ -12,6 +12,30 @@ const SUGGESTIONS = [
   'Falar com um mentor',
 ];
 
+interface TinaProviderResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+  message?: {
+    content?: string;
+  };
+  error?: string;
+}
+
+function tinaResponse(response: unknown): DeepChatResponse {
+  if (typeof response !== 'object' || response === null) {
+    return { error: 'A Tina não conseguiu interpretar a resposta.' };
+  }
+
+  const providerResponse = response as TinaProviderResponse;
+  const text = providerResponse.choices?.[0]?.message?.content ?? providerResponse.message?.content;
+  if (text) return { text };
+
+  return { error: providerResponse.error ?? 'A Tina está temporariamente indisponível.' };
+}
+
 export function TinaChat() {
   const [open, setOpen] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -55,7 +79,7 @@ export function TinaChat() {
         </div>
         <div className="flex flex-col">
           <span className="text-sm font-semibold text-ink-primary">Tina Intelligence</span>
-          <span className="text-[9px] font-bold uppercase tracking-widest text-accent/60">System Active • {AI_PROVIDER}</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-accent/60">Ativa • {AI_PROVIDER}</span>
         </div>
         <div className="ml-auto flex items-center gap-3">
           {remaining !== null && (
@@ -79,17 +103,17 @@ export function TinaChat() {
           connect={{
             url: `${API_URL}/tina/chat`,
             credentials: 'include',
-            stream: true,
+            additionalBodyProps: { stream: false },
           }}
           history={[
-            { role: 'ai', text: 'Saudações. Sou a Tina, o teu oráculo de percurso vocacional. Como posso processar o teu futuro hoje?' },
+            { role: 'ai', text: 'Olá. Sou a Tina, a tua assistente de percurso vocacional. Como posso ajudar hoje?' },
           ]}
           responseInterceptor={(response: unknown) => {
             const res = response as Record<string, unknown>;
             const headers = res['_headers'] as Record<string, string> | undefined;
             const val = headers?.['x-ratelimit-remaining'];
             if (val) setRemaining(Number(val));
-            return res as DeepChatResponse;
+            return tinaResponse(response);
           }}
           inputAreaStyle={{ backgroundColor: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)' }}
           messageStyles={{
