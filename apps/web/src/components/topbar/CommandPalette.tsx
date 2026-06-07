@@ -60,9 +60,13 @@ function getNavCommands(role: Role | undefined): NavCommand[] {
     ],
     instituicao: [
       { label: 'Dashboard Instituição', to: '/app/dashboard/instituicao' },
+      { label: 'Gerir Cursos', to: '/app/instituicao/cursos' },
+      { label: 'Criar Curso', to: '/app/instituicao/cursos/criar' },
+      { label: 'Gerir Simulações', to: '/app/instituicao/simulacoes' },
+      { label: 'Criar Simulação', to: '/app/instituicao/simulacoes/criar' },
       { label: 'Programas', to: '/app/instituicao/programas' },
       { label: 'Propostas', to: '/app/instituicao/propostas' },
-      { label: 'Criar Experiência', to: '/app/instituicao/experiencias/nova' },
+      { label: 'Criar Experiência', to: '/app/instituicao/criar-experiencia' },
     ],
     moderador: [
       { label: 'Dashboard Moderador', to: '/app/dashboard/moderador' },

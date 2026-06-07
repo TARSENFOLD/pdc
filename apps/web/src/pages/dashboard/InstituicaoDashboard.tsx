@@ -13,7 +13,8 @@ import {
   Trophy,
   Palette,
   Search,
-  ShieldCheck
+  ShieldCheck,
+  FlaskConical,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -21,6 +22,7 @@ const CTAS = [
   { label: 'Criar Experiência', to: '/app/instituicao/criar-experiencia', icon: Building2, variant: 'primary' as const },
   { label: 'Criar Programa', to: '/app/instituicao/criar-programa', icon: Briefcase },
   { label: 'Criar Curso', to: '/app/instituicao/cursos/criar', icon: ShieldCheck },
+  { label: 'Criar Simulação', to: '/app/instituicao/simulacoes/criar', icon: FlaskConical },
   { label: 'Criar Post', to: '/app/feed/criar', icon: MessageSquare },
   { label: 'Registar Marco', to: '/app/conquistas/criar', icon: Trophy },
   { label: 'Branding', to: '/app/instituicao/branding', icon: Palette },

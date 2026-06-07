@@ -4,8 +4,13 @@ import { Button, Card, CardGridSkeleton, Badge } from '@/components/ui';
 import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 import { simulacoesApi } from '@/lib/api/simulacoes';
 import { Plus, Edit2, Eye } from 'lucide-react';
+import { useAuth } from '@/lib/auth/auth-context';
 
 export function MentorSimulacoesPage() {
+  const { user } = useAuth();
+  const routeBase = user?.role === 'instituicao'
+    ? '/app/instituicao/simulacoes'
+    : '/app/mentor/simulacoes';
   const { data, isLoading } = useQuery({
     queryKey: ['simulacoes', 'minhas'],
     queryFn: () => simulacoesApi.getMinhas(),
@@ -29,7 +34,7 @@ export function MentorSimulacoesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-ink-primary font-sora">As Minhas Simulações</h1>
         <Button asChild>
-          <Link to="/app/mentor/simulacoes/criar">
+          <Link to={`${routeBase}/criar`}>
             <Plus className="mr-2 h-4 w-4" />
             Criar Simulação
           </Link>
@@ -40,7 +45,7 @@ export function MentorSimulacoesPage() {
         <Card className="flex flex-col items-center justify-center py-12 text-center">
           <p className="text-ink-tertiary mb-4">Ainda não criaste nenhuma simulação.</p>
           <Button asChild variant="secondary">
-            <Link to="/app/mentor/simulacoes/criar">Começar agora</Link>
+            <Link to={`${routeBase}/criar`}>Começar agora</Link>
           </Button>
         </Card>
       ) : (
@@ -63,13 +68,13 @@ export function MentorSimulacoesPage() {
                 <p className="text-sm text-ink-tertiary line-clamp-3 mb-4 flex-1">{sim.descricao}</p>
                 <div className="flex gap-2">
                   <Button asChild variant="secondary" size="sm" className="flex-1">
-                    <Link to={`/app/mentor/simulacoes/${sim.id}/editar`}>
+                    <Link to={`${routeBase}/${sim.id}/editar`}>
                       <Edit2 className="mr-2 h-3 w-3" />
                       Editar
                     </Link>
                   </Button>
                   <Button asChild variant="secondary" size="sm" className="flex-1">
-                    <Link to={`/simulacoes/${sim.id}`}>
+                    <Link to={`/app/simulacoes/${sim.id}`}>
                       <Eye className="mr-2 h-3 w-3" />
                       Ver
                     </Link>

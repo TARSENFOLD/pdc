@@ -37,3 +37,6 @@
   garantindo que refresh, middleware e bootstrap validam a mesma identidade.
 - O contexto vocacional da Tina consulta `areasInteresse`, conforme o schema Strapi atual;
   o campo legado singular `areaInteresse` não é enviado ao CMS.
+- A instituição recebe navegação operacional completa para cursos, simulações, experiências,
+  programas, estudantes, propostas, relatórios e branding, reutilizando builders e RBAC já
+  partilhados com mentores.

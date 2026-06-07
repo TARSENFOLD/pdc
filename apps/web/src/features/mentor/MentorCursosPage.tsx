@@ -5,9 +5,14 @@ import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 import { cursosApi } from '@/lib/api/cursos';
 import { toast } from '@/hooks/useToast';
 import { Plus, Edit2, Eye, Send, Globe } from 'lucide-react';
+import { useAuth } from '@/lib/auth/auth-context';
 
 export function MentorCursosPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const routeBase = user?.role === 'instituicao'
+    ? '/app/instituicao/cursos'
+    : '/app/mentor/cursos';
 
   const { data, isLoading } = useQuery({
     queryKey: ['cursos', 'meus'],
@@ -42,7 +47,7 @@ export function MentorCursosPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-ink-primary font-sora">Os Meus Cursos</h1>
         <Button asChild>
-          <Link to="/app/mentor/cursos/criar">
+          <Link to={`${routeBase}/criar`}>
             <Plus className="mr-2 h-4 w-4" />
             Criar Curso
           </Link>
@@ -53,7 +58,7 @@ export function MentorCursosPage() {
         <Card className="flex flex-col items-center justify-center py-12 text-center">
           <p className="text-ink-tertiary mb-4">Ainda não criaste nenhum curso.</p>
           <Button asChild variant="secondary">
-            <Link to="/app/mentor/cursos/criar">Começar agora</Link>
+            <Link to={`${routeBase}/criar`}>Começar agora</Link>
           </Button>
         </Card>
       ) : (
@@ -76,7 +81,7 @@ export function MentorCursosPage() {
                 <p className="text-sm text-ink-tertiary line-clamp-3 mb-4 flex-1">{curso.descricao}</p>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild variant="secondary" size="sm" className="flex-1">
-                    <Link to={`/app/mentor/cursos/${curso.id}/editar`}>
+                    <Link to={`${routeBase}/${curso.id}/editar`}>
                       <Edit2 className="mr-2 h-3 w-3" />
                       Editar
                     </Link>
