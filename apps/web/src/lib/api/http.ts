@@ -1,4 +1,6 @@
-const BASE_URL: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+const configuredBaseUrl = import.meta.env.VITE_API_URL as string | undefined;
+const BASE_URL: string = configuredBaseUrl
+  ?? (import.meta.env.PROD ? 'https://api.usepdc.com' : '/api');
 
 export class ApiError extends Error {
   constructor(
@@ -63,6 +65,15 @@ async function request<T>(path: string, init?: RequestInit, retried = false): Pr
   if (!response.ok) {
     const body: unknown = await response.json().catch(() => null);
     throw new ApiError(response.status, `HTTP ${String(response.status)}: ${path}`, body);
+  }
+
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new ApiError(
+      response.status,
+      `Resposta inválida da API: ${path}`,
+      { contentType },
+    );
   }
 
   const data = await response.json() as unknown;

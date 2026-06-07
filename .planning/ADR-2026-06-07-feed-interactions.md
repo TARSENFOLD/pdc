@@ -47,3 +47,6 @@
   usam `autor.userId`. O campo inexistente `instituicaoId` não integra o contrato persistido.
 - Consultas de experiências e simulações só pedem relações existentes no schema Strapi; media
   inexistente não pode derrubar a área de gestão.
+- O frontend em Cloudflare Pages usa `https://api.usepdc.com` como origem de produção quando
+  `VITE_API_URL` não é injetada no build. O caminho relativo `/api` fica restrito ao proxy de
+  desenvolvimento; Pages não deve devolver o shell HTML para chamadas BFF.
