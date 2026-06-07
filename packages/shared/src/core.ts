@@ -129,15 +129,31 @@ export interface ChatMessage {
   timestamp?: string;
 }
 
+const CanonicalChatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string().min(1),
+});
+
+const DeepChatMessageSchema = z.object({
+  role: z.enum(['user', 'ai', 'system']),
+  text: z.string().min(1),
+}).transform((message): ChatMessage => ({
+  role: message.role === 'ai' ? 'assistant' : message.role,
+  content: message.text,
+}));
+
 export const ChatPayloadSchema = z.object({
-  message: z.string().optional(),
-  messages: z.array(z.object({
-    role: z.enum(['user', 'assistant', 'system']),
-    content: z.string(),
-  })).optional(),
+  message: z.string().min(1).optional(),
+  messages: z.array(z.union([
+    CanonicalChatMessageSchema,
+    DeepChatMessageSchema,
+  ])).optional(),
   stream: z.boolean().optional().default(false),
   context: z.record(z.unknown()).optional(),
-});
+}).refine(
+  (payload) => payload.message !== undefined || (payload.messages?.length ?? 0) > 0,
+  { message: 'message or messages is required' },
+);
 
 export type ChatPayload = z.infer<typeof ChatPayloadSchema>;
 

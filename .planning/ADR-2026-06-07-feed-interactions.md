@@ -31,3 +31,5 @@
   horizontal por IDs previsíveis.
 - `avatarUrl` e `bannerUrl` apontando para R2 são a identidade visual canónica; relações
   `foto` e `capa` do Strapi permanecem somente como fallback de migração.
+- O formato externo do DeepChat (`role=ai`, `text`) é normalizado em `@pdc/shared` para o
+  contrato canónico da Tina (`role=assistant`, `content`) antes de chegar ao BFF.
