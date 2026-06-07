@@ -185,9 +185,10 @@ experienciaRoutes.post('/',
         estado: 'draft',
         slug: body.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
       });
+      const experienciaId = normalizeExternalId(res.data.id);
 
       const event = await eventBus.publishWithOutbox(DomainEventName.EXPERIENCIA_CRIADA, {
-        experienciaId: res.data.id,
+        experienciaId,
         autorId: id,
         titulo: body.titulo,
         area: body.area
@@ -195,6 +196,7 @@ experienciaRoutes.post('/',
 
       return c.json({
         ...res.data,
+        id: experienciaId,
         eventId: event.id
       }, 201);
     } catch {
@@ -356,3 +358,7 @@ experienciaRoutes.patch('/:id/estado',
     }
   }
 );
+function normalizeExternalId(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  throw new Error('Strapi devolveu um identificador de experiência inválido');
+}

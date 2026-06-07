@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/lib/auth/auth-context';
 import { ExperienceSectionsBuilder } from './components/ExperienceSectionsBuilder';
 import { newExperienceSection } from './components/experience-section-factory';
+import { getErrorBody } from '@/lib/api/http';
 
 const STORAGE_KEY = 'pdc_builder_experiencia_draft';
 
@@ -24,10 +25,8 @@ function timelinePath(index: number, field: 'ano' | 'foco') {
   return ['guiaInstitucional', 'timelineCurricular', index, field].join('.') as `guiaInstitucional.timelineCurricular.${number}.${typeof field}`;
 }
 
-type ApiError = { response?: { data?: { error?: string } }; message?: string };
-
-function getErrorMessage(err: ApiError): string {
-  return err.response?.data?.error ?? err.message ?? 'Erro desconhecido';
+function getErrorMessage(err: unknown): string {
+  return getErrorBody(err)?.error ?? (err instanceof Error ? err.message : 'Erro desconhecido');
 }
 
 export function CriarExperienciaPage() {
@@ -39,6 +38,7 @@ export function CriarExperienciaPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [lastEventId, setLastEventId] = useState<string | null>(null);
+  const [isEditingModule, setIsEditingModule] = useState(false);
 
   const form = useForm<CriarExperienciaPayload>({
     resolver: zodResolver(CriarExperienciaPayloadSchema),
@@ -129,12 +129,12 @@ export function CriarExperienciaPage() {
   // BUG-002/003: mutations separadas — cada uma com semântica própria
   const createMutation = useMutation({
     mutationFn: (data: CriarExperienciaPayload) => experienciasApi.create(data),
-    onError: (err: ApiError) => toast({ title: 'Falha ao criar', description: getErrorMessage(err), variant: 'error' }),
+    onError: (err: unknown) => toast({ title: 'Falha ao criar', description: getErrorMessage(err), variant: 'error' }),
   });
 
   const updateMutation = useMutation({
     mutationFn: (data: CriarExperienciaPayload) => experienciasApi.update(editId ?? '', data),
-    onError: (err: ApiError) => toast({ title: 'Falha ao atualizar', description: getErrorMessage(err), variant: 'error' }),
+    onError: (err: unknown) => toast({ title: 'Falha ao atualizar', description: getErrorMessage(err), variant: 'error' }),
   });
 
   const estadoMutation = useMutation({
@@ -232,7 +232,7 @@ export function CriarExperienciaPage() {
           { id: 'vozes', label: 'Depoimentos' },
           { id: 'guia', label: 'Instituição' },
         ]}
-        actions={
+        actions={isEditingModule ? undefined : (
           <BuilderActionsBar
             state={currentState}
             userRole={user?.role || 'instituicao'}
@@ -241,7 +241,7 @@ export function CriarExperienciaPage() {
             onPublish={handlePublish}
             isSubmitting={isSubmitting}
           />
-        }
+        )}
       >
         <BuilderSection
           value="identidade"
@@ -313,6 +313,7 @@ export function CriarExperienciaPage() {
             register={register}
             watch={watch}
             setValue={setValue}
+            onEditingChange={setIsEditingModule}
           />
         </BuilderSection>
 

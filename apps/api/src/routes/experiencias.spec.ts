@@ -178,7 +178,7 @@ describe('experienciaRoutes E2E contracts', () => {
   it('POST / cria experiência como draft e dispara evento G15', async () => {
     vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({
       ...expPublicada,
-      id: 'exp-new',
+      id: 41,
       estado: 'draft',
     }));
 
@@ -208,8 +208,10 @@ describe('experienciaRoutes E2E contracts', () => {
     }));
     expect(publishWithOutboxMock).toHaveBeenCalledWith(
       DomainEventName.EXPERIENCIA_CRIADA,
-      expect.objectContaining({ experienciaId: 'exp-new', autorId: 'inst-1' }),
+      expect.objectContaining({ experienciaId: '41', autorId: 'inst-1' }),
     );
+    const responseBody = await res.json() as { id: string };
+    expect(responseBody.id).toBe('41');
   });
 
   it('POST / rejeita estudante com 403', async () => {

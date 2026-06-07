@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useFieldArray, type Control, type UseFormRegister, type UseFormSetValue, type UseFormWatch } from 'react-hook-form';
-import { ChevronDown, ChevronUp, FileText, Image, Music, Plus, Trash2, Video } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { CriarExperienciaPayload, ExperienciaItem, ExperienciaSecao } from '@pdc/shared';
 import { Button, Input, Select } from '@/components/ui';
 import { BuilderUploadZone } from '@/components/builders';
@@ -39,6 +39,7 @@ interface Props {
   register: UseFormRegister<CriarExperienciaPayload>;
   watch: UseFormWatch<CriarExperienciaPayload>;
   setValue: UseFormSetValue<CriarExperienciaPayload>;
+  onEditingChange?: (editing: boolean) => void;
 }
 
 function sectionPath(index: number): `secoes.${number}` {
@@ -72,25 +73,29 @@ function MediaPreview({ item, url, onRemove }: { item: ExperienciaItem; url: str
   );
 }
 
-export function ExperienceSectionsBuilder({ control, register, watch, setValue }: Props) {
+export function ExperienceSectionsBuilder({ control, register, watch, setValue, onEditingChange }: Props) {
   const sections = useFieldArray({ control, name: 'secoes', keyName: 'fieldKey' });
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [newType, setNewType] = useState<ExperienciaSecao['tipo']>('personalizado');
 
   useEffect(() => {
-    if (activeIndex >= sections.fields.length) setActiveIndex(Math.max(0, sections.fields.length - 1));
+    if (activeIndex !== null && activeIndex >= sections.fields.length) setActiveIndex(null);
   }, [activeIndex, sections.fields.length]);
+
+  useEffect(() => {
+    onEditingChange?.(activeIndex !== null);
+    return () => { onEditingChange?.(false); };
+  }, [activeIndex, onEditingChange]);
 
   const move = (index: number, direction: -1 | 1) => {
     const target = index + direction;
     if (target < 0 || target >= sections.fields.length) return;
     sections.swap(index, target);
-    setActiveIndex(target);
+    if (activeIndex === index) setActiveIndex(target);
     setValue('secoes', watch('secoes').map((section, ordem) => ({ ...section, ordem })), { shouldDirty: true });
   };
 
-  const activeSection = sections.fields[activeIndex];
-  if (!activeSection) {
+  if (sections.fields.length === 0) {
     return (
       <div className="border border-dashed border-border p-10 text-center">
         <p className="text-sm text-ink-secondary">Ainda não existem módulos.</p>
@@ -99,48 +104,68 @@ export function ExperienceSectionsBuilder({ control, register, watch, setValue }
     );
   }
 
-  const currentSectionPath = sectionPath(activeIndex);
-  const items = watch(`${currentSectionPath}.itens`);
-
-  return (
-    <div className="grid min-h-[620px] overflow-hidden border border-border lg:grid-cols-[230px_minmax(0,1fr)_280px]">
-      <aside className="border-b border-border bg-recessed/35 p-3 lg:border-b-0 lg:border-r">
-        <p className="px-2 pb-3 text-xs font-bold uppercase text-ink-tertiary">Estrutura</p>
-        <div className="space-y-1">
-          {sections.fields.map((section, index) => (
-            <button
-              key={section.fieldKey}
-              type="button"
-              onClick={() => { setActiveIndex(index); }}
-              className={`flex w-full items-center gap-3 px-3 py-3 text-left text-sm ${activeIndex === index ? 'bg-accent/10 text-accent' : 'text-ink-secondary hover:bg-elevated'}`}
-            >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current text-[10px]">{String(index + 1)}</span>
-              <span className="line-clamp-2">{watch(`${sectionPath(index)}.titulo`)}</span>
-            </button>
-          ))}
+  if (activeIndex === null) {
+    return (
+      <div className="space-y-8">
+        <div className="grid gap-3">
+          {sections.fields.map((section, index) => {
+            const sectionData = watch(sectionPath(index));
+            return (
+              <article key={section.fieldKey} className="grid gap-5 border-b border-border py-6 first:pt-0 md:grid-cols-[48px_minmax(0,1fr)_auto] md:items-center">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-sm text-ink-secondary">
+                  {String(index + 1)}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase text-accent">
+                    {SECTION_TYPES.find((option) => option.value === sectionData.tipo)?.label}
+                  </p>
+                  <h3 className="mt-1 text-lg font-bold text-ink-primary">{sectionData.titulo}</h3>
+                  <p className="mt-1 text-sm text-ink-secondary">
+                    {String(sectionData.itens.length)} {sectionData.itens.length === 1 ? 'conteúdo' : 'conteúdos'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setActiveIndex(index); }}>
+                    <Pencil size={14} /> Editar
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { move(index, -1); }} aria-label="Mover módulo para cima"><ChevronUp size={16} /></Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { move(index, 1); }} aria-label="Mover módulo para baixo"><ChevronDown size={16} /></Button>
+                </div>
+              </article>
+            );
+          })}
         </div>
-        <div className="mt-4 space-y-2 border-t border-border pt-4">
-          <Select aria-label="Tipo do novo módulo" value={newType} onChange={(event) => { setNewType(event.target.value as ExperienciaSecao['tipo']); }}>
+
+        <div className="grid gap-3 border-t border-border pt-7 sm:grid-cols-[minmax(0,280px)_auto] sm:items-end">
+          <Select label="Tipo do novo módulo" value={newType} onChange={(event) => { setNewType(event.target.value as ExperienciaSecao['tipo']); }}>
             {SECTION_TYPES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </Select>
           <Button
             type="button"
-            variant="outline"
-            size="sm"
-            className="w-full"
+            className="sm:w-fit"
             onClick={() => {
               const label = SECTION_TYPES.find((option) => option.value === newType)?.label ?? 'Novo módulo';
               sections.append(newExperienceSection(newType, sections.fields.length, label));
               setActiveIndex(sections.fields.length);
             }}
           >
-            <Plus size={14} /> Adicionar módulo
+            <Plus size={16} /> Adicionar módulo
           </Button>
         </div>
-      </aside>
+      </div>
+    );
+  }
 
-      <main className="min-w-0 p-5 md:p-7">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
+  const currentSectionPath = sectionPath(activeIndex);
+  const items = watch(`${currentSectionPath}.itens`);
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <button type="button" onClick={() => { setActiveIndex(null); }} className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-ink-secondary hover:text-ink-primary">
+        <ArrowLeft size={16} /> Voltar aos módulos
+      </button>
+      <main className="min-w-0">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-6">
           <div>
             <p className="text-xs font-bold uppercase text-accent">Módulo {String(activeIndex + 1)}</p>
             <h3 className="mt-1 text-xl font-bold text-ink-primary">{watch(`${currentSectionPath}.titulo`)}</h3>
@@ -152,7 +177,7 @@ export function ExperienceSectionsBuilder({ control, register, watch, setValue }
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-[180px_1fr]">
+        <div className="mt-8 grid gap-5 md:grid-cols-[200px_1fr]">
           <Select label="Tipo" {...register(`${currentSectionPath}.tipo`)}>
             {SECTION_TYPES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </Select>
@@ -160,7 +185,7 @@ export function ExperienceSectionsBuilder({ control, register, watch, setValue }
         </div>
         <textarea {...register(`${currentSectionPath}.descricao`)} placeholder="Resumo deste módulo" className="mt-4 min-h-20 w-full border border-border bg-recessed p-3 text-sm outline-none focus:border-accent" />
 
-        <div className="mt-8 space-y-5">
+        <div className="mt-12 space-y-8">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-bold text-ink-primary">Conteúdos</h4>
             <Button type="button" variant="outline" size="sm" onClick={() => { setValue(`${currentSectionPath}.itens`, [...items, newExperienceItem(items.length)], { shouldDirty: true }); }}><Plus size={14} /> Adicionar conteúdo</Button>
@@ -168,7 +193,7 @@ export function ExperienceSectionsBuilder({ control, register, watch, setValue }
           {items.map((item, itemIndex) => {
             const currentItemPath = itemPath(activeIndex, itemIndex);
             return (
-              <article key={item.id} className="border border-border p-4">
+              <article key={item.id} className="space-y-5 border-t border-border pt-8 first:border-t-0 first:pt-0">
                 <div className="grid gap-3 md:grid-cols-[150px_1fr_auto]">
                   <Select label="Formato" {...register(`${currentItemPath}.tipo`)}>
                     {ITEM_TYPES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -177,42 +202,29 @@ export function ExperienceSectionsBuilder({ control, register, watch, setValue }
                   <Button type="button" variant="ghost" size="sm" className="self-end text-accent-danger" onClick={() => { setValue(`${currentSectionPath}.itens`, items.filter((_, index) => index !== itemIndex).map((current, ordem) => ({ ...current, ordem })), { shouldDirty: true }); }}><Trash2 size={16} /></Button>
                 </div>
                 <textarea {...register(`${currentItemPath}.conteudo`)} placeholder="Conteúdo, descrição ou URL externa" className="mt-3 min-h-28 w-full border border-border bg-recessed p-3 text-sm outline-none focus:border-accent" />
+                <div>
+                  <p className="mb-3 text-xs font-bold uppercase text-ink-tertiary">Mídia</p>
+                  {watch(`${currentItemPath}.mediaUrl`) ? (
+                    <MediaPreview
+                      item={item}
+                      url={watch(`${currentItemPath}.mediaUrl`) ?? ''}
+                      onRemove={() => { setValue(`${currentItemPath}.mediaUrl`, undefined, { shouldDirty: true }); }}
+                    />
+                  ) : (
+                    <BuilderUploadZone
+                      accept={item.tipo === 'video' ? 'video/*' : item.tipo === 'audio' ? 'audio/*' : item.tipo === 'pdf' ? 'application/pdf' : 'image/*,application/pdf,video/*,audio/*'}
+                      onUploadComplete={(urls) => {
+                        const uploadedUrl = urls[0];
+                        if (uploadedUrl) setValue(`${currentItemPath}.mediaUrl`, uploadedUrl, { shouldDirty: true });
+                      }}
+                    />
+                  )}
+                </div>
               </article>
             );
           })}
         </div>
       </main>
-
-      <aside className="border-t border-border bg-recessed/25 p-5 lg:border-l lg:border-t-0">
-        <p className="text-xs font-bold uppercase text-ink-tertiary">Mídia do conteúdo</p>
-        <p className="mt-2 text-xs leading-5 text-ink-secondary">Selecione um conteúdo abaixo para carregar e rever a mídia.</p>
-        <div className="mt-5 space-y-5">
-          {items.map((item, itemIndex) => {
-            const currentItemPath = itemPath(activeIndex, itemIndex);
-            const url = watch(`${currentItemPath}.mediaUrl`);
-            const Icon = item.tipo === 'video' ? Video : item.tipo === 'audio' ? Music : item.tipo === 'imagem' || item.tipo === 'galeria' ? Image : FileText;
-            return (
-              <div key={item.id}>
-                <div className="mb-2 flex items-center gap-2">
-                  <Icon size={14} className="text-accent" />
-                  <span className="truncate text-xs font-semibold text-ink-primary">{item.titulo}</span>
-                </div>
-                {url ? (
-                  <MediaPreview item={item} url={url} onRemove={() => { setValue(`${currentItemPath}.mediaUrl`, undefined, { shouldDirty: true }); }} />
-                ) : (
-                  <BuilderUploadZone
-                    accept={item.tipo === 'video' ? 'video/*' : item.tipo === 'audio' ? 'audio/*' : item.tipo === 'pdf' ? 'application/pdf' : 'image/*,application/pdf,video/*,audio/*'}
-                    onUploadComplete={(urls) => {
-                      const uploadedUrl = urls[0];
-                      if (uploadedUrl) setValue(`${currentItemPath}.mediaUrl`, uploadedUrl, { shouldDirty: true });
-                    }}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </aside>
     </div>
   );
 }
