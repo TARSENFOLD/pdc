@@ -46,6 +46,12 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+window.addEventListener('pdc:session-expired', () => {
+  if (window.location.pathname !== '/login') {
+    window.location.replace('/login');
+  }
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

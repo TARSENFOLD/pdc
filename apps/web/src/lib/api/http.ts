@@ -32,13 +32,20 @@ const SKIP_REFRESH_PATHS = new Set([
 
 let refreshPromise: Promise<boolean> | null = null;
 
+function notifySessionExpired(): void {
+  window.dispatchEvent(new Event('pdc:session-expired'));
+}
+
 function tryRefresh(): Promise<boolean> {
   if (!refreshPromise) {
     refreshPromise = fetch(`${BASE_URL}/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
     })
-      .then(r => r.ok)
+      .then((response) => {
+        if (!response.ok) notifySessionExpired();
+        return response.ok;
+      })
       .catch(() => false)
       .finally(() => { refreshPromise = null; });
   }
@@ -63,6 +70,9 @@ async function request<T>(path: string, init?: RequestInit, retried = false): Pr
   }
 
   if (!response.ok) {
+    if (response.status === 401 && path === '/auth/refresh') {
+      notifySessionExpired();
+    }
     const body: unknown = await response.json().catch(() => null);
     throw new ApiError(response.status, `HTTP ${String(response.status)}: ${path}`, body);
   }
