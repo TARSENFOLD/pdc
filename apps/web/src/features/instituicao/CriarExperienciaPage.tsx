@@ -8,8 +8,6 @@ import { experienciasApi } from '@/lib/api/experiencias';
 import { Input, Select, Button, Spinner } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
 import { BuilderShell, BuilderSection, BuilderUploadZone, BuilderActionsBar } from '@/components/builders';
-import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
-import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/lib/auth/auth-context';
 import { ExperienceSectionsBuilder } from './components/ExperienceSectionsBuilder';
 import { newExperienceSection } from './components/experience-section-factory';
@@ -37,7 +35,6 @@ export function CriarExperienciaPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [lastEventId, setLastEventId] = useState<string | null>(null);
   const [isEditingModule, setIsEditingModule] = useState(false);
 
   const form = useForm<CriarExperienciaPayload>({
@@ -158,15 +155,11 @@ export function CriarExperienciaPage() {
           toast({ title: 'Experiência Atualizada!' });
           navigate('/app/instituicao/experiencias');
         } else {
-          const res = await createMutation.mutateAsync(data);
+          await createMutation.mutateAsync(data);
           invalidateAll();
           localStorage.removeItem(STORAGE_KEY);
-          toast({ title: 'Experiência Criada!' });
-          if (res.eventId) {
-            setLastEventId(res.eventId);
-          } else {
-            navigate('/app/instituicao/experiencias');
-          }
+          toast({ title: 'Rascunho guardado.' });
+          navigate('/app/instituicao/experiencias');
         }
       } catch {
         // erros tratados pelos onError de cada mutation
@@ -415,26 +408,6 @@ export function CriarExperienciaPage() {
         </BuilderSection>
       </BuilderShell>
 
-      <AnimatePresence>
-        {lastEventId && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-canvas/95 backdrop-blur-md"
-          >
-            <div className="w-full max-w-xl">
-              <EcosystemImpactPanel
-                eventId={lastEventId}
-                variant="full"
-                onComplete={() => {
-                  setTimeout(() => { navigate('/app/instituicao/experiencias'); }, 3000);
-                }}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }
