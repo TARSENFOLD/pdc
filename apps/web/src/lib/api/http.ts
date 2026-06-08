@@ -70,9 +70,6 @@ async function request<T>(path: string, init?: RequestInit, retried = false): Pr
   }
 
   if (!response.ok) {
-    if (response.status === 401 && path === '/auth/refresh') {
-      notifySessionExpired();
-    }
     const body: unknown = await response.json().catch(() => null);
     throw new ApiError(response.status, `HTTP ${String(response.status)}: ${path}`, body);
   }
