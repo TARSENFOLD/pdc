@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '@/lib/auth/auth-context';
 import { authApi } from '@/lib/api/auth';
@@ -32,9 +32,7 @@ export default function LoginPage() {
   const { login, user, isLoading: isAuthLoading } = useAuth();
   const { track } = useTelemetry();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/app';
+  const from = '/app';
 
   const handleWarpComplete = useCallback(() => {
     navigate(from, { replace: true });
