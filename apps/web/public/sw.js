@@ -2,7 +2,7 @@
 // Strategies: NetworkFirst (API), CacheFirst (assets), StaleWhileRevalidate (fonts/manifest)
 // Background sync for offline telemetry queue via IndexedDB
 
-const CACHE_VERSION = 'pdc-v2.2';
+const CACHE_VERSION = 'pdc-v2.3';
 const CACHES = {
   static: `pdc-static-${CACHE_VERSION}`,
   assets: `pdc-assets-${CACHE_VERSION}`,

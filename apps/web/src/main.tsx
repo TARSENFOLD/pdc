@@ -33,9 +33,7 @@ if ('serviceWorker' in navigator) {
         if (!newWorker) return;
         newWorker.addEventListener('statechange', () => {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            window.dispatchEvent(
-              new CustomEvent('pdc-sw-update', { detail: { worker: newWorker } })
-            );
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
           }
         });
       });
