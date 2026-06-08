@@ -7,6 +7,10 @@ import type {
   RegistoInstituicaoPayload,
 } from '@pdc/shared';
 
+const configuredBaseUrl = import.meta.env.VITE_API_URL as string | undefined;
+const AUTH_BASE_URL = configuredBaseUrl
+  ?? (import.meta.env.PROD ? 'https://api.usepdc.com' : '/api');
+
 export interface LoginPayload {
   email: string;
   password: string;
@@ -39,12 +43,10 @@ export const authApi = {
   verifyOtp: (otp: string, canal: 'email' | 'sms') =>
     http.post<User>('/auth/otp/verify', { otp, canal }),
   loginWithGoogle: () => {
-    const baseUrl: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
-    window.location.href = `${baseUrl}/auth/google`;
+    window.location.assign(`${AUTH_BASE_URL}/auth/google`);
   },
   loginWithLinkedIn: () => {
-    const baseUrl: string = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
-    window.location.href = `${baseUrl}/auth/linkedin`;
+    window.location.assign(`${AUTH_BASE_URL}/auth/linkedin`);
   },
   finalizarOAuthRole: (payload: OAuthFinalizarRoleChoice) =>
     http.post<User>('/auth/finalizar/escolher-role', payload),
