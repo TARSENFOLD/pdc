@@ -8,7 +8,7 @@ import {
 } from './auth.constants.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { type User, type Role, type Conquista, RoleSchema, normalizeTipo } from '@pdc/shared';
-import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
+import { strapiDelete, strapiDeleteRaw, strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
 import { resolvePerfilAvatar } from '../perfil/perfil-media.js';
 import { z } from 'zod';
@@ -60,6 +60,7 @@ interface StrapiPerfilData {
   oauthVerified?: boolean;
   oauthProvider?: string;
   onboardingCompleto?: boolean;
+  instituicaoGerida?: { id: string | number; documentId?: string } | null;
 }
 
 function resolveRole(strapiRoleName: string | undefined, perfilTipo: string | undefined): Role {
@@ -179,6 +180,40 @@ export const authService = {
     });
 
     return this.getUserById(userId);
+  },
+
+  async rollbackRegistration(userId: string): Promise<void> {
+    const perfis = await strapiGet<StrapiPerfilData>('/perfis', {
+      'filters[userId][$eq]': userId,
+      'populate[instituicaoGerida][fields][0]': 'id',
+      'populate[instituicaoGerida][fields][1]': 'documentId',
+      'pagination[pageSize]': '1',
+    });
+    const perfil = perfis.data[0];
+    const errors: unknown[] = [];
+    if (perfil?.instituicaoGerida) {
+      try {
+        await strapiDelete(`/instituicoes/${perfil.instituicaoGerida.documentId ?? String(perfil.instituicaoGerida.id)}`);
+      } catch (error) {
+        errors.push(error);
+        log.error({ error, userId }, 'Falha ao remover instituição durante rollback');
+      }
+    }
+    if (perfil?.id !== undefined) {
+      try {
+        await strapiDelete(`/perfis/${perfil.documentId ?? String(perfil.id)}`);
+      } catch (error) {
+        errors.push(error);
+        log.error({ error, userId }, 'Falha ao remover perfil durante rollback');
+      }
+    }
+    try {
+      await strapiDeleteRaw(`/users/${userId}`);
+    } catch (error) {
+      errors.push(error);
+      log.error({ error, userId }, 'Falha ao remover utilizador durante rollback');
+    }
+    if (errors.length > 0) throw new AggregateError(errors, 'Rollback de registo incompleto');
   },
 
   async getUserById(id: string): Promise<User> {

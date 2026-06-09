@@ -60,6 +60,7 @@ import { landingRoutes } from './routes/landing.js';
 import { healthRoutes } from './routes/health.js';
 import { adminAprovacoesRoutes } from './routes/admin/aprovacoes.js';
 import { homeRoutes } from './routes/home.js';
+import { instituicaoRoutes } from './routes/instituicoes.js';
 
 import { socketService } from './modules/realtime/socket.service.js';
 import { tinaService } from './modules/tina/tina.service.js';
@@ -167,6 +168,7 @@ app.route('/media', mediaPublicRoutes);
 app.route('/media', mediaRoutes);
 app.route('/notificacoes', notificacaoRoutes);
 app.route('/perfis', perfilRoutes);
+app.route('/instituicoes', instituicaoRoutes);
 app.route('/denuncias', denunciaRoutes);
 app.route('/feature-flags', featureFlagsRoutes);
 app.route('/domain-events', domainEventRoutes);

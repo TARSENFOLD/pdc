@@ -9,8 +9,11 @@ import {
 } from '@pdc/shared';
 import { initiate2faChallenge } from './auth.otp.js';
 import { type AuthVariables } from '../modules/auth/auth.middleware.js';
+import { provisionInstituicaoForUser } from '../modules/instituicoes/instituicao.provision.js';
+import pino from 'pino';
 
 export const registerRoutes = new Hono<{ Variables: AuthVariables }>();
+const log = pino({ name: 'auth-register' });
 
 registerRoutes.use('/*', rateLimitRegisto);
 
@@ -60,6 +63,21 @@ registerRoutes.post('/instituicao', zValidator('json', RegistoInstituicaoPayload
       documentos: documentos ?? [], 
       aprovado: false 
     });
+    try {
+      await provisionInstituicaoForUser(user.id, {
+        nome,
+        tipo,
+        ...(regiao !== undefined ? { regiao } : {}),
+        ...(documentos !== undefined ? { documentos } : {}),
+      });
+    } catch (error) {
+      try {
+        await authService.rollbackRegistration(user.id);
+      } catch (rollbackError) {
+        log.error({ rollbackError, userId: user.id }, 'Falha na compensação do registo institucional');
+      }
+      throw error;
+    }
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido';

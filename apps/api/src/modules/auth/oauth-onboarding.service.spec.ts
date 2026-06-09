@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const strapiGetMock = vi.hoisted(() => vi.fn());
 const strapiPutMock = vi.hoisted(() => vi.fn());
+const provisionMock = vi.hoisted(() => vi.fn());
 const otpServiceMock = vi.hoisted(() => ({
   verifyOtp: vi.fn(),
 }));
@@ -12,6 +13,9 @@ vi.mock('../strapi/strapi.client.js', () => ({
 }));
 
 vi.mock('./otp.service.js', () => ({ otpService: otpServiceMock }));
+vi.mock('../instituicoes/instituicao.provision.js', () => ({
+  provisionInstituicaoForUser: provisionMock,
+}));
 
 vi.mock('../../lib/env.js', () => ({
   env: { NODE_ENV: 'test' },
@@ -31,6 +35,7 @@ describe('oauthOnboardingService.escolherRole', () => {
     vi.clearAllMocks();
     strapiGetMock.mockResolvedValue({ data: [MOCK_PERFIL] });
     strapiPutMock.mockResolvedValue({ data: MOCK_PERFIL });
+    provisionMock.mockResolvedValue({ id: 7 });
   });
 
   it('updates perfil tipo and completes OAuth onboarding for estudante without OTP', async () => {
@@ -97,6 +102,11 @@ describe('oauthOnboardingService.escolherRole', () => {
       tipoInstituicao: 'Universidade',
       documentos,
     }));
+    expect(provisionMock).toHaveBeenCalledWith('user-42', {
+      nome: 'ISPTEC',
+      tipo: 'Universidade',
+      documentos,
+    });
   });
 
   it('throws 404 when perfil not found', async () => {

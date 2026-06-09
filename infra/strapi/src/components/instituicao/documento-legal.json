@@ -1,0 +1,13 @@
+{
+  "collectionName": "components_instituicao_documentos_legais",
+  "info": { "displayName": "Documento legal privado" },
+  "attributes": {
+    "tipo": { "type": "enumeration", "enum": ["nif", "alvara", "estatuto", "acreditacao", "representacao", "outro"], "required": true },
+    "nome": { "type": "string", "required": true },
+    "storageKey": { "type": "string", "required": true, "private": true },
+    "mimeType": { "type": "string", "required": true },
+    "tamanho": { "type": "biginteger", "required": true },
+    "estadoAnalise": { "type": "enumeration", "enum": ["pending", "approved", "rejected"], "default": "pending" },
+    "motivoRejeicao": { "type": "text", "private": true }
+  }
+}

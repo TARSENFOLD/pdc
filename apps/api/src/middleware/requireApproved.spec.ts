@@ -71,6 +71,15 @@ function mockPerfil(aprovado: boolean) {
   });
 }
 
+function mockInstituicao(estado: string) {
+  redisMock.get.mockResolvedValue(null);
+  redisMock.set.mockResolvedValue('OK');
+  strapiGetMock.mockResolvedValue({
+    data: [{ id: 'perfil-1', userId: 'user-1', instituicaoGerida: { id: 7, estado } }],
+    meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
+  });
+}
+
 function mockCacheHit(aprovado: boolean) {
   redisMock.get.mockResolvedValue(aprovado);
 }
@@ -171,14 +180,14 @@ describe('requireApproved — instituicao (flag ON)', () => {
     mockFlagOn();
   });
 
-  it('instituicao + aprovado=true → 201', async () => {
-    mockPerfil(true);
+  it('instituicao + estado verified → 201', async () => {
+    mockInstituicao('verified');
     const res = await post(buildApp('instituicao'));
     expect(res.status).toBe(201);
   });
 
-  it('instituicao + aprovado=false → 403 with PERFIL_NAO_APROVADO', async () => {
-    mockPerfil(false);
+  it('instituicao + estado draft → 403 with PERFIL_NAO_APROVADO', async () => {
+    mockInstituicao('draft');
     const res = await post(buildApp('instituicao'));
     expect(res.status).toBe(403);
     const body = await res.json() as { code: string };

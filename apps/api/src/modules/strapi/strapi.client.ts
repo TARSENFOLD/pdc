@@ -205,3 +205,14 @@ export async function strapiGetRaw<T>(path: string, params?: Record<string, stri
   }
   return res.json() as Promise<T>;
 }
+
+export async function strapiDeleteRaw<T>(path: string): Promise<T> {
+  const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
+    method: 'DELETE',
+    headers: buildHeaders(),
+  }, WRITE_TIMEOUT);
+  if (!res.ok) {
+    throw new StrapiHttpError(`Strapi DELETE ${path} falhou: ${res.status.toString()}`, res.status, path);
+  }
+  return res.json() as Promise<T>;
+}

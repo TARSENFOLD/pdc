@@ -16,6 +16,8 @@ import {
 } from '@pdc/shared';
 import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
 import { resolvePerfilAvatar } from '../modules/perfil/perfil-media.js';
+import { instituicaoService } from '../modules/instituicoes/instituicao.service.js';
+import type { StrapiInstituicao as InstituicaoCanonica } from '../modules/instituicoes/instituicao.types.js';
 
 const log = pino({ name: 'catalogo-pessoas' });
 
@@ -32,15 +34,7 @@ interface StrapiMentor {
   disponivel?: boolean;
 }
 
-interface StrapiInstituicao {
-  id: string | number;
-  slug?: string;
-  nome: string;
-  descricao?: string;
-  logoUrl?: string;
-  tipo?: string;
-  regiao?: string;
-}
+interface StrapiInstituicao extends InstituicaoCanonica { regiao?: string }
 
 interface StrapiPerfilPublic {
   id: string | number;
@@ -180,34 +174,68 @@ export const instituicoesRoutes = new Hono();
 const instFilters = paginationQuery.extend({
   tipo: z.string().optional(),
   regiao: z.string().optional(),
+  provincia: z.string().optional(),
+  area: z.string().optional(),
+  natureza: z.string().optional(),
 });
 
 function mapInst(d: StrapiInstituicao): InstituicaoPublica {
+  const canonical = instituicaoService.mapPublica(d);
   return {
     id: sid(d.id), slug: d.slug, nome: d.nome,
-    bio: d.descricao, logoUrl: d.logoUrl || undefined, tipo: d.tipo ?? 'instituicao', regiao: d.regiao,
+    bio: d.descricao, descricao: d.descricao, logoUrl: d.logoUrl || undefined,
+    tipo: d.tipo ?? 'instituicao', regiao: d.regiao,
+    estado: canonical.estado, verificada: canonical.verificada,
+    natureza: canonical.natureza, localizacao: canonical.localizacao,
+    contactos: canonical.contactos, oferta: canonical.oferta,
+    recursos: canonical.recursos, qualidade: canonical.qualidade,
+    multimedia: canonical.multimedia, selos: canonical.selos,
   };
 }
 
 instituicoesRoutes.get('/', zValidator('query', instFilters), async (c) => {
-  const q = c.req.valid('query');
-  const p: Record<string, string> = { }; // populate: 'logo' removed
-  // publishedFilter(p);
-  buildPagination(p, q.page, q.limit, q.pageSize);
-  if (q.tipo) p['filters[tipo][$eq]'] = q.tipo;
-  if (q.regiao) p['filters[regiao][$eq]'] = q.regiao;
-  const res = await strapiGet<StrapiInstituicao>('/instituicoes', p);
-  return c.json({ data: res.data.map(mapInst), meta: toMeta(res.meta) });
+  try {
+    const q = c.req.valid('query');
+    const p: Record<string, string> = {
+      'filters[estado][$eq]': 'verified',
+      'populate[enderecoEstruturado]': '*',
+      'populate[contactosInstitucionais]': '*',
+      'populate[acreditacoes]': '*',
+      'populate[politicas]': '*',
+    };
+    buildPagination(p, q.page, q.limit, q.pageSize);
+    if (q.tipo) p['filters[tipo][$eq]'] = q.tipo;
+    if (q.regiao) p['filters[regiao][$eq]'] = q.regiao;
+    if (q.provincia) p['filters[enderecoEstruturado][provincia][$eq]'] = q.provincia;
+    if (q.area) p['filters[areasAtividade][$contains]'] = q.area;
+    if (q.natureza) p['filters[natureza][$eq]'] = q.natureza;
+    const res = await strapiGet<StrapiInstituicao>('/instituicoes', p);
+    return c.json({ data: res.data.map(mapInst), meta: toMeta(res.meta) });
+  } catch (err) {
+    log.error({ err }, 'Failed to fetch instituicoes catalog');
+    return c.json({ error: 'Falha ao carregar catálogo de instituições' }, 502);
+  }
 });
 
 instituicoesRoutes.get('/:slug', async (c) => {
-  const slug = c.req.param('slug');
-  const p: Record<string, string> = { 'filters[slug][$eq]': slug }; // populate: 'logo' removed
-  // publishedFilter(p);
-  const res = await strapiGet<StrapiInstituicao>('/instituicoes', p);
-  const first = res.data[0];
-  if (!first) return c.json({ error: 'Instituição não encontrada' }, 404);
-  return c.json({ data: mapInst(first) });
+  try {
+    const slug = c.req.param('slug');
+    const p: Record<string, string> = {
+      'filters[slug][$eq]': slug,
+      'filters[estado][$eq]': 'verified',
+      'populate[enderecoEstruturado]': '*',
+      'populate[contactosInstitucionais]': '*',
+      'populate[acreditacoes]': '*',
+      'populate[politicas]': '*',
+    };
+    const res = await strapiGet<StrapiInstituicao>('/instituicoes', p);
+    const first = res.data[0];
+    if (!first) return c.json({ error: 'Instituição não encontrada' }, 404);
+    return c.json({ data: mapInst(first) });
+  } catch (err) {
+    log.error({ err }, 'Failed to fetch instituicao detail');
+    return c.json({ error: 'Falha ao carregar instituição' }, 502);
+  }
 });
 
 // ─── Pessoas ─────────────────────────────────────────────────────────────────

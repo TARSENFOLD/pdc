@@ -1,4 +1,12 @@
 import { z } from 'zod';
+import { EnderecoAngolaSchema } from './schemas/instituicoes-base.js';
+import {
+  ContactosInstituicaoSchema,
+  MultimediaInstituicaoSchema,
+  OfertaInstituicaoSchema,
+  QualidadeInstituicaoSchema,
+  RecursosInstituicaoSchema,
+} from './schemas/instituicoes-seccoes.js';
 import { ReputacaoTierSchema } from './reputation.js';
 import { ConquistaSchema } from './schemas/conquistas.js';
 import { InscricaoComCursoSchema } from './cursos.js';
@@ -186,6 +194,16 @@ export const InstituicaoPublicaSchema = z.object({
   bio: z.string().optional(),
   descricao: z.string().optional(),
   slug: z.string().optional(),
+  estado: z.string().optional(),
+  verificada: z.boolean().optional(),
+  natureza: z.string().optional(),
+  localizacao: EnderecoAngolaSchema.optional(),
+  contactos: ContactosInstituicaoSchema.optional(),
+  oferta: OfertaInstituicaoSchema.optional(),
+  recursos: RecursosInstituicaoSchema.optional(),
+  qualidade: QualidadeInstituicaoSchema.optional(),
+  multimedia: MultimediaInstituicaoSchema.optional(),
+  selos: z.array(z.string()).optional(),
 });
 
 export type InstituicaoPublica = z.infer<typeof InstituicaoPublicaSchema>;

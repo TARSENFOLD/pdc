@@ -53,11 +53,12 @@ function tryRefresh(): Promise<boolean> {
 }
 
 async function request<T>(path: string, init?: RequestInit, retried = false): Promise<T> {
+  const isFormData = init?.body instanceof FormData;
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     credentials: 'include',
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(init?.headers as Record<string, string> | undefined),
     },
   });
@@ -114,4 +115,7 @@ export const http = {
 
   delete: <T>(path: string, init?: RequestInit) =>
     request<T>(path, { ...init, method: 'DELETE' }),
+
+  postForm: <T>(path: string, body: FormData) =>
+    request<T>(path, { method: 'POST', body }),
 };

@@ -2,6 +2,7 @@ import pino from 'pino';
 import { otpService } from './otp.service.js';
 import { strapiGet, strapiPut } from '../strapi/strapi.client.js';
 import { type OAuthFinalizarRoleChoice } from '@pdc/shared';
+import { provisionInstituicaoForUser } from '../instituicoes/instituicao.provision.js';
 
 const log = pino({ name: 'oauth-onboarding-service' });
 
@@ -52,6 +53,11 @@ export const oauthOnboardingService = {
       if (payload.documentos.length > 0) {
         strapiPayload.documentos = payload.documentos;
       }
+      await provisionInstituicaoForUser(userId, {
+        nome: payload.nomeInstituicao,
+        tipo: payload.tipoInstituicao,
+        documentos: payload.documentos,
+      });
     }
 
     const perfilId = perfilPersistedId(perfil);

@@ -101,7 +101,7 @@ export const SIDEBAR_CONFIG: SidebarItem[] = [
       { type: 'leaf', slug: 'estudantes_vinculados', to: '/app/instituicao/estudantes-vinculados', icon: Users, roles: ['instituicao'] },
       { type: 'leaf', slug: 'propostas', to: '/app/instituicao/propostas', icon: Search, roles: ['instituicao'] },
       { type: 'leaf', slug: 'relatorios', to: '/app/instituicao/relatorios', icon: FileText, roles: ['instituicao'] },
-      { type: 'leaf', slug: 'branding', to: '/app/instituicao/branding', icon: Palette, roles: ['instituicao'] },
+      { type: 'leaf', slug: 'branding', to: '/app/instituicao/perfil', icon: Palette, roles: ['instituicao'] },
     ],
   },
   {

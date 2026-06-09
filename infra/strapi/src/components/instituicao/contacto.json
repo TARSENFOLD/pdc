@@ -1,0 +1,10 @@
+{
+  "collectionName": "components_instituicao_contactos",
+  "info": { "displayName": "Contacto institucional" },
+  "attributes": {
+    "tipo": { "type": "enumeration", "enum": ["email", "telefone", "whatsapp"], "required": true },
+    "valor": { "type": "string", "required": true },
+    "departamento": { "type": "string" },
+    "publico": { "type": "boolean", "default": false }
+  }
+}

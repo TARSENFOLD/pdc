@@ -135,6 +135,12 @@
       "relation": "manyToOne",
       "target": "api::instituicao.instituicao"
     },
+    "instituicaoGerida": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::instituicao.instituicao",
+      "inversedBy": "gestores"
+    },
     "conquistas": {
       "type": "relation",
       "relation": "manyToMany",

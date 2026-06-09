@@ -113,6 +113,11 @@ const MentoresCatalogoPage = React.lazy(() => import('@/features/catalogo/Mentor
 const MentorPublicoPerfilPage = React.lazy(() => import('@/features/catalogo/MentorPublicoPerfilPage').then(m => ({ default: m.MentorPublicoPerfilPage })));
 const InstituicoesCatalogoPage = React.lazy(() => import('@/features/catalogo/InstituicoesCatalogoPage'));
 const InstituicaoPublicoPerfilPage = React.lazy(() => import('@/features/catalogo/InstituicaoPublicoPerfilPage').then(m => ({ default: m.InstituicaoPublicoPerfilPage })));
+const InstituicaoPerfilShell = React.lazy(() => import('@/features/instituicao/perfil/InstituicaoPerfilShell').then(m => ({ default: m.InstituicaoPerfilShell })));
+const InstituicaoOverviewPage = React.lazy(() => import('@/features/instituicao/perfil/InstituicaoOverviewPage').then(m => ({ default: m.InstituicaoOverviewPage })));
+const InstituicaoSectionPage = React.lazy(() => import('@/features/instituicao/perfil/InstituicaoSectionPage').then(m => ({ default: m.InstituicaoSectionPage })));
+const InstituicaoDocumentosPage = React.lazy(() => import('@/features/instituicao/perfil/InstituicaoDocumentosPage').then(m => ({ default: m.InstituicaoDocumentosPage })));
+const InstituicaoPreviewPage = React.lazy(() => import('@/features/instituicao/perfil/InstituicaoPreviewPage').then(m => ({ default: m.InstituicaoPreviewPage })));
 const PerfilPublicoPage = React.lazy(() => import('@/features/catalogo/PerfilPublicoPage'));
 const ProgramasCatalogoPage = React.lazy(() => import('@/features/catalogo/ProgramasCatalogoPage'));
 const ProgramaDetailPage = React.lazy(() => import('@/features/catalogo/ProgramaDetailPage').then(m => ({ default: m.ProgramaDetailPage })));
@@ -279,6 +284,22 @@ export const router = createBrowserRouter([
       {
         path: 'instituicao/branding',
         element: <RoleGuard allowed={['instituicao', 'super_admin']}><BrandingPage /></RoleGuard>
+      },
+      {
+        path: 'instituicao/perfil',
+        element: <RoleGuard allowed={['instituicao']}><InstituicaoPerfilShell /></RoleGuard>,
+        children: [
+          { index: true, element: <Navigate to="visao-geral" replace /> },
+          { path: 'visao-geral', element: <InstituicaoOverviewPage /> },
+          { path: 'identidade', element: <InstituicaoSectionPage section="identidade" /> },
+          { path: 'localizacao-contactos', element: <InstituicaoSectionPage section="localizacao-contactos" /> },
+          { path: 'oferta', element: <InstituicaoSectionPage section="oferta" /> },
+          { path: 'recursos', element: <InstituicaoSectionPage section="recursos" /> },
+          { path: 'qualidade', element: <InstituicaoSectionPage section="qualidade" /> },
+          { path: 'multimedia', element: <InstituicaoSectionPage section="multimedia" /> },
+          { path: 'documentos', element: <InstituicaoDocumentosPage /> },
+          { path: 'preview', element: <InstituicaoPreviewPage /> },
+        ],
       },
 
       // Admin

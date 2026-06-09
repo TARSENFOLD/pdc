@@ -1269,16 +1269,42 @@ export interface ApiInstituicaoInstituicao extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    acessibilidade: Schema.Attribute.JSON;
+    acreditacoes: Schema.Attribute.Component<'instituicao.acreditacao', true>;
+    anoFundacao: Schema.Attribute.Integer;
     aprovada: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    areasAtividade: Schema.Attribute.JSON;
     branding: Schema.Attribute.JSON;
     capa: Schema.Attribute.Media<'images'>;
     codigoAcesso: Schema.Attribute.String & Schema.Attribute.Unique;
+    contactosInstitucionais: Schema.Attribute.Component<
+      'instituicao.contacto',
+      true
+    >;
     contatos: Schema.Attribute.JSON;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     descricao: Schema.Attribute.Text;
+    documentosLegais: Schema.Attribute.Component<
+      'instituicao.documento-legal',
+      true
+    > &
+      Schema.Attribute.Private;
     endereco: Schema.Attribute.String;
+    enderecoEstruturado: Schema.Attribute.Component<
+      'instituicao.endereco',
+      false
+    >;
+    estado: Schema.Attribute.Enumeration<
+      ['draft', 'pending_review', 'changes_requested', 'verified', 'suspended']
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'draft'>;
+    estatisticas: Schema.Attribute.JSON;
+    galeria: Schema.Attribute.Media<'images' | 'videos', true>;
+    gestores: Schema.Attribute.Relation<'oneToMany', 'api::perfil.perfil'>;
+    infraestruturas: Schema.Attribute.JSON;
     limiteAlunos: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
@@ -1287,18 +1313,47 @@ export interface ApiInstituicaoInstituicao extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.Private;
     logo: Schema.Attribute.Media<'images'>;
-    natureza: Schema.Attribute.Enumeration<['publica', 'privada', 'mista']>;
+    motivoAlteracoes: Schema.Attribute.Text & Schema.Attribute.Private;
+    natureza: Schema.Attribute.Enumeration<
+      [
+        'publica',
+        'privada',
+        'mista',
+        'associacao',
+        'fundacao',
+        'cooperativa',
+        'outra',
+      ]
+    >;
+    nif: Schema.Attribute.String & Schema.Attribute.Private;
+    niveisEnsino: Schema.Attribute.JSON;
     nome: Schema.Attribute.String & Schema.Attribute.Required;
+    nomeLegal: Schema.Attribute.String;
     planoAtivo: Schema.Attribute.Enumeration<['gratuito', 'basico', 'premium']>;
+    politicas: Schema.Attribute.Component<'instituicao.politica', true>;
     publishedAt: Schema.Attribute.DateTime;
+    redesSociais: Schema.Attribute.JSON;
     regiao: Schema.Attribute.String;
+    servicos: Schema.Attribute.JSON;
+    sigla: Schema.Attribute.String;
     slug: Schema.Attribute.UID<'nome'> & Schema.Attribute.Unique;
+    submetidaEm: Schema.Attribute.DateTime;
     tipo: Schema.Attribute.Enumeration<
-      ['universidade', 'instituto', 'escola', 'empresa', 'ong', 'outro']
+      [
+        'universidade',
+        'instituto',
+        'escola',
+        'centro_formacao',
+        'empresa',
+        'ong',
+        'laboratorio',
+        'outro',
+      ]
     >;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    verificadaEm: Schema.Attribute.DateTime;
     website: Schema.Attribute.String;
   };
 }
@@ -1851,6 +1906,10 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
       'api::inscricao.inscricao'
     >;
     instituicao: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::instituicao.instituicao'
+    >;
+    instituicaoGerida: Schema.Attribute.Relation<
       'manyToOne',
       'api::instituicao.instituicao'
     >;

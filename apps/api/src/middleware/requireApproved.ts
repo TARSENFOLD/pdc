@@ -21,9 +21,10 @@ interface StrapiPerfil {
   id: string;
   userId: string;
   aprovado?: boolean;
+  instituicaoGerida?: { id?: string | number; estado?: string } | null;
 }
 
-async function lookupAprovado(userId: string): Promise<boolean> {
+async function lookupAprovado(userId: string, role: string): Promise<boolean> {
   let cached: boolean | null = null;
   try {
     cached = await redis.get<boolean>(cacheKey(userId));
@@ -35,11 +36,14 @@ async function lookupAprovado(userId: string): Promise<boolean> {
   const res = await strapiGet<StrapiPerfil>('/perfis', {
     'filters[userId][$eq]': userId,
     'fields[0]': 'aprovado',
+    'populate[instituicaoGerida][fields][0]': 'estado',
     'pagination[pageSize]': '1',
   });
 
   const perfil = res.data[0];
-  const aprovado = perfil?.aprovado === true;
+  const aprovado = role === 'instituicao'
+    ? perfil?.instituicaoGerida?.estado === 'verified'
+    : perfil?.aprovado === true;
 
   try {
     await redis.set(cacheKey(userId), aprovado, { ex: CACHE_TTL_SECONDS });
@@ -109,7 +113,7 @@ export function requireApproved() {
     }
 
     try {
-      const aprovado = await lookupAprovado(user.id);
+      const aprovado = await lookupAprovado(user.id, user.role);
       if (!aprovado) {
         return c.json(
           { error: 'Aguarda aprovação para criar conteúdo', code: 'PERFIL_NAO_APROVADO' },

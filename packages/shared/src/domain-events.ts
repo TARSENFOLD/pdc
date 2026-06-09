@@ -75,6 +75,12 @@ export enum DomainEventName {
   MFA_ATIVADO = 'mfa.ativado',
   OAUTH_VINCULADO = 'oauth.vinculado',
 
+  // --- Instituição ---
+  INSTITUICAO_ATUALIZADA = 'instituicao.atualizada',
+  INSTITUICAO_SUBMETIDA = 'instituicao.submetida',
+  INSTITUICAO_VERIFICADA = 'instituicao.verificada',
+  INSTITUICAO_ALTERACOES_SOLICITADAS = 'instituicao.alteracoes_solicitadas',
+
   // --- Vínculo ---
   VINCULO_SOLICITADO = 'vinculo.solicitado',
   VINCULO_APROVADO = 'vinculo.aprovado',
@@ -321,4 +327,8 @@ export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
   [DomainEventName.PERFIL_APROVADO]: z.object({ perfilId: z.string(), aprovadorId: z.string(), role: z.string(), userId: z.string() }),
   [DomainEventName.PERFIL_REJEITADO]: z.object({ perfilId: z.string(), rejeitadorId: z.string(), motivo: z.string().min(10).max(500), role: z.string(), userId: z.string() }),
   [DomainEventName.ONBOARDING_PASSO_CONCLUIDO]: z.object({ perfilId: z.string(), passo: z.number(), role: z.string() }),
+  [DomainEventName.INSTITUICAO_ATUALIZADA]: z.object({ instituicaoId: z.string(), userId: z.string(), seccao: z.string() }),
+  [DomainEventName.INSTITUICAO_SUBMETIDA]: z.object({ instituicaoId: z.string(), userId: z.string() }),
+  [DomainEventName.INSTITUICAO_VERIFICADA]: z.object({ instituicaoId: z.string(), aprovadorId: z.string() }),
+  [DomainEventName.INSTITUICAO_ALTERACOES_SOLICITADAS]: z.object({ instituicaoId: z.string(), aprovadorId: z.string(), motivo: z.string() }),
 };

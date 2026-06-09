@@ -16,13 +16,13 @@
     "descricao": { "type": "text" },
     "tipo": {
       "type": "enumeration",
-      "enum": ["universidade", "instituto", "escola", "empresa", "ong", "outro"]
+      "enum": ["universidade", "instituto", "escola", "centro_formacao", "empresa", "ong", "laboratorio", "outro"]
     },
     "endereco": { "type": "string" },
     "regiao": { "type": "string" },
     "natureza": {
       "type": "enumeration",
-      "enum": ["publica", "privada", "mista"]
+      "enum": ["publica", "privada", "mista", "associacao", "fundacao", "cooperativa", "outra"]
     },
     "contatos": { "type": "json" },
     "website": { "type": "string" },
@@ -36,5 +36,38 @@
     "limiteAlunos": { "type": "integer", "default": 0 },
     "aprovada": { "type": "boolean", "default": false },
     "branding": { "type": "json" }
+    ,
+    "nomeLegal": { "type": "string" },
+    "sigla": { "type": "string" },
+    "nif": { "type": "string", "private": true },
+    "anoFundacao": { "type": "integer" },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["draft", "pending_review", "changes_requested", "verified", "suspended"],
+      "default": "draft",
+      "required": true
+    },
+    "motivoAlteracoes": { "type": "text", "private": true },
+    "submetidaEm": { "type": "datetime" },
+    "verificadaEm": { "type": "datetime" },
+    "enderecoEstruturado": { "type": "component", "component": "instituicao.endereco", "repeatable": false },
+    "contactosInstitucionais": { "type": "component", "component": "instituicao.contacto", "repeatable": true },
+    "niveisEnsino": { "type": "json" },
+    "areasAtividade": { "type": "json" },
+    "servicos": { "type": "json" },
+    "estatisticas": { "type": "json" },
+    "infraestruturas": { "type": "json" },
+    "acessibilidade": { "type": "json" },
+    "acreditacoes": { "type": "component", "component": "instituicao.acreditacao", "repeatable": true },
+    "politicas": { "type": "component", "component": "instituicao.politica", "repeatable": true },
+    "galeria": { "type": "media", "multiple": true, "allowedTypes": ["images", "videos"] },
+    "redesSociais": { "type": "json" },
+    "documentosLegais": { "type": "component", "component": "instituicao.documento-legal", "repeatable": true, "private": true },
+    "gestores": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::perfil.perfil",
+      "mappedBy": "instituicaoGerida"
+    }
   }
 }

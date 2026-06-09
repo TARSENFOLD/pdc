@@ -1,0 +1,11 @@
+{
+  "collectionName": "components_instituicao_acreditacoes",
+  "info": { "displayName": "Acreditação ou certificação" },
+  "attributes": {
+    "nome": { "type": "string", "required": true },
+    "entidade": { "type": "string", "required": true },
+    "fonte": { "type": "string" },
+    "validaAte": { "type": "date" },
+    "categoria": { "type": "enumeration", "enum": ["acreditacao", "certificacao"], "required": true }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "collectionName": "components_instituicao_enderecos",
+  "info": { "displayName": "Endereço Angola" },
+  "attributes": {
+    "pais": { "type": "string", "default": "AO", "required": true },
+    "provincia": {
+      "type": "enumeration",
+      "required": true,
+      "enum": ["Bengo", "Benguela", "Bié", "Cabinda", "Cuando", "Cubango", "Cuanza Norte", "Cuanza Sul", "Cunene", "Huambo", "Huíla", "Icolo e Bengo", "Luanda", "Lunda Norte", "Lunda Sul", "Malanje", "Moxico", "Moxico Leste", "Namibe", "Uíge", "Zaire"]
+    },
+    "municipio": { "type": "string", "required": true },
+    "comuna": { "type": "string" },
+    "localidade": { "type": "string" },
+    "rua": { "type": "string" },
+    "latitude": { "type": "decimal" },
+    "longitude": { "type": "decimal" },
+    "requerConfirmacaoTerritorial": { "type": "boolean", "default": false }
+  }
+}
