@@ -14,6 +14,7 @@ import {
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { instituicaoService } from '../modules/instituicoes/instituicao.service.js';
+import { provisionInstituicaoForUser } from '../modules/instituicoes/instituicao.provision.js';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { uploadToR2 } from '../modules/media/r2.service.js';
 import { validateMagicBytes } from '../modules/media/file-type-guard.js';
@@ -26,6 +27,28 @@ const log = pino({ name: 'instituicoes-routes' });
 
 instituicaoRoutes.use('*', verifyJwt);
 instituicaoRoutes.use('*', checkRole(['instituicao', 'super_admin']));
+
+const ProvisionarInstituicaoSchema = z.object({
+  nome: z.string().trim().min(2).max(160).optional(),
+});
+
+instituicaoRoutes.post('/me/provisionar', async (c) => {
+  const user = c.get('user');
+  let body: unknown = {};
+  const rawBody = await c.req.text();
+  if (rawBody.trim() !== '') {
+    try {
+      body = JSON.parse(rawBody) as unknown;
+    } catch {
+      return c.json({ error: 'JSON inválido no corpo do pedido' }, 400);
+    }
+  }
+  const input = ProvisionarInstituicaoSchema.parse(body);
+  const result = await provisionInstituicaoForUser(user.id, {
+    nome: input.nome ?? 'Nova Instituição',
+  });
+  return c.json({ data: result.instituicao }, result.created ? 201 : 200);
+});
 
 instituicaoRoutes.get('/me', async (c) => {
   return c.json({ data: await instituicaoService.minha(c.get('user').id) });

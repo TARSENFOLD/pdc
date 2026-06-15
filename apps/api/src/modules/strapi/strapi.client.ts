@@ -38,7 +38,7 @@ export class StrapiHttpError extends Error {
  * Normalise Strapi v4 (nested `attributes`) responses to flat format.
  * If already flat (v5), returns unchanged. Preserves `meta` for pagination.
  */
-function normalize<T>(response: T): T {
+export function normalizeStrapiResponse<T>(response: T): T {
   if (response == null || typeof response !== 'object') return response;
 
   const res = response as unknown as Record<string, unknown>;
@@ -49,17 +49,19 @@ function normalize<T>(response: T): T {
   if (Array.isArray(data)) {
     res['data'] = data.map((item: unknown) => {
       if (typeof item === 'object' && item !== null && 'attributes' in item) {
-        const entry = item as { id: unknown; attributes: Record<string, unknown> };
+        const entry = item as Record<string, unknown> & { attributes: Record<string, unknown> };
+        const { attributes, ...identity } = entry;
         return {
-          id: entry.id,
-          ...entry.attributes,
+          ...identity,
+          ...attributes,
         };
       }
       return item;
     });
   } else if (typeof data === 'object' && 'attributes' in data) {
-    const entry = data as { id: unknown; attributes: Record<string, unknown> };
-    res['data'] = { id: entry.id, ...entry.attributes };
+    const entry = data as Record<string, unknown> & { attributes: Record<string, unknown> };
+    const { attributes, ...identity } = entry;
+    res['data'] = { ...identity, ...attributes };
   }
 
   return response;
@@ -126,7 +128,7 @@ export async function strapiGet<T>(
     throw new StrapiHttpError(`Strapi GET ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
   const json = (await res.json()) as StrapiListResponse<T>;
-  return normalize(json);
+  return normalizeStrapiResponse(json);
 }
 
 export async function strapiPost<T>(path: string, body: unknown): Promise<StrapiSingleResponse<T>> {
@@ -139,7 +141,7 @@ export async function strapiPost<T>(path: string, body: unknown): Promise<Strapi
     throw new StrapiHttpError(`Strapi POST ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
   const json = (await res.json()) as StrapiSingleResponse<T>;
-  return normalize(json);
+  return normalizeStrapiResponse(json);
 }
 
 export async function strapiPut<T>(path: string, body: unknown): Promise<StrapiSingleResponse<T>> {
@@ -152,7 +154,7 @@ export async function strapiPut<T>(path: string, body: unknown): Promise<StrapiS
     throw new StrapiHttpError(`Strapi PUT ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
   const json = (await res.json()) as StrapiSingleResponse<T>;
-  return normalize(json);
+  return normalizeStrapiResponse(json);
 }
 
 export async function strapiDelete<T>(path: string): Promise<T> {
@@ -164,7 +166,7 @@ export async function strapiDelete<T>(path: string): Promise<T> {
     throw new StrapiHttpError(`Strapi DELETE ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
   const json = (await res.json()) as T;
-  return normalize(json);
+  return normalizeStrapiResponse(json);
 }
 
 // Para endpoints que não usam o wrapper { data: ... } (ex: Strapi Users plugin)

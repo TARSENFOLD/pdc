@@ -121,7 +121,7 @@ describe('feed helpers', () => {
   });
 
   it('mapeia feed-post aprovado para FeedItem social', () => {
-    const stats: ItemStats = { likes: 3, ratingMedia: 0, ratingTotal: 0 };
+    const stats: ItemStats = { likes: 3, comentarios: 2, shares: 1, ratingMedia: 0, ratingTotal: 0 };
     const entity: StrapiEntity & { tipo: FeedItemTipo } = {
       id: 'post-1',
       tipo: 'post',
@@ -146,12 +146,12 @@ describe('feed helpers', () => {
       autorNome: 'Ana PDC',
       avatar: 'https://cdn.pdc.test/avatar.jpg',
       imagem: 'https://cdn.pdc.test/post.jpg',
-      stats: { likes: 3, ratingMedia: 0, ratingTotal: 0 },
+      stats: { likes: 3, comentarios: 2, shares: 1, ratingMedia: 0, ratingTotal: 0 },
     });
   });
 
   it('deriva titulo e userId de campos reais quando nao ha titulo explicito', () => {
-    const stats: ItemStats = { likes: 0, ratingMedia: 0, ratingTotal: 0 };
+    const stats: ItemStats = { likes: 0, comentarios: 0, shares: 0, ratingMedia: 0, ratingTotal: 0 };
     const entity: StrapiEntity & { tipo: FeedItemTipo } = {
       id: 'curso-1',
       tipo: 'curso',

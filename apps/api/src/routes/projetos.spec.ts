@@ -235,9 +235,10 @@ describe('projetoRoutes E2E contracts', () => {
     };
 
     it('estudante publica projeto diretamente — PROJETO_PUBLICADO emitido', async () => {
-      vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{ id: 'perfil-est' }]));
+      vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{ id: 9 }]));
       vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({
-        id: 'proj-new',
+        id: 41,
+        documentId: 'doc-proj-41',
         ...createPayload,
         estado: 'published',
         autor: { id: 'perfil-est', userId: 'user-est', nome: 'Estudante' },
@@ -255,15 +256,16 @@ describe('projetoRoutes E2E contracts', () => {
 
       expect(res.status).toBe(201);
       expect(strapiPost).toHaveBeenCalledWith('/projetos', expect.objectContaining({
-        autor: 'perfil-est',
+        autor: '9',
         estado: 'published',
         acessoCoreACL: [],
         votos: [],
       }));
       expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.PROJETO_PUBLICADO, expect.objectContaining({
-        projetoId: 'proj-new',
-        autorId: 'perfil-est',
+        projetoId: 'doc-proj-41',
+        autorId: '9',
       }));
+      expect(await res.json()).toMatchObject({ id: 'doc-proj-41', documentId: 'doc-proj-41' });
     });
 
     it('estado inicial é sempre published', async () => {

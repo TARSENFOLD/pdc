@@ -29,12 +29,14 @@ export interface MatchPayload {
 }
 
 export interface StrapiAutorMatchInfo {
+  id: number | string;
   reputacao?: number;
 }
 
 export interface StrapiEstudanteMatchInfo {
   id: number | string;
   reputacao?: number;
+  areasInteresse?: unknown;
 }
 
 export interface StrapiBehaviorPattern {
@@ -78,7 +80,12 @@ export const matchHook: EcosystemHook<MatchPayload> = {
 
     try {
       // 1. Obter tier do autor
-      const resAutor = await strapiGet<StrapiAutorMatchInfo>(`/perfis/${autorId}`, { 'fields[0]': 'reputacao' });
+      const resAutor = await strapiGet<StrapiAutorMatchInfo>('/perfis', {
+        'filters[id][$eq]': autorId,
+        'fields[0]': 'id',
+        'fields[1]': 'reputacao',
+        'pagination[pageSize]': '1',
+      });
       const autorData = resAutor.data[0];
       const autorRep = autorData?.reputacao || 0;
       const autorTier = reputationService.getTier(autorRep);
@@ -93,14 +100,20 @@ export const matchHook: EcosystemHook<MatchPayload> = {
 
       // 2. Procurar estudantes candidatos
       const resEstudantes = await strapiGet<StrapiEstudanteMatchInfo>('/perfis', {
-        'filters[role][$eq]': 'estudante',
-        'filters[areaInteresse][$eq]': area,
+        'filters[tipo][$eq]': 'estudante',
         'pagination[pageSize]': '100',
         'fields[0]': 'id',
-        'fields[1]': 'reputacao'
+        'fields[1]': 'reputacao',
+        'fields[2]': 'areasInteresse',
       });
 
-      const candidatos = resEstudantes.data;
+      const normalizedArea = area.toLocaleUpperCase();
+      const candidatos = resEstudantes.data.filter((perfil) => {
+        if (!Array.isArray(perfil.areasInteresse)) return false;
+        return perfil.areasInteresse.some(
+          (candidateArea) => typeof candidateArea === 'string' && candidateArea.toLocaleUpperCase() === normalizedArea,
+        );
+      });
       if (candidatos.length === 0) return { status: 'sent', data: { matchesCreated: 0, candidatesEvaluated: 0, minScore } };
 
       // 3. Obter DNA Biomecânico em Batch (Soberania)

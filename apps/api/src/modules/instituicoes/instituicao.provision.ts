@@ -7,18 +7,39 @@ function slugify(value: string): string {
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+export type InstituicaoReference = Pick<StrapiInstituicao, 'id' | 'nome'> & {
+  documentId?: string;
+};
+
+export interface ProvisionInstituicaoResult {
+  instituicao: InstituicaoReference;
+  created: boolean;
+}
+
+function instituicaoReference(instituicao: StrapiInstituicao): InstituicaoReference {
+  return {
+    id: instituicao.id,
+    ...(instituicao.documentId ? { documentId: instituicao.documentId } : {}),
+    nome: instituicao.nome,
+  };
+}
+
 export async function provisionInstituicaoForUser(
   userId: string,
   input: { nome: string; tipo?: string; regiao?: string; documentos?: unknown[] },
-): Promise<StrapiInstituicao> {
+): Promise<ProvisionInstituicaoResult> {
   const perfis = await strapiGet<StrapiPerfilGestor>('/perfis', {
     'filters[userId][$eq]': userId,
-    'populate[instituicaoGerida]': '*',
+    'populate[instituicaoGerida][fields][0]': 'id',
+    'populate[instituicaoGerida][fields][1]': 'documentId',
+    'populate[instituicaoGerida][fields][2]': 'nome',
     'pagination[pageSize]': '1',
   });
   const perfil = perfis.data[0];
   if (!perfil) throw Object.assign(new Error('Perfil institucional não encontrado'), { status: 404 });
-  if (perfil.instituicaoGerida) return perfil.instituicaoGerida;
+  if (perfil.instituicaoGerida) {
+    return { instituicao: instituicaoReference(perfil.instituicaoGerida), created: false };
+  }
 
   const baseSlug = slugify(input.nome) || `instituicao-${userId}`;
   const slug = `${baseSlug}-${userId}-${crypto.randomUUID().slice(0, 8)}`;
@@ -51,5 +72,5 @@ export async function provisionInstituicaoForUser(
       ...(rollbackError ? { rollbackError } : {}),
     });
   }
-  return instituicao;
+  return { instituicao: instituicaoReference(instituicao), created: true };
 }

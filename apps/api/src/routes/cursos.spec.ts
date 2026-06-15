@@ -86,8 +86,20 @@ describe('cursoRoutes E2E contracts', () => {
 
   it('instituição cria curso em review e não publica direto', async () => {
     vi.mocked(strapiPost)
-      .mockResolvedValueOnce(singleResponse({ id: 'curso-1', ...payload, autorId: 'inst-user', estado: 'review' }))
-      .mockResolvedValueOnce(singleResponse({ id: 'mod-1', titulo: 'Módulo Inicial', ordem: 1 }))
+      .mockResolvedValueOnce(singleResponse({
+        id: 'curso-1',
+        documentId: 'doc-curso-1',
+        ...payload,
+        autorId: 'inst-user',
+        estado: 'review',
+      }))
+      .mockResolvedValueOnce(singleResponse({
+        id: 'mod-1',
+        documentId: 'doc-mod-1',
+        titulo: 'Módulo Inicial',
+        ordem: 1,
+        itens: [],
+      }))
       .mockResolvedValueOnce(singleResponse({ id: 'item-1', titulo: 'Aula de abertura', tipo: 'texto', ordem: 1 }));
 
     const res = await app.request('/cursos', {
@@ -106,6 +118,12 @@ describe('cursoRoutes E2E contracts', () => {
       autorId: 'inst-user',
       autor: 'perfil-inst',
       estado: 'review',
+    }));
+    expect(strapiPost).toHaveBeenCalledWith('/modulos', expect.objectContaining({
+      curso: 'doc-curso-1',
+    }));
+    expect(strapiPost).toHaveBeenCalledWith('/modulo-items', expect.objectContaining({
+      modulo: 'doc-mod-1',
     }));
     expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.CURSO_SUBMETIDO_COMITE, {
       cursoId: 'curso-1',
@@ -209,18 +227,27 @@ describe('cursoRoutes E2E contracts', () => {
         documentId: 'doc-curso-1',
       }]))
       .mockResolvedValueOnce(listResponse([{
-        id: 'curso-1',
-        modulos: [{
-          id: 'mod-1',
-          documentId: 'doc-mod-1',
-          titulo: 'Módulo existente',
+        id: 'mod-1',
+        documentId: 'doc-mod-1',
+        titulo: 'Módulo existente',
+        ordem: 1,
+      }]))
+      .mockResolvedValueOnce(listResponse([
+        {
+          id: 'item-1',
+          documentId: 'doc-item-1',
+          titulo: 'Item existente',
+          tipo: 'texto',
           ordem: 1,
-          itens: [
-            { id: 'item-1', documentId: 'doc-item-1' },
-            { id: 'item-removido', documentId: 'doc-item-removido' },
-          ],
-        }],
-      }]));
+        },
+        {
+          id: 'item-removido',
+          documentId: 'doc-item-removido',
+          titulo: 'Item removido',
+          tipo: 'texto',
+          ordem: 2,
+        },
+      ]));
     vi.mocked(strapiPut)
       .mockResolvedValueOnce(singleResponse({ id: 'curso-1' }))
       .mockResolvedValueOnce(singleResponse({ id: 'mod-1' }))
@@ -260,5 +287,45 @@ describe('cursoRoutes E2E contracts', () => {
       cursoId: 'curso-1',
       autorId: 'mentor-user',
     });
+  });
+
+  it('expõe documentId como identidade persistente de módulos e itens', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{
+        id: 'curso-1',
+        titulo: 'Curso',
+        descricao: 'Descrição válida do curso.',
+        slug: 'curso',
+        autorId: 'mentor-user',
+        totalHoras: 1,
+        estado: 'draft',
+        createdAt: '2026-06-14T10:00:00.000Z',
+        updatedAt: '2026-06-14T10:00:00.000Z',
+      }]))
+      .mockResolvedValueOnce(listResponse([{
+        id: 'mod-1',
+        documentId: 'doc-mod-1',
+        titulo: 'Módulo',
+        ordem: 1,
+      }]))
+      .mockResolvedValueOnce(listResponse([{
+        id: 'item-1',
+        documentId: 'doc-item-1',
+        titulo: 'Item',
+        tipo: 'texto',
+        ordem: 1,
+      }]));
+
+    const res = await app.request('/cursos/curso-1', {
+      headers: {
+        'x-test-user': 'mentor-user',
+        'x-test-role': 'mentor',
+      },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as { modulos: Array<{ id: string; itens: Array<{ id: string }> }> };
+    expect(body.modulos[0]?.id).toBe('doc-mod-1');
+    expect(body.modulos[0]?.itens[0]?.id).toBe('doc-item-1');
   });
 });

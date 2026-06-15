@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import pino from 'pino';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, optionalJwt, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
@@ -13,6 +14,7 @@ import { toPaginatedResponse } from './pagination.js';
 
 type Vars = { Variables: OptionalAuthVariables };
 export const projetoRoutes = new Hono<Vars>();
+const log = pino({ name: 'routes:projetos' });
 
 const projetoQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
@@ -22,7 +24,9 @@ const projetoQuerySchema = z.object({
   modos: z.string().optional(),
 });
 
-interface StrapiProjeto extends Omit<Projeto, 'autor'> {
+interface StrapiProjeto extends Omit<Projeto, 'autor' | 'id'> {
+  id: string | number;
+  documentId?: string;
   autor?: { id: string | number; userId: string };
   acessoCoreACL?: ACLEntry[];
 }
@@ -68,11 +72,12 @@ function canViewProjeto(projeto: StrapiProjeto, perfilId: string | null, user: O
 
 async function resolvePerfilId(userId: string | undefined): Promise<string | null> {
   if (!userId) return null;
-  const resPerfil = await strapiGet<{ id: string }>('/perfis', {
+  const resPerfil = await strapiGet<{ id: string | number }>('/perfis', {
     'filters[userId][$eq]': userId,
     'fields[0]': 'id',
   });
-  return resPerfil.data[0]?.id || null;
+  const perfilId = resPerfil.data[0]?.id;
+  return perfilId === undefined ? null : String(perfilId);
 }
 
 // GET /projetos — público, core filtrado por ACL
@@ -178,7 +183,7 @@ projetoRoutes.post('/',
         historicoEstados,
       });
 
-      const projetoId = res.data.id;
+      const projetoId = res.data.documentId ?? String(res.data.id);
 
       const event = await eventBus.publishWithOutbox(DomainEventName.PROJETO_PUBLICADO, {
         projetoId,
@@ -187,8 +192,9 @@ projetoRoutes.post('/',
         area: body.area,
       });
 
-      return c.json({ ...res.data, eventId: event.id }, 201);
-    } catch {
+      return c.json({ ...res.data, id: projetoId, eventId: event.id }, 201);
+    } catch (error) {
+      log.error({ error, userId }, 'Falha na publicação do projeto');
       return c.json({ error: 'Falha na publicação do projeto' }, 502);
     }
   }

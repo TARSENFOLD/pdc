@@ -88,7 +88,13 @@ beforeEach(() => {
   vi.mocked(getWeights).mockResolvedValue(DEFAULT_WEIGHTS);
 
   vi.mocked(fetchCandidates).mockResolvedValue([]);
-  vi.mocked(getItemStats).mockResolvedValue({ likes: 0, ratingMedia: 0, ratingTotal: 0 });
+  vi.mocked(getItemStats).mockResolvedValue({
+    likes: 0,
+    comentarios: 0,
+    shares: 0,
+    ratingMedia: 0,
+    ratingTotal: 0,
+  });
   vi.mocked(buildFeatures).mockReturnValue({ engagement: 0, completion: 0, rating: 0, recency: 0, reputation: 0, affinity: 0, time: 0 });
   vi.mocked(calcRecencyScore).mockReturnValue(0.5);
   vi.mocked(calcScore).mockReturnValue(0.5);

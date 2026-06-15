@@ -7,8 +7,10 @@ import {
   LandingVereditoSchema,
   type ChatMessage,
   type LandingVeredito,
+  type Role,
 } from '@pdc/shared';
 import { env } from '../../lib/env.js';
+import { tinaContextService } from './tina-context.service.js';
 
 const redis = env.UPSTASH_REDIS_REST_URL
   ? new Redis({
@@ -81,7 +83,13 @@ Regras:
     }
   },
 
-  async chat(messages: ChatMessage[], userId: string | null, ip: string, stream: boolean): Promise<Response> {
+  async chat(
+    messages: ChatMessage[],
+    userId: string | null,
+    ip: string,
+    stream: boolean,
+    role?: Role,
+  ): Promise<Response> {
     const lastMessage = messages[messages.length - 1]?.content || '';
     
     const guard = validarMensagem(lastMessage);
@@ -95,7 +103,7 @@ Regras:
     }
 
     const chunks = await this.buscarChunks(lastMessage);
-    const userContext = userId ? await aiService.buildContexto(userId) : 'Utilizador não autenticado.';
+    const userContext = await tinaContextService.build(userId, role);
     const systemPrompt = this.buildSystemPrompt(userContext, chunks);
 
     // AI call logic

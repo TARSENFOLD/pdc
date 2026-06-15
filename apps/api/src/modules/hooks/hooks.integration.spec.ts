@@ -5,7 +5,7 @@ import { feedHook } from './feed.hook.js';
 import { matchHook } from './match.hook.js';
 import { achievementHook } from './achievement.hook.js';
 import { notifyHook } from './notify.hook.js';
-import { DomainEventName } from '@pdc/shared';
+import { DomainEventName, EcosystemHookName, type EcosystemHookContext } from '@pdc/shared';
 import type { StrapiListResponse, StrapiSingleResponse } from '@pdc/shared';
 import { strapiPost, strapiPut, strapiGet } from '../strapi/strapi.client.js';
 
@@ -43,6 +43,17 @@ vi.mock('../conquistas/conquistas.engine.js', () => ({
 }));
 
 describe('G15: EcosystemHooks Integration', () => {
+  const hookContext: EcosystemHookContext = {
+    results: {
+      [EcosystemHookName.RANKING]: { status: 'skipped' },
+      [EcosystemHookName.FEED]: { status: 'skipped' },
+      [EcosystemHookName.MATCH]: { status: 'skipped' },
+      [EcosystemHookName.ACHIEVEMENT]: { status: 'skipped' },
+      [EcosystemHookName.NOTIFY]: { status: 'skipped' },
+      [EcosystemHookName.BEHAVIOR]: { status: 'skipped' },
+    },
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     eventBus.removeAllListeners();
@@ -58,7 +69,7 @@ describe('G15: EcosystemHooks Integration', () => {
         id: 'autor-1', 
         role: 'mentor', 
         reputacao: 100, 
-        areaInteresse: 'Tecnologia',
+        areasInteresse: ['Tecnologia'],
         userId: 'user-123' 
       }]));
 
@@ -110,5 +121,63 @@ describe('G15: EcosystemHooks Integration', () => {
     expect(strapiPut).toHaveBeenCalledWith(expect.stringContaining('/domain-events/'), expect.objectContaining({
       processed: true
     }));
+  });
+
+  it('integra projeto publicado no feed com conteúdo e IDs normalizados', async () => {
+    const result = await feedHook.execute({
+      id: 'event-projeto-feed',
+      name: DomainEventName.PROJETO_PUBLICADO,
+      payload: {
+        projetoId: 42,
+        autorId: 9,
+        titulo: 'Saúde comunitária',
+        descricao: 'Projeto criado para apoiar comunidades em Angola.',
+        area: 'SAUDE',
+      },
+      timestamp: '2026-06-14T12:00:00.000Z',
+      correlationId: 'event-projeto-feed',
+    }, hookContext);
+
+    expect(result.status).toBe('sent');
+    expect(strapiPost).toHaveBeenCalledWith('/feed-entries', expect.objectContaining({
+      entityType: 'projeto',
+      entityId: '42',
+      autorId: '9',
+      titulo: 'Saúde comunitária',
+      corpo: 'Projeto criado para apoiar comunidades em Angola.',
+    }));
+  });
+
+  it('resolve autor do projeto por ID relacional no Match do Strapi v5', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ id: 9, reputacao: 60 }]))
+      .mockResolvedValueOnce(listResponse([]));
+
+    const result = await matchHook.execute({
+      id: 'event-projeto-match',
+      name: DomainEventName.PROJETO_PUBLICADO,
+      payload: {
+        projetoId: 'doc-projeto-42',
+        autorId: '9',
+        area: 'SAUDE',
+      },
+      timestamp: '2026-06-14T12:00:00.000Z',
+      correlationId: 'event-projeto-match',
+    }, hookContext);
+
+    expect(result.status).toBe('sent');
+    expect(strapiGet).toHaveBeenNthCalledWith(1, '/perfis', {
+      'filters[id][$eq]': '9',
+      'fields[0]': 'id',
+      'fields[1]': 'reputacao',
+      'pagination[pageSize]': '1',
+    });
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/perfis', {
+      'filters[tipo][$eq]': 'estudante',
+      'pagination[pageSize]': '100',
+      'fields[0]': 'id',
+      'fields[1]': 'reputacao',
+      'fields[2]': 'areasInteresse',
+    });
   });
 });

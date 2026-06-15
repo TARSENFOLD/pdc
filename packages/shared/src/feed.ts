@@ -21,6 +21,7 @@ export const FeedItemTipoSchema = z.enum([
   'experiencia',
   'programa',
   'projeto',
+  'partilha',
 ]);
 
 export type FeedItemTipo = z.infer<typeof FeedItemTipoSchema>;
@@ -39,6 +40,16 @@ export const FeedItemSchema = z.object({
   createdAt: z.string(),
   timestamp: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
+  originalPost: z.object({
+    id: z.string(),
+    titulo: z.string(),
+    corpo: z.string().optional(),
+    userId: z.string(),
+    autorNome: z.string().optional(),
+    avatar: z.string().nullable().optional(),
+    mediaUrls: z.array(z.string().url()).max(10).optional(),
+    createdAt: z.string(),
+  }).optional(),
   slug: z.string().optional(),
   area: AreaVocacionalSchema.optional(),
   autorNome: z.string().optional(),

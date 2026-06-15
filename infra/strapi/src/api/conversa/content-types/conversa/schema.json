@@ -1,0 +1,54 @@
+{
+  "kind": "collectionType",
+  "collectionName": "conversas",
+  "info": {
+    "singularName": "conversa",
+    "pluralName": "conversas",
+    "displayName": "Conversa"
+  },
+  "options": {
+    "draftAndPublish": false,
+    "indexes": [
+      {
+        "name": "unique_conversa_participantes",
+        "columns": ["participantsKey"],
+        "type": "unique"
+      },
+      {
+        "name": "idx_conversa_participant1",
+        "columns": ["participant1"]
+      },
+      {
+        "name": "idx_conversa_participant2",
+        "columns": ["participant2"]
+      }
+    ]
+  },
+  "attributes": {
+    "participantsKey": {
+      "type": "string",
+      "private": true
+    },
+    "participant1": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "participant2": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "ultimaMensagem": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::mensagem.mensagem"
+    },
+    "criadoEm": {
+      "type": "datetime",
+      "required": true
+    }
+  }
+}

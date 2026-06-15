@@ -7,7 +7,14 @@
     "displayName": "Partilha"
   },
   "options": {
-    "draftAndPublish": false
+    "draftAndPublish": false,
+    "indexes": [
+      {
+        "name": "unique_internal_share_actor_target",
+        "columns": ["actor", "targetType", "targetId", "canal"],
+        "type": "unique"
+      }
+    ]
   },
   "attributes": {
     "actor": {
@@ -20,8 +27,11 @@
     "targetId": { "type": "string", "required": true },
     "canal": {
       "type": "enumeration",
+      "required": true,
+      "default": "interno",
       "enum": ["interno", "whatsapp", "linkedin", "twitter", "email", "outro"]
     },
+    "nota": { "type": "text", "maxLength": 500 },
     "criadoEm": { "type": "datetime" }
   }
 }

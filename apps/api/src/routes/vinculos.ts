@@ -158,17 +158,22 @@ vinculoRoutes.post('/:id/pedir', async (c) => {
   const { id: userId } = c.get('user');
 
   try {
-    const solicitanteRes = await strapiGet<StrapiPerfilMini>('/perfis', {
-      'filters[userId][$eq]': userId,
-      'pagination[pageSize]': '1',
-    });
+    const [solicitanteRes, destinatarioPerfil] = await Promise.all([
+      strapiGet<StrapiPerfilMini>('/perfis', {
+        'filters[userId][$eq]': userId,
+        'pagination[pageSize]': '1',
+      }),
+      findStrapiEntity<StrapiPerfilMini>('perfis', destinatarioPerfilId),
+    ]);
     const solicitantePerfil = solicitanteRes.data[0];
 
-    if (!solicitantePerfil) {
+    if (!solicitantePerfil || !destinatarioPerfil) {
       return c.json({ error: 'Perfil não encontrado' }, 404);
     }
 
     const resPost = await strapiPost<StrapiVinculo>('/vinculos', {
+      senderId: userId,
+      receiverId: destinatarioPerfil.userId,
       solicitante: solicitantePerfil.documentId ?? solicitantePerfil.id,
       destinatario: destinatarioPerfilId,
       status: 'pendente',

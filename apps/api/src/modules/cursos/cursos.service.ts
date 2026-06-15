@@ -10,8 +10,7 @@ interface StrapiPerfilRef {
   id: string | number;
 }
 
-interface ExistingModuloItem {
-  id: string | number;
+interface ExistingModuloItem extends ItemModulo {
   documentId?: string;
 }
 
@@ -54,14 +53,30 @@ type CursoModuloPayload = CriarCursoPayload['modulos'][number];
 type CursoItemPayload = CursoModuloPayload['itens'][number];
 type CursoBasePayload = Omit<CriarCursoPayload, 'modulos' | 'regrasAcesso' | 'estado'>;
 type CursoWithThumbnail = Curso & { thumbnailUrl?: string; documentId?: string };
+type CursoPersisted = Curso & { documentId?: string };
 
 function persistedId(entity: { id: string | number; documentId?: string }): string {
   return entity.documentId ?? String(entity.id);
 }
 
+function matchesId(entity: { id: string | number; documentId?: string }, id: string): boolean {
+  return String(entity.id) === id || entity.documentId === id;
+}
+
 function entityId(value: unknown): string {
   if (typeof value === 'string' || typeof value === 'number') return String(value);
   throw new Error('Identificador Strapi inválido');
+}
+
+function toPublicModulo(modulo: ExistingModulo): Modulo {
+  return {
+    ...modulo,
+    id: persistedId(modulo),
+    itens: modulo.itens.map((item) => ({
+      ...item,
+      id: persistedId(item),
+    })),
+  };
 }
 
 async function resolveCursoDocumentId(id: string): Promise<string> {
@@ -76,15 +91,15 @@ async function resolveCursoDocumentId(id: string): Promise<string> {
   return curso.documentId ?? entityId(curso.id);
 }
 
-async function listarModulosCurso(cursoId: string): Promise<Modulo[]> {
-  const modulosRes = await strapiGet<Omit<Modulo, 'itens'>>('/modulos', {
+async function listarModulosCurso(cursoId: string): Promise<ExistingModulo[]> {
+  const modulosRes = await strapiGet<Omit<ExistingModulo, 'itens'>>('/modulos', {
     'filters[curso][id][$eq]': cursoId,
     'sort': 'ordem:asc',
     'pagination[pageSize]': '100',
   });
 
   const modulos = await Promise.all(modulosRes.data.map(async (modulo) => {
-    const itensRes = await strapiGet<ItemModulo>('/modulo-items', {
+    const itensRes = await strapiGet<ExistingModuloItem>('/modulo-items', {
       'filters[modulo][id][$eq]': entityId(modulo.id),
       'sort': 'ordem:asc',
       'pagination[pageSize]': '200',
@@ -96,10 +111,9 @@ async function listarModulosCurso(cursoId: string): Promise<Modulo[]> {
 }
 
 async function syncCursoItems(moduloId: string, existingItems: ExistingModuloItem[], nextItems: CursoItemPayload[]): Promise<void> {
-  const nextIds = new Set(nextItems.flatMap((item) => item.persistedId ? [item.persistedId] : []));
-
   await Promise.all(existingItems
-    .filter((item) => !nextIds.has(persistedId(item)))
+    .filter((item) => !nextItems.some((nextItem) =>
+      nextItem.persistedId ? matchesId(item, nextItem.persistedId) : false))
     .map((item) => strapiDelete(`/modulo-items/${persistedId(item)}`)));
 
   for (const item of nextItems) {
@@ -113,7 +127,8 @@ async function syncCursoItems(moduloId: string, existingItems: ExistingModuloIte
     };
 
     if (item.persistedId) {
-      await strapiPut(`/modulo-items/${item.persistedId}`, body);
+      const existingItem = existingItems.find((candidate) => matchesId(candidate, item.persistedId ?? ''));
+      await strapiPut(`/modulo-items/${existingItem ? persistedId(existingItem) : item.persistedId}`, body);
     } else {
       await strapiPost<unknown>('/modulo-items', body);
     }
@@ -159,7 +174,7 @@ export const cursosService = {
     return {
       ...curso,
       capaUrl: curso.capaUrl ?? curso.thumbnailUrl,
-      modulos,
+      modulos: modulos.map(toPublicModulo),
     };
   },
 
@@ -168,7 +183,7 @@ export const cursosService = {
     const initialState = estado === 'published' ? 'review' : (estado ?? 'draft');
     
     // 1. Criar o Curso Base no Strapi
-    const res = await strapiPost<Curso>('/cursos', {
+    const res = await strapiPost<CursoPersisted>('/cursos', {
       ...toCursoStrapiData(cursoData),
       regrasAcesso,
       autorId,
@@ -178,17 +193,18 @@ export const cursosService = {
     });
     
     const cursoId = entityId(res.data.id);
+    const cursoDocumentId = persistedId(res.data);
 
     // 2. Criar Módulos e Itens em Cascata (Sovereign Cascading)
     if (modulos.length > 0) {
       for (const mod of modulos) {
-        const modRes = await strapiPost<Modulo>('/modulos', {
+        const modRes = await strapiPost<ExistingModulo>('/modulos', {
           titulo: mod.titulo,
           ordem: mod.ordem,
-          curso: cursoId
+          curso: cursoDocumentId,
         });
         
-        const moduloId = modRes.data.id;
+        const moduloId = persistedId(modRes.data);
         
         for (const item of mod.itens) {
           await strapiPost<unknown>('/modulo-items', {
@@ -224,33 +240,28 @@ export const cursosService = {
     });
 
     if (modulos) {
-      const cursoRes = await strapiGet<CursoComModulos>('/cursos', {
-        'filters[id][$eq]': id,
-        populate: 'modulos.itens',
-        'pagination[pageSize]': '1',
-      });
-      const curso = first(cursoRes.data);
-      const existingModules = curso?.modulos ?? [];
-      const nextIds = new Set(modulos.flatMap((modulo) => modulo.persistedId ? [modulo.persistedId] : []));
+      const existingModules = await listarModulosCurso(id);
 
       await Promise.all(existingModules
-        .filter((modulo) => !nextIds.has(persistedId(modulo)))
+        .filter((modulo) => !modulos.some((nextModulo) =>
+          nextModulo.persistedId ? matchesId(modulo, nextModulo.persistedId) : false))
         .map((modulo) => strapiDelete(`/modulos/${persistedId(modulo)}`)));
 
       for (const modulo of modulos) {
         const body = {
           titulo: modulo.titulo,
           ordem: modulo.ordem,
-          curso: id,
+          curso: cursoDocumentId,
         };
 
         if (modulo.persistedId) {
-          await strapiPut(`/modulos/${modulo.persistedId}`, body);
-          const existingModule = existingModules.find((item) => persistedId(item) === modulo.persistedId);
-          await syncCursoItems(modulo.persistedId, existingModule?.itens ?? [], modulo.itens);
+          const existingModule = existingModules.find((item) => matchesId(item, modulo.persistedId ?? ''));
+          const moduloDocumentId = existingModule ? persistedId(existingModule) : modulo.persistedId;
+          await strapiPut(`/modulos/${moduloDocumentId}`, body);
+          await syncCursoItems(moduloDocumentId, existingModule?.itens ?? [], modulo.itens);
         } else {
-          const modRes = await strapiPost<Modulo>('/modulos', body);
-          await syncCursoItems(entityId(modRes.data.id), [], modulo.itens);
+          const modRes = await strapiPost<ExistingModulo>('/modulos', body);
+          await syncCursoItems(persistedId(modRes.data), [], modulo.itens);
         }
       }
     }
