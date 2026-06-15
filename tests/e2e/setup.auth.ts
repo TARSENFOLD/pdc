@@ -2,10 +2,12 @@ import { test as setup, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 
-// 7 canonical roles: aluno kept as invariant until W6 migration; estudante and comite_cientifico added
+// `aluno` is a legacy fixture alias; both files authenticate the canonical estudante role.
 const roles = ['aluno', 'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin'] as const;
 const AUTH_DIR = path.join(__dirname, '../.auth');
 const TEST_PASSWORD = process.env.TEST_USER_PASSWORD ?? 'password123';
+
+setup.describe.configure({ mode: 'serial', timeout: 90_000 });
 
 // Ensure auth directory exists
 if (!fs.existsSync(AUTH_DIR)) {
@@ -22,7 +24,8 @@ for (const role of roles) {
     await page.waitForSelector('input[placeholder="nome@exemplo.com"]');
     
     // Fill credentials
-    await page.fill('input[placeholder="nome@exemplo.com"]', `${role}@traycer.test`);
+    const accountRole = role === 'aluno' ? 'estudante' : role;
+    await page.fill('input[placeholder="nome@exemplo.com"]', `${accountRole}@traycer.test`);
     await page.fill('input[placeholder="••••••••"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
 
@@ -38,6 +41,13 @@ for (const role of roles) {
 
     // Final confirmation: must be in /app
     await expect(page).toHaveURL(/.*\/app(\/|$)/, { timeout: 20_000 });
+
+    if (accountRole === 'instituicao') {
+      const provisionResponse = await page.request.post('/api/instituicoes/me/provisionar', {
+        data: { nome: 'Instituição E2E PDC' },
+      });
+      expect(provisionResponse).toBeOK();
+    }
 
     await page.evaluate(() => {
       localStorage.removeItem('pdc:telemetry:pending');

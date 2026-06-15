@@ -6,9 +6,10 @@ import { cursosApi } from '@/lib/api/cursos';
 import { aiApi } from '@/lib/api/ai';
 import { QuizPlayer } from '@/features/ai/QuizPlayer';
 import type { ItemModulo } from '@pdc/shared';
-import { BookOpen, Check, ChevronLeft, ChevronRight, Circle, Menu } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Circle } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { ItemPlayerHeader } from './ItemPlayerHeader';
 
 function ExternalLink({ url, label }: { url: string; label: string }) {
   return (
@@ -140,16 +141,24 @@ export function ItemPlayer() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-53px)] bg-canvas">
+    <div className="relative flex min-h-[calc(100vh-64px)] bg-canvas">
+      <ItemPlayerHeader
+        key={`${itemId}-${String(completedCount)}-${String(marcarMutation.isPending)}`}
+        cursoId={cursoId}
+        title={item.titulo}
+        completedCount={completedCount}
+        totalCount={allItems.length}
+        progressPercent={progressPercent}
+        concluded={concluido}
+        pending={marcarMutation.isPending}
+        onOpenCurriculum={() => { setCurriculumOpen(true); }}
+        onComplete={() => { marcarMutation.mutate(); }}
+      />
       <aside className={cn(
-        'absolute inset-y-0 left-0 z-30 w-[310px] border-r border-border bg-recessed transition-transform lg:relative lg:translate-x-0',
+        'absolute inset-y-0 left-0 z-30 w-[300px] border-r border-border bg-recessed transition-transform lg:relative lg:translate-x-0',
         curriculumOpen ? 'translate-x-0' : '-translate-x-full',
       )}>
-        <div className="border-b border-border p-5">
-          <button type="button" onClick={() => { navigate(`/app/cursos/${cursoId}`); }} className="mb-4 flex items-center gap-2 text-xs text-ink-tertiary hover:text-ink-primary">
-            <ChevronLeft size={14} />
-            Voltar ao curso
-          </button>
+        <div className="border-b border-border px-5 py-6">
           <h2 className="line-clamp-2 font-semibold text-ink-primary">{curso.titulo}</h2>
           <div className="mt-4 flex items-center justify-between text-xs text-ink-secondary">
             <span>{completedCount} de {allItems.length} concluídos</span>
@@ -160,7 +169,7 @@ export function ItemPlayer() {
           </div>
         </div>
 
-        <nav className="h-[calc(100vh-220px)] overflow-y-auto p-3" aria-label="Currículo do curso">
+        <nav className="h-[calc(100vh-180px)] overflow-y-auto p-3" aria-label="Currículo do curso">
           {curso.modulos?.map((module, moduleIndex) => (
             <section key={module.id} className="mb-5">
               <div className="px-3 pb-2">
@@ -201,30 +210,12 @@ export function ItemPlayer() {
       )}
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex min-h-16 items-center justify-between gap-4 border-b border-border px-4 md:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <button type="button" onClick={() => { setCurriculumOpen(true); }} className="rounded-sm p-2 text-ink-secondary hover:bg-elevated lg:hidden" aria-label="Abrir currículo">
-              <Menu size={20} />
-            </button>
-            <BookOpen className="hidden h-5 w-5 text-accent sm:block" />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-ink-primary">{item.titulo}</p>
-              <p className="text-xs capitalize text-ink-tertiary">{item.tipo}</p>
-            </div>
-          </div>
-          <Button
-            onClick={() => { marcarMutation.mutate(); }}
-            isLoading={marcarMutation.isPending}
-            disabled={concluido}
-            variant={concluido ? 'secondary' : 'primary'}
-            size="sm"
-          >
-            {concluido ? 'Concluído' : 'Marcar como concluído'}
-          </Button>
-        </header>
-
         <div className="flex-1 overflow-y-auto">
-          <article className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8 md:py-10">
+          <article className="mx-auto w-full max-w-5xl px-4 py-8 md:px-10 md:py-12">
+            <div className="mb-7 border-b border-border pb-5">
+              <p className="text-xs font-semibold uppercase text-accent">{item.tipo}</p>
+              <h2 className="mt-2 font-display text-2xl text-ink-primary">{item.titulo}</h2>
+            </div>
             {item.tipo === 'quiz' ? (
               <QuizSection cursoId={cursoId} moduloId={moduloId ?? ''} />
             ) : (

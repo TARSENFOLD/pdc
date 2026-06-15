@@ -51,7 +51,7 @@ export function MentorSimulacoesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {simulacoes.map((sim) => (
-            <Card key={sim.id} className="overflow-hidden flex flex-col h-full border-ink-tertiary/10/40 hover:border-accent/40 transition-colors">
+            <Card key={sim.id} className="overflow-hidden flex flex-col h-full border-ink-tertiary/10 hover:border-accent/40 transition-colors">
               {sim.capaUrl ? (
                 <img src={sim.capaUrl} alt={sim.titulo} className="h-40 w-full object-cover" />
               ) : (

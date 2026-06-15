@@ -1,5 +1,5 @@
 import { Control, UseFormRegister, UseFieldArrayReturn, useFieldArray, UseFormSetValue } from 'react-hook-form';
-import { Card, Input, Button } from '@/components/ui';
+import { Input, Button } from '@/components/ui';
 import { Plus, Trash2, BookOpen, Layers, Link as LinkIcon, FileUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CriarCursoPayload } from '@pdc/shared';
@@ -38,10 +38,10 @@ function ModuleItemsEditor({
   });
 
   return (
-    <div className="pl-4 border-l-2 border-white/5 space-y-4">
+    <div className="space-y-4 border-l border-border pl-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-[10px] font-black text-ink-tertiary uppercase tracking-widest">
-          <BookOpen size={12} /> Conteúdos do Módulo
+        <div className="flex items-center gap-2 text-xs font-semibold text-ink-secondary">
+          <BookOpen size={14} /> Conteúdos do módulo
         </div>
         <Button
           type="button"
@@ -55,16 +55,16 @@ function ModuleItemsEditor({
               conteudo: '',
             });
           }}
-          className="gap-2 text-[10px]"
+          className="gap-2 text-xs"
         >
           <Plus size={14} /> Adicionar Item
         </Button>
       </div>
 
       {itemsArray.fields.map((item, itemIndex) => (
-        <div key={item.id} className="rounded-xl border border-white/10 bg-canvas/40 p-4 space-y-3">
+        <div key={item.id} className="space-y-4 border-t border-border py-5 first:border-t-0">
           <div className="grid gap-3 md:grid-cols-[140px_1fr_auto]">
-            <select {...register(itemPath(moduleIndex, itemIndex, 'tipo'))} className="bg-canvas border border-white/10 rounded-lg px-3 py-2 text-xs">
+            <select {...register(itemPath(moduleIndex, itemIndex, 'tipo'))} className="min-h-10 rounded-sm border border-border bg-canvas px-3 text-xs text-ink-primary">
               <option value="video">Vídeo</option>
               <option value="pdf">PDF</option>
               <option value="iframe">Iframe</option>
@@ -72,11 +72,11 @@ function ModuleItemsEditor({
               <option value="quiz">Quiz</option>
               <option value="texto">Texto</option>
             </select>
-            <Input className="h-10 text-xs bg-canvas/50" {...register(itemPath(moduleIndex, itemIndex, 'titulo'))} placeholder="Título do Conteúdo" />
+            <Input className="h-10 bg-canvas text-xs" {...register(itemPath(moduleIndex, itemIndex, 'titulo'))} />
             <button
               type="button"
               onClick={() => { itemsArray.remove(itemIndex); }}
-              className="text-error p-2 hover:bg-error/10 rounded-lg"
+              className="min-h-10 min-w-10 p-2 text-error hover:bg-error/10"
               aria-label="Remover item"
             >
               <Trash2 size={18} />
@@ -85,11 +85,11 @@ function ModuleItemsEditor({
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="space-y-1">
-              <span className="flex items-center gap-2 text-[10px] font-bold uppercase text-ink-tertiary"><LinkIcon size={12} /> URL / Embed</span>
-              <Input className="h-10 text-xs bg-canvas/50" {...register(itemPath(moduleIndex, itemIndex, 'url'))} placeholder="https://..." />
+              <span className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><LinkIcon size={12} /> URL ou embed</span>
+              <Input className="h-10 bg-canvas text-xs" {...register(itemPath(moduleIndex, itemIndex, 'url'))} />
             </label>
             <div className="space-y-1">
-              <span className="flex items-center gap-2 text-[10px] font-bold uppercase text-ink-tertiary"><FileUp size={12} /> Upload</span>
+              <span className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><FileUp size={12} /> Ficheiro</span>
               <SovereignMediaUpload
                 accept="image/*,video/mp4,application/pdf"
                 maxSizeMB={50}
@@ -102,11 +102,10 @@ function ModuleItemsEditor({
           </div>
 
           <label className="space-y-1 block">
-            <span className="text-[10px] font-bold uppercase text-ink-tertiary">Texto / Instruções / Conteúdo Richtext</span>
+            <span className="text-xs font-semibold text-ink-secondary">Texto ou instruções</span>
             <textarea
               {...register(itemPath(moduleIndex, itemIndex, 'conteudo'))}
-              className="min-h-24 w-full rounded-xl border border-white/10 bg-canvas/50 px-4 py-3 text-xs outline-none transition-all focus:border-accent"
-              placeholder="Conteúdo textual, instruções da tarefa ou descrição do recurso."
+              className="min-h-28 w-full rounded-sm border border-border bg-canvas px-4 py-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent"
             />
           </label>
         </div>
@@ -120,10 +119,10 @@ export function CourseCurriculum({ register, control, setValue, modulosArray }: 
 
   return (
     <section>
-      <div className="flex items-center justify-between mb-6 px-2">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500"><Layers size={20} /></div>
-          <h2 className="text-xl font-bold">Músculo Curricular</h2>
+          <Layers size={20} className="text-accent" />
+          <h3 className="text-base font-semibold text-ink-primary">Módulos do curso</h3>
         </div>
         <Button 
           type="button" 
@@ -145,13 +144,13 @@ export function CourseCurriculum({ register, control, setValue, modulosArray }: 
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
             >
-              <Card className="p-6 border-white/5 bg-recessed/30 relative group">
+              <section className="group border-b border-border py-7 first:pt-0">
                 <div className="flex items-start gap-4">
-                  <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center font-black text-accent">{index + 1}</div>
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-sm font-semibold text-accent">{index + 1}</div>
                   <div className="flex-1 space-y-4">
                     <div className="flex gap-4">
-	                      <Input className="bg-transparent border-b border-t-0 border-x-0 rounded-none focus:border-accent" {...register(moduloPath(index, 'titulo'))} placeholder="Nome do Módulo" />
-                      <button type="button" onClick={() => { removeModulo(index); }} className="text-error opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-error/10 rounded-lg">
+	                      <Input className="rounded-none border-x-0 border-t-0 bg-transparent focus:border-accent" {...register(moduloPath(index, 'titulo'))} />
+                      <button type="button" onClick={() => { removeModulo(index); }} className="min-h-11 min-w-11 p-2 text-error opacity-70 transition-opacity hover:bg-error/10 group-hover:opacity-100">
                         <Trash2 size={20} />
                       </button>
                     </div>
@@ -159,7 +158,7 @@ export function CourseCurriculum({ register, control, setValue, modulosArray }: 
                     <ModuleItemsEditor register={register} control={control} setValue={setValue} moduleIndex={index} />
                   </div>
                 </div>
-              </Card>
+              </section>
             </motion.div>
           ))}
         </AnimatePresence>

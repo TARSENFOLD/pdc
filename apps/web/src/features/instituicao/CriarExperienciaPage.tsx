@@ -1,27 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CriarExperienciaPayloadSchema, type CriarExperienciaPayload } from '@pdc/shared';
-import { useForm, useFieldArray } from 'react-hook-form';
+import {
+  CriarExperienciaPayloadSchema,
+  parsePainelRealidade,
+  type CriarExperienciaPayload,
+} from '@pdc/shared';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { experienciasApi } from '@/lib/api/experiencias';
-import { Input, Select, Button, Spinner } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
-import { BuilderShell, BuilderSection, BuilderUploadZone, BuilderActionsBar } from '@/components/builders';
+import { RichBuilderShell, BuilderSection, BuilderActionsBar } from '@/components/builders';
 import { useAuth } from '@/lib/auth/auth-context';
 import { ExperienceSectionsBuilder } from './components/ExperienceSectionsBuilder';
+import { ExperienceIdentityFields } from './components/ExperienceIdentityFields';
+import { ExperienceCanonicalPanelsEditor } from './components/ExperienceCanonicalPanelsEditor';
 import { newExperienceSection } from './components/experience-section-factory';
 import { getErrorBody } from '@/lib/api/http';
 
 const STORAGE_KEY = 'pdc_builder_experiencia_draft';
-
-function muralPath(index: number, field: 'autor' | 'cargo' | 'depoimento') {
-  return ['muralVozes', index, field].join('.') as `muralVozes.${number}.${typeof field}`;
-}
-
-function timelinePath(index: number, field: 'ano' | 'foco') {
-  return ['guiaInstitucional', 'timelineCurricular', index, field].join('.') as `guiaInstitucional.timelineCurricular.${number}.${typeof field}`;
-}
 
 function getErrorMessage(err: unknown): string {
   return getErrorBody(err)?.error ?? (err instanceof Error ? err.message : 'Erro desconhecido');
@@ -60,9 +58,6 @@ export function CriarExperienciaPage() {
   });
 
   const { register, control, setValue, watch, formState: { errors } } = form;
-  const muralArray = useFieldArray({ control, name: 'muralVozes' });
-  const timelineArray = useFieldArray({ control, name: 'guiaInstitucional.timelineCurricular' });
-
   // BUG-005: carregar dados existentes em modo edição
   const { data: existingExp, isLoading: isLoadingExp } = useQuery({
     queryKey: ['experiencias', editId],
@@ -80,7 +75,7 @@ export function CriarExperienciaPage() {
     if (nivel) setValue('nivel', nivel);
     if (modalidade) setValue('modalidade', modalidade);
     if (duracaoEstimada != null) setValue('duracaoEstimada', duracaoEstimada);
-    if (painelRealidade) setValue('painelRealidade', painelRealidade);
+    if (painelRealidade) setValue('painelRealidade', parsePainelRealidade(painelRealidade));
     if (muralVozes) setValue('muralVozes', muralVozes);
     if (guiaInstitucional) setValue('guiaInstitucional', guiaInstitucional);
     if (secoes) setValue('secoes', secoes);
@@ -94,7 +89,10 @@ export function CriarExperienciaPage() {
     if (saved) {
       try {
         const parsed: unknown = JSON.parse(saved);
-        const draft = CriarExperienciaPayloadSchema.partial().safeParse(parsed);
+        const migrated = typeof parsed === 'object' && parsed !== null && 'painelRealidade' in parsed && parsed.painelRealidade
+          ? { ...parsed, painelRealidade: parsePainelRealidade(parsed.painelRealidade) }
+          : parsed;
+        const draft = CriarExperienciaPayloadSchema.partial().safeParse(migrated);
         if (draft.success) {
           const data = draft.data;
           if (data.titulo !== undefined) setValue('titulo', data.titulo);
@@ -142,6 +140,13 @@ export function CriarExperienciaPage() {
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending || estadoMutation.isPending;
   const currentState = existingExp?.estado ?? 'draft';
+  const showValidationErrors = (validationErrors: FieldErrors<CriarExperienciaPayload>) => {
+    toast({
+      title: 'Revê os campos da experiência',
+      description: `Campos inválidos: ${Object.keys(validationErrors).join(', ')}`,
+      variant: 'error',
+    });
+  };
 
   // BUG-002: handleSubmit garante validação Zod antes de qualquer mutação
   // BUG-003: três handlers com semânticas distintas
@@ -164,7 +169,7 @@ export function CriarExperienciaPage() {
       } catch {
         // erros tratados pelos onError de cada mutation
       }
-    })();
+    }, showValidationErrors)();
   };
 
   const handleSubmitReview = () => {
@@ -187,7 +192,7 @@ export function CriarExperienciaPage() {
       } catch {
         // erros tratados pelos onError de cada mutation
       }
-    })();
+    }, showValidationErrors)();
   };
 
   const handlePublish = () => {
@@ -205,35 +210,39 @@ export function CriarExperienciaPage() {
 
   return (
     <>
-      <BuilderShell
+      <RichBuilderShell
         title={isEditMode ? 'Editar experiência' : 'Criar experiência'}
         description={isEditMode
           ? 'Actualiza os dados da tua experiência curricular.'
           : 'Apresenta o curso, o mercado, as pessoas e a vida na instituição de forma clara.'
         }
-        state={currentState}
-        breadcrumbs={[
-          { label: 'Início', to: '/app' },
-          // BUG-004: rota corrigida para /app/instituicao/experiencias
-          { label: 'Experiências', to: '/app/instituicao/experiencias' },
-          { label: isEditMode ? 'Editar' : 'Nova Experiência' }
+        steps={[
+          { id: 'identidade', label: 'Dados principais', description: 'Identidade e contexto' },
+          { id: 'estrutura', label: 'Storytelling', description: 'Seções da experiência' },
+          { id: 'realidade', label: 'Realidade', description: 'Mercado em Angola' },
+          { id: 'vozes', label: 'Vozes', description: 'Depoimentos reais' },
+          { id: 'guia', label: 'Instituição', description: 'Campus e percurso' },
         ]}
-        sections={[
-          { id: 'identidade', label: 'Dados principais' },
-          { id: 'estrutura', label: 'Módulos da experiência' },
-          { id: 'realidade', label: 'Mercado' },
-          { id: 'vozes', label: 'Depoimentos' },
-          { id: 'guia', label: 'Instituição' },
-        ]}
-        actions={isEditingModule ? undefined : (
-          <BuilderActionsBar
-            state={currentState}
-            userRole={user?.role || 'instituicao'}
-            onSaveDraft={handleSaveDraft}
-            onSubmitReview={handleSubmitReview}
-            onPublish={handlePublish}
-            isSubmitting={isSubmitting}
-          />
+        settingsPanel={(
+          <div className="space-y-7">
+            <div>
+              <p className="text-xs font-semibold uppercase text-accent">Acesso</p>
+              <h3 className="mt-2 text-base font-semibold text-ink-primary">Sempre gratuita</h3>
+              <p className="mt-2 text-sm leading-6 text-ink-secondary">
+                Experiências são conteúdos institucionais de orientação e não podem ser monetizadas.
+              </p>
+            </div>
+            {!isEditingModule && (
+              <BuilderActionsBar
+                state={currentState}
+                userRole={user?.role || 'instituicao'}
+                onSaveDraft={handleSaveDraft}
+                onSubmitReview={handleSubmitReview}
+                onPublish={handlePublish}
+                isSubmitting={isSubmitting}
+              />
+            )}
+          </div>
         )}
       >
         <BuilderSection
@@ -241,59 +250,7 @@ export function CriarExperienciaPage() {
           title="Identidade e Contexto"
           description="O que é esta experiência e a quem se destina."
         >
-          <div className="space-y-6">
-            <Input label="Título da Experiência" {...register('titulo')} error={errors.titulo?.message} />
-            <div className="space-y-1">
-              <label className="text-sm font-bold uppercase tracking-widest text-ink-tertiary">Descrição Narrativa</label>
-              <textarea
-                className="flex min-h-[120px] w-full rounded-sm border border-ink-tertiary/20 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
-                {...register('descricao')}
-              />
-              {errors.descricao && <p className="text-xs text-accent-danger">{errors.descricao.message}</p>}
-            </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <Select label="Área Vocacional" {...register('area')}>
-                  <option value="TECNOLOGIA">Tecnologia</option>
-                  <option value="SAUDE">Saúde</option>
-                  <option value="GESTAO">Gestão</option>
-                  <option value="ARTES">Artes</option>
-                  <option value="ENGENHARIA">Engenharia</option>
-                  <option value="DIREITO">Direito</option>
-                  <option value="EDUCACAO">Educação</option>
-                  <option value="COMUNICACAO">Comunicação</option>
-                  <option value="CIENCIAS_SOCIAIS">Ciências Sociais</option>
-                  <option value="CIENCIAS_NATURAIS">Ciências Naturais</option>
-                  <option value="CIENCIAS_AGRARIAS">Ciências Agrárias</option>
-                  <option value="ARQUITETURA">Arquitetura</option>
-                  <option value="TURISMO_HOTELARIA">Turismo e Hotelaria</option>
-                  <option value="DESPORTO">Desporto</option>
-                  <option value="OUTRA">Outra</option>
-                </Select>
-                <Select label="Nível" {...register('nivel')}>
-                  <option value="basico">Básico</option>
-                  <option value="medio">Médio</option>
-                  <option value="avancado">Avançado</option>
-                </Select>
-                <Select label="Modalidade" {...register('modalidade')}>
-                  <option value="presencial">Presencial</option>
-                  <option value="online">Online</option>
-                  <option value="hibrido">Híbrido</option>
-                </Select>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <Input
-                  label="Duração (horas)"
-                  type="number"
-                  min={1}
-                  max={10000}
-                  placeholder="ex: 40"
-                  {...register('duracaoEstimada', { valueAsNumber: true })}
-                  error={errors.duracaoEstimada?.message}
-                />
-              </div>
-            </div>
-          </div>
+          <ExperienceIdentityFields register={register} errors={errors} />
         </BuilderSection>
 
         <BuilderSection
@@ -315,16 +272,7 @@ export function CriarExperienciaPage() {
           title="Painel de Realidade"
           description="Dados de mercado e empregabilidade (Spec 04)."
         >
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Salário Médio Base" {...register('painelRealidade.salarioMedio')} placeholder="ex: 1.200€ - 1.500€" />
-              <Input label="Taxa de Empregabilidade" {...register('painelRealidade.taxaEmpregabilidade')} placeholder="ex: 94%" />
-            </div>
-            <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Principais Empregadores</p>
-            <div className="p-4 border border-ink-tertiary/10 rounded-xl bg-recessed/30 italic text-sm text-ink-secondary">
-              Configuração de marcas parceiras em breve.
-            </div>
-          </div>
+          <ExperienceCanonicalPanelsEditor panel="realidade" control={control} register={register} watch={watch} setValue={setValue} />
         </BuilderSection>
 
         <BuilderSection
@@ -332,23 +280,7 @@ export function CriarExperienciaPage() {
           title="Mural de Vozes"
           description="Depoimentos reais de quem já viveu a experiência."
         >
-          <div className="space-y-6">
-            {muralArray.fields.map((field, index) => (
-              <div key={field.id} className="p-6 border border-ink-tertiary/10 rounded-2xl bg-canvas space-y-4">
-                <Input label="Autor" {...register(muralPath(index, 'autor'))} />
-                <Input label="Cargo/Função" {...register(muralPath(index, 'cargo'))} />
-                <textarea
-                  placeholder="O depoimento..."
-                  className="w-full rounded-xl border border-ink-tertiary/10 bg-recessed p-3 text-sm"
-                  {...register(muralPath(index, 'depoimento'))}
-                />
-                <Button variant="ghost" size="sm" className="text-accent-danger" onClick={() => { muralArray.remove(index); }}>Remover Voz</Button>
-              </div>
-            ))}
-            <Button variant="outline" className="w-full" onClick={() => { muralArray.append({ tipo: 'aluno', autor: '', cargo: '', depoimento: '' }); }}>
-              + Adicionar Testemunho
-            </Button>
-          </div>
+          <ExperienceCanonicalPanelsEditor panel="vozes" control={control} register={register} watch={watch} setValue={setValue} />
         </BuilderSection>
 
         <BuilderSection
@@ -356,57 +288,9 @@ export function CriarExperienciaPage() {
           title="Guia Institucional"
           description="Vitrinas do campus e jornada curricular."
         >
-          <div className="space-y-8">
-            <div>
-              <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest mb-4">Fotos do Campus / Laboratórios</p>
-              <BuilderUploadZone
-                multiple
-                accept="image/*"
-                onUploadComplete={(urls) => {
-                  const current = watch('guiaInstitucional.fotosCampus') || [];
-                  setValue('guiaInstitucional.fotosCampus', [...current, ...urls]);
-                }}
-              />
-              {(watch('guiaInstitucional.fotosCampus') ?? []).length > 0 && (
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {(watch('guiaInstitucional.fotosCampus') ?? []).map((url, index) => (
-                    <div key={url} className="relative border border-ink-tertiary/15 bg-recessed">
-                      <img src={url} alt={`Campus ${String(index + 1)}`} className="aspect-video w-full object-cover" />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-1 top-1 bg-canvas/90"
-                        onClick={() => {
-                          setValue(
-                            'guiaInstitucional.fotosCampus',
-                            (watch('guiaInstitucional.fotosCampus') ?? []).filter((_, currentIndex) => currentIndex !== index),
-                            { shouldDirty: true },
-                          );
-                        }}
-                      >
-                        Remover
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Timeline Curricular</p>
-              {timelineArray.fields.map((field, index) => (
-                <div key={field.id} className="flex gap-4 items-end">
-                  <Input label="Ano/Fase" {...register(timelinePath(index, 'ano'))} />
-                  <Input label="Foco Principal" {...register(timelinePath(index, 'foco'))} className="flex-1" />
-                  <Button variant="ghost" onClick={() => { timelineArray.remove(index); }}>X</Button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={() => { timelineArray.append({ ano: '', foco: '' }); }}>+ Adicionar Fase</Button>
-            </div>
-          </div>
+          <ExperienceCanonicalPanelsEditor panel="guia" control={control} register={register} watch={watch} setValue={setValue} />
         </BuilderSection>
-      </BuilderShell>
+      </RichBuilderShell>
 
     </>
   );

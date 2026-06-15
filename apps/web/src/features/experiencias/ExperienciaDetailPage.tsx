@@ -20,6 +20,7 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { toast } from '@/hooks/useToast';
 import type { Experiencia } from '@pdc/shared';
 import type { ExperienciaItem, ExperienciaSecao } from '@pdc/shared';
+import { ExperienceStoryPanels } from './ExperienceStoryPanels';
 
 function ExperienceItemView({ item }: { item: ExperienciaItem }) {
   if ((item.tipo === 'imagem' || item.tipo === 'galeria') && item.mediaUrl) {
@@ -175,17 +176,19 @@ export function ExperienciaDetailPage() {
   const orderedSections = [...(exp.secoes ?? [])].sort((a, b) => a.ordem - b.ordem);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-10 px-5 pb-20 animate-in fade-in duration-1000">
+    <div className="mx-auto max-w-6xl space-y-12 px-5 pb-20 animate-in fade-in duration-1000">
       <SEOHead title={`${exp.titulo} | PDC`} description={exp.descricao} />
 
-      <section className="relative h-[300px] rounded-[32px] overflow-hidden border border-white/5">
-         <div className="absolute inset-0 bg-gradient-to-br from-accent/20 to-background opacity-40" />
-         <div className="relative h-full flex flex-col justify-end p-8 space-y-4">
+      <section className="relative min-h-[360px] overflow-hidden border-b border-border bg-recessed">
+         {exp.capaUrl && <img src={exp.capaUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+         <div className="absolute inset-0 bg-black/55" />
+         <div className="relative flex min-h-[360px] max-w-4xl flex-col justify-end space-y-4 p-8 md:p-12">
             <div className="flex items-center gap-2">
-              <Badge className="w-fit bg-accent/10 text-accent border-accent/20 uppercase text-[9px] font-black">Experiência Curricular</Badge>
+              <Badge className="w-fit border-accent/30 bg-black/40 text-accent uppercase text-[9px] font-black">Experiência Curricular</Badge>
               <EditorialStateBadge state={exp.estado} />
             </div>
-            <h1 className="text-4xl font-black text-ink-primary tracking-tighter leading-tight">{exp.titulo}</h1>
+            <h1 className="font-display text-4xl leading-tight text-white md:text-5xl">{exp.titulo}</h1>
+            <p className="max-w-2xl text-base leading-7 text-white/80">{exp.descricao}</p>
             <div className="flex items-center gap-4 pt-4">
                <RatingStars targetType="experiencia" targetId={id} stats={ratingStats} />
                <LikeButton targetType="experiencia" targetId={id} initialCount={likeStatus?.count} initialLiked={likeStatus?.liked} />
@@ -193,6 +196,8 @@ export function ExperienciaDetailPage() {
             </div>
          </div>
       </section>
+
+      <ExperienceStoryPanels experience={exp} />
 
       {orderedSections.length > 0 ? (
         <div>
@@ -214,7 +219,7 @@ export function ExperienciaDetailPage() {
          </div>
 
          <aside className="space-y-6">
-            <Card className="p-8 bg-recessed border-accent/20 space-y-6 shadow-2xl">
+            <Card className="space-y-6 border-accent/20 bg-recessed p-8">
                <div className="space-y-4">
                    <div className="flex items-center gap-3">
                       <Building2 size={20} className="text-accent" />
@@ -227,7 +232,7 @@ export function ExperienciaDetailPage() {
                </div>
                {/* BUG-009: onClick e estado de loading adicionados */}
                <Button
-                 className="w-full h-14 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs"
+                 className="h-14 w-full bg-accent text-xs font-black uppercase text-white"
                  onClick={handleInscrever}
                  disabled={inscricaoMutation.isPending || inscricaoMutation.isSuccess}
                >
