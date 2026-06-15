@@ -156,6 +156,13 @@ describe('programaRoutes contracts', () => {
         titulo: payload.titulo,
         estado: 'draft',
         instituicao: { id: 'instituicao-1' },
+      }]))
+      .mockResolvedValueOnce(listResponse([{
+        id: 'programa-1',
+        titulo: payload.titulo,
+        estado: 'draft',
+        cursos: [],
+        experiencias: [{ id: 'experiencia-1' }],
       }]));
     vi.mocked(strapiPut).mockResolvedValueOnce(singleResponse({
       id: 'programa-1',
@@ -339,7 +346,7 @@ describe('programaRoutes contracts', () => {
 
     expect(response.status).toBe(200);
     expect(strapiPost).toHaveBeenCalledWith(
-      '/inscricoes-programas/91/transicao-conclusao',
+      '/inscricoes-programas/inscricao-doc-91/transicao-conclusao',
       expect.objectContaining({ action: 'complete' }),
     );
     expect(publishWithOutboxMock).toHaveBeenCalledTimes(1);

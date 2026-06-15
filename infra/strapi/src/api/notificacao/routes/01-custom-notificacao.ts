@@ -4,7 +4,11 @@ export default {
       method: 'POST',
       path: '/notificacoes/marcar-todas-lidas',
       handler: 'notificacao.markAllRead',
-      config: {},
+      config: {
+        auth: {
+          scope: ['api::notificacao.notificacao.markAllRead'],
+        },
+      },
     },
   ],
 };

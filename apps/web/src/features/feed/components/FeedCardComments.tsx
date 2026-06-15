@@ -21,6 +21,13 @@ interface FeedCardCommentsProps {
   placeholder: string;
 }
 
+function relativeTime(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? 'há instantes'
+    : formatDistanceToNow(date, { addSuffix: true, locale: pt });
+}
+
 export function FeedCardComments({
   comments,
   totalComments,
@@ -52,7 +59,7 @@ export function FeedCardComments({
                     {comment.autor.nome || 'Utilizador'}
                   </span>
                   <span className="shrink-0 text-[10px] text-[var(--ink-tertiary)]">
-                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: pt })}
+                    {relativeTime(comment.createdAt)}
                   </span>
                 </div>
                 <p className="mt-0.5 text-sm leading-snug text-[var(--ink-secondary)]">
@@ -91,7 +98,7 @@ export function FeedCardComments({
             className="h-9 w-full rounded-full border border-[var(--chrome-border)] bg-[var(--surface-elevated)] px-4 pr-20 text-sm text-[var(--ink-primary)] outline-none transition-colors placeholder:text-[var(--ink-tertiary)] focus:border-[var(--accent-terracotta)]"
             disabled={isPending}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') onSubmit();
+              if (event.key === 'Enter' && commentText.trim()) onSubmit();
             }}
           />
           <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">

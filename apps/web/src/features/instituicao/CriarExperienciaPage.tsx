@@ -89,7 +89,11 @@ export function CriarExperienciaPage() {
     if (saved) {
       try {
         const parsed: unknown = JSON.parse(saved);
-        const migrated = typeof parsed === 'object' && parsed !== null && 'painelRealidade' in parsed && parsed.painelRealidade
+        const migrated = typeof parsed === 'object'
+          && parsed !== null
+          && 'painelRealidade' in parsed
+          && parsed.painelRealidade
+          && typeof parsed.painelRealidade === 'object'
           ? { ...parsed, painelRealidade: parsePainelRealidade(parsed.painelRealidade) }
           : parsed;
         const draft = CriarExperienciaPayloadSchema.partial().safeParse(migrated);

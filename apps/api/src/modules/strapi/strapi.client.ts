@@ -50,18 +50,22 @@ export function normalizeStrapiResponse<T>(response: T): T {
     res['data'] = data.map((item: unknown) => {
       if (typeof item === 'object' && item !== null && 'attributes' in item) {
         const entry = item as Record<string, unknown> & { attributes: Record<string, unknown> };
-        const { attributes, ...identity } = entry;
-        return {
-          ...identity,
+        const { id, documentId, attributes } = entry;
+        const normalized: Record<string, unknown> = {
           ...attributes,
+          id,
         };
+        if (documentId !== undefined) normalized['documentId'] = documentId;
+        return normalized;
       }
       return item;
     });
   } else if (typeof data === 'object' && 'attributes' in data) {
     const entry = data as Record<string, unknown> & { attributes: Record<string, unknown> };
-    const { attributes, ...identity } = entry;
-    res['data'] = { ...identity, ...attributes };
+    const { id, documentId, attributes } = entry;
+    const normalized: Record<string, unknown> = { ...attributes, id };
+    if (documentId !== undefined) normalized['documentId'] = documentId;
+    res['data'] = normalized;
   }
 
   return response;

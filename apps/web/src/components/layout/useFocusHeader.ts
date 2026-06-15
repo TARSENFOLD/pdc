@@ -1,22 +1,26 @@
-import { useContext, useEffect, useRef } from 'react';
+import { useContext, useEffect } from 'react';
 import {
   FocusHeaderStateContext,
   FocusModeDispatchContext,
   type FocusHeaderData,
 } from './focus-mode-context';
 
+/**
+ * Regista o cabeçalho do modo foco. Passe `data` memoizado quando incluir
+ * ReactNode em `progress` ou `actions`, para evitar updates redundantes.
+ */
 export function useFocusHeader(data: FocusHeaderData): void {
   const dispatch = useContext(FocusModeDispatchContext);
   const setHeader = dispatch?.setHeader;
   const clearHeader = dispatch?.clearHeader;
-  const dataRef = useRef(data);
-  dataRef.current = data;
 
   useEffect(() => {
     if (!setHeader || !clearHeader) return;
-    setHeader(dataRef.current);
-    return clearHeader;
-  }, [clearHeader, setHeader]);
+    setHeader(data);
+    return () => {
+      clearHeader();
+    };
+  }, [clearHeader, data, setHeader]);
 }
 
 export function useFocusHeaderState(): FocusHeaderData {

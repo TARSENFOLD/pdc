@@ -20,6 +20,7 @@ import { uploadToR2 } from '../modules/media/r2.service.js';
 import { validateMagicBytes } from '../modules/media/file-type-guard.js';
 import crypto from 'node:crypto';
 import pino from 'pino';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 type Vars = { Variables: AuthVariables };
 export const instituicaoRoutes = new Hono<Vars>();
@@ -43,11 +44,25 @@ instituicaoRoutes.post('/me/provisionar', async (c) => {
       return c.json({ error: 'JSON inválido no corpo do pedido' }, 400);
     }
   }
-  const input = ProvisionarInstituicaoSchema.parse(body);
-  const result = await provisionInstituicaoForUser(user.id, {
-    nome: input.nome ?? 'Nova Instituição',
-  });
-  return c.json({ data: result.instituicao }, result.created ? 201 : 200);
+  const validation = ProvisionarInstituicaoSchema.safeParse(body);
+  if (!validation.success) {
+    return c.json({ error: 'Dados de entrada inválidos' }, 400);
+  }
+  const input = validation.data;
+  try {
+    const result = await provisionInstituicaoForUser(user.id, {
+      nome: input.nome ?? 'Nova Instituição',
+    });
+    return c.json({ data: result.instituicao }, result.created ? 201 : 200);
+  } catch (error) {
+    const err = error as { status?: number; message?: string; retryable?: boolean };
+    const rawStatus = typeof err.status === 'number' ? err.status : 502;
+    const status = rawStatus >= 200 && rawStatus < 600 ? rawStatus : 502;
+    return c.json({
+      error: err.message ?? 'Falha ao provisionar instituição',
+      retryable: err.retryable === true,
+    }, status as ContentfulStatusCode);
+  }
 });
 
 instituicaoRoutes.get('/me', async (c) => {

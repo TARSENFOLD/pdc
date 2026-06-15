@@ -18,7 +18,8 @@ export function ProjetoColaboracaoPage(): React.JSX.Element {
   const project = projectQuery.data?.data[0];
   const isOwner = !!project && !!user?.perfilId && project.autor?.id === user.perfilId;
   const approved = project?.acessoCoreACL?.filter((entry) => entry.estado === 'aprovado') ?? [];
-  const canCollaborate = isOwner || !!project?.core;
+  const canCollaborate = isOwner
+    || approved.some((entry) => entry.perfilId === user?.perfilId);
 
   const requestAccess = useMutation({
     mutationFn: () => projetosApi.requestAccess(id ?? ''),
@@ -57,7 +58,7 @@ export function ProjetoColaboracaoPage(): React.JSX.Element {
           <section className="space-y-7">
             <div>
               <h2 className="text-base font-semibold text-ink-primary">Núcleo técnico</h2>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-ink-secondary">{project.core ?? 'O autor ainda não adicionou documentação técnica.'}</p>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-ink-secondary">{project.core?.trim() || 'O autor ainda não adicionou documentação técnica.'}</p>
             </div>
             <div className="flex flex-wrap gap-3 border-t border-border pt-5">
               {project.repoUrl && (

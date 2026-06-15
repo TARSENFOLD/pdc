@@ -143,6 +143,7 @@ describe('interactionRoutes', () => {
 
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({ shared: true, shareId: 'share-doc-9', count: 1 });
+    expect(publishWithOutboxMock).toHaveBeenCalledTimes(1);
     expect(publishWithOutboxMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ autorId: 'perfil-doc-7' }),

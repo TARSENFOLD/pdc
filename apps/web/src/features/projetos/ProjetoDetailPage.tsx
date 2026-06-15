@@ -243,7 +243,7 @@ export function ProjetoDetailPage() {
               {projeto.modos.map((modo) => {
                 const cta = PROJECT_MODE_CTA[modo];
                 const Icon = cta.icon;
-                const needsAccess = modo === 'colaboracao' || modo === 'mentoria' || modo === 'financiamento';
+                const needsAccess = modo === 'mentoria' || modo === 'financiamento';
                 if (modo === 'exposicao') return null;
                 return (
                   <Button
@@ -252,7 +252,7 @@ export function ProjetoDetailPage() {
                     className="rounded-sm gap-2"
                     disabled={needsAccess && accessRequestMutation.isPending}
                     onClick={() => {
-                      if (modo === 'colaboracao' && projeto.core) {
+                      if (modo === 'colaboracao') {
                         navigate(`/app/projetos/${id}/colaboracao`);
                       } else if (needsAccess) {
                         accessRequestMutation.mutate();

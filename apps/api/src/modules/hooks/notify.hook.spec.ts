@@ -180,7 +180,7 @@ describe('notifyHook — publicação de conteúdo', () => {
   });
 
   it('resolve autorId como ID relacional de perfil para PROJETO_PUBLICADO', async () => {
-    vi.mocked(strapiGet).mockResolvedValue(listResponse([{ id: 9 }]));
+    vi.mocked(strapiGet).mockResolvedValue(listResponse([{ id: '9' }]));
     const event = makeEvent(DomainEventName.PROJETO_PUBLICADO, {
       autorId: '9',
       projetoId: 'doc-projeto-42',

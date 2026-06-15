@@ -23,13 +23,13 @@ describe('RichBuilderShell', () => {
       </RichBuilderShell>,
     );
 
-    expect(screen.getByRole('navigation', { name: 'Etapas de criação' })).toBeDefined();
-    expect(screen.getByText('Editor de identidade')).toBeDefined();
-    expect(screen.getByText('Definições editoriais')).toBeDefined();
+    expect(screen.getByRole('navigation', { name: 'Etapas de criação' })).toBeTruthy();
+    expect(screen.getByText('Editor de identidade')).toBeTruthy();
+    expect(screen.getByText('Definições editoriais')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /Conteúdo/ }));
 
-    expect(screen.getByText('Editor de conteúdo')).toBeDefined();
+    expect(screen.getByText('Editor de conteúdo')).toBeTruthy();
     expect(screen.queryByText('Editor de identidade')).toBeNull();
   });
 
@@ -46,7 +46,7 @@ describe('RichBuilderShell', () => {
     );
 
     expect(screen.queryByRole('navigation', { name: 'Etapas de criação' })).toBeNull();
-    expect(screen.queryByText('Conteúdo disponível')).not.toBeNull();
-    expect(screen.queryByText('Definições disponíveis')).not.toBeNull();
+    expect(screen.queryByText('Conteúdo disponível')).toBeTruthy();
+    expect(screen.queryByText('Definições disponíveis')).toBeTruthy();
   });
 });

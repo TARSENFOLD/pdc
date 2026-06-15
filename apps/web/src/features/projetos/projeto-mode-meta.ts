@@ -1,7 +1,7 @@
-import { Banknote, GraduationCap, Layers, MessageCircle, Users } from 'lucide-react';
+import { Banknote, GraduationCap, Layers, MessageCircle, Users, type LucideIcon } from 'lucide-react';
 import type { ProjetoModo } from '@pdc/shared';
 
-export const PROJECT_MODE_CTA: Record<ProjetoModo, { label: string; icon: typeof Users }> = {
+export const PROJECT_MODE_CTA: Record<ProjetoModo, { label: string; icon: LucideIcon }> = {
   exposicao: { label: 'Projeto em exposição', icon: Layers },
   colaboracao: { label: 'Pedir para Colaborar', icon: Users },
   mentoria: { label: 'Oferecer Mentoria', icon: GraduationCap },

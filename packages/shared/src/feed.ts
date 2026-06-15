@@ -48,7 +48,7 @@ export const FeedItemSchema = z.object({
     autorNome: z.string().optional(),
     avatar: z.string().nullable().optional(),
     mediaUrls: z.array(z.string().url()).max(10).optional(),
-    createdAt: z.string(),
+    createdAt: z.string().datetime(),
   }).optional(),
   slug: z.string().optional(),
   area: AreaVocacionalSchema.optional(),

@@ -59,7 +59,11 @@ export function ExperienceIdentityFields({
           min={1}
           max={10000}
           {...register('duracaoEstimada', {
-            setValueAs: (value: unknown) => value === '' ? undefined : Number(value),
+            setValueAs: (value: unknown) => {
+              if (value === '') return undefined;
+              const duration = Number(value);
+              return Number.isFinite(duration) ? duration : undefined;
+            },
           })}
           error={errors.duracaoEstimada?.message}
         />

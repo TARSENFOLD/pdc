@@ -39,7 +39,7 @@ export function ExperienceStoryPanels({ experience }: { experience: Experiencia 
                     <>
                       <div className="flex h-12 w-12 items-center justify-center bg-recessed">
                         {employer.logoUrl
-                          ? <img src={employer.logoUrl} alt="" className="h-9 w-9 object-contain" />
+                          ? <img src={employer.logoUrl} alt={employer.nome} className="h-9 w-9 object-contain" />
                           : <Building2 size={22} className="text-ink-tertiary" />}
                       </div>
                       <div className="min-w-0">
@@ -49,11 +49,11 @@ export function ExperienceStoryPanels({ experience }: { experience: Experiencia 
                     </>
                   );
                   return employer.url ? (
-                    <a key={`${employer.nome}-${String(index)}`} href={employer.url} target="_blank" rel="noreferrer" className="flex items-center gap-4 bg-canvas p-4 hover:bg-recessed">
+                    <a key={index} href={employer.url} target="_blank" rel="noreferrer" className="flex items-center gap-4 bg-canvas p-4 hover:bg-recessed">
                       {content}
                     </a>
                   ) : (
-                    <div key={`${employer.nome}-${String(index)}`} className="flex items-center gap-4 bg-canvas p-4">
+                    <div key={index} className="flex items-center gap-4 bg-canvas p-4">
                       {content}
                     </div>
                   );

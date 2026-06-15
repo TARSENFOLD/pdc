@@ -10,8 +10,8 @@ export interface InteractionPerfil {
   foto?: { url?: string } | null;
 }
 
-export async function getInteractionPerfil(userId: string): Promise<InteractionPerfil | null> {
-  if (!userId || userId.trim() === '') return null;
+export async function getInteractionPerfil(userId: string | null | undefined): Promise<InteractionPerfil | null> {
+  if (typeof userId !== 'string' || userId.trim() === '') return null;
   const response = await strapiGet<InteractionPerfil>('/perfis', {
     'filters[userId][$eq]': userId,
     'pagination[pageSize]': '1',

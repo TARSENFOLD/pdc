@@ -128,7 +128,10 @@ async function syncCursoItems(moduloId: string, existingItems: ExistingModuloIte
 
     if (item.persistedId) {
       const existingItem = existingItems.find((candidate) => matchesId(candidate, item.persistedId ?? ''));
-      await strapiPut(`/modulo-items/${existingItem ? persistedId(existingItem) : item.persistedId}`, body);
+      if (!existingItem) {
+        throw new Error(`Item de módulo com id ${item.persistedId} não encontrado para atualização`);
+      }
+      await strapiPut(`/modulo-items/${persistedId(existingItem)}`, body);
     } else {
       await strapiPost<unknown>('/modulo-items', body);
     }
@@ -256,9 +259,12 @@ export const cursosService = {
 
         if (modulo.persistedId) {
           const existingModule = existingModules.find((item) => matchesId(item, modulo.persistedId ?? ''));
-          const moduloDocumentId = existingModule ? persistedId(existingModule) : modulo.persistedId;
+          if (!existingModule) {
+            throw new Error(`Módulo com id ${modulo.persistedId} não encontrado para atualização`);
+          }
+          const moduloDocumentId = persistedId(existingModule);
           await strapiPut(`/modulos/${moduloDocumentId}`, body);
-          await syncCursoItems(moduloDocumentId, existingModule?.itens ?? [], modulo.itens);
+          await syncCursoItems(moduloDocumentId, existingModule.itens, modulo.itens);
         } else {
           const modRes = await strapiPost<ExistingModulo>('/modulos', body);
           await syncCursoItems(persistedId(modRes.data), [], modulo.itens);

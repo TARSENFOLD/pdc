@@ -53,9 +53,13 @@ function missingRequiredSections(secoes: ExperienciaSecao[] | undefined): string
 }
 
 function normalizeExperiencia(experiencia: Experiencia): Experiencia {
-  return experiencia.painelRealidade
-    ? { ...experiencia, painelRealidade: parsePainelRealidade(experiencia.painelRealidade) }
-    : experiencia;
+  if (!experiencia.painelRealidade) return experiencia;
+  try {
+    return { ...experiencia, painelRealidade: parsePainelRealidade(experiencia.painelRealidade) };
+  } catch (error) {
+    log.warn({ error, experienciaId: experiencia.id }, 'Falha ao normalizar painelRealidade');
+    return experiencia;
+  }
 }
 
 export const experienciaRoutes = new Hono<Vars>();

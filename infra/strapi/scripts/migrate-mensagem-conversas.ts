@@ -15,9 +15,23 @@ interface MensagemLegada {
   createdAt?: string;
 }
 
+interface ConversaMigrada {
+  id?: string | number;
+  documentId?: string;
+}
+
 function orderedPair(first: PerfilRef, second: PerfilRef): [PerfilRef, PerfilRef] {
-  const comparison = String(first.id).localeCompare(String(second.id), undefined, { numeric: true });
+  const comparison = compareParticipantIds(String(first.id), String(second.id));
   return comparison <= 0 ? [first, second] : [second, first];
+}
+
+function compareParticipantIds(first: string, second: string): number {
+  if (/^\d+$/.test(first) && /^\d+$/.test(second)) {
+    const leftNumber = BigInt(first);
+    const rightNumber = BigInt(second);
+    return leftNumber === rightNumber ? 0 : leftNumber < rightNumber ? -1 : 1;
+  }
+  return first < second ? -1 : first > second ? 1 : 0;
 }
 
 export async function migrateMensagemConversas(strapi: Core.Strapi): Promise<void> {
@@ -45,6 +59,11 @@ export async function migrateMensagemConversas(strapi: Core.Strapi): Promise<voi
         strapi.log.error(`[mensagem-conversa-migration] mensagem=${String(message.id)} participantes inválidos`);
         continue;
       }
+      if (!message.documentId) {
+        failed++;
+        strapi.log.error(`[mensagem-conversa-migration] mensagem=${String(message.id)} sem documentId`);
+        continue;
+      }
 
       try {
         const [participant1, participant2] = orderedPair(message.remetente, message.destinatario);
@@ -52,19 +71,20 @@ export async function migrateMensagemConversas(strapi: Core.Strapi): Promise<voi
         const existing = await strapi.documents('api::conversa.conversa').findMany({
           filters: { participantsKey },
           limit: 1,
+        }) as ConversaMigrada[];
+        const conversa = existing[0] ?? await createOrRefetchConversa(strapi, {
+          participant1,
+          participant2,
+          participantsKey,
+          criadoEm: message.criadoEm ?? message.createdAt ?? new Date().toISOString(),
         });
-        const conversa = existing[0] ?? await strapi.documents('api::conversa.conversa').create({
+        if (!conversa.documentId) {
+          throw new Error(`Conversa ${String(conversa.id)} sem documentId`);
+        }
+        await strapi.documents('api::mensagem.mensagem').update({
+          documentId: message.documentId,
           data: {
-            participant1: participant1.id,
-            participant2: participant2.id,
-            participantsKey,
-            criadoEm: message.criadoEm ?? message.createdAt ?? new Date().toISOString(),
-          },
-        });
-        await strapi.db.query('api::mensagem.mensagem').update({
-          where: { id: message.id },
-          data: {
-            conversa: conversa.id,
+            conversa: conversa.documentId,
           },
         });
         migrated++;
@@ -88,3 +108,31 @@ export async function migrateMensagemConversas(strapi: Core.Strapi): Promise<voi
 }
 
 export default migrateMensagemConversas;
+
+async function createOrRefetchConversa(
+  strapi: Core.Strapi,
+  input: {
+    participant1: PerfilRef;
+    participant2: PerfilRef;
+    participantsKey: string;
+    criadoEm: string;
+  },
+): Promise<ConversaMigrada> {
+  try {
+    return await strapi.documents('api::conversa.conversa').create({
+      data: {
+        participant1: input.participant1.id,
+        participant2: input.participant2.id,
+        participantsKey: input.participantsKey,
+        criadoEm: input.criadoEm,
+      },
+    }) as ConversaMigrada;
+  } catch (error) {
+    const existing = await strapi.documents('api::conversa.conversa').findMany({
+      filters: { participantsKey: input.participantsKey },
+      limit: 1,
+    }) as ConversaMigrada[];
+    if (existing[0]) return existing[0];
+    throw error;
+  }
+}

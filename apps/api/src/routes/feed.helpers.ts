@@ -177,14 +177,33 @@ export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: Fe
   ]);
 
   const postsById = new Map(feedPosts.data.map((post) => [String(post.id), post]));
+  const missingPostIds = [...new Set(partilhas.data
+    .map((share) => share.targetId)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0 && !postsById.has(id)))];
+  if (missingPostIds.length > 0) {
+    const missingPostFilters = Object.fromEntries(
+      missingPostIds.map((id, index) => [`filters[id][$in][${index.toString()}]`, id]),
+    );
+    const missingPosts = await strapiGet<StrapiEntity>('/feed-posts', {
+      ...missingPostFilters,
+      'filters[estado][$eq]': 'aprovada',
+      'pagination[pageSize]': String(missingPostIds.length),
+      populate: 'autor.foto',
+    });
+    for (const post of missingPosts.data) {
+      postsById.set(String(post.id), post);
+    }
+  }
   const shares = partilhas.data.flatMap((share) => {
     const originalPost = postsById.get(String(share.targetId));
     if (!originalPost) return [];
+    const createdAt = share.criadoEm ?? share.createdAt;
+    if (!createdAt) return [];
     return [{
       ...share,
       tipo: 'partilha' as const,
       corpo: share.nota ?? '',
-      createdAt: share.criadoEm ?? share.createdAt,
+      createdAt,
       autor: share.actor,
       originalPost,
     }];

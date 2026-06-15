@@ -87,7 +87,12 @@ commentsRoutes.post('/', verifyJwt, rateLimitComments, zValidator('json', Create
     );
   });
 
-  return c.json({ data: mapComment({ ...res.data, autor: perfil }) }, 201);
+  try {
+    return c.json({ data: mapComment({ ...res.data, autor: perfil }) }, 201);
+  } catch (error) {
+    log.error({ error, comentarioId: res.data.id }, 'Comentário criado; falha ao mapear resposta');
+    return c.json({ error: 'Comentário criado, mas não foi possível mapear a resposta' }, 500);
+  }
 });
 
 commentsRoutes.get('/list', zValidator('query', z.object({
@@ -95,17 +100,17 @@ commentsRoutes.get('/list', zValidator('query', z.object({
   targetId: z.string(),
 })), async (c) => {
   const { targetType, targetId } = c.req.valid('query');
+  const req = await strapiGet<StrapiComment>('/comments', {
+    'filters[targetType][$eq]': targetType,
+    'filters[targetId][$eq]': targetId,
+    'filters[estado][$eq]': 'ativo',
+    'sort[0]': 'createdAt:desc',
+    populate: 'autor.foto',
+  });
   try {
-    const req = await strapiGet<StrapiComment>('/comments', {
-      'filters[targetType][$eq]': targetType,
-      'filters[targetId][$eq]': targetId,
-      'filters[estado][$eq]': 'ativo',
-      'sort[0]': 'createdAt:desc',
-      populate: 'autor.foto',
-    });
     return c.json({ data: req.data.map(mapComment) });
   } catch (error) {
     log.error({ error, targetType, targetId }, 'Falha ao mapear comentários');
-    return c.json({ error: 'Não foi possível carregar os comentários' }, 502);
+    return c.json({ error: 'Não foi possível carregar os comentários' }, 500);
   }
 });

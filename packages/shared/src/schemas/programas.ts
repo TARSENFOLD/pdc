@@ -28,6 +28,13 @@ export const ProgramaPrecoPolicySchema = z.object({
       path: ['valor'],
     });
   }
+  if (policy.modo === 'gratuito' && policy.valor !== 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'O valor deve ser zero quando o programa é gratuito',
+      path: ['valor'],
+    });
+  }
 });
 export type ProgramaPrecoPolicy = z.infer<typeof ProgramaPrecoPolicySchema>;
 

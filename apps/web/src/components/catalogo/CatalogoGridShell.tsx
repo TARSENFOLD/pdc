@@ -3,6 +3,7 @@ import { CardGridSkeleton } from '../ui/Skeleton';
 import { AspirationalEmpty } from '../ui/AspirationalEmpty';
 import { Button } from '../ui/Button';
 import { AlertTriangle, SearchX, Sparkles } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 interface CatalogoGridShellProps {
   isLoading?: boolean;
@@ -29,44 +30,44 @@ export function CatalogoGridShell({
   emptyDescription = 'Experimenta outra área ou aguarda novos conteúdos.',
   emptyVariant = 'zero-results',
 }: CatalogoGridShellProps): React.ReactElement {
+  const reducedMotion = useReducedMotion();
   const EmptyIcon = emptyVariant === 'empty' ? Sparkles : SearchX;
+  const stateKey = error ? 'error' : isLoading ? 'loading' : isEmpty ? 'empty' : 'content';
 
   return (
     <div className="space-y-6" data-testid="catalogo">
       {filterBar}
-      {error ? (
-        <AspirationalEmpty
-          icon={AlertTriangle}
-          title="Não foi possível carregar este catálogo"
-          description="A ligação ao catálogo falhou. Tenta novamente sem perder os filtros atuais."
-          action={
-            onRetry ? (
-              <Button variant="outline" onClick={onRetry}>
-                Tentar novamente
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : isLoading ? (
-        <CardGridSkeleton />
-      ) : isEmpty ? (
-        <AspirationalEmpty
-          icon={EmptyIcon}
-          title={emptyTitle}
-          description={emptyDescription}
-          action={
-            onClearFilters ? (
-              <Button variant="outline" onClick={onClearFilters}>
-                Limpar filtros
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {children}
-        </div>
-      )}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={stateKey}
+          initial={{ opacity: 0, y: reducedMotion ? 0 : 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: reducedMotion ? 0 : -4 }}
+          transition={{ duration: reducedMotion ? 0.01 : 0.18 }}
+        >
+          {error ? (
+            <AspirationalEmpty
+              icon={AlertTriangle}
+              title="Não foi possível carregar este catálogo"
+              description="A ligação ao catálogo falhou. Tenta novamente sem perder os filtros atuais."
+              action={onRetry ? <Button variant="outline" onClick={onRetry}>Tentar novamente</Button> : undefined}
+            />
+          ) : isLoading ? (
+            <CardGridSkeleton />
+          ) : isEmpty ? (
+            <AspirationalEmpty
+              icon={EmptyIcon}
+              title={emptyTitle}
+              description={emptyDescription}
+              action={onClearFilters ? <Button variant="outline" onClick={onClearFilters}>Limpar filtros</Button> : undefined}
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {children}
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

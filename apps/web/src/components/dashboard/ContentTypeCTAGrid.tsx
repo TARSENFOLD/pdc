@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Card } from '../ui';
+import { GlassCard } from '../ui/GlassCard';
+import { AsymmetricButton } from '../ui/AsymmetricButton';
 import { LucideIcon } from 'lucide-react';
 
 interface CTA {
@@ -31,12 +32,24 @@ export default function ContentTypeCTAGrid({ title, ctas, gridCols = 2, classNam
       <h3 className="text-[10px] font-black uppercase tracking-widest text-ink-tertiary">{title}</h3>
       <div className={`grid ${cols} gap-4`}>
         {ctas.map((cta) => (
-          <Link key={cta.to} to={cta.to}>
-            <Card interactive className="p-4 flex flex-col items-center text-center gap-3 border-white/5 hover:border-accent/30">
-              <cta.icon size={20} className={cta.variant === 'primary' ? 'text-accent' : 'text-ink-tertiary'} />
-              <span className="text-xs font-bold">{cta.label}</span>
-            </Card>
-          </Link>
+          cta.variant === 'primary' ? (
+            <AsymmetricButton key={cta.to} asChild className="h-full min-h-24 w-full">
+              <Link to={cta.to} className="flex flex-col items-center justify-center gap-3 text-center">
+                <cta.icon size={20} aria-hidden="true" />
+                <span className="text-xs font-bold">{cta.label}</span>
+              </Link>
+            </AsymmetricButton>
+          ) : (
+            <Link key={cta.to} to={cta.to} className="group">
+              <GlassCard
+                halo={false}
+                className="flex min-h-24 flex-col items-center justify-center gap-3 rounded-sm border border-[var(--chrome-border)] p-4 text-center transition-colors group-hover:border-[var(--accent-terracotta)]"
+              >
+                <cta.icon size={20} className="text-ink-tertiary transition-colors group-hover:text-accent" aria-hidden="true" />
+                <span className="text-xs font-bold">{cta.label}</span>
+              </GlassCard>
+            </Link>
+          )
         ))}
       </div>
     </div>

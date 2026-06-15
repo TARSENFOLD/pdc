@@ -37,11 +37,11 @@ describe('ExperienceStoryPanels', () => {
   it('renderiza os três painéis e o cartão de empregador', () => {
     render(<ExperienceStoryPanels experience={EXPERIENCE} />);
 
-    expect(screen.getByText('Painel de realidade')).toBeDefined();
-    expect(screen.getByText('Mural de vozes')).toBeDefined();
-    expect(screen.getByText('Guia institucional')).toBeDefined();
+    expect(screen.getByText('Painel de realidade')).toBeTruthy();
+    expect(screen.getByText('Ana Manuel')).toBeTruthy();
+    expect(screen.getByText(/Bases científicas/)).toBeTruthy();
     expect(screen.getByRole('link', { name: /Sonangol/ }).getAttribute('href'))
       .toBe('https://www.sonangol.co.ao');
-    expect(screen.getByText('Energia')).toBeDefined();
+    expect(screen.getByText('Energia')).toBeTruthy();
   });
 });

@@ -62,6 +62,11 @@ describe('commentsRoutes', () => {
     });
 
     expect(response.status).toBe(201);
+    expect(strapiGet).toHaveBeenCalledWith('/perfis', {
+      'filters[userId][$eq]': 'user-1',
+      'pagination[pageSize]': '1',
+      populate: 'foto',
+    });
     expect(strapiPost).toHaveBeenCalledWith('/comments', expect.objectContaining({
       autor: 'perfil-doc-1',
       estado: 'ativo',

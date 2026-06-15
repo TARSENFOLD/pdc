@@ -17,7 +17,7 @@ interface ProgramaActor {
 export async function resolveProgramaActor(
   user: { id: string; role: Role },
 ): Promise<ProgramaActor | null> {
-  if (!user.id || user.id.trim() === '') return null;
+  if (typeof user.id !== 'string' || user.id.trim() === '') return null;
   const response = await strapiGet<StrapiRelation & {
     instituicaoGerida?: StrapiRelation | null;
   }>('/perfis', {
@@ -48,6 +48,9 @@ export function sameRelation(
   if (left.documentId !== undefined && right.documentId !== undefined) {
     return left.documentId === right.documentId;
   }
+  if (left.documentId !== undefined || right.documentId !== undefined) {
+    return false;
+  }
   return String(left.id) === String(right.id);
 }
 
@@ -67,7 +70,11 @@ export function canTransitionPrograma(
   role: Role,
 ): boolean {
   if (role === 'super_admin') return true;
-  if (role === 'moderador') return current === 'published' && next === 'archived';
+  if (role === 'moderador') {
+    return (current === 'review' && next === 'approved')
+      || (current === 'review' && next === 'rejected')
+      || (current === 'published' && next === 'archived');
+  }
   if (role === 'mentor' || role === 'instituicao') {
     return (current === 'draft' && next === 'review')
       || (current === 'approved' && next === 'published')

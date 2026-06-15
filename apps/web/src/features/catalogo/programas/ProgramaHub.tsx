@@ -100,7 +100,7 @@ export default function ProgramaHub({
           <div className="space-y-3 border-t border-border pt-4">
             {isEnrolled ? (
               <motion.div
-                initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
+                initial={reducedMotion ? { opacity: 0, scale: 1 } : { opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="space-y-3"
               >

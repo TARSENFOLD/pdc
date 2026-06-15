@@ -10,6 +10,7 @@ import * as reputationService from '../reputation/reputation.service.js';
 import pino from 'pino';
 
 const log = pino({ name: 'match-hook' });
+const CANDIDATE_PAGE_SIZE = 100;
 
 export interface MatchPayload {
   autorId: string;
@@ -36,7 +37,7 @@ export interface StrapiAutorMatchInfo {
 export interface StrapiEstudanteMatchInfo {
   id: number | string;
   reputacao?: number;
-  areasInteresse?: unknown;
+  areasInteresse?: string[];
 }
 
 export interface StrapiBehaviorPattern {
@@ -44,6 +45,29 @@ export interface StrapiBehaviorPattern {
   cognitiveFluidity?: number;
   resilienceIndex?: number;
   focusStability?: number;
+}
+
+async function fetchCandidateProfiles(area: string): Promise<StrapiEstudanteMatchInfo[]> {
+  const candidates: StrapiEstudanteMatchInfo[] = [];
+  let page = 1;
+  let pageCount = 1;
+
+  do {
+    const response = await strapiGet<StrapiEstudanteMatchInfo>('/perfis', {
+      'filters[tipo][$eq]': 'estudante',
+      'filters[areasInteresse][$containsi]': area,
+      'pagination[page]': String(page),
+      'pagination[pageSize]': String(CANDIDATE_PAGE_SIZE),
+      'fields[0]': 'id',
+      'fields[1]': 'reputacao',
+      'fields[2]': 'areasInteresse',
+    });
+    candidates.push(...response.data);
+    pageCount = response.meta.pagination.pageCount;
+    page++;
+  } while (page <= pageCount);
+
+  return candidates;
 }
 
 /**
@@ -99,19 +123,13 @@ export const matchHook: EcosystemHook<MatchPayload> = {
       const minScore = tierThresholds[autorTier] || 0.40;
 
       // 2. Procurar estudantes candidatos
-      const resEstudantes = await strapiGet<StrapiEstudanteMatchInfo>('/perfis', {
-        'filters[tipo][$eq]': 'estudante',
-        'pagination[pageSize]': '100',
-        'fields[0]': 'id',
-        'fields[1]': 'reputacao',
-        'fields[2]': 'areasInteresse',
-      });
+      const estudantes = await fetchCandidateProfiles(area);
 
-      const normalizedArea = area.toLocaleUpperCase();
-      const candidatos = resEstudantes.data.filter((perfil) => {
+      const normalizedArea = area.toUpperCase();
+      const candidatos = estudantes.filter((perfil) => {
         if (!Array.isArray(perfil.areasInteresse)) return false;
         return perfil.areasInteresse.some(
-          (candidateArea) => typeof candidateArea === 'string' && candidateArea.toLocaleUpperCase() === normalizedArea,
+          (candidateArea) => candidateArea.toUpperCase() === normalizedArea,
         );
       });
       if (candidatos.length === 0) return { status: 'sent', data: { matchesCreated: 0, candidatesEvaluated: 0, minScore } };

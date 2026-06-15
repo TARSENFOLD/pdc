@@ -14,6 +14,13 @@ interface FeedCardContentProps {
   readLessLabel: string;
 }
 
+function relativeTime(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? 'há instantes'
+    : formatDistanceToNow(date, { addSuffix: true, locale: pt });
+}
+
 export function FeedCardContent({
   item,
   displayedContent,
@@ -47,11 +54,11 @@ export function FeedCardContent({
       {(item.mediaUrls?.length ?? 0) > 0 && (
         <div className={`grid gap-2 overflow-hidden rounded-sm border border-[var(--chrome-border)] bg-black ${(item.mediaUrls?.length ?? 0) > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {item.mediaUrls?.map((url, index) => (
-            /\.mp4(?:$|\?)/i.test(url) ? (
+            /\.(mp4|webm|mov|m4v)(?:[?#]|$)/i.test(url) ? (
               <video key={`${url}-${String(index)}`} src={url} controls preload="metadata" className="max-h-[500px] w-full object-contain" />
             ) : (
               <Link key={`${url}-${String(index)}`} to={`/app/feed-posts/${item.id}`} className="group block overflow-hidden">
-                <img src={url} alt="" className="max-h-[500px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]" />
+                <img src={url} alt={`${item.titulo} - imagem ${String(index + 1)}`} className="max-h-[500px] w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]" />
               </Link>
             )
           ))}
@@ -66,7 +73,7 @@ export function FeedCardContent({
           <div className="mb-3 flex items-center gap-3">
             <Avatar
               src={item.originalPost.avatar ?? undefined}
-              fallback={(item.originalPost.autorNome ?? 'U').substring(0, 2)}
+              fallback={(item.originalPost.autorNome?.trim() || 'U').substring(0, 2)}
               className="h-8 w-8"
             />
             <div>
@@ -74,7 +81,7 @@ export function FeedCardContent({
                 {item.originalPost.autorNome ?? 'Utilizador PDC'}
               </p>
               <p className="text-[10px] text-[var(--ink-tertiary)]">
-                {formatDistanceToNow(new Date(item.originalPost.createdAt), { addSuffix: true, locale: pt })}
+                {relativeTime(item.originalPost.createdAt)}
               </p>
             </div>
           </div>

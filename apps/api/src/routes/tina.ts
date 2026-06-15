@@ -24,7 +24,7 @@ tinaRoutes.post('/chat', optionalJwt, zValidator('json', ChatPayloadSchema), asy
   const { message, messages, stream } = c.req.valid('json');
   const prompt = message ?? messages?.at(-1)?.content;
   if (!prompt) return c.json({ error: 'message is required' }, 400);
-  const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
+  const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
   
   const user = c.get('user');
   const res = await tinaService.chat(

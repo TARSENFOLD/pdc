@@ -11,6 +11,11 @@ export default factories.createCoreController('api::inscricao-programa.inscricao
     if (!inscricaoId || (action !== 'complete' && action !== 'revert') || typeof timestamp !== 'string') {
       return ctx.badRequest('Transição de conclusão inválida');
     }
+    const parsedTimestamp = new Date(timestamp);
+    if (Number.isNaN(parsedTimestamp.getTime())) {
+      return ctx.badRequest('Timestamp de conclusão inválido');
+    }
+    const canonicalTimestamp = parsedTimestamp.toISOString();
 
     const isComplete = action === 'complete';
     try {
@@ -18,11 +23,11 @@ export default factories.createCoreController('api::inscricao-programa.inscricao
         where: {
           id: inscricaoId,
           concluido: !isComplete,
-          ...(isComplete ? {} : { dataConclusao: timestamp }),
+          ...(isComplete ? {} : { dataConclusao: canonicalTimestamp }),
         },
         data: {
           concluido: isComplete,
-          dataConclusao: isComplete ? timestamp : null,
+          dataConclusao: isComplete ? canonicalTimestamp : null,
         },
       });
       ctx.body = { data: { updated: result.count } };

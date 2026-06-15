@@ -143,7 +143,6 @@ export function ItemPlayer() {
   return (
     <div className="relative flex min-h-[calc(100vh-64px)] bg-canvas">
       <ItemPlayerHeader
-        key={`${itemId}-${String(completedCount)}-${String(marcarMutation.isPending)}`}
         cursoId={cursoId}
         title={item.titulo}
         completedCount={completedCount}

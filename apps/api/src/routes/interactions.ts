@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import pino from 'pino';
 import {
   StrapiHttpError,
   strapiGet,
@@ -27,6 +28,7 @@ import {
 } from './interactions.types.js';
 
 export const interactionRoutes = new Hono<{ Variables: AuthVariables }>();
+const log = pino({ name: 'routes:interactions' });
 
 interactionRoutes.use('*', verifyJwt);
 
@@ -39,7 +41,7 @@ interactionRoutes.post('/like', rateLimitInteractions, zValidator('json', Toggle
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
 
   const p: Record<string, string> = {
-    'filters[actor][id][$eq]': String(perfil.id),
+    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
   };
@@ -65,6 +67,8 @@ interactionRoutes.post('/like', rateLimitInteractions, zValidator('json', Toggle
       autorId: String(interactionPerfilId(perfil)),
       targetType,
       targetId,
+    }).catch((err: unknown) => {
+      log.error({ err, userId: user.id, targetType, targetId }, 'Like persistido; falha ao publicar evento no outbox');
     });
     return c.json({ liked: true });
   }
@@ -87,7 +91,7 @@ interactionRoutes.get('/like/status', zValidator('query', z.object({
   });
 
   const exactUserReq = await strapiGet<StrapiInteractionEntity>('/likes', {
-    'filters[actor][id][$eq]': String(perfil.id),
+    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
   });
@@ -109,7 +113,7 @@ interactionRoutes.post('/bookmark', rateLimitInteractions, zValidator('json', To
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
 
   const p: Record<string, string> = {
-    'filters[actor][id][$eq]': String(perfil.id),
+    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
   };
@@ -132,6 +136,8 @@ interactionRoutes.post('/bookmark', rateLimitInteractions, zValidator('json', To
       autorId: String(interactionPerfilId(perfil)),
       targetType,
       targetId,
+    }).catch((err: unknown) => {
+      log.error({ err, userId: user.id, targetType, targetId }, 'Bookmark persistido; falha ao publicar evento no outbox');
     });
     return c.json({ bookmarked: true });
   }
@@ -146,7 +152,7 @@ interactionRoutes.get('/bookmark/status', zValidator('query', z.object({
   const perfil = await getInteractionPerfil(user.id);
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
   const existing = await strapiGet<StrapiInteractionEntity>('/bookmarks', {
-    'filters[actor][id][$eq]': String(perfil.id),
+    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
     'pagination[pageSize]': '1',
@@ -160,7 +166,7 @@ interactionRoutes.get('/bookmarks', async (c) => {
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
 
   const req = await strapiGet<StrapiInteractionEntity>('/bookmarks', {
-    'filters[actor][id][$eq]': String(perfil.id),
+    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
   });
 
   const data = req.data.map((entity) => toBookmark(entity, perfil));
@@ -177,7 +183,7 @@ interactionRoutes.post('/share', rateLimitInteractions, zValidator('json', Share
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
 
   const filters = {
-    'filters[actor][id][$eq]': String(perfil.id),
+    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
     'filters[targetType][$eq]': payload.targetType,
     'filters[targetId][$eq]': payload.targetId,
     'filters[canal][$eq]': payload.canal,
@@ -230,6 +236,14 @@ interactionRoutes.post('/share', rateLimitInteractions, zValidator('json', Share
     autorId: String(interactionPerfilId(perfil)),
     targetType: payload.targetType,
     targetId: payload.targetId,
+  }).catch((err: unknown) => {
+    log.error({
+      err,
+      userId: user.id,
+      targetType: payload.targetType,
+      targetId: payload.targetId,
+      canal: payload.canal,
+    }, 'Partilha persistida; falha ao publicar evento no outbox');
   });
 
   const count = await strapiGet<unknown>('/partilhas', {
@@ -255,7 +269,7 @@ interactionRoutes.get('/share/status', zValidator('query', z.object({
 
   const [mine, all] = await Promise.all([
     strapiGet<StrapiShare>('/partilhas', {
-      'filters[actor][id][$eq]': String(perfil.id),
+      'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
       'filters[targetType][$eq]': targetType,
       'filters[targetId][$eq]': targetId,
       'filters[canal][$eq]': 'interno',
@@ -284,12 +298,14 @@ interactionRoutes.delete('/share/:id', async (c) => {
   const existing = await strapiGet<StrapiShare>('/partilhas', {
     'filters[$and][0][$or][0][id][$eq]': shareId,
     'filters[$and][0][$or][1][documentId][$eq]': shareId,
-    'filters[$and][1][actor][id][$eq]': String(perfil.id),
-    'filters[$and][2][canal][$eq]': 'interno',
+    'filters[$and][1][actor][id][$eq]': String(interactionPerfilId(perfil)),
     'pagination[pageSize]': '1',
   });
   const share = existing.data[0];
   if (!share) return c.json({ error: 'Republicação não encontrada' }, 404);
+  if (share.canal !== 'interno') {
+    return c.json({ error: 'Apenas republicações internas podem ser removidas' }, 400);
+  }
   await strapiDelete(`/partilhas/${String(share.documentId ?? share.id)}`);
   return c.json({ shared: false });
 });

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useFocusHeader } from '@/components/layout/useFocusHeader';
@@ -15,7 +16,7 @@ interface ItemPlayerHeaderProps {
 }
 
 export function ItemPlayerHeader(props: ItemPlayerHeaderProps): null {
-  useFocusHeader({
+  const header = useMemo(() => ({
     title: props.title,
     backTo: `/app/cursos/${props.cursoId}`,
     progress: (
@@ -49,6 +50,17 @@ export function ItemPlayerHeader(props: ItemPlayerHeaderProps): null {
         </Button>
       </>
     ),
-  });
+  }), [
+    props.completedCount,
+    props.concluded,
+    props.cursoId,
+    props.onComplete,
+    props.onOpenCurriculum,
+    props.pending,
+    props.progressPercent,
+    props.title,
+    props.totalCount,
+  ]);
+  useFocusHeader(header);
   return null;
 }

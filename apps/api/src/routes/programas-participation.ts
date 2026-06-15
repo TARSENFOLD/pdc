@@ -157,7 +157,7 @@ programaParticipationRoutes.post('/:id/inscricao', verifyJwt, async (c) => {
       }
       throw eventError;
     }
-    return c.json({ id: created.data.id }, 201);
+    return c.json({ id: inscricaoPersistedId(created.data) }, 201);
   } catch (error) {
     log.error({ error, programaId, userId }, 'Falha ao processar inscrição em Programa');
     if (error instanceof ProgramaParticipationRollbackError) {
@@ -181,6 +181,7 @@ programaParticipationRoutes.post('/:id/concluir', verifyJwt, async (c) => {
     const inscricoes = await strapiGet<StrapiInscricaoPrograma>('/inscricoes-programas', {
       'filters[perfil][id][$eq]': perfilId,
       'filters[programa][id][$eq]': programaId,
+      'pagination[pageSize]': '1',
     });
     const inscricao = inscricoes.data[0];
     if (!inscricao) return c.json({ error: 'Inscrição não encontrada' }, 404);
@@ -189,13 +190,13 @@ programaParticipationRoutes.post('/:id/concluir', verifyJwt, async (c) => {
     const persistedId = inscricaoPersistedId(inscricao);
     const completionTimestamp = new Date().toISOString();
     const transition = await strapiPost<{ updated: number }>(
-      `/inscricoes-programas/${String(inscricao.id)}/transicao-conclusao`,
+      `/inscricoes-programas/${persistedId}/transicao-conclusao`,
       {
         action: 'complete',
         timestamp: completionTimestamp,
       },
     );
-    if (transition.data.updated === 0) {
+    if (transition.data.updated !== 1) {
       return c.json({ success: true, alreadyCompleted: true });
     }
     try {
@@ -207,7 +208,7 @@ programaParticipationRoutes.post('/:id/concluir', verifyJwt, async (c) => {
       try {
         await retryCompensation(async () => {
           const rollback = await strapiPost<{ updated: number }>(
-            `/inscricoes-programas/${String(inscricao.id)}/transicao-conclusao`,
+            `/inscricoes-programas/${persistedId}/transicao-conclusao`,
             {
               action: 'revert',
               timestamp: completionTimestamp,

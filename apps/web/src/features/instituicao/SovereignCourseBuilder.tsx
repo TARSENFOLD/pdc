@@ -19,9 +19,18 @@ import { Spinner } from '@/components/ui';
 
 type FormValues = z.infer<typeof CriarCursoPayloadSchema>;
 type EditableCursoState = NonNullable<FormValues['estado']>;
+type CursoVisibilidade = NonNullable<FormValues['visibilidade']>;
 
 function toEditableState(state: string | undefined): EditableCursoState | undefined {
   return state === 'draft' || state === 'review' || state === 'published' ? state : undefined;
+}
+
+function resolveCursoVisibilidade(curso: unknown): CursoVisibilidade {
+  if (!curso || typeof curso !== 'object' || !('visibilidade' in curso)) return 'publico';
+  const value = (curso as Record<string, unknown>).visibilidade;
+  return value === 'publico' || value === 'privado' || value === 'institucional'
+    ? value
+    : 'publico';
 }
 
 export function SovereignCourseBuilder() {
@@ -66,7 +75,7 @@ export function SovereignCourseBuilder() {
       area: curso.area ?? 'TECNOLOGIA',
       nivel: curso.nivel === 'basico' || curso.nivel === 'medio' || curso.nivel === 'avancado' ? curso.nivel : 'medio',
       capaUrl: curso.capaUrl ?? undefined,
-      visibilidade: 'publico',
+      visibilidade: resolveCursoVisibilidade(curso),
       gratuito: curso.gratuito ?? true,
       preco: curso.preco ?? 0,
       moeda: curso.moeda ?? 'AOA',

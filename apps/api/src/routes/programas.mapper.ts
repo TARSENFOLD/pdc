@@ -1,6 +1,6 @@
 import type { CriarProgramaPayload, Programa } from '@pdc/shared';
 
-type ProgramaRelation = { id: string | number };
+type ProgramaRelation = { id: string | number; documentId?: string };
 
 export interface StrapiProgramaRecord {
   id: string | number;
@@ -37,12 +37,12 @@ export function toStrapiPrograma(
 
   return {
     ...fields,
-    ...(cursosIds === undefined ? {} : { cursos: cursosIds }),
-    ...(experienciasIds === undefined ? {} : { experiencias: experienciasIds }),
-    ...(simulacoesIds === undefined ? {} : { simulacoes: simulacoesIds }),
-    ...(projetosIds === undefined ? {} : { projetos: projetosIds }),
-    ...(instituicaoId === undefined ? {} : { instituicao: instituicaoId }),
-    ...(responsavelId === undefined ? {} : { responsavel: responsavelId }),
+    ...(cursosIds != null ? { cursos: cursosIds } : {}),
+    ...(experienciasIds != null ? { experiencias: experienciasIds } : {}),
+    ...(simulacoesIds != null ? { simulacoes: simulacoesIds } : {}),
+    ...(projetosIds != null ? { projetos: projetosIds } : {}),
+    ...(instituicaoId != null ? { instituicao: instituicaoId } : {}),
+    ...(responsavelId != null ? { responsavel: responsavelId } : {}),
   };
 }
 
@@ -58,11 +58,15 @@ export function fromStrapiPrograma<T extends StrapiProgramaRecord>(
     experienciasIds: relationIds(programa.experiencias),
     simulacoesIds: relationIds(programa.simulacoes),
     projetosIds: relationIds(programa.projetos),
-    instituicaoId: programa.instituicao ? String(programa.instituicao.id) : undefined,
-    responsavelId: programa.responsavel ? String(programa.responsavel.id) : undefined,
+    instituicaoId: relationId(programa.instituicao),
+    responsavelId: relationId(programa.responsavel),
   };
 }
 
 function relationIds(relations: ProgramaRelation[] | undefined): string[] {
-  return relations?.map((relation) => String(relation.id)) ?? [];
+  return relations?.map((relation) => relationId(relation)).filter((id): id is string => id !== undefined) ?? [];
+}
+
+function relationId(relation: ProgramaRelation | undefined): string | undefined {
+  return relation?.documentId ?? (relation?.id !== undefined ? String(relation.id) : undefined);
 }

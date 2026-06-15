@@ -13,11 +13,14 @@ export function ProjetoTagSelector({ tags, onChange, error }: ProjetoTagSelector
 
   const addTag = () => {
     const tag = input.trim().replace(/^#/, '');
-    if (!tag || tags.some((current) => current.toLocaleLowerCase() === tag.toLocaleLowerCase())) {
+    if (!tag || tags.some((current) => current.toLowerCase() === tag.toLowerCase())) {
       setInput('');
       return;
     }
-    if (tags.length >= 10) return;
+    if (tags.length >= 10) {
+      setInput('');
+      return;
+    }
     onChange([...tags, tag]);
     setInput('');
   };

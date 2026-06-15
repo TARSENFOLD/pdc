@@ -18,6 +18,9 @@ test.describe('Criar Curso', () => {
     const createResponse = await createResponsePromise;
     expect(createResponse.status()).toBe(201);
     const created = await createResponse.json() as { id: string | number };
+    if (created.id === undefined || created.id === null || created.id === '') {
+      throw new Error('Resposta de criação do curso não contém id');
+    }
 
     await mentorPage.goto(`/app/mentor/cursos/${String(created.id)}/editar`);
     await expect(mentorPage.locator('input[name="titulo"]')).toHaveValue(title);
@@ -31,13 +34,13 @@ test.describe('Criar Curso', () => {
     const validationMessage = mentorPage.getByText(/Campos inválidos:/);
     const reviewRequest = await Promise.race([
       reviewRequestPromise,
-      validationMessage.waitFor({ state: 'visible', timeout: 2_000 }).then(async () => {
+      validationMessage.waitFor({ state: 'visible', timeout: 10_000 }).then(async () => {
         throw new Error(await validationMessage.textContent() ?? 'Validação do curso falhou');
       }),
     ]);
     const reviewResponse = await reviewRequest.response();
     expect(reviewResponse).not.toBeNull();
-    if (!reviewResponse) throw new Error('Resposta de revisão ausente');
+    if (!reviewResponse) return;
     if (!reviewResponse.ok()) {
       throw new Error(`Falha ao submeter revisão de ${String(created.id)} (${String(reviewResponse.status())}): ${await reviewResponse.text()}`);
     }

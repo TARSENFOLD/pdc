@@ -174,6 +174,8 @@ describe('G15: EcosystemHooks Integration', () => {
     });
     expect(strapiGet).toHaveBeenNthCalledWith(2, '/perfis', {
       'filters[tipo][$eq]': 'estudante',
+      'filters[areasInteresse][$containsi]': 'SAUDE',
+      'pagination[page]': '1',
       'pagination[pageSize]': '100',
       'fields[0]': 'id',
       'fields[1]': 'reputacao',

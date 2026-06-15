@@ -231,9 +231,13 @@ mensagensRoutes.post(
         criadoEm: new Date().toISOString(),
       });
 
-      await strapiPut(`/conversas/${persistedEntityId(conversa)}`, {
-        ultimaMensagem: persistedEntityId(criada.data),
-      });
+      try {
+        await strapiPut(`/conversas/${persistedEntityId(conversa)}`, {
+          ultimaMensagem: persistedEntityId(criada.data),
+        });
+      } catch (updateError) {
+        log.warn({ updateError, conversaId: persistedEntityId(conversa) }, 'Mensagem criada; falha ao atualizar ultimaMensagem');
+      }
       await eventBus.publishWithOutbox(DomainEventName.MENSAGEM_ENVIADA, {
         mensagemId: String(criada.data.id),
         conversaId: String(conversa.id),

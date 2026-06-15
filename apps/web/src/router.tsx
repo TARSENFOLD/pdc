@@ -17,6 +17,7 @@ import { Spinner } from '@/components/ui';
 import { TermosPage } from '@/pages/TermosPage';
 import { PrivacidadePage } from '@/pages/PrivacidadePage';
 import { DashboardRedirect, RoleGuard } from './router-guards';
+import { LegacyMentorSimulacaoEditRedirect } from '@/features/simulacoes/LegacyMentorSimulacaoEditRedirect';
 
 const ReputacaoPage = React.lazy(() => import('@/features/reputacao/ReputacaoPage').then(m => ({ default: m.ReputacaoPage })));
 
@@ -42,6 +43,8 @@ const ConfiguracoesPage = React.lazy(() => import('@/features/perfil/Configuraco
 const ProjetoListPage = React.lazy(() => import('@/features/projetos/ProjetoListPage').then(m => ({ default: m.ProjetoListPage })));
 const ProjetoDetailPage = React.lazy(() => import('@/features/projetos/ProjetoDetailPage').then(m => ({ default: m.ProjetoDetailPage })));
 const ProjetoFormPage = React.lazy(() => import('@/features/projetos/ProjetoFormPage').then(m => ({ default: m.ProjetoFormPage })));
+const ProjetoColaboracaoPage = React.lazy(() => import('@/features/projetos/ProjetoColaboracaoPage').then(m => ({ default: m.ProjetoColaboracaoPage })));
+const ProjetoPedidosPage = React.lazy(() => import('@/features/projetos/ProjetoPedidosPage').then(m => ({ default: m.ProjetoPedidosPage })));
 
 const MentoriaListPage = React.lazy(() => import('@/features/mentorias/MentoriaListPage').then(m => ({ default: m.MentoriaListPage })));
 const ConquistasPage = React.lazy(() => import('@/features/conquistas/ConquistasPage').then(m => ({ default: m.ConquistasPage })));
@@ -175,6 +178,8 @@ export const router = createBrowserRouter([
       { path: 'projetos/novo', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoFormPage /></Suspense> },
       { path: 'projetos/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoDetailPage /></Suspense> },
       { path: 'projetos/:id/editar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoFormPage /></Suspense> },
+      { path: 'projetos/:id/colaboracao', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoColaboracaoPage /></Suspense> },
+      { path: 'projetos/:id/pedidos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoPedidosPage /></Suspense> },
       { path: 'mentorias', element: <MentoriaListPage /> },
       { path: 'conquistas', element: <ConquistasPage /> },
       { path: 'conquistas/criar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ConquistaManualComposer /></Suspense> },
@@ -199,7 +204,7 @@ export const router = createBrowserRouter([
       { path: 'mentor/simulacoes', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><MentorSimulacoesPage /></RoleGuard> },
       { path: 'mentor/simulacoes/criar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
       { path: 'mentor/simulacoes/:id/editar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
-      { path: 'mentor/simulacoes/editar/:id', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
+      { path: 'mentor/simulacoes/editar/:id', element: <LegacyMentorSimulacaoEditRedirect /> },
       { path: 'mentor/upload', element: <RoleGuard allowed={['mentor', 'super_admin']}><UploadConteudoPage /></RoleGuard> },
       { path: 'mentor/estudantes/inscritos', element: <RoleGuard allowed={['mentor', 'super_admin']}><EstudantesInscritosPage /></RoleGuard> },
       { path: 'mentor/mentorados', element: <RoleGuard allowed={['mentor', 'super_admin']}><MentoradosPage /></RoleGuard> },

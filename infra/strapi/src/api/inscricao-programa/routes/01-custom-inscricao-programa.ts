@@ -4,7 +4,11 @@ export default {
       method: 'POST',
       path: '/inscricoes-programas/:id/transicao-conclusao',
       handler: 'inscricao-programa.transitionCompletion',
-      config: {},
+      config: {
+        auth: {
+          scope: ['api::inscricao-programa.inscricao-programa.transitionCompletion'],
+        },
+      },
     },
   ],
 };

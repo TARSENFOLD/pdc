@@ -150,10 +150,9 @@ export default function SidebarContent({ onNavigate, collapsed = false }: Sideba
         <button
           onClick={() => { void logout(); }}
           title={collapsed ? 'Sair do PDC' : undefined}
-          className={`flex w-full items-center rounded-lg transition-colors duration-150 min-h-[44px] hover:bg-red-500/10 ${
+          className={`flex w-full items-center rounded-lg transition-colors duration-150 min-h-[44px] text-accent-danger hover:bg-accent-danger/10 ${
             collapsed ? 'justify-center px-0 py-3 mx-0' : 'gap-3 px-3 py-2 text-sm mx-0'
           }`}
-          style={{ color: '#ef4444' }}
         >
           <LogOut size={18} className="shrink-0" />
           {!collapsed && <span>Sair do PDC</span>}

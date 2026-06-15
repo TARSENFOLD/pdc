@@ -1,18 +1,26 @@
+import { useMemo } from 'react';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import FocusHeader from '../FocusHeader';
 import FocusModeProvider from '../FocusModeProvider';
 import { getFocusRouteTitle, isFocusMode } from '../focus-routes';
 import { useFocusHeader } from '../useFocusHeader';
+import { LegacyMentorSimulacaoEditRedirect } from '@/features/simulacoes/LegacyMentorSimulacaoEditRedirect';
 
 function RegisteredHeader(): null {
-  useFocusHeader({
+  const header = useMemo(() => ({
     title: 'Título registado',
     progress: <span>Etapa 2 de 4</span>,
     actions: <button type="button">Guardar</button>,
-  });
+  }), []);
+  useFocusHeader(header);
   return null;
+}
+
+function CurrentLocation(): React.ReactElement {
+  const location = useLocation();
+  return <output>{location.pathname}</output>;
 }
 
 describe('focus mode routes', () => {
@@ -33,6 +41,19 @@ describe('focus mode routes', () => {
     '/app/home',
   ])('não ativa focus mode fora dos builders em %s', (pathname) => {
     expect(isFocusMode(pathname)).toBe(false);
+  });
+
+  it('preserva o id ao redirecionar a edição legada de Simulação', () => {
+    render(
+      <MemoryRouter initialEntries={['/app/mentor/simulacoes/editar/sim-1']}>
+        <Routes>
+          <Route path="/app/mentor/simulacoes/editar/:id" element={<LegacyMentorSimulacaoEditRedirect />} />
+          <Route path="/app/mentor/simulacoes/:id/editar" element={<CurrentLocation />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('/app/mentor/simulacoes/sim-1/editar')).toBeDefined();
   });
 });
 

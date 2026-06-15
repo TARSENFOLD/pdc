@@ -13,19 +13,27 @@ export default factories.createCoreController('api::notificacao.notificacao', ({
       return ctx.badRequest('userId é obrigatório');
     }
     try {
+      const perfil = await strapi.db.query('api::perfil.perfil').findOne({
+        where: { userId },
+        select: ['id'],
+      }) as { id: string | number } | null;
+      if (!perfil) {
+        return ctx.notFound('Perfil não encontrado');
+      }
+      const timestamp = new Date().toISOString();
       const result = await strapi.db.query('api::notificacao.notificacao').updateMany({
         where: {
-          perfil: { userId },
+          perfil: perfil.id,
           lida: false,
         },
         data: {
           lida: true,
-          lidaEm: new Date().toISOString(),
+          lidaEm: timestamp,
         },
       });
       ctx.body = { data: { updated: result.count } };
     } catch (error) {
-      strapi.log.error('Falha ao marcar notificações como lidas', { error, userId });
+      strapi.log.error('Falha ao marcar notificações como lidas', { error });
       return ctx.internalServerError('Não foi possível atualizar as notificações');
     }
   },

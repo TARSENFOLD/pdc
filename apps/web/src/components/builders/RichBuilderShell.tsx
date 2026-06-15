@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { BuilderStepContext } from './builder-step-context';
 
@@ -31,6 +31,11 @@ export default function RichBuilderShell({
   onStepChange,
 }: RichBuilderShellProps): React.JSX.Element {
   const [internalStep, setInternalStep] = useState(steps[0]?.id ?? null);
+  useEffect(() => {
+    if (controlledStep !== undefined) return;
+    const internalStepValid = steps.some((step) => step.id === internalStep);
+    if (!internalStepValid) setInternalStep(steps[0]?.id ?? null);
+  }, [controlledStep, internalStep, steps]);
   const requestedStep = controlledStep ?? internalStep;
   const activeStep = steps.some((step) => step.id === requestedStep)
     ? requestedStep

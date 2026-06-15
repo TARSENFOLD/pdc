@@ -12,7 +12,7 @@ interface TinaPerfil {
 }
 
 function roleLabel(role: Role): string {
-  const labels: Record<Role, string> = {
+  const labels: Partial<Record<Role, string>> = {
     estudante: 'Estudante',
     mentor: 'Mentor',
     instituicao: 'Instituição',
@@ -21,7 +21,7 @@ function roleLabel(role: Role): string {
     super_admin: 'Administrador da plataforma',
     patrocinador: 'Patrocinador',
   };
-  return labels[role];
+  return labels[role] ?? role;
 }
 
 async function getPerfilContext(userId: string): Promise<string> {

@@ -7,6 +7,24 @@ interface Props {
   errors: FieldErrors<CriarCursoPayload>;
 }
 
+const AREA_LABELS: Record<string, string> = {
+  SAUDE: 'Saúde',
+  ENGENHARIA: 'Engenharia',
+  TECNOLOGIA: 'Tecnologia',
+  DIREITO: 'Direito',
+  GESTAO: 'Gestão',
+  EDUCACAO: 'Educação',
+  ARTES: 'Artes',
+  CIENCIAS_AGRARIAS: 'Ciências Agrárias',
+  CIENCIAS_SOCIAIS: 'Ciências Sociais',
+  COMUNICACAO: 'Comunicação',
+  CIENCIAS_NATURAIS: 'Ciências Naturais',
+  ARQUITETURA: 'Arquitetura',
+  TURISMO_HOTELARIA: 'Turismo e Hotelaria',
+  DESPORTO: 'Desporto',
+  OUTRA: 'Outra',
+};
+
 export function CourseBaseInfo({ register, errors }: Props) {
   return (
     <div className="max-w-3xl space-y-7">
@@ -25,7 +43,7 @@ export function CourseBaseInfo({ register, errors }: Props) {
            <div className="space-y-1">
               <label className="text-sm font-medium text-ink-secondary">Área vocacional</label>
               <select {...register('area')} className="min-h-11 w-full rounded-sm border border-border bg-canvas px-4 text-sm text-ink-primary outline-none focus:border-accent">
-                {AreaVocacionalSchema.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                {AreaVocacionalSchema.options.map(opt => <option key={opt} value={opt}>{AREA_LABELS[opt] ?? opt}</option>)}
               </select>
            </div>
            <div className="space-y-1">

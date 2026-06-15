@@ -20,17 +20,34 @@ const ACTION_LABELS: Record<string, string> = {
   projeto: 'Abrir',
 };
 
+const INTERACTION_TARGET_TYPES = new Set<string>([
+  'curso',
+  'simulacao',
+  'experiencia',
+  'projeto',
+  'mentor',
+  'instituicao',
+  'post',
+  'conquista',
+]);
+
+function toInteractionTargetType(tipo: string): InteractionTargetType | null {
+  return INTERACTION_TARGET_TYPES.has(tipo) ? tipo as InteractionTargetType : null;
+}
+
 function getLink(item: FeedItem): string {
   switch (item.tipo) {
     case 'curso': return `/app/cursos/${item.slug ?? item.id}`;
     case 'simulacao': return `/app/simulacoes/${item.slug ?? item.id}`;
     case 'experiencia': return `/app/experiencias/${item.slug ?? item.id}`;
     case 'projeto': return `/app/projetos/${item.id}`;
-    default: return '#';
+    default: return '/app/catalogo';
   }
 }
 
 export function FeedContentCard({ item }: { item: FeedItem }) {
+  const targetType = toInteractionTargetType(item.tipo);
+
   return (
     <div className="py-5 border-b border-ink-tertiary/10 hover:bg-elevated transition-colors group">
       <div className="flex justify-between items-start mb-3">
@@ -78,15 +95,19 @@ export function FeedContentCard({ item }: { item: FeedItem }) {
 
       <div className="flex items-center justify-between pt-2">
         <div className="flex items-center gap-2">
-          <LikeButton
-            targetType={item.tipo as InteractionTargetType}
-            targetId={item.id}
-            initialCount={item.stats?.likes ?? 0}
-          />
-          <BookmarkButton
-            targetType={item.tipo as InteractionTargetType}
-            targetId={item.id}
-          />
+          {targetType && (
+            <>
+              <LikeButton
+                targetType={targetType}
+                targetId={item.id}
+                initialCount={item.stats?.likes ?? 0}
+              />
+              <BookmarkButton
+                targetType={targetType}
+                targetId={item.id}
+              />
+            </>
+          )}
         </div>
         <Link to={getLink(item)}>
           <Button size="sm" variant="ghost" className="gap-1.5 text-accent">

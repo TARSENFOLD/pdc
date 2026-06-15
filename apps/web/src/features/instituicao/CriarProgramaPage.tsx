@@ -33,6 +33,7 @@ const PROGRAMA_FIELD_LABELS: Record<string, string> = {
   projetosIds: 'Projetos',
   recursos: 'Recursos',
   precoPolicy: 'Modelo de acesso',
+  moeda: 'Moeda',
 };
 
 export default function CriarProgramaPage() {

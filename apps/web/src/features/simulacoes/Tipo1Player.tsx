@@ -67,22 +67,22 @@ export const Tipo1Player = ({ simulacao }: Props) => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-700">
+    <div className="grid grid-cols-1 gap-8 animate-in fade-in duration-700 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-6">
-        <Card className="overflow-hidden bg-black aspect-video relative group border-0 shadow-2xl">
+        <Card className="group relative aspect-video overflow-hidden border border-[var(--chrome-border)] bg-[var(--chrome-surface)] shadow-[var(--elevation-2)]">
           {!videoStarted ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-t from-black/80 to-transparent">
-              <Button 
-                size="lg" 
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--chrome-surface)]">
+              <Button
+                size="lg"
                 onClick={handleStartVideo}
-                className="rounded-full w-20 h-20 flex items-center justify-center p-0 bg-white text-black hover:scale-110 transition-transform"
+                className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--ink-on-accent)] p-0 text-[var(--chrome-surface)] transition-opacity hover:opacity-90"
               >
                 <span className="text-3xl ml-1">▶</span>
               </Button>
-              <p className="mt-4 text-ink-primary font-medium">Assistir Introdução do Caso</p>
+              <p className="mt-4 font-medium text-[var(--ink-on-accent)]">Assistir introdução do caso</p>
             </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-ink-primary bg-slate-900">
+            <div className="flex h-full w-full items-center justify-center bg-[var(--chrome-surface)] text-[var(--ink-on-accent)]">
               {simulacao.conteudoUrl ? (
                 <video 
                   src={simulacao.conteudoUrl} 
@@ -93,7 +93,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
               ) : (
                 <div className="text-center space-y-4">
                   <Clapperboard size={48} aria-hidden={true} className="animate-pulse text-ink-primary" />
-                  <p className="text-lg text-slate-400">A reproduzir conteúdo da simulação...</p>
+                  <p className="text-lg text-[var(--ink-on-accent)] opacity-70">A reproduzir conteúdo da simulação...</p>
                   <Button variant="secondary" size="sm" onClick={() => { setVideoStarted(false); }}>Reiniciar</Button>
                 </div>
               )}
@@ -102,8 +102,8 @@ export const Tipo1Player = ({ simulacao }: Props) => {
         </Card>
 
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold">Resumo da Tarefa</h2>
-          <p className="text-gray-600 leading-relaxed">
+          <h2 className="text-2xl font-bold text-ink-primary">Resumo da tarefa</h2>
+          <p className="leading-relaxed text-ink-secondary">
             Analisa cuidadosamente o vídeo acima e identifica os pontos críticos da situação apresentada. 
             Utiliza a checklist lateral para guiar a tua análise e submete a tua auto-avaliação final.
           </p>
@@ -111,27 +111,29 @@ export const Tipo1Player = ({ simulacao }: Props) => {
       </div>
 
       <div className="space-y-6">
-        <Card className="p-6 space-y-6 border-2 border-slate-100">
+        <Card className="space-y-6 border border-[var(--chrome-border)] bg-[var(--surface-elevated)] p-6">
           <div className="space-y-4">
             <h3 className="font-bold text-lg flex items-center gap-2">
-              <span className="w-2 h-6 bg-blue-500 rounded-full"></span>
-              Análise de Competências
+              <span className="h-6 w-1 bg-[var(--accent-terracotta)]"></span>
+              Análise de competências
             </h3>
             <div className="space-y-3">
               {(Object.keys(checklist) as Array<keyof typeof checklist>).map((item) => (
                 <label 
                   key={item} 
-                  className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                    checklist[item] ? 'border-green-200 bg-green-50' : 'border-slate-50 bg-slate-50 hover:border-slate-200'
+                  className={`flex cursor-pointer items-center gap-3 rounded-sm border p-3 transition-colors ${
+                    checklist[item]
+                      ? 'border-[var(--accent-success)] bg-[color-mix(in_srgb,var(--accent-success)_12%,transparent)]'
+                      : 'border-[var(--chrome-border)] bg-[var(--surface-recessed)] hover:border-[var(--ink-tertiary)]'
                   }`}
                 >
                   <input 
                     type="checkbox" 
-                    className="w-5 h-5 rounded text-blue-600 focus:ring-blue-500"
+                    className="h-5 w-5 rounded-sm accent-[var(--accent-terracotta)] focus:ring-[var(--accent-terracotta)]"
                     checked={checklist[item]} 
                     onChange={() => { handleCheck(item); }}
                   />
-                  <span className={`text-sm font-medium capitalize ${checklist[item] ? 'text-green-800' : 'text-slate-700'}`}>
+                  <span className={`text-sm font-medium capitalize ${checklist[item] ? 'text-[var(--accent-success)]' : 'text-ink-secondary'}`}>
                     {item} da situação
                   </span>
                 </label>
@@ -141,13 +143,13 @@ export const Tipo1Player = ({ simulacao }: Props) => {
 
           <div className="space-y-4 pt-4 border-t">
             <h3 className="font-bold text-lg flex items-center gap-2">
-              <span className="w-2 h-6 bg-orange-500 rounded-full"></span>
+              <span className="h-6 w-1 bg-[var(--accent-terracotta)]"></span>
               Auto-avaliação
             </h3>
             <div className="space-y-4">
               <div className="flex justify-between text-sm font-medium">
-                <span className="text-slate-500">Nível de confiança</span>
-                <Badge variant="outline" className="text-orange-700 bg-orange-50">{score}/10</Badge>
+                <span className="text-ink-secondary">Nível de confiança</span>
+                <Badge variant="outline" className="border-accent/20 bg-accent/10 text-accent">{score}/10</Badge>
               </div>
               <input 
                 type="range" 
@@ -155,9 +157,9 @@ export const Tipo1Player = ({ simulacao }: Props) => {
                 max="10" 
                 value={score} 
                 onChange={(e) => { setScore(Number(e.target.value)); }}
-                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                className="h-2 w-full cursor-pointer appearance-none rounded-sm bg-[var(--surface-recessed)] accent-[var(--accent-terracotta)]"
               />
-              <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-ink-tertiary">
                 <span>Iniciante</span>
                 <span>Especialista</span>
               </div>
@@ -166,7 +168,7 @@ export const Tipo1Player = ({ simulacao }: Props) => {
 
           <Button 
             onClick={() => { void handleSubmit(); }} 
-            className="w-full py-6 text-lg font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-100"
+            className="asymmetric-a w-full bg-accent py-6 text-lg font-bold text-white hover:bg-[var(--accent-terracotta-soft)]"
             disabled={!Object.values(checklist).some(v => v)}
           >
             Concluir Simulação

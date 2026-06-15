@@ -92,4 +92,18 @@ describe('CriarProgramaPayloadSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('rejeita programa gratuito com valor diferente de zero', () => {
+    const result = CriarProgramaPayloadSchema.safeParse({
+      ...BASE_PAYLOAD,
+      area: 'TECNOLOGIA',
+      precoPolicy: {
+        modo: 'gratuito',
+        valor: 1000,
+        moeda: 'AOA',
+        bolsasDisponiveis: false,
+      },
+    });
+    expect(result.success).toBe(false);
+  });
 });

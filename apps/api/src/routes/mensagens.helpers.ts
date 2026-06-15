@@ -24,9 +24,20 @@ export function orderedParticipants(
   first: InteractionPerfil,
   second: InteractionPerfil,
 ): [InteractionPerfil, InteractionPerfil] {
-  return String(first.id).localeCompare(String(second.id), undefined, { numeric: true }) <= 0
+  return compareParticipantIds(first.id, second.id) <= 0
     ? [first, second]
     : [second, first];
+}
+
+function compareParticipantIds(first: string | number, second: string | number): number {
+  const left = String(first);
+  const right = String(second);
+  if (/^\d+$/.test(left) && /^\d+$/.test(right)) {
+    const leftNumber = BigInt(left);
+    const rightNumber = BigInt(right);
+    return leftNumber === rightNumber ? 0 : leftNumber < rightNumber ? -1 : 1;
+  }
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 export function isParticipant(conversa: StrapiConversa, userId: string): boolean {

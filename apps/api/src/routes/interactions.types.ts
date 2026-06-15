@@ -20,9 +20,9 @@ export function toBookmark(
   perfil: InteractionPerfil,
 ): Bookmark {
   const createdAt = entity.criadoEm ?? entity.createdAt;
-  if (!createdAt) throw new Error(`Bookmark ${String(entity.id)} sem timestamp`);
+  if (!createdAt) throw new Error(`Bookmark ${entity.documentId ?? String(entity.id)} (id: ${String(entity.id)}) sem timestamp`);
   return {
-    id: String(entity.id),
+    id: entity.documentId ?? String(entity.id),
     userId: perfil.userId,
     targetType: entity.targetType,
     targetId: entity.targetId,

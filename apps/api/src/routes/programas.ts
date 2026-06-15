@@ -5,7 +5,7 @@ import { verifyJwt, optionalJwt, type OptionalAuthVariables } from '../modules/a
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { requireApproved } from '../middleware/requireApproved.js';
 import { rateLimitContentCreate } from '../middleware/rateLimit.js';
-import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { strapiDelete, strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { CriarProgramaPayloadSchema, AtualizarProgramaEstadoSchema } from '@pdc/shared';
@@ -127,7 +127,7 @@ programaRoutes.post('/',
         ? 'super_admin'
         : actor.role === 'instituicao' ? 'instituicao' : 'mentor';
       const slug = body.titulo
-        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
       const programaData = {
         ...toStrapiPrograma(body),
@@ -141,14 +141,24 @@ programaRoutes.post('/',
         historicoEstados: [{ estado: 'draft', timestamp: new Date().toISOString(), autorId: user.id }],
       };
       const res = await strapiPost<StrapiProgramaRecord>('/programas', programaData);
-      const programaId = res.data.id;
-      const event = await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_CRIADO, {
-        programaId: String(programaId),
-        autorId: String(actor.perfil.id),
-        titulo: body.titulo,
-        area: body.area,
-        criadorTipo,
-      });
+      const programaId = res.data.documentId ?? res.data.id;
+      let event;
+      try {
+        event = await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_CRIADO, {
+          programaId: String(programaId),
+          autorId: String(relationId(actor.perfil)),
+          titulo: body.titulo,
+          area: body.area,
+          criadorTipo,
+        });
+      } catch (eventError) {
+        try {
+          await strapiDelete(`/programas/${String(programaId)}`);
+        } catch {
+          return c.json({ error: 'Programa criado, mas o rollback falhou', code: 'PROGRAMA_CREATION_ROLLBACK_FAILED' }, 503);
+        }
+        throw eventError;
+      }
       return c.json({ ...fromStrapiPrograma(res.data), eventId: event.id }, 201);
     } catch {
       return c.json({ error: 'Falha ao criar programa' }, 502);
@@ -186,7 +196,12 @@ programaRoutes.put('/:id',
         `/programas/${id}`,
         toStrapiPrograma(body),
       );
-      return c.json(fromStrapiPrograma(resPut.data));
+      const updated = await strapiGet<StrapiProgramaRecord>('/programas', {
+        'filters[id][$eq]': id,
+        'pagination[pageSize]': '1',
+        populate: PROGRAMA_POPULATE,
+      });
+      return c.json(fromStrapiPrograma(updated.data[0] ?? resPut.data));
     } catch {
       return c.json({ error: 'Falha ao atualizar programa' }, 502);
     }

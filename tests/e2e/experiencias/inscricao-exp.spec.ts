@@ -6,7 +6,7 @@ test.describe('Experiências - Inscrição', () => {
     await expect(alunoPage.getByRole('main', { name: 'Lista de experiências' })).toBeVisible({ timeout: 10_000 });
   });
 
-  test('experiencias page shows cards or empty state', async ({ alunoPage }) => {
+  test('experiencias page renders list region', async ({ alunoPage }) => {
     await alunoPage.goto('/app/experiencias');
     const listRegion = alunoPage.getByRole('main', { name: 'Lista de experiências' });
     await expect(listRegion).toBeVisible();
