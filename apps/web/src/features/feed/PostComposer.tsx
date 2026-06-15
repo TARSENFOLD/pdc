@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Image as ImageIcon, LoaderCircle, Video, X } from 'lucide-react';
+import { Image as ImageIcon, LoaderCircle, Send, Video, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { CriarPostPayloadSchema, type CriarPostPayload } from '@pdc/shared';
 import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
@@ -11,6 +11,8 @@ import { Card } from '@/components/ui/Card';
 import { feedApi } from '@/lib/api/feed';
 import { mediaApi } from '@/lib/api/media';
 import { toast } from '@/hooks/useToast';
+import BuilderShell from '@/components/builders/BuilderShell';
+import BuilderSection from '@/components/builders/BuilderSection';
 
 interface PostComposerFormProps {
   variant?: 'page' | 'inline';
@@ -95,7 +97,7 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
 
   const form = (
     <Card className={isInline ? 'p-4 border-[var(--chrome-border)] bg-[var(--chrome-surface)] rounded-sm' : 'p-6 bg-[var(--chrome-surface)] border-[var(--chrome-border)] rounded-sm'}>
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      <form id={isInline ? undefined : 'post-composer-form'} className="space-y-4" onSubmit={handleSubmit}>
         <div className="relative">
           {!isInline && (
             <label htmlFor="post-corpo" className="block text-xs font-bold uppercase tracking-widest text-[var(--ink-tertiary)] mb-2">
@@ -157,14 +159,16 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
               </button>
             </div>
           ) : <div />}
-          <Button 
-            type="submit" 
-            isLoading={mutation.isPending} 
-            disabled={corpo.trim().length === 0 || uploadMutation.isPending}
-            className="rounded-md bg-[var(--accent-terracotta)] hover:bg-[var(--accent-terracotta-soft)] text-white h-8 px-6 text-[11px] font-bold uppercase tracking-widest shadow-sm"
-          >
-            {t('feed.postButton', 'POST')}
-          </Button>
+          {isInline && (
+            <Button
+              type="submit"
+              isLoading={mutation.isPending}
+              disabled={corpo.trim().length === 0 || uploadMutation.isPending}
+              className="h-8 rounded-md bg-[var(--accent-terracotta)] px-6 text-[11px] font-bold uppercase tracking-widest text-white shadow-sm hover:bg-[var(--accent-terracotta-soft)]"
+            >
+              {t('feed.postButton', 'Publicar')}
+            </Button>
+          )}
         </div>
       </form>
     </Card>
@@ -184,27 +188,38 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
 
   return (
     <>
-      <div className="mx-auto max-w-2xl px-4 py-10 space-y-6">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/app/feed">
-              <ArrowLeft size={16} className="mr-1" />
-              Voltar ao Feed
-            </Link>
-          </Button>
-        </div>
-
-        <div className="space-y-1">
-          <h1 className="font-display text-3xl font-black tracking-tight text-ink-primary" data-testid="page-hero-title">
-            Criar publicação
-          </h1>
-          <p className="text-sm text-ink-secondary">
-            Partilha uma experiência, conquista ou reflexão com a comunidade PDC.
-          </p>
-        </div>
-
-        {form}
-      </div>
+      <BuilderShell
+        title="Criar publicação"
+        description="Partilha uma experiência, conquista ou reflexão com a comunidade PDC."
+        breadcrumbs={[{ label: 'Feed', to: '/app/feed' }, { label: 'Nova publicação' }]}
+        sections={[{ id: 'conteudo', label: 'Conteúdo' }]}
+        actions={(
+          <div className="sticky top-6 space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-ink-primary">Publicação</p>
+              <p className="mt-1 text-xs leading-5 text-ink-tertiary">O conteúdo aprovado aparece imediatamente no feed.</p>
+            </div>
+            <Button
+              type="submit"
+              form="post-composer-form"
+              isLoading={mutation.isPending}
+              disabled={corpo.trim().length === 0 || uploadMutation.isPending}
+              className="h-11 w-full rounded-sm bg-accent font-semibold text-white"
+            >
+              <Send size={16} className="mr-2" />
+              Publicar
+            </Button>
+          </div>
+        )}
+      >
+        <BuilderSection
+          value="conteudo"
+          title="Conteúdo da publicação"
+          description="Escreve com clareza e adiciona imagens ou vídeo quando ajudarem a contar a história."
+        >
+          {form}
+        </BuilderSection>
+      </BuilderShell>
       <ComposerImpactOverlay
         eventId={lastEventId}
         onComplete={() => {

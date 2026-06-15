@@ -22,17 +22,17 @@ const ACTION_LABELS: Record<string, string> = {
 
 function getLink(item: FeedItem): string {
   switch (item.tipo) {
-    case 'curso': return `/cursos/${item.slug ?? item.id}`;
-    case 'simulacao': return `/simulacoes/${item.slug ?? item.id}`;
-    case 'experiencia': return `/experiencias/${item.slug ?? item.id}`;
-    case 'projeto': return `/projetos/${item.id}`;
+    case 'curso': return `/app/cursos/${item.slug ?? item.id}`;
+    case 'simulacao': return `/app/simulacoes/${item.slug ?? item.id}`;
+    case 'experiencia': return `/app/experiencias/${item.slug ?? item.id}`;
+    case 'projeto': return `/app/projetos/${item.id}`;
     default: return '#';
   }
 }
 
-export function FeedCard({ item }: { item: FeedItem }) {
+export function FeedContentCard({ item }: { item: FeedItem }) {
   return (
-    <div className="py-5 border-b border-ink-tertiary/10/40 hover:bg-elevated transition-colors group">
+    <div className="py-5 border-b border-ink-tertiary/10 hover:bg-elevated transition-colors group">
       <div className="flex justify-between items-start mb-3">
         <div className="flex flex-col gap-1">
           <Badge variant="outline" className="w-fit text-[10px] font-bold uppercase tracking-wider border-none bg-elevated/50">

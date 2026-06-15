@@ -24,7 +24,8 @@ import {
   Upload,
   MessageSquare,
   Trophy,
-  LayoutDashboard
+  LayoutDashboard,
+  FolderKanban
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -94,6 +95,7 @@ export function MentorDashboard() {
             ctas={[
               { label: 'Criar Curso', to: '/app/mentor/cursos/criar', icon: BookOpen, variant: 'primary' },
               { label: 'Criar Laboratório', to: '/app/mentor/simulacoes/criar', icon: Brain, variant: 'primary' },
+              { label: 'Criar Projeto', to: '/app/projetos/novo', icon: FolderKanban },
               { label: 'Criar Post', to: '/app/feed/criar', icon: MessageSquare },
               { label: 'Registar Marco', to: '/app/conquistas/criar', icon: Trophy },
               { label: 'Upload Conteúdo', to: '/app/mentor/upload', icon: Upload },
