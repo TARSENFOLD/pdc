@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import type { Core } from '@strapi/strapi';
 import { ONBOARDING_VIDEO_ROLES, ONBOARDING_VIDEO_TITLES } from './shared/onboarding-video-constants';
+import { normalizedParticipantsKey } from './api/conversa/content-types/conversa/lifecycles';
 
 const INITIAL_FLAGS = [
   { domain: 'DISCUSSIONS_ENABLED', description: 'Habilitar módulo de discussões' },
@@ -13,6 +14,8 @@ export default {
   register(/* { strapi }: { strapi: Core.Strapi } */) {},
 
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
+    registerConversaLifecycles(strapi);
+
     const featureFlagService = strapi.service('api::feature-flag.feature-flag');
 
     for (const flag of INITIAL_FLAGS) {
@@ -45,6 +48,36 @@ export default {
     }
   },
 };
+
+function registerConversaLifecycles(strapi: Core.Strapi) {
+  strapi.db.lifecycles.subscribe({
+    models: ['api::conversa.conversa'],
+    async beforeCreate(event) {
+      const data = event.params.data as Record<string, unknown>;
+      data.participantsKey = normalizedParticipantsKey(data);
+    },
+    async beforeUpdate(event) {
+      const data = event.params.data as Record<string, unknown>;
+      const where = event.params.where as { id?: string | number };
+      const id = where.id;
+
+      if (!id) {
+        data.participantsKey = normalizedParticipantsKey(data);
+        return;
+      }
+
+      const current = await strapi.db.query('api::conversa.conversa').findOne({
+        where: { id },
+        populate: ['participant1', 'participant2'],
+      }) as Record<string, unknown> | null;
+      if (!current) {
+        throw new Error(`Conversa ${String(id)} não encontrada durante beforeUpdate`);
+      }
+      const merged = { ...current, ...data };
+      data.participantsKey = normalizedParticipantsKey(merged);
+    },
+  });
+}
 
 async function seedOnboardingVideos(strapi: Core.Strapi) {
   for (const role of ONBOARDING_VIDEO_ROLES) {

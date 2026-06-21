@@ -80,8 +80,9 @@ export function InstituicaoProgramasPage() {
       ) : (
         <div className="space-y-4">
           {programas.map((prog, idx) => (
-            <motion.div
+            <motion.article
               key={prog.id}
+              aria-label={prog.titulo}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05, duration: 0.3 }}
@@ -154,7 +155,7 @@ export function InstituicaoProgramasPage() {
                   </Button>
                 )}
               </div>
-            </motion.div>
+            </motion.article>
           ))}
         </div>
       )}

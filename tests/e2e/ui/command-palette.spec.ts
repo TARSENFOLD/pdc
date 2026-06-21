@@ -6,6 +6,11 @@ import { test, expect } from '../../helpers/fixtures';
  * Usa data-testid tolerantes a mudanças de texto.
  */
 test.describe('Command Palette', () => {
+  test('legacy simulation edit deep link redirects to the canonical route', async ({ mentorPage }) => {
+    await mentorPage.goto('/app/mentor/simulacoes/editar/sim-legada');
+    await expect(mentorPage).toHaveURL(/\/app\/mentor\/simulacoes\/sim-legada\/editar$/);
+  });
+
   test('opens via trigger button and can be closed', async ({ alunoPage }) => {
     await alunoPage.goto('/app/home');
 
@@ -52,5 +57,17 @@ test.describe('Command Palette', () => {
 
     // Verifica que a lista de resultados ainda renderiza (não interessa o texto)
     await expect(alunoPage.locator('[data-testid="command-palette"] [role="listbox"]')).toBeVisible();
+  });
+
+  test('navigates to a canonical route without NotFound', async ({ alunoPage }) => {
+    await alunoPage.goto('/app/home');
+    await expect(alunoPage.locator('[data-testid="topbar"]')).toBeVisible({ timeout: 15_000 });
+
+    await alunoPage.locator('[data-testid="command-palette-trigger"]').click();
+    await alunoPage.locator('[data-testid="command-palette-input"]').fill('Feed');
+    await alunoPage.getByRole('option').filter({ hasText: 'Feed' }).getByRole('button').click();
+
+    await expect(alunoPage).toHaveURL(/\/app\/feed$/);
+    await expect(alunoPage.getByText('Página não encontrada')).not.toBeVisible();
   });
 });

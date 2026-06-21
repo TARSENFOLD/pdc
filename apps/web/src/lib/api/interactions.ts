@@ -10,6 +10,8 @@ import type {
   CreateRatingPayload,
   Comment,
   CreateCommentPayload,
+  SharePayload,
+  ShareStatus,
 } from '@pdc/shared';
 
 // ─── Likes ────────────────────────────────────────────────────────────────────
@@ -18,7 +20,7 @@ export const likeApi = {
     return http.post<{ liked: boolean }>('/interactions/like', payload);
   },
   getStatus: async (targetType: InteractionTargetType, targetId: string) => {
-    return http.get<LikeStatus>(`/interactions/like/status?targetType=${targetType}&targetId=${targetId}`);
+    return http.get<LikeStatus>(`/interactions/like/status?${new URLSearchParams({ targetType, targetId }).toString()}`);
   },
 };
 
@@ -31,7 +33,7 @@ export const bookmarkApi = {
     return http.get<{ data: Bookmark[] }>('/interactions/bookmarks');
   },
   getStatus: async (targetType: InteractionTargetType, targetId: string) => {
-    return http.get<BookmarkStatus>(`/interactions/bookmark/status?targetType=${targetType}&targetId=${targetId}`);
+    return http.get<BookmarkStatus>(`/interactions/bookmark/status?${new URLSearchParams({ targetType, targetId }).toString()}`);
   },
 };
 
@@ -53,4 +55,13 @@ export const commentsApi = {
   list: async (targetType: InteractionTargetType, targetId: string) => {
     return http.get<{ data: Comment[] }>(`/comments/list?targetType=${targetType}&targetId=${targetId}`);
   },
+};
+
+export const sharesApi = {
+  create: (payload: SharePayload) =>
+    http.post<ShareStatus>('/interactions/share', payload),
+  status: (targetType: InteractionTargetType, targetId: string) =>
+    http.get<ShareStatus>(`/interactions/share/status?${new URLSearchParams({ targetType, targetId }).toString()}`),
+  remove: (shareId: string) =>
+    http.delete<{ shared: false }>(`/interactions/share/${shareId}`),
 };

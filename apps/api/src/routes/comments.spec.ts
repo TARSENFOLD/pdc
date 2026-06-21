@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono, type Context, type Next } from 'hono';
 import { commentsRoutes } from './comments.js';
 import { strapiGet, strapiPost } from '../modules/strapi/strapi.client.js';
-import type { StrapiSingleResponse } from '@pdc/shared';
+import type { StrapiListResponse, StrapiSingleResponse } from '@pdc/shared';
+import type { InteractionPerfil } from '../modules/interactions/interaction-profile.js';
 
 const publishWithOutboxMock = vi.hoisted(() => vi.fn().mockResolvedValue({ id: 'evt-comment-1' }));
 
@@ -35,20 +36,20 @@ describe('commentsRoutes', () => {
     vi.clearAllMocks();
   });
 
-  it('publica comentário diretamente como aprovado', async () => {
+  it('publica comentário ativo com a relação autor', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce({
+      data: [{ id: 'perfil-1', documentId: 'perfil-doc-1', userId: 'user-1', nome: 'Ana' }],
+      meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
+    } as StrapiListResponse<InteractionPerfil>);
     vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({
       id: 1,
-      userId: 'user-1',
       targetType: 'post',
       targetId: 'post-1',
       conteudo: 'Comentário útil para a comunidade.',
-      estado: 'aprovado',
+      estado: 'ativo',
+      autor: { id: 'perfil-1', userId: 'user-1', nome: 'Ana' },
       createdAt: '2026-06-07T00:00:00.000Z',
     }));
-    vi.mocked(strapiGet).mockResolvedValueOnce({
-      data: [{ id: 'perfil-1' }],
-      meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
-    });
 
     const response = await app.request('/comments', {
       method: 'POST',
@@ -61,8 +62,18 @@ describe('commentsRoutes', () => {
     });
 
     expect(response.status).toBe(201);
+    expect(strapiGet).toHaveBeenCalledWith('/perfis', {
+      'filters[userId][$eq]': 'user-1',
+      'pagination[pageSize]': '1',
+      populate: 'foto',
+    });
     expect(strapiPost).toHaveBeenCalledWith('/comments', expect.objectContaining({
-      estado: 'aprovado',
+      autor: 'perfil-doc-1',
+      estado: 'ativo',
     }));
+    expect(publishWithOutboxMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ autorId: 'perfil-doc-1' }),
+    );
   });
 });

@@ -142,13 +142,13 @@ export function FeedPostDetailPage() {
             {comments.map((comment) => (
               <div key={comment.id} className="flex gap-4 p-4 rounded-sm hover:bg-[var(--surface-elevated)]/50 transition-colors">
                 <Avatar 
-                  src={comment.autor?.avatarUrl || undefined} 
-                  fallback={(comment.autor?.nome || 'U').substring(0, 2)} 
+                  src={comment.autor.avatarUrl || undefined}
+                  fallback={(comment.autor.nome || 'U').substring(0, 2)}
                   className="h-8 w-8 shrink-0 border border-[var(--chrome-border)]"
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-bold text-[var(--ink-primary)]">{comment.autor?.nome || 'Utilizador PDC'}</span>
+                    <span className="text-sm font-bold text-[var(--ink-primary)]">{comment.autor.nome || 'Utilizador PDC'}</span>
                     <span className="text-[10px] text-[var(--ink-tertiary)] uppercase tracking-widest">
                       {new Date(comment.createdAt).toLocaleDateString('pt-PT')}
                     </span>

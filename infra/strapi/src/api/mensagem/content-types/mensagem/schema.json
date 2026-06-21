@@ -22,6 +22,11 @@
       "target": "api::perfil.perfil",
       "required": true
     },
+    "conversa": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::conversa.conversa"
+    },
     "conteudo": { "type": "text", "required": true, "maxLength": 2000 },
     "lida": { "type": "boolean", "default": false },
     "lidaEm": { "type": "datetime" },

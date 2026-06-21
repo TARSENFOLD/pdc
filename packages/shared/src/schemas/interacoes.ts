@@ -94,6 +94,56 @@ export type CreateRatingPayload = z.infer<typeof CreateRatingPayloadSchema>;
 export const SharePayloadSchema = z.object({
   targetType: InteractionTargetTypeSchema,
   targetId: z.string(),
+  // Omisso significa a ação primária "Republicar no PDC".
+  canal: z.enum(['interno', 'whatsapp', 'linkedin', 'twitter', 'email', 'outro']).default('interno'),
+  nota: z.string().max(500).optional(),
 });
 
 export type SharePayload = z.infer<typeof SharePayloadSchema>;
+
+export const ShareSchema = z.object({
+  id: z.string(),
+  actorId: z.string(),
+  targetType: InteractionTargetTypeSchema,
+  targetId: z.string(),
+  canal: z.enum(['interno', 'whatsapp', 'linkedin', 'twitter', 'email', 'outro']),
+  nota: z.string().max(500).optional(),
+  createdAt: z.string().datetime(),
+});
+
+export type Share = z.infer<typeof ShareSchema>;
+
+export const ShareStatusSchema = z.object({
+  shared: z.boolean(),
+  shareId: z.string().optional(),
+  count: z.number().int().min(0),
+});
+
+export type ShareStatus = z.infer<typeof ShareStatusSchema>;
+
+export const CreateCommentPayloadSchema = z.object({
+  targetId: z.string().min(1),
+  targetType: InteractionTargetTypeSchema,
+  conteudo: z.string().trim().min(1).max(1000),
+  parentId: z.string().optional(),
+});
+
+export type CreateCommentPayload = z.infer<typeof CreateCommentPayloadSchema>;
+
+export const CommentSchema = z.object({
+  id: z.string(),
+  targetId: z.string(),
+  targetType: InteractionTargetTypeSchema,
+  conteudo: z.string(),
+  estado: z.enum(['ativo', 'removido', 'moderado']),
+  parentId: z.string().optional(),
+  createdAt: z.string().datetime(),
+  autor: z.object({
+    id: z.string(),
+    userId: z.string(),
+    nome: z.string(),
+    avatarUrl: z.string().url().nullable().optional(),
+  }),
+});
+
+export type Comment = z.infer<typeof CommentSchema>;

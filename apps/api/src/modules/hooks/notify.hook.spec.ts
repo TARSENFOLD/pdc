@@ -173,6 +173,37 @@ describe('notifyHook — FOMO triggers', () => {
   });
 });
 
+describe('notifyHook — publicação de conteúdo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(strapiPost).mockResolvedValue({ data: { id: 'notif-content' }, meta: {} });
+  });
+
+  it('resolve autorId como ID relacional de perfil para PROJETO_PUBLICADO', async () => {
+    vi.mocked(strapiGet).mockResolvedValue(listResponse([{ id: '9' }]));
+    const event = makeEvent(DomainEventName.PROJETO_PUBLICADO, {
+      autorId: '9',
+      projetoId: 'doc-projeto-42',
+      titulo: 'Projeto Angola',
+      area: 'TECNOLOGIA',
+    });
+
+    const result = await notifyHook.execute(event, emptyContext);
+
+    expect(strapiGet).toHaveBeenCalledWith('/perfis', {
+      'filters[id][$eq]': '9',
+      'fields[0]': 'id',
+      'pagination[pageSize]': '1',
+    });
+    expect(strapiPost).toHaveBeenCalledWith('/notificacoes', expect.objectContaining({
+      perfil: '9',
+      tipo: 'sucesso',
+      titulo: 'Actividade Processada',
+    }));
+    expect(result).toEqual({ status: 'sent' });
+  });
+});
+
 describe('notifyHook — approval triggers', () => {
   beforeEach(() => {
     vi.clearAllMocks();

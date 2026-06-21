@@ -22,6 +22,12 @@
     "autorId": {
       "type": "string"
     },
+    "titulo": {
+      "type": "string"
+    },
+    "corpo": {
+      "type": "text"
+    },
     "area": {
       "type": "string"
     },

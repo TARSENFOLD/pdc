@@ -7,24 +7,13 @@ import TopBar from './TopBar';
 import { AppErrorBoundary } from '../ui/AppErrorBoundary';
 import { TinaChat } from '@/features/tina/TinaChat';
 import { useNotificacoes } from '@/lib/realtime/useNotificacoes';
+import FocusHeader from './FocusHeader';
+import FocusModeProvider from './FocusModeProvider';
+import { isFocusMode } from './focus-routes';
 
 const SIDEBAR_WIDTH = 260;
 const SIDEBAR_COLLAPSED_WIDTH = 64;
 const SIDEBAR_STORAGE_KEY = 'sidebar:collapsed';
-
-const FOCUS_MODE_ROUTES = [
-  /^\/app\/(?:mentor|instituicao)\/cursos\/(?:criar|[^/]+\/editar)\/?$/,
-  /^\/app\/(?:mentor|instituicao)\/simulacoes\/(?:criar|[^/]+\/editar|editar\/[^/]+)\/?$/,
-  /^\/app\/instituicao\/(?:criar-experiencia|editar-experiencia\/[^/]+)\/?$/,
-  /^\/app\/instituicao\/(?:criar-programa|editar-programa\/[^/]+)\/?$/,
-  /^\/app\/cursos\/[^/]+\/itens\/[^/]+\/?$/,
-  /^\/app\/experiencias\/[^/]+\/?$/,
-  /^\/app\/simulacoes\/[^/]+\/play\/?$/,
-];
-
-function isFocusMode(pathname: string): boolean {
-  return FOCUS_MODE_ROUTES.some((pattern) => pattern.test(pathname));
-}
 
 function loadCollapsed(): boolean {
   try { return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'; } catch { return false; }
@@ -62,9 +51,14 @@ export default function AppLayout(): React.JSX.Element {
   if (focusMode) {
     return (
       <div className="min-h-screen bg-[var(--surface-canvas)] text-[var(--ink-primary)] antialiased">
-        <AppErrorBoundary>
-          <Outlet />
-        </AppErrorBoundary>
+        <FocusModeProvider>
+          <FocusHeader />
+          <main>
+            <AppErrorBoundary>
+              <Outlet />
+            </AppErrorBoundary>
+          </main>
+        </FocusModeProvider>
       </div>
     );
   }

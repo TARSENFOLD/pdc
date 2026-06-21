@@ -1,11 +1,13 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { zValidator } from '@hono/zod-validator';
-import { getCookie } from 'hono/cookie';
-import { jwtVerify } from 'jose';
 import { z } from 'zod';
 import pino from 'pino';
-import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
+import {
+  optionalJwt,
+  verifyJwt,
+  type OptionalAuthVariables,
+} from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { tinaService } from '../modules/tina/tina.service.js';
 import { strapiGet, strapiPost } from '../modules/strapi/strapi.client.js';
@@ -15,30 +17,23 @@ import { env } from '../lib/env.js';
 
 const log = pino({ name: 'routes:tina' });
 
-const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
-
-export const tinaRoutes = new Hono<{ Variables: AuthVariables }>();
+export const tinaRoutes = new Hono<{ Variables: OptionalAuthVariables }>();
 
 // POST /tina/chat — Auth opcional
-tinaRoutes.post('/chat', zValidator('json', ChatPayloadSchema), async (c) => {
+tinaRoutes.post('/chat', optionalJwt, zValidator('json', ChatPayloadSchema), async (c) => {
   const { message, messages, stream } = c.req.valid('json');
   const prompt = message ?? messages?.at(-1)?.content;
   if (!prompt) return c.json({ error: 'message is required' }, 400);
-  const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
+  const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
   
-  // Tentar extrair userId do cookie se existir
-  let userId: string | null = null;
-  const token = getCookie(c, 'access_token');
-  if (token) {
-    try {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
-      userId = payload.sub as string;
-    } catch {
-      // Ignora erro de auth opcional
-    }
-  }
-
-  const res = await tinaService.chat(messages ?? [{ role: 'user', content: prompt }], userId, ip, stream);
+  const user = c.get('user');
+  const res = await tinaService.chat(
+    messages ?? [{ role: 'user', content: prompt }],
+    user?.id ?? null,
+    ip,
+    stream,
+    user?.role,
+  );
 
   if (!res.ok) {
     const providerError: unknown = await res.json().catch(() => null);

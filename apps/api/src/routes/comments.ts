@@ -13,72 +13,86 @@ import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { rateLimitComments } from '../middleware/rateLimit.js';
 import pino from 'pino';
+import {
+  getInteractionPerfil,
+  interactionPerfilDto,
+  interactionPerfilId,
+  type InteractionPerfil,
+} from '../modules/interactions/interaction-profile.js';
 
 export const commentsRoutes = new Hono<{ Variables: AuthVariables }>();
 const log = pino({ name: 'comments-routes' });
 
 interface StrapiEntity {
   id: number;
-  userId: string;
+  autor?: InteractionPerfil;
   targetType: InteractionTargetType;
   targetId: string;
-  createdAt: string;
+  criadoEm?: string;
+  createdAt?: string;
 }
 
 interface StrapiComment extends StrapiEntity {
   conteudo: string;
-  estado: 'pendente'|'aprovado'|'rejeitado';
+  estado: 'ativo' | 'removido' | 'moderado';
+  parentId?: string;
+}
+
+function mapComment(comment: StrapiComment): Comment {
+  if (!comment.autor) {
+    log.error({ comentarioId: comment.id }, 'Comentário retornado sem autor populado');
+    throw new Error('Comentário sem autor');
+  }
+  const createdAt = comment.criadoEm ?? comment.createdAt;
+  if (!createdAt) {
+    log.error({ comentarioId: comment.id }, 'Comentário retornado sem timestamp');
+    throw new Error('Comentário sem timestamp');
+  }
+  return {
+    id: String(comment.id),
+    targetType: comment.targetType,
+    targetId: comment.targetId,
+    conteudo: comment.conteudo,
+    estado: comment.estado,
+    parentId: comment.parentId,
+    createdAt,
+    autor: interactionPerfilDto(comment.autor),
+  };
 }
 
 commentsRoutes.post('/', verifyJwt, rateLimitComments, zValidator('json', CreateCommentPayloadSchema), async (c) => {
   const user = c.get('user');
-  const { targetType, targetId, conteudo } = c.req.valid('json');
+  const { targetType, targetId, conteudo, parentId } = c.req.valid('json');
+  const perfil = await getInteractionPerfil(user.id);
+  if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
 
-  // Fix: StrapiSingleResponse already provides res.data as the T type.
   const res = await strapiPost<StrapiComment>('/comments', {
-    userId: user.id,
+    autor: interactionPerfilId(perfil),
     targetType,
     targetId,
     conteudo,
-    estado: 'aprovado',
-    createdAt: new Date().toISOString(),
+    parentId,
+    estado: 'ativo',
+    criadoEm: new Date().toISOString(),
   });
 
-  // G15: Impacto no Ecossistema
-  // Buscamos o perfilId para o evento
-  const resPerfil = await strapiGet<{ id: string }>('/perfis', {
-    'filters[userId][$eq]': user.id,
-    'fields[0]': 'id',
+  await eventBus.publishWithOutbox(DomainEventName.COMENTARIO_CRIADO, {
+    autorId: String(interactionPerfilId(perfil)),
+    targetType,
+    targetId,
+  }).catch((err: unknown) => {
+    log.error(
+      { err, userId: user.id, comentarioId: res.data.id, targetType, targetId },
+      'Comentário persistido; falha ao publicar evento no outbox',
+    );
   });
-  const perfilId = resPerfil.data[0]?.id;
 
-  if (perfilId) {
-    await eventBus.publishWithOutbox(DomainEventName.COMENTARIO_CRIADO, {
-      comentarioId: res.data.id,
-      perfilId,
-      targetType,
-      targetId
-    }).catch((err: unknown) => {
-      log.error(
-        { err, userId: user.id, comentarioId: res.data.id, targetType, targetId },
-        'Comentário persistido; falha ao publicar evento no outbox',
-      );
-    });
-  } else {
-    log.error({ userId: user.id, comentarioId: res.data.id }, 'Comentário persistido sem perfil associado; evento não publicado');
+  try {
+    return c.json({ data: mapComment({ ...res.data, autor: perfil }) }, 201);
+  } catch (error) {
+    log.error({ error, comentarioId: res.data.id }, 'Comentário criado; falha ao mapear resposta');
+    return c.json({ error: 'Comentário criado, mas não foi possível mapear a resposta' }, 500);
   }
-
-  const bodyResponse: Comment = {
-    id: res.data.id.toString(),
-    userId: res.data.userId,
-    targetType: res.data.targetType,
-    targetId: res.data.targetId,
-    conteudo: res.data.conteudo,
-    estado: res.data.estado,
-    createdAt: res.data.createdAt,
-  };
-
-  return c.json({ data: bodyResponse }, 201);
 });
 
 commentsRoutes.get('/list', zValidator('query', z.object({
@@ -86,24 +100,17 @@ commentsRoutes.get('/list', zValidator('query', z.object({
   targetId: z.string(),
 })), async (c) => {
   const { targetType, targetId } = c.req.valid('query');
-
-  // Fix: StrapiListResponse already has res.data as StrapiComment[].
   const req = await strapiGet<StrapiComment>('/comments', {
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
-    'filters[estado][$eq]': 'aprovado',
+    'filters[estado][$eq]': 'ativo',
     'sort[0]': 'createdAt:desc',
+    populate: 'autor.foto',
   });
-
-  const data: Comment[] = req.data.map(d => ({
-    id: d.id.toString(),
-    userId: d.userId,
-    targetType: d.targetType,
-    targetId: d.targetId,
-    conteudo: d.conteudo,
-    estado: d.estado,
-    createdAt: d.createdAt,
-  }));
-
-  return c.json({ data });
+  try {
+    return c.json({ data: req.data.map(mapComment) });
+  } catch (error) {
+    log.error({ error, targetType, targetId }, 'Falha ao mapear comentários');
+    return c.json({ error: 'Não foi possível carregar os comentários' }, 500);
+  }
 });

@@ -5,30 +5,31 @@ import { verifyJwt, optionalJwt, type OptionalAuthVariables } from '../modules/a
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { requireApproved } from '../middleware/requireApproved.js';
 import { rateLimitContentCreate } from '../middleware/rateLimit.js';
-import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { strapiDelete, strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { CriarProgramaPayloadSchema, AtualizarProgramaEstadoSchema } from '@pdc/shared';
 import { applyPublicCatalogStateFilter, isPublicCatalogEstado } from './publication-state.js';
 import { toPaginatedResponse } from './pagination.js';
+import {
+  fromStrapiPrograma,
+  toStrapiPrograma,
+  type StrapiProgramaRecord,
+} from './programas.mapper.js';
+import {
+  canManagePrograma,
+  canTransitionPrograma,
+  relationId,
+  resolveProgramaActor,
+  sameRelation,
+} from './programas-access.js';
+import { programaParticipationRoutes } from './programas-participation.js';
 
 // GET / e GET /:id são públicos (optionalJwt); rotas protegidas usam verifyJwt individualmente
 type Vars = { Variables: OptionalAuthVariables };
 export const programaRoutes = new Hono<Vars>();
 
 const PROGRAMA_POPULATE = 'capa,instituicao,responsavel,cursos,experiencias,simulacoes,projetos';
-
-interface StrapiPrograma {
-  id: string;
-  titulo: string;
-  estado: string;
-  perfilId?: string;
-  instituicaoId?: string;
-  responsavel?: { id: string };
-  instituicao?: { id: string };
-  historicoEstados?: Array<{ estado: string; timestamp: string; autorId: string }>;
-  metadata?: unknown;
-}
 
 // GET /programas — catálogo público
 programaRoutes.get('/', async (c) => {
@@ -38,54 +39,37 @@ programaRoutes.get('/', async (c) => {
       sort: 'createdAt:desc',
     };
     applyPublicCatalogStateFilter(params);
-    const res = await strapiGet<StrapiPrograma>('/programas', params);
-    return c.json(toPaginatedResponse(res));
+    const res = await strapiGet<StrapiProgramaRecord>('/programas', params);
+    return c.json({
+      ...toPaginatedResponse(res),
+      data: res.data.map(fromStrapiPrograma),
+    });
   } catch {
     return c.json({ error: 'Erro ao carregar programas' }, 502);
   }
 });
 
-// GET /programas/meus — inscrições do utilizador (protegido)
-programaRoutes.get('/meus', verifyJwt, async (c) => {
-  const user = c.get('user');
-  const { id: userId } = user;
-  try {
-    const resPerfil = await strapiGet<{ id: string }>('/perfis', {
-      'filters[userId][$eq]': userId,
-      'fields[0]': 'id',
-    });
-    const perfilId = resPerfil.data[0]?.id;
-    if (!perfilId) return c.json(toPaginatedResponse({ data: [], meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } } }));
-    const res = await strapiGet<StrapiPrograma>('/inscricoes-programas', {
-      'filters[perfil][id][$eq]': perfilId,
-      populate: 'programa.capa,programa.instituicao',
-    });
-    return c.json(toPaginatedResponse(res));
-  } catch {
-    return c.json({ error: 'Erro ao carregar as tuas inscrições' }, 502);
-  }
-});
+programaRoutes.route('/', programaParticipationRoutes);
 
 // GET /programas/minhas — programas criados pelo utilizador (protegido)
 programaRoutes.get('/minhas', verifyJwt, checkRole(['mentor', 'instituicao', 'super_admin']), async (c) => {
   const user = c.get('user');
-  const { id: userId, role } = user;
   try {
-    const resPerfil = await strapiGet<{ id: string }>('/perfis', {
-      'filters[userId][$eq]': userId,
-      'fields[0]': 'id',
-    });
-    const perfilId = resPerfil.data[0]?.id;
-    if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
+    const actor = await resolveProgramaActor(user);
+    if (!actor) return c.json({ error: 'Perfil não encontrado' }, 404);
     const params: Record<string, string> = { populate: PROGRAMA_POPULATE };
-    if (role === 'mentor') {
-      params['filters[responsavel][id][$eq]'] = perfilId;
-    } else if (role === 'instituicao') {
-      params['filters[instituicao][id][$eq]'] = perfilId;
+    if (actor.role === 'mentor') {
+      params['filters[responsavel][id][$eq]'] = String(actor.perfil.id);
+    } else if (actor.role === 'instituicao') {
+      if (!actor.instituicao) return c.json({ error: 'Instituição associada não encontrada' }, 404);
+      params['filters[instituicao][id][$eq]'] = String(actor.instituicao.id);
     }
     // super_admin vê todos
-    const res = await strapiGet<StrapiPrograma>('/programas', params);
-    return c.json(toPaginatedResponse(res));
+    const res = await strapiGet<StrapiProgramaRecord>('/programas', params);
+    return c.json({
+      ...toPaginatedResponse(res),
+      data: res.data.map(fromStrapiPrograma),
+    });
   } catch {
     return c.json({ error: 'Erro ao carregar programas criados' }, 502);
   }
@@ -96,7 +80,7 @@ programaRoutes.get('/:id', optionalJwt, async (c) => {
   const id = c.req.param('id');
   if (!id) return c.json({ error: 'Id é obrigatório' }, 400);
   try {
-    const res = await strapiGet<StrapiPrograma>('/programas', {
+    const res = await strapiGet<StrapiProgramaRecord>('/programas', {
       'filters[id][$eq]': id,
       'pagination[pageSize]': '1',
       populate: PROGRAMA_POPULATE,
@@ -109,18 +93,15 @@ programaRoutes.get('/:id', optionalJwt, async (c) => {
       if (!user) return c.json({ error: 'Programa não disponível' }, 404);
 
       // Verifica se é o criador ou moderador
-      const resPerfil = await strapiGet<{ id: string }>('/perfis', {
-        'filters[userId][$eq]': user.id,
-        'fields[0]': 'id',
-      });
-      const perfilId = resPerfil.data[0]?.id;
-      const isCreator = String(prog.responsavel?.id) === String(perfilId) ||
-        String(prog.instituicao?.id) === String(perfilId);
+      const actor = await resolveProgramaActor(user);
+      if (!actor) return c.json({ error: 'Programa não disponível' }, 404);
+      const isCreator = sameRelation(prog.responsavel, actor.perfil)
+        || sameRelation(prog.instituicao, actor.instituicao);
       const isModerator = ['moderador', 'super_admin'].includes(user.role);
       if (!isCreator && !isModerator) return c.json({ error: 'Programa não disponível' }, 404);
     }
 
-    return c.json(prog);
+    return c.json(fromStrapiPrograma(prog));
   } catch {
     return c.json({ error: 'Falha ao carregar programa' }, 502);
   }
@@ -136,85 +117,54 @@ programaRoutes.post('/',
   async (c) => {
     const user = c.get('user');
     const body = c.req.valid('json');
-    const { id: userId, role } = user;
     try {
-      const resPerfil = await strapiGet<{ id: string }>('/perfis', {
-        'filters[userId][$eq]': userId,
-        'fields[0]': 'id',
-      });
-      const perfilId = resPerfil.data[0]?.id;
-      const criadorTipo = role === 'super_admin' ? 'super_admin' : role === 'instituicao' ? 'instituicao' : 'mentor';
+      const actor = await resolveProgramaActor(user);
+      if (!actor) return c.json({ error: 'Perfil não encontrado' }, 404);
+      if (actor.role === 'instituicao' && !actor.instituicao) {
+        return c.json({ error: 'Instituição associada não encontrada' }, 404);
+      }
+      const criadorTipo = actor.role === 'super_admin'
+        ? 'super_admin'
+        : actor.role === 'instituicao' ? 'instituicao' : 'mentor';
       const slug = body.titulo
-        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
       const programaData = {
-        ...body,
+        ...toStrapiPrograma(body),
         estado: 'draft',
         slug,
         criadorTipo,
-        responsavel: perfilId,
-        historicoEstados: [{ estado: 'draft', timestamp: new Date().toISOString(), autorId: userId }],
+        responsavel: relationId(actor.perfil),
+        ...(actor.role === 'instituicao' && actor.instituicao
+          ? { instituicao: relationId(actor.instituicao) }
+          : {}),
+        historicoEstados: [{ estado: 'draft', timestamp: new Date().toISOString(), autorId: user.id }],
       };
-      const res = await strapiPost<StrapiPrograma>('/programas', programaData);
-      const programaId = res.data.id;
-      const event = await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_CRIADO, {
-        programaId,
-        autorId: String(perfilId),
-        titulo: body.titulo,
-        area: body.area,
-        criadorTipo,
-      });
-      return c.json({ ...res.data, eventId: event.id }, 201);
+      const res = await strapiPost<StrapiProgramaRecord>('/programas', programaData);
+      const programaId = res.data.documentId ?? res.data.id;
+      let event;
+      try {
+        event = await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_CRIADO, {
+          programaId: String(programaId),
+          autorId: String(relationId(actor.perfil)),
+          titulo: body.titulo,
+          area: body.area,
+          criadorTipo,
+        });
+      } catch (eventError) {
+        try {
+          await strapiDelete(`/programas/${String(programaId)}`);
+        } catch {
+          return c.json({ error: 'Programa criado, mas o rollback falhou', code: 'PROGRAMA_CREATION_ROLLBACK_FAILED' }, 503);
+        }
+        throw eventError;
+      }
+      return c.json({ ...fromStrapiPrograma(res.data), eventId: event.id }, 201);
     } catch {
       return c.json({ error: 'Falha ao criar programa' }, 502);
     }
   }
 );
-
-// POST /programas/:id/inscricao — inscrição no programa (protegido)
-programaRoutes.post('/:id/inscricao', verifyJwt, async (c) => {
-  const programaId = c.req.param('id');
-  if (!programaId) return c.json({ error: 'Id é obrigatório' }, 400);
-  const user = c.get('user');
-  const { id: userId } = user;
-  try {
-    const resPerfil = await strapiGet<{ id: string }>('/perfis', {
-      'filters[userId][$eq]': userId,
-      'fields[0]': 'id',
-    });
-    const perfilId = resPerfil.data[0]?.id;
-    if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
-
-    const params: Record<string, string | string[]> = {
-      'filters[id][$eq]': programaId,
-      'pagination[pageSize]': '1',
-    };
-    applyPublicCatalogStateFilter(params);
-    const resPrograma = await strapiGet<StrapiPrograma>('/programas', params);
-    if (!resPrograma.data[0]) return c.json({ error: 'Programa não disponível para inscrição' }, 404);
-
-    const resDup = await strapiGet<{ id: string }>('/inscricoes-programas', {
-      'filters[perfil][id][$eq]': perfilId,
-      'filters[programa][id][$eq]': programaId,
-      'pagination[pageSize]': '1',
-    });
-    if (resDup.data.length > 0) return c.json({ error: 'Já inscrito neste programa' }, 409);
-
-    const res = await strapiPost<{ id: string }>('/inscricoes-programas', {
-      perfil: perfilId,
-      programa: programaId,
-    });
-
-    await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_INSCRICAO, {
-      programaId,
-      estudanteId: userId,
-    });
-
-    return c.json({ id: res.data.id }, 201);
-  } catch {
-    return c.json({ error: 'Falha ao processar inscrição' }, 502);
-  }
-});
 
 // PUT /programas/:id — atualizar programa (protegido)
 programaRoutes.put('/:id',
@@ -226,15 +176,11 @@ programaRoutes.put('/:id',
     if (!id) return c.json({ error: 'Id é obrigatório' }, 400);
     const user = c.get('user');
     const body = c.req.valid('json');
-    const { id: userId, role } = user;
     try {
-      const resPerfil = await strapiGet<{ id: string }>('/perfis', {
-        'filters[userId][$eq]': userId,
-        'fields[0]': 'id',
-      });
-      const perfilId = resPerfil.data[0]?.id;
+      const actor = await resolveProgramaActor(user);
+      if (!actor) return c.json({ error: 'Perfil não encontrado' }, 404);
 
-      const resGet = await strapiGet<StrapiPrograma>('/programas', {
+      const resGet = await strapiGet<StrapiProgramaRecord>('/programas', {
         'filters[id][$eq]': id,
         'pagination[pageSize]': '1',
         populate: 'responsavel,instituicao',
@@ -242,13 +188,20 @@ programaRoutes.put('/:id',
       const existing = resGet.data[0];
       if (!existing) return c.json({ error: 'Programa não encontrado' }, 404);
 
-      const podeEditar = role === 'super_admin' ||
-        (role === 'mentor' && String(existing.responsavel?.id) === String(perfilId)) ||
-        (role === 'instituicao' && String(existing.instituicao?.id) === String(perfilId));
-      if (!podeEditar) return c.json({ error: 'Autoridade insuficiente' }, 403);
+      if (!canManagePrograma(actor, existing)) {
+        return c.json({ error: 'Autoridade insuficiente' }, 403);
+      }
 
-      const resPut = await strapiPut<StrapiPrograma>(`/programas/${id}`, body);
-      return c.json(resPut.data);
+      const resPut = await strapiPut<StrapiProgramaRecord>(
+        `/programas/${id}`,
+        toStrapiPrograma(body),
+      );
+      const updated = await strapiGet<StrapiProgramaRecord>('/programas', {
+        'filters[id][$eq]': id,
+        'pagination[pageSize]': '1',
+        populate: PROGRAMA_POPULATE,
+      });
+      return c.json(fromStrapiPrograma(updated.data[0] ?? resPut.data));
     } catch {
       return c.json({ error: 'Falha ao atualizar programa' }, 502);
     }
@@ -267,13 +220,10 @@ programaRoutes.patch('/:id/estado',
     const { estado, motivoRejeicao } = c.req.valid('json');
     const { id: userId, role } = user;
     try {
-      const resPerfil = await strapiGet<{ id: string }>('/perfis', {
-        'filters[userId][$eq]': userId,
-        'fields[0]': 'id',
-      });
-      const perfilId = resPerfil.data[0]?.id;
+      const actor = await resolveProgramaActor(user);
+      if (!actor) return c.json({ error: 'Perfil não encontrado' }, 404);
 
-      const resGet = await strapiGet<StrapiPrograma>('/programas', {
+      const resGet = await strapiGet<StrapiProgramaRecord>('/programas', {
         'filters[id][$eq]': id,
         'pagination[pageSize]': '1',
         populate: 'responsavel,instituicao',
@@ -283,23 +233,9 @@ programaRoutes.patch('/:id/estado',
 
       const estadoAtual = programa.estado;
 
-      const transicaoPermitida = (atual: string, novo: string, userRole: string): boolean => {
-        if (userRole === 'super_admin') return true;
-        if (userRole === 'moderador') return novo === 'archived' && atual === 'published';
-        if (userRole === 'mentor' || userRole === 'instituicao') {
-          if (atual === 'draft' && novo === 'review') return true;
-          if (atual === 'approved' && novo === 'published') return true;
-          if (atual === 'draft' && novo === 'archived') return true;
-        }
-        return false;
-      };
-
-      const podeEditar = role === 'super_admin' ||
-        role === 'moderador' ||
-        String(programa.responsavel?.id) === String(perfilId) ||
-        String(programa.instituicao?.id) === String(perfilId);
+      const podeEditar = role === 'moderador' || canManagePrograma(actor, programa);
       if (!podeEditar) return c.json({ error: 'Sem permissão para editar este programa' }, 403);
-      if (!transicaoPermitida(estadoAtual, estado, role)) {
+      if (!canTransitionPrograma(estadoAtual, estado, role)) {
         return c.json({ error: `Transição inválida de ${estadoAtual} para ${estado}` }, 400);
       }
 
@@ -330,35 +266,3 @@ programaRoutes.patch('/:id/estado',
     }
   }
 );
-
-// POST /programas/:id/concluir — marcar programa como concluído (protegido)
-programaRoutes.post('/:id/concluir', verifyJwt, async (c) => {
-  const programaId = c.req.param('id');
-  if (!programaId) return c.json({ error: 'Id é obrigatório' }, 400);
-  const user = c.get('user');
-  const { id: userId } = user;
-  try {
-    const resPerfil = await strapiGet<{ id: string }>('/perfis', {
-      'filters[userId][$eq]': userId,
-      'fields[0]': 'id',
-    });
-    const perfilId = resPerfil.data[0]?.id;
-    const resInscr = await strapiGet<{ id: string }>('/inscricoes-programas', {
-      'filters[perfil][id][$eq]': String(perfilId),
-      'filters[programa][id][$eq]': programaId,
-    });
-    const existing = resInscr.data[0];
-    if (!existing) return c.json({ error: 'Inscrição não encontrada' }, 404);
-    await strapiPut(`/inscricoes-programas/${existing.id}`, {
-      concluido: true,
-      dataConclusao: new Date().toISOString(),
-    });
-    await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_CONCLUIDO, {
-      programaId,
-      perfilId: String(perfilId),
-    });
-    return c.json({ success: true });
-  } catch {
-    return c.json({ error: 'Erro ao concluir programa' }, 502);
-  }
-});

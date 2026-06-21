@@ -1,6 +1,4 @@
 import { z } from 'zod';
-import { PerfilPublicoSchema } from '../user.js';
-
 export const MensagemSchema = z.object({
   id: z.string(),
   conversaId: z.string(),
@@ -14,8 +12,11 @@ export type Mensagem = z.infer<typeof MensagemSchema>;
 
 export const ConversaSchema = z.object({
   id: z.string(),
-  participantes: z.array(PerfilPublicoSchema),
-  ultimaMensagem: MensagemSchema.optional(),
+  interlocutorId: z.string(),
+  interlocutorNome: z.string(),
+  interlocutorFoto: z.string().url().nullable().optional(),
+  ultimaMensagem: z.string().optional(),
+  naoLidas: z.number().int().min(0),
   updatedAt: z.string().datetime(),
 });
 

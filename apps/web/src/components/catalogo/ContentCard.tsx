@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Card } from '../ui/Card';
+import { GlassCard } from '../ui/GlassCard';
 import { Badge, type BadgeVariant } from '../ui/Badge';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import type React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { CatalogoLinkType } from './catalogoLinks';
@@ -44,17 +44,21 @@ export default function ContentCard({
   footerInfo,
   icon: PlaceholderIcon,
 }: ContentCardProps): React.JSX.Element {
+  const reducedMotion = useReducedMotion();
   const placeholder = type ? PLACEHOLDERS[type] : undefined;
   const typeLabel = type ? TYPE_LABELS[type] : undefined;
 
   return (
     <motion.div
-      whileHover={{ y: -3 }}
+      {...(!reducedMotion ? { whileHover: { y: -3 } } : {})}
       transition={{ type: 'spring', stiffness: 220, damping: 28 }}
       className="h-full"
     >
       <Link to={href} className="group block h-full" aria-label={`${ctaLabel}: ${title}`}>
-        <Card interactive className="overflow-hidden h-full flex flex-col !bg-canvas border-transparent hover:border-ink-tertiary/10 !shadow-none hover:!shadow-md transition-all">
+        <GlassCard
+          halo={false}
+          className="flex h-full flex-col overflow-hidden rounded-sm border border-[var(--chrome-border)] bg-[var(--surface-elevated)] p-0 shadow-[var(--elevation-1)] transition-[border-color,box-shadow] hover:border-[var(--accent-terracotta)] hover:shadow-[var(--elevation-2)]"
+        >
           <div className="aspect-video bg-recessed relative overflow-hidden">
             {image ? (
               <img
@@ -76,7 +80,7 @@ export default function ContentCard({
                 {PlaceholderIcon ? (
                   <PlaceholderIcon size={40} className="text-[var(--chrome-active)] opacity-30" strokeWidth={1} />
                 ) : (
-                  <div className="w-12 h-12 rounded-xl bg-[var(--chrome-active-soft)] flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-[var(--chrome-active-soft)]">
                     <span className="text-[var(--chrome-active)] opacity-40 font-bold text-xs font-mono">PDC</span>
                   </div>
                 )}
@@ -103,7 +107,7 @@ export default function ContentCard({
               <p className="text-xs text-ink-tertiary line-clamp-2">{subtitle || 'PDC'}</p>
             </div>
             {footerInfo && footerInfo.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+              <div className="mt-4 flex items-center justify-between border-t border-[var(--chrome-border)] pt-4">
                 {footerInfo.map((f) => (
                   <div key={f.label} className="flex items-center gap-1.5 text-[10px] text-ink-tertiary font-medium">
                     <f.icon size={12} />
@@ -116,7 +120,7 @@ export default function ContentCard({
               {ctaLabel}
             </span>
           </div>
-        </Card>
+        </GlassCard>
       </Link>
     </motion.div>
   );

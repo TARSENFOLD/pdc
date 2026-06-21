@@ -36,6 +36,18 @@ export interface StrapiEntity {
   visibilidade?: string;
   publishedAt?: string;
   createdAt: string;
+  criadoEm?: string;
+  nota?: string;
+  targetType?: string;
+  targetId?: string;
+  actor?: {
+    id?: string | number;
+    userId?: string;
+    nome?: string;
+    foto?: { url?: string } | null;
+    avatarUrl?: string | null;
+  } | null;
+  originalPost?: StrapiEntity;
 }
 
 export interface StrapiUserProfile {
@@ -59,6 +71,8 @@ export async function getOptionalUserId(c: Context): Promise<string | undefined>
 
 export interface ItemStats {
   likes: number;
+  comentarios: number;
+  shares: number;
   ratingMedia: number;
   ratingTotal: number;
 }
@@ -78,11 +92,22 @@ export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<Item
   if (cached) return cached;
 
   try {
-    const [likes, ratings] = await Promise.all([
+    const [likes, comments, shares, ratings] = await Promise.all([
       strapiGet<unknown>('/likes', {
         'filters[targetType][$eq]': tipo,
         'filters[targetId][$eq]': id,
         'pagination[limit]': '1',
+      }),
+      strapiGet<unknown>('/comments', {
+        'filters[targetType][$eq]': tipo,
+        'filters[targetId][$eq]': id,
+        'filters[estado][$eq]': 'ativo',
+        'pagination[pageSize]': '1',
+      }),
+      strapiGet<unknown>('/partilhas', {
+        'filters[targetType][$eq]': tipo,
+        'filters[targetId][$eq]': id,
+        'pagination[pageSize]': '1',
       }),
       strapiGet<{ valor: number }>('/ratings', {
         'filters[targetType][$eq]': tipo,
@@ -95,16 +120,22 @@ export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<Item
     const ratingTotal = vals.length;
     const ratingMedia = ratingTotal > 0 ? vals.reduce((a, b) => a + b, 0) / ratingTotal : 0;
 
-    const result: ItemStats = { likes: likes.meta.pagination.total, ratingMedia, ratingTotal };
+    const result: ItemStats = {
+      likes: likes.meta.pagination.total,
+      comentarios: comments.meta.pagination.total,
+      shares: shares.meta.pagination.total,
+      ratingMedia,
+      ratingTotal,
+    };
     await redis.set(statsCacheKey, result, { ex: 300 });
     return result;
   } catch {
-    return { likes: 0, ratingMedia: 0, ratingTotal: 0 };
+    return { likes: 0, comentarios: 0, shares: 0, ratingMedia: 0, ratingTotal: 0 };
   }
 }
 
 export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: FeedItemTipo }>> {
-  const [cursos, simulacoes, experiencias, feedPosts, programas, projetos] = await Promise.all([
+  const [cursos, simulacoes, experiencias, feedPosts, programas, projetos, partilhas] = await Promise.all([
     strapiGet<StrapiEntity>('/cursos', {
       'pagination[pageSize]': '100',
       sort: 'publishedAt:desc',
@@ -136,7 +167,47 @@ export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: Fe
       sort: 'createdAt:desc',
       populate: 'autor,media',
     }),
+    strapiGet<StrapiEntity>('/partilhas', {
+      'filters[canal][$eq]': 'interno',
+      'filters[targetType][$eq]': 'post',
+      'pagination[pageSize]': '100',
+      sort: 'criadoEm:desc',
+      populate: 'actor.foto',
+    }),
   ]);
+
+  const postsById = new Map(feedPosts.data.map((post) => [String(post.id), post]));
+  const missingPostIds = [...new Set(partilhas.data
+    .map((share) => share.targetId)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0 && !postsById.has(id)))];
+  if (missingPostIds.length > 0) {
+    const missingPostFilters = Object.fromEntries(
+      missingPostIds.map((id, index) => [`filters[id][$in][${index.toString()}]`, id]),
+    );
+    const missingPosts = await strapiGet<StrapiEntity>('/feed-posts', {
+      ...missingPostFilters,
+      'filters[estado][$eq]': 'aprovada',
+      'pagination[pageSize]': String(missingPostIds.length),
+      populate: 'autor.foto',
+    });
+    for (const post of missingPosts.data) {
+      postsById.set(String(post.id), post);
+    }
+  }
+  const shares = partilhas.data.flatMap((share) => {
+    const originalPost = postsById.get(String(share.targetId));
+    if (!originalPost) return [];
+    const createdAt = share.criadoEm ?? share.createdAt;
+    if (!createdAt) return [];
+    return [{
+      ...share,
+      tipo: 'partilha' as const,
+      corpo: share.nota ?? '',
+      createdAt,
+      autor: share.actor,
+      originalPost,
+    }];
+  });
 
   const all = [
     ...cursos.data.map((d) => ({ ...d, tipo: 'curso' as const })),
@@ -145,10 +216,12 @@ export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: Fe
     ...feedPosts.data.map((d) => ({ ...d, tipo: 'post' as const })),
     ...programas.data.map((d) => ({ ...d, tipo: 'programa' as const })),
     ...projetos.data.map((d) => ({ ...d, tipo: 'projeto' as const })),
+    ...shares,
   ] as Array<StrapiEntity & { tipo: FeedItemTipo }>;
 
   return all.filter((c) => {
     if (c.tipo === 'post') return c.estado === 'aprovada';
+    if (c.tipo === 'partilha') return true;
     const vis = c.visibilidade ?? 'publico';
     return isPublicCatalogEstado(c.estado) && vis === 'publico';
   });
@@ -185,6 +258,7 @@ export function toFeedItem(
   const title = titleFromContent(c);
   const body = c.corpo ?? c.descricao ?? '';
   const authorId = c.autor?.userId ?? c.autorId ?? c.autor?.id ?? c.id;
+  const originalPost = c.originalPost;
 
   return {
     id: String(c.id),
@@ -203,7 +277,23 @@ export function toFeedItem(
     autorNome: c.autor?.nome ?? c.autorNome ?? c.instituicaoNome ?? c.estudante?.nome,
     score,
     recencyScore,
-    stats: { likes: stats.likes, ratingMedia: stats.ratingMedia, ratingTotal: stats.ratingTotal },
+    stats: {
+      likes: stats.likes,
+      comentarios: stats.comentarios,
+      shares: stats.shares,
+      ratingMedia: stats.ratingMedia,
+      ratingTotal: stats.ratingTotal,
+    },
+    originalPost: originalPost ? {
+      id: String(originalPost.id),
+      titulo: titleFromContent({ ...originalPost, tipo: 'post' }),
+      corpo: originalPost.corpo ?? originalPost.descricao,
+      userId: String(originalPost.autor?.userId ?? originalPost.autorId ?? originalPost.autor?.id ?? originalPost.id),
+      autorNome: originalPost.autor?.nome ?? originalPost.autorNome,
+      avatar: resolvePerfilAvatar(originalPost.autor?.avatarUrl, originalPost.autor?.foto),
+      mediaUrls: Array.isArray(originalPost.mediaUrls) ? originalPost.mediaUrls : [],
+      createdAt: originalPost.createdAt,
+    } : undefined,
   };
 }
 
@@ -213,7 +303,22 @@ export function buildFeatures(
   affinityBoost = 0,
   authorReputation = 0
 ): FeedFeatures {
-  const engagementNorm = Math.min(1, (stats.likes * 2 + stats.ratingTotal * 5) / 100);
+  const engagementWeights = {
+    like: 2,
+    comment: 3,
+    share: 4,
+    rating: 5,
+  } as const;
+  const engagementNormalizationCeiling = 100;
+  const engagementNorm = Math.min(
+    1,
+    (
+      stats.likes * engagementWeights.like
+      + stats.comentarios * engagementWeights.comment
+      + stats.shares * engagementWeights.share
+      + stats.ratingTotal * engagementWeights.rating
+    ) / engagementNormalizationCeiling,
+  );
   const ratingNorm = stats.ratingMedia / 5;
   return {
     engagement: engagementNorm,

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 // Mock do env ANTES de qualquer outro import que dependa dele
 vi.mock('../lib/env.js', () => ({
@@ -113,6 +114,18 @@ describe('AreaVocacional Enum Contract', () => {
       expect(res.status).toBe(400);
     },
   );
+
+  it('mantém o enum de Programa no Strapi alinhado às 15 áreas canónicas', () => {
+    const schemaUrl = new URL(
+      '../../../../infra/strapi/src/api/programa/content-types/programa/schema.json',
+      import.meta.url,
+    );
+    const schema = JSON.parse(readFileSync(schemaUrl, 'utf8')) as {
+      attributes: { area: { enum: string[] } };
+    };
+
+    expect(schema.attributes.area.enum).toEqual(CANONICAL_AREAS);
+  });
 
   it.each(CANONICAL_AREAS)(
     'POST /landing/pulse deve aceitar área canónica %s',

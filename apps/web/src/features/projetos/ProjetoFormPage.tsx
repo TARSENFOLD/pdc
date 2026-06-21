@@ -5,13 +5,15 @@ import { projetosApi } from '@/lib/api/projetos';
 import { CriarProjetoPayloadSchema, type CriarProjetoPayload } from '@pdc/shared';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Input, Select, Button, Spinner } from '@/components/ui';
+import { Input, Select, Spinner } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
 import { BuilderShell, BuilderSection, BuilderUploadZone, BuilderActionsBar } from '@/components/builders';
 import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
+import { ProjetoTagSelector } from './components/ProjetoTagSelector';
+import { ProjetoModeSelector } from './components/ProjetoModeSelector';
 
 function emptyStringToUndefined(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -49,7 +51,9 @@ export function ProjetoFormPage() {
     }
   });
 
-  const { register, reset, setValue, formState: { errors } } = form;
+  const { register, reset, setValue, watch, formState: { errors } } = form;
+  const tags = watch('tags');
+  const modos = watch('modos');
 
   useEffect(() => {
     if (projeto) {
@@ -116,15 +120,6 @@ export function ProjetoFormPage() {
       variant: 'error'
     })
   });
-  const aclMutation = useMutation({
-    mutationFn: ({ perfilId, acao }: { perfilId: string, acao: 'aprovar' | 'rejeitar' }) => 
-      projetosApi.gerirACL(projetoId, perfilId, acao),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['projetos', id] });
-      toast({ title: 'Permissão de acesso atualizada.' });
-    }
-  });
-
   const handleSaveDraft = form.handleSubmit((data) => {
     pendingActionRef.current = 'draft';
     mutation.mutate(data);
@@ -159,7 +154,6 @@ export function ProjetoFormPage() {
         { id: 'pitch', label: 'Pitch Público' },
         { id: 'core', label: 'Núcleo Técnico' },
         { id: 'modos', label: 'Modos de Atuação' },
-        ...(isEdit ? [{ id: 'acl', label: 'Gestão de Acessos' }] : []),
         { id: 'recursos', label: 'Repositórios e Tags' },
       ]}
       actions={
@@ -250,58 +244,12 @@ export function ProjetoFormPage() {
         title="Modos de Atuação"
         description="Como o projeto interage com outros talentos e mentores."
       >
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { id: 'exposicao', label: 'Exposição', desc: 'Apenas visualização.' },
-            { id: 'colaboracao', label: 'Colaboração', desc: 'Aceita contribuidores.' },
-            { id: 'mentoria', label: 'Mentoria', desc: 'Procura orientação.' },
-            { id: 'financiamento', label: 'Financiamento', desc: 'Procura investimento.' },
-            { id: 'feedbackComunitario', label: 'Feedback Comunitário', desc: 'Pede opiniões da comunidade.' },
-          ].map((modo) => (
-            <label key={modo.id} className="flex items-start gap-3 p-4 rounded-sm border border-ink-tertiary/10 bg-recessed cursor-pointer hover:border-accent/20 transition-all">
-               <input 
-                 type="checkbox" 
-                 value={modo.id} 
-                 className="mt-1 accent-accent"
-                 {...register('modos')}
-               />
-               <div>
-                  <p className="text-sm font-semibold text-ink-primary">{modo.label}</p>
-                  <p className="text-[10px] text-ink-tertiary">{modo.desc}</p>
-               </div>
-            </label>
-          ))}
-        </div>
+        <ProjetoModeSelector
+          register={register}
+          selected={modos}
+          error={errors.modos?.message}
+        />
       </BuilderSection>
-
-      {isEdit && (
-        <BuilderSection
-          value="acl"
-          title="Gestão de Acessos (ACL)"
-          description="Pedidos de acesso ao núcleo técnico do teu projeto."
-        >
-          <div className="space-y-4">
-            {!projeto?.acessoCoreACL || projeto.acessoCoreACL.length === 0 ? (
-              <p className="text-sm text-ink-secondary italic py-4">Nenhum pedido de acesso pendente.</p>
-            ) : (
-              projeto.acessoCoreACL.map((entry) => (
-                <div key={entry.perfilId} className="flex items-center justify-between p-4 rounded-sm bg-canvas border border-ink-tertiary/10">
-                   <div>
-                      <p className="text-sm font-semibold text-ink-primary">ID: {entry.perfilId}</p>
-                      <p className="text-[9px] text-ink-tertiary uppercase tracking-wide">{entry.estado}</p>
-                   </div>
-                   {entry.estado === 'pendente' && (
-                     <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="text-accent-success" onClick={() => { aclMutation.mutate({ perfilId: entry.perfilId, acao: 'aprovar' }); }}>Aprovar</Button>
-                        <Button size="sm" variant="ghost" className="text-accent-danger" onClick={() => { aclMutation.mutate({ perfilId: entry.perfilId, acao: 'rejeitar' }); }}>Rejeitar</Button>
-                     </div>
-                   )}
-                </div>
-              ))
-            )}
-          </div>
-        </BuilderSection>
-      )}
 
       <BuilderSection
         value="recursos"
@@ -313,9 +261,11 @@ export function ProjetoFormPage() {
               <Input label="URL Repositório" {...register('repoUrl', { setValueAs: emptyStringToUndefined })} placeholder="https://github.com/..." />
               <Input label="URL Demo" {...register('demoUrl', { setValueAs: emptyStringToUndefined })} placeholder="https://demo.exemplo.ao" />
            </div>
-           <div className="p-4 rounded-sm bg-recessed/30 border border-ink-tertiary/10 italic text-sm text-ink-secondary">
-             Seletor de Tags avançado disponível em breve.
-           </div>
+           <ProjetoTagSelector
+             tags={tags}
+             onChange={(nextTags) => { setValue('tags', nextTags, { shouldDirty: true, shouldValidate: true }); }}
+             error={errors.tags?.message}
+           />
         </div>
       </BuilderSection>
     </BuilderShell>

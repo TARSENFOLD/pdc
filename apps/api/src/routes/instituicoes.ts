@@ -14,11 +14,13 @@ import {
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { instituicaoService } from '../modules/instituicoes/instituicao.service.js';
+import { provisionInstituicaoForUser } from '../modules/instituicoes/instituicao.provision.js';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { uploadToR2 } from '../modules/media/r2.service.js';
 import { validateMagicBytes } from '../modules/media/file-type-guard.js';
 import crypto from 'node:crypto';
 import pino from 'pino';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 type Vars = { Variables: AuthVariables };
 export const instituicaoRoutes = new Hono<Vars>();
@@ -26,6 +28,42 @@ const log = pino({ name: 'instituicoes-routes' });
 
 instituicaoRoutes.use('*', verifyJwt);
 instituicaoRoutes.use('*', checkRole(['instituicao', 'super_admin']));
+
+const ProvisionarInstituicaoSchema = z.object({
+  nome: z.string().trim().min(2).max(160).optional(),
+});
+
+instituicaoRoutes.post('/me/provisionar', async (c) => {
+  const user = c.get('user');
+  let body: unknown = {};
+  const rawBody = await c.req.text();
+  if (rawBody.trim() !== '') {
+    try {
+      body = JSON.parse(rawBody) as unknown;
+    } catch {
+      return c.json({ error: 'JSON inválido no corpo do pedido' }, 400);
+    }
+  }
+  const validation = ProvisionarInstituicaoSchema.safeParse(body);
+  if (!validation.success) {
+    return c.json({ error: 'Dados de entrada inválidos' }, 400);
+  }
+  const input = validation.data;
+  try {
+    const result = await provisionInstituicaoForUser(user.id, {
+      nome: input.nome ?? 'Nova Instituição',
+    });
+    return c.json({ data: result.instituicao }, result.created ? 201 : 200);
+  } catch (error) {
+    const err = error as { status?: number; message?: string; retryable?: boolean };
+    const rawStatus = typeof err.status === 'number' ? err.status : 502;
+    const status = rawStatus >= 200 && rawStatus < 600 ? rawStatus : 502;
+    return c.json({
+      error: err.message ?? 'Falha ao provisionar instituição',
+      retryable: err.retryable === true,
+    }, status as ContentfulStatusCode);
+  }
+});
 
 instituicaoRoutes.get('/me', async (c) => {
   return c.json({ data: await instituicaoService.minha(c.get('user').id) });

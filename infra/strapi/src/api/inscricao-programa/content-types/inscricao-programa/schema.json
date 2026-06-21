@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "inscricoes_programas",
+  "info": {
+    "singularName": "inscricao-programa",
+    "pluralName": "inscricoes-programas",
+    "displayName": "Inscrição em Programa"
+  },
+  "options": {
+    "draftAndPublish": false,
+    "indexes": [
+      {
+        "name": "unique_inscricao_perfil_programa",
+        "columns": ["perfil", "programa"],
+        "type": "unique"
+      },
+      {
+        "name": "idx_inscricao_programa_perfil",
+        "columns": ["perfil"]
+      },
+      {
+        "name": "idx_inscricao_programa_programa",
+        "columns": ["programa"]
+      }
+    ]
+  },
+  "attributes": {
+    "perfil": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "programa": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::programa.programa",
+      "required": true
+    },
+    "concluido": {
+      "type": "boolean",
+      "default": false
+    },
+    "dataConclusao": {
+      "type": "datetime"
+    }
+  }
+}

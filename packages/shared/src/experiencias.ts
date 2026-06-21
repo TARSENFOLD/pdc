@@ -3,12 +3,35 @@ import { EstadoEditorialSchema, AreaVocacionalSchema, ModalidadeSchema } from '.
 
 // ─── 3 Painéis Canónicos (G3 Spec 04 §3.1) ─────────────────────────────────────────
 
+export const EmpregadorSchema = z.object({
+  nome: z.string().min(1).max(160),
+  setor: z.string().min(1).max(120).optional(),
+  logoUrl: z.string().url().optional(),
+  url: z.string().url().optional(),
+});
+
 export const PainelRealidadeSchema = z.object({
   taxaEmpregabilidade: z.string().optional(), // ex: "94%"
   salarioMedio: z.string().optional(),
   taxaConclusao: z.string().optional(),
-  principaisEmpregadores: z.array(z.string()).optional(),
+  principaisEmpregadores: z.array(EmpregadorSchema).optional(),
 });
+
+const PainelRealidadeLegadoSchema = z.object({
+  taxaEmpregabilidade: z.string().optional(),
+  salarioMedio: z.string().optional(),
+  taxaConclusao: z.string().optional(),
+  principaisEmpregadores: z.array(z.union([z.string().min(1), EmpregadorSchema])).optional(),
+});
+
+export function parsePainelRealidade(value: unknown): PainelRealidade {
+  const legacy = PainelRealidadeLegadoSchema.parse(value);
+  return PainelRealidadeSchema.parse({
+    ...legacy,
+    principaisEmpregadores: legacy.principaisEmpregadores?.map((entry) =>
+      typeof entry === 'string' ? { nome: entry } : entry),
+  });
+}
 
 export const MuralVozesItemSchema = z.object({
   tipo: z.enum(['aluno', 'professor', 'profissional']),
@@ -27,6 +50,7 @@ export const GuiaInstitucionalSchema = z.object({
 });
 
 export type PainelRealidade = z.infer<typeof PainelRealidadeSchema>;
+export type Empregador = z.infer<typeof EmpregadorSchema>;
 export type MuralVozesItem = z.infer<typeof MuralVozesItemSchema>;
 export type GuiaInstitucional = z.infer<typeof GuiaInstitucionalSchema>;
 

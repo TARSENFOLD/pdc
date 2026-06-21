@@ -5,19 +5,36 @@ import { CriarProgramaPayloadSchema, type CriarProgramaPayload, type Programa } 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { programasApi } from '@/lib/api/programas';
-import { Input, Select, Spinner } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
-import { BuilderShell, BuilderSection, BuilderActionsBar, BuilderUploadZone } from '@/components/builders';
+import { BuilderShell, BuilderActionsBar } from '@/components/builders';
 import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { motion, AnimatePresence } from 'motion/react';
-import { Layers, Coins, Image } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
+import ProgramaFormSections from './programas/ProgramaFormSections';
 
 type ApiError = { response?: { data?: { error?: string } }; message?: string };
 
 function getErrorMessage(err: ApiError): string {
   return err.response?.data?.error ?? err.message ?? 'Erro desconhecido';
 }
+
+const PROGRAMA_FIELD_LABELS: Record<string, string> = {
+  titulo: 'Título',
+  proposito: 'Propósito',
+  metodologia: 'Metodologia',
+  area: 'Área',
+  tipo: 'Tipo',
+  modalidade: 'Modalidade',
+  vagas: 'Vagas',
+  cursosIds: 'Cursos',
+  experienciasIds: 'Experiências',
+  simulacoesIds: 'Simulações',
+  projetosIds: 'Projetos',
+  recursos: 'Recursos',
+  precoPolicy: 'Modelo de acesso',
+  moeda: 'Moeda',
+};
 
 export default function CriarProgramaPage() {
   const { id: editId } = useParams<{ id?: string }>();
@@ -42,10 +59,21 @@ export default function CriarProgramaPage() {
       experienciasIds: [],
       simulacoesIds: [],
       projetosIds: [],
+      recursos: {
+        materiais: [],
+        infraestrutura: [],
+        equipa: [],
+      },
+      precoPolicy: {
+        modo: 'gratuito',
+        valor: 0,
+        moeda: 'AOA',
+        bolsasDisponiveis: false,
+      },
     }
   });
 
-  const { register, setValue, formState: { errors } } = form;
+  const { setValue } = form;
 
   const { data: existingPrograma, isLoading: isLoadingPrograma } = useQuery({
     queryKey: ['programas', editId],
@@ -64,6 +92,17 @@ export default function CriarProgramaPage() {
     if (p.capaUrl) setValue('capaUrl', p.capaUrl);
     if (p.modalidade) setValue('modalidade', p.modalidade);
     if (p.vagas != null) setValue('vagas', p.vagas);
+    setValue('cursosIds', p.cursosIds ?? []);
+    setValue('experienciasIds', p.experienciasIds ?? []);
+    setValue('simulacoesIds', p.simulacoesIds ?? []);
+    setValue('projetosIds', p.projetosIds ?? []);
+    setValue('recursos', p.recursos ?? { materiais: [], infraestrutura: [], equipa: [] });
+    setValue('precoPolicy', p.precoPolicy ?? {
+      modo: 'gratuito',
+      valor: 0,
+      moeda: 'AOA',
+      bolsasDisponiveis: false,
+    });
   }, [existingPrograma, isEditMode, setValue]);
 
   const invalidateAll = () => {
@@ -89,6 +128,14 @@ export default function CriarProgramaPage() {
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending || estadoMutation.isPending;
   const currentState = existingPrograma?.estado ?? 'draft';
+  const showValidationErrors = (errors: typeof form.formState.errors) => {
+    const invalidFields = Object.keys(errors).map((field) => PROGRAMA_FIELD_LABELS[field] ?? field);
+    toast({
+      title: 'Revê os campos do programa',
+      description: `Campos inválidos: ${invalidFields.join(', ')}`,
+      variant: 'error',
+    });
+  };
 
   const handleSaveDraft = () => {
     void form.handleSubmit(async (data) => {
@@ -112,7 +159,7 @@ export default function CriarProgramaPage() {
       } catch {
         // erros tratados pelos onError de cada mutation
       }
-    })();
+    }, showValidationErrors)();
   };
 
   const handleSubmitReview = () => {
@@ -134,7 +181,7 @@ export default function CriarProgramaPage() {
       } catch {
         // erros tratados pelos onError de cada mutation
       }
-    })();
+    }, showValidationErrors)();
   };
 
   const handlePublish = () => {
@@ -181,141 +228,7 @@ export default function CriarProgramaPage() {
           />
         }
       >
-        <BuilderSection
-          value="proposito"
-          title="Propósito e Identidade"
-          description="O valor diferenciador e objetivo pedagógico central."
-        >
-          <div className="space-y-6">
-            <Input label="Título do Programa" {...register('titulo')} error={errors.titulo?.message} />
-
-            {/* Upload de capa */}
-            <div className="space-y-2">
-              <p className="text-sm font-bold uppercase tracking-widest text-ink-tertiary flex items-center gap-2">
-                <Image size={14} className="text-accent" /> Imagem de Capa
-              </p>
-              {form.watch('capaUrl') ? (
-                <div className="relative h-32 w-full overflow-hidden rounded-2xl border border-ink-tertiary/10">
-                  <img src={form.watch('capaUrl') ?? ''} alt="Capa" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => { setValue('capaUrl', null); }}
-                    className="absolute top-2 right-2 h-7 w-7 rounded-full bg-canvas/80 backdrop-blur-sm flex items-center justify-center text-ink-tertiary hover:text-accent text-xs font-black"
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <BuilderUploadZone
-                  entityType="capa"
-                  onUploadComplete={(urls) => { if (urls[0]) setValue('capaUrl', urls[0]); }}
-                />
-              )}
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-bold uppercase tracking-widest text-ink-tertiary">Objetivo Soberano (Propósito)</label>
-              <textarea
-                className="flex min-h-[120px] w-full rounded-xl border border-ink-tertiary/20 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
-                {...register('proposito')}
-              />
-              <div className="flex items-center justify-between">
-                {errors.proposito ? <p className="text-xs text-accent-danger">{errors.proposito.message}</p> : <span />}
-                <p className="text-[10px] text-ink-tertiary">{form.watch('proposito').length}/2000 (mín. 10)</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Select label="Domínio Vocacional" {...register('area')}>
-                <option value="SAUDE">Saúde</option>
-                <option value="ENGENHARIA">Engenharia</option>
-                <option value="TECNOLOGIA">Tecnologia</option>
-                <option value="DIREITO">Direito</option>
-                <option value="GESTAO">Gestão</option>
-                <option value="EDUCACAO">Educação</option>
-                <option value="ARTES">Artes</option>
-                <option value="CIENCIAS_AGRARIAS">Ciências Agrárias</option>
-                <option value="CIENCIAS_SOCIAIS">Ciências Sociais</option>
-                <option value="COMUNICACAO">Comunicação</option>
-                <option value="CIENCIAS_NATURAIS">Ciências Naturais</option>
-                <option value="ARQUITETURA">Arquitetura</option>
-                <option value="TURISMO_HOTELARIA">Turismo e Hotelaria</option>
-                <option value="DESPORTO">Desporto</option>
-                <option value="OUTRA">Outra</option>
-              </Select>
-              <Select label="Tipo de Programa" {...register('tipo')}>
-                <option value="standard">Standard</option>
-                <option value="shadowapro">Shadow a Pro</option>
-                <option value="eduvisit">EduVisita</option>
-              </Select>
-            </div>
-          </div>
-        </BuilderSection>
-
-        <BuilderSection
-          value="metodologia"
-          title="Metodologia e Recursos"
-          description="Como o programa é entregue e que meios são disponibilizados."
-        >
-          <div className="space-y-6">
-            <div className="space-y-1">
-              <label className="text-sm font-bold uppercase tracking-widest text-ink-tertiary">Descrição Metodológica</label>
-              <textarea
-                className="flex min-h-[120px] w-full rounded-xl border border-ink-tertiary/20 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
-                {...register('metodologia')}
-              />
-              <div className="flex items-center justify-between">
-                {errors.metodologia ? <p className="text-xs text-accent-danger">{errors.metodologia.message}</p> : <span />}
-                <p className="text-[10px] text-ink-tertiary">{form.watch('metodologia').length}/2000 (mín. 10)</p>
-              </div>
-            </div>
-            <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Recursos Didáticos (JSON Spec)</p>
-            <div className="p-4 border border-ink-tertiary/10 rounded-xl bg-recessed/30 italic text-sm text-ink-secondary">
-              Mapeamento de recursos técnicos e infraestrutura disponível em breve.
-            </div>
-          </div>
-        </BuilderSection>
-
-        <BuilderSection
-          value="conteudos"
-          title="Conteúdos Agrupados"
-          description="Integração de cursos, simulações e experiências práticas."
-        >
-          <div className="p-6 border border-dashed border-ink-tertiary/20 rounded-2xl bg-recessed/30 text-center space-y-4">
-            <Layers size={32} className="mx-auto text-ink-tertiary opacity-40" />
-            <p className="text-sm text-ink-secondary max-w-xs mx-auto">
-              Seletor de conteúdos do catálogo para agregação soberana disponível na próxima iteração.
-            </p>
-            <div className="text-[9px] font-black uppercase tracking-widest text-ink-tertiary opacity-60">
-              Módulos: {form.watch('cursosIds')?.length || 0} · Simul: {form.watch('simulacoesIds')?.length || 0}
-            </div>
-          </div>
-        </BuilderSection>
-
-        <BuilderSection
-          value="inscricao"
-          title="Regras de Inscrição e Preço"
-          description="Governação de acesso e política comercial."
-        >
-          <div className="space-y-8">
-            <div className="grid grid-cols-2 gap-4">
-              <Select label="Modalidade" {...register('modalidade')}>
-                <option value="presencial">Presencial</option>
-                <option value="online">Online</option>
-                <option value="hibrido">Híbrido</option>
-              </Select>
-              <Input label="Vagas Totais" type="number" {...register('vagas', { valueAsNumber: true })} />
-            </div>
-            <div className="space-y-4">
-              <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest flex items-center gap-2">
-                <Coins size={14} className="text-accent" /> Política de Preços
-              </p>
-              <div className="p-4 rounded-xl border border-accent/20 bg-accent/5">
-                <p className="text-xs text-ink-secondary leading-relaxed">
-                  Os programas seguem a precificação dinâmica baseada em mérito. Define o valor base e as bolsas de excelência (em breve).
-                </p>
-              </div>
-            </div>
-          </div>
-        </BuilderSection>
+        <ProgramaFormSections form={form} />
       </BuilderShell>
 
       <AnimatePresence>

@@ -786,6 +786,58 @@ export interface ApiConquistaConquista extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiConversaConversa extends Struct.CollectionTypeSchema {
+  collectionName: 'conversas';
+  info: {
+    displayName: 'Conversa';
+    pluralName: 'conversas';
+    singularName: 'conversa';
+  };
+  options: {
+    draftAndPublish: false;
+    indexes: [
+      {
+        columns: ['participantsKey'];
+        name: 'unique_conversa_participantes';
+        type: 'unique';
+      },
+      {
+        columns: ['participant1'];
+        name: 'idx_conversa_participant1';
+      },
+      {
+        columns: ['participant2'];
+        name: 'idx_conversa_participant2';
+      },
+    ];
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    criadoEm: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::conversa.conversa'
+    > &
+      Schema.Attribute.Private;
+    participant1: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'> &
+      Schema.Attribute.Required;
+    participant2: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'> &
+      Schema.Attribute.Required;
+    participantsKey: Schema.Attribute.String & Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    ultimaMensagem: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::mensagem.mensagem'
+    >;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiCursoCurso extends Struct.CollectionTypeSchema {
   collectionName: 'cursos';
   info: {
@@ -1138,6 +1190,7 @@ export interface ApiFeedEntryFeedEntry extends Struct.CollectionTypeSchema {
   attributes: {
     area: Schema.Attribute.String;
     autorId: Schema.Attribute.String;
+    corpo: Schema.Attribute.Text;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1160,6 +1213,7 @@ export interface ApiFeedEntryFeedEntry extends Struct.CollectionTypeSchema {
     source: Schema.Attribute.Enumeration<
       ['geral', 'vocacional', 'institucional', 'trending']
     >;
+    titulo: Schema.Attribute.String;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1210,6 +1264,55 @@ export interface ApiFeedPostFeedPost extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     rejeitadoEm: Schema.Attribute.DateTime;
     rejeitadoPor: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiInscricaoProgramaInscricaoPrograma
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'inscricoes_programas';
+  info: {
+    displayName: 'Inscri\u00E7\u00E3o em Programa';
+    pluralName: 'inscricoes-programas';
+    singularName: 'inscricao-programa';
+  };
+  options: {
+    draftAndPublish: false;
+    indexes: [
+      {
+        columns: ['perfil', 'programa'];
+        name: 'unique_inscricao_perfil_programa';
+        type: 'unique';
+      },
+      {
+        columns: ['perfil'];
+        name: 'idx_inscricao_programa_perfil';
+      },
+      {
+        columns: ['programa'];
+        name: 'idx_inscricao_programa_programa';
+      },
+    ];
+  };
+  attributes: {
+    concluido: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    dataConclusao: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::inscricao-programa.inscricao-programa'
+    > &
+      Schema.Attribute.Private;
+    perfil: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'> &
+      Schema.Attribute.Required;
+    programa: Schema.Attribute.Relation<'manyToOne', 'api::programa.programa'> &
+      Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1452,6 +1555,7 @@ export interface ApiMensagemMensagem extends Struct.CollectionTypeSchema {
       Schema.Attribute.SetMinMaxLength<{
         maxLength: 2000;
       }>;
+    conversa: Schema.Attribute.Relation<'manyToOne', 'api::conversa.conversa'>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1713,13 +1817,22 @@ export interface ApiPartilhaPartilha extends Struct.CollectionTypeSchema {
   };
   options: {
     draftAndPublish: false;
+    indexes: [
+      {
+        columns: ['actor', 'targetType', 'targetId', 'canal'];
+        name: 'unique_internal_share_actor_target';
+        type: 'unique';
+      },
+    ];
   };
   attributes: {
     actor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'> &
       Schema.Attribute.Required;
     canal: Schema.Attribute.Enumeration<
       ['interno', 'whatsapp', 'linkedin', 'twitter', 'email', 'outro']
-    >;
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'interno'>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1730,6 +1843,10 @@ export interface ApiPartilhaPartilha extends Struct.CollectionTypeSchema {
       'api::partilha.partilha'
     > &
       Schema.Attribute.Private;
+    nota: Schema.Attribute.Text &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 500;
+      }>;
     publishedAt: Schema.Attribute.DateTime;
     targetId: Schema.Attribute.String & Schema.Attribute.Required;
     targetType: Schema.Attribute.String & Schema.Attribute.Required;
@@ -2050,16 +2167,21 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
   attributes: {
     area: Schema.Attribute.Enumeration<
       [
-        'ENGENHARIA',
         'SAUDE',
+        'ENGENHARIA',
         'TECNOLOGIA',
-        'AGRONOMIA',
+        'DIREITO',
         'GESTAO',
         'EDUCACAO',
-        'DIREITO',
-        'CIENCIAS_SOCIAIS',
         'ARTES',
-        'OUTRO',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
       ]
     >;
     capa: Schema.Attribute.Media<'images'>;
@@ -3274,6 +3396,7 @@ declare module '@strapi/strapi' {
       'api::comment.comment': ApiCommentComment;
       'api::conquista-utilizador.conquista-utilizador': ApiConquistaUtilizadorConquistaUtilizador;
       'api::conquista.conquista': ApiConquistaConquista;
+      'api::conversa.conversa': ApiConversaConversa;
       'api::curso.curso': ApiCursoCurso;
       'api::denuncia.denuncia': ApiDenunciaDenuncia;
       'api::domain-event.domain-event': ApiDomainEventDomainEvent;
@@ -3282,6 +3405,7 @@ declare module '@strapi/strapi' {
       'api::feature-flag.feature-flag': ApiFeatureFlagFeatureFlag;
       'api::feed-entry.feed-entry': ApiFeedEntryFeedEntry;
       'api::feed-post.feed-post': ApiFeedPostFeedPost;
+      'api::inscricao-programa.inscricao-programa': ApiInscricaoProgramaInscricaoPrograma;
       'api::inscricao.inscricao': ApiInscricaoInscricao;
       'api::instituicao.instituicao': ApiInstituicaoInstituicao;
       'api::like.like': ApiLikeLike;

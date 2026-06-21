@@ -1,66 +1,60 @@
-import { UseFormRegister, FieldErrors } from 'react-hook-form';
-import { Card, Input } from '@/components/ui';
-import { Layout, Image as ImageIcon } from 'lucide-react';
+import type { UseFormRegister, FieldErrors } from 'react-hook-form';
+import { Input } from '@/components/ui';
 import { AreaVocacionalSchema, type CriarCursoPayload } from '@pdc/shared';
-import { SovereignMediaUpload } from './SovereignMediaUpload';
 
 interface Props {
   register: UseFormRegister<CriarCursoPayload>;
   errors: FieldErrors<CriarCursoPayload>;
-  onCapaUploaded: (url: string) => void;
 }
 
-export function CourseBaseInfo({ register, errors, onCapaUploaded }: Props) {
+const AREA_LABELS: Record<string, string> = {
+  SAUDE: 'Saúde',
+  ENGENHARIA: 'Engenharia',
+  TECNOLOGIA: 'Tecnologia',
+  DIREITO: 'Direito',
+  GESTAO: 'Gestão',
+  EDUCACAO: 'Educação',
+  ARTES: 'Artes',
+  CIENCIAS_AGRARIAS: 'Ciências Agrárias',
+  CIENCIAS_SOCIAIS: 'Ciências Sociais',
+  COMUNICACAO: 'Comunicação',
+  CIENCIAS_NATURAIS: 'Ciências Naturais',
+  ARQUITETURA: 'Arquitetura',
+  TURISMO_HOTELARIA: 'Turismo e Hotelaria',
+  DESPORTO: 'Desporto',
+  OUTRA: 'Outra',
+};
+
+export function CourseBaseInfo({ register, errors }: Props) {
   return (
-    <Card className="p-8 border-white/5 bg-elevated/50 backdrop-blur-xl">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-accent/10 rounded-lg text-accent"><Layout size={20} /></div>
-        <h2 className="text-xl font-bold">Estrutura Soberana</h2>
-      </div>
-      
-      <div className="space-y-6">
-        <Input label="Título do Desafio" {...register('titulo')} error={errors.titulo?.message} placeholder="Ex: Engenharia de Prompt de Elite" />
+    <div className="max-w-3xl space-y-7">
+        <Input label="Título do curso" {...register('titulo')} error={errors.titulo?.message} />
         
         <div className="space-y-1">
-          <label className="text-sm font-medium opacity-70">Manifesto do Curso</label>
+          <label className="text-sm font-medium text-ink-secondary">Descrição</label>
           <textarea 
-            className="flex min-h-25 w-full rounded-xl border border-white/10 bg-recessed px-4 py-3 text-sm focus:border-accent outline-none transition-all"
+            className="flex min-h-36 w-full rounded-sm border border-border bg-canvas px-4 py-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent"
             {...register('descricao')}
-            placeholder="O que o estudante irá conquistar?"
           />
           {errors.descricao && <p className="text-xs text-error">{errors.descricao.message}</p>}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-5 sm:grid-cols-2">
            <div className="space-y-1">
-              <label className="text-sm font-medium opacity-70">Área Vocacional</label>
-              <select {...register('area')} className="w-full bg-recessed border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-accent transition-all">
-                {AreaVocacionalSchema.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+              <label className="text-sm font-medium text-ink-secondary">Área vocacional</label>
+              <select {...register('area')} className="min-h-11 w-full rounded-sm border border-border bg-canvas px-4 text-sm text-ink-primary outline-none focus:border-accent">
+                {AreaVocacionalSchema.options.map(opt => <option key={opt} value={opt}>{AREA_LABELS[opt] ?? opt}</option>)}
               </select>
            </div>
            <div className="space-y-1">
-              <label className="text-sm font-medium opacity-70">Nível de Rigor</label>
-              <select {...register('nivel')} className="w-full bg-recessed border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-accent transition-all">
-                <option value="basico">Básico (Iniciação)</option>
-                <option value="medio">Médio (Competência)</option>
-                <option value="avancado">Avançado (Mestria)</option>
+              <label className="text-sm font-medium text-ink-secondary">Nível</label>
+              <select {...register('nivel')} className="min-h-11 w-full rounded-sm border border-border bg-canvas px-4 text-sm text-ink-primary outline-none focus:border-accent">
+                <option value="basico">Básico</option>
+                <option value="medio">Intermédio</option>
+                <option value="avancado">Avançado</option>
               </select>
            </div>
         </div>
-
-        {/* Upload E2E G8 Integrado */}
-        <div className="space-y-1 mt-4">
-           <label className="text-sm font-medium opacity-70 flex items-center gap-2"><ImageIcon size={14} /> Capa do Curso</label>
-           <SovereignMediaUpload 
-             onSuccess={onCapaUploaded} 
-             accept="image/jpeg, image/png, image/webp" 
-             maxSizeMB={5} 
-             entityType="curso-capa"
-           />
-           {/* Campo oculto que guardará a URL final */}
-           <input type="hidden" {...register('capaUrl')} />
-        </div>
-      </div>
-    </Card>
+    </div>
   );
 }

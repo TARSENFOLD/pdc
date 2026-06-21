@@ -10,6 +10,7 @@ import * as reputationService from '../reputation/reputation.service.js';
 import pino from 'pino';
 
 const log = pino({ name: 'match-hook' });
+const CANDIDATE_PAGE_SIZE = 100;
 
 export interface MatchPayload {
   autorId: string;
@@ -29,12 +30,14 @@ export interface MatchPayload {
 }
 
 export interface StrapiAutorMatchInfo {
+  id: number | string;
   reputacao?: number;
 }
 
 export interface StrapiEstudanteMatchInfo {
   id: number | string;
   reputacao?: number;
+  areasInteresse?: string[];
 }
 
 export interface StrapiBehaviorPattern {
@@ -42,6 +45,29 @@ export interface StrapiBehaviorPattern {
   cognitiveFluidity?: number;
   resilienceIndex?: number;
   focusStability?: number;
+}
+
+async function fetchCandidateProfiles(area: string): Promise<StrapiEstudanteMatchInfo[]> {
+  const candidates: StrapiEstudanteMatchInfo[] = [];
+  let page = 1;
+  let pageCount = 1;
+
+  do {
+    const response = await strapiGet<StrapiEstudanteMatchInfo>('/perfis', {
+      'filters[tipo][$eq]': 'estudante',
+      'filters[areasInteresse][$containsi]': area,
+      'pagination[page]': String(page),
+      'pagination[pageSize]': String(CANDIDATE_PAGE_SIZE),
+      'fields[0]': 'id',
+      'fields[1]': 'reputacao',
+      'fields[2]': 'areasInteresse',
+    });
+    candidates.push(...response.data);
+    pageCount = response.meta.pagination.pageCount;
+    page++;
+  } while (page <= pageCount);
+
+  return candidates;
 }
 
 /**
@@ -78,7 +104,12 @@ export const matchHook: EcosystemHook<MatchPayload> = {
 
     try {
       // 1. Obter tier do autor
-      const resAutor = await strapiGet<StrapiAutorMatchInfo>(`/perfis/${autorId}`, { 'fields[0]': 'reputacao' });
+      const resAutor = await strapiGet<StrapiAutorMatchInfo>('/perfis', {
+        'filters[id][$eq]': autorId,
+        'fields[0]': 'id',
+        'fields[1]': 'reputacao',
+        'pagination[pageSize]': '1',
+      });
       const autorData = resAutor.data[0];
       const autorRep = autorData?.reputacao || 0;
       const autorTier = reputationService.getTier(autorRep);
@@ -92,15 +123,15 @@ export const matchHook: EcosystemHook<MatchPayload> = {
       const minScore = tierThresholds[autorTier] || 0.40;
 
       // 2. Procurar estudantes candidatos
-      const resEstudantes = await strapiGet<StrapiEstudanteMatchInfo>('/perfis', {
-        'filters[role][$eq]': 'estudante',
-        'filters[areaInteresse][$eq]': area,
-        'pagination[pageSize]': '100',
-        'fields[0]': 'id',
-        'fields[1]': 'reputacao'
-      });
+      const estudantes = await fetchCandidateProfiles(area);
 
-      const candidatos = resEstudantes.data;
+      const normalizedArea = area.toUpperCase();
+      const candidatos = estudantes.filter((perfil) => {
+        if (!Array.isArray(perfil.areasInteresse)) return false;
+        return perfil.areasInteresse.some(
+          (candidateArea) => candidateArea.toUpperCase() === normalizedArea,
+        );
+      });
       if (candidatos.length === 0) return { status: 'sent', data: { matchesCreated: 0, candidatesEvaluated: 0, minScore } };
 
       // 3. Obter DNA Biomecânico em Batch (Soberania)

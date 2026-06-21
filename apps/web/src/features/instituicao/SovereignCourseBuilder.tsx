@@ -10,7 +10,8 @@ import { toast } from '@/hooks/useToast';
 import { CourseBaseInfo } from './components/CourseBaseInfo';
 import { CourseMeritGuard } from './components/CourseMeritGuard';
 import { CourseCurriculum } from './components/CourseCurriculum';
-import { BuilderShell, BuilderSection, BuilderActionsBar } from '@/components/builders';
+import { CourseSettingsPanel } from './components/CourseSettingsPanel';
+import { RichBuilderShell, BuilderSection, BuilderActionsBar } from '@/components/builders';
 import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -18,9 +19,18 @@ import { Spinner } from '@/components/ui';
 
 type FormValues = z.infer<typeof CriarCursoPayloadSchema>;
 type EditableCursoState = NonNullable<FormValues['estado']>;
+type CursoVisibilidade = NonNullable<FormValues['visibilidade']>;
 
 function toEditableState(state: string | undefined): EditableCursoState | undefined {
   return state === 'draft' || state === 'review' || state === 'published' ? state : undefined;
+}
+
+function resolveCursoVisibilidade(curso: unknown): CursoVisibilidade {
+  if (!curso || typeof curso !== 'object' || !('visibilidade' in curso)) return 'publico';
+  const value = (curso as Record<string, unknown>).visibilidade;
+  return value === 'publico' || value === 'privado' || value === 'institucional'
+    ? value
+    : 'publico';
 }
 
 export function SovereignCourseBuilder() {
@@ -39,6 +49,9 @@ export function SovereignCourseBuilder() {
       area: 'TECNOLOGIA',
       nivel: 'medio',
       visibilidade: 'publico',
+      gratuito: true,
+      preco: 0,
+      moeda: 'AOA',
       regrasAcesso: { minFluidez: 0, minResiliencia: 0, minFoco: 0 },
       modulos: [{ titulo: 'Módulo 1: Introdução', ordem: 1, itens: [{ titulo: 'Bem-vindo', tipo: 'texto', ordem: 1 }] }]
     }
@@ -61,11 +74,11 @@ export function SovereignCourseBuilder() {
       descricao: curso.descricao,
       area: curso.area ?? 'TECNOLOGIA',
       nivel: curso.nivel === 'basico' || curso.nivel === 'medio' || curso.nivel === 'avancado' ? curso.nivel : 'medio',
-      capaUrl: curso.capaUrl,
-      visibilidade: 'publico',
+      capaUrl: curso.capaUrl ?? undefined,
+      visibilidade: resolveCursoVisibilidade(curso),
       gratuito: curso.gratuito ?? true,
       preco: curso.preco ?? 0,
-      moeda: curso.moeda,
+      moeda: curso.moeda ?? 'AOA',
       estado: toEditableState(curso.estado),
       regrasAcesso: {
         minFluidez: curso.regrasAcesso?.minFluidez ?? 0,
@@ -81,7 +94,7 @@ export function SovereignCourseBuilder() {
             persistedId: item.id,
             titulo: item.titulo,
             tipo: item.tipo,
-            conteudo: item.conteudo,
+            conteudo: item.conteudo ?? undefined,
             url: item.url ?? undefined,
             ordem: item.ordem || itemIndex + 1,
           })),
@@ -135,6 +148,12 @@ export function SovereignCourseBuilder() {
   const submitWithState = (estado: FormValues['estado']) => {
     void handleSubmit((data) => {
       mutation.mutate({ ...data, estado });
+    }, (validationErrors) => {
+      toast({
+        title: 'Revê os campos do curso',
+        description: `Campos inválidos: ${Object.keys(validationErrors).join(', ')}`,
+        variant: 'error',
+      });
     })();
   };
 
@@ -144,59 +163,59 @@ export function SovereignCourseBuilder() {
 
   return (
   <>
-    <BuilderShell
-      title={isEditing ? 'Editar curso' : 'Criar curso'}
-      description="Organiza a apresentação, os requisitos e o currículo que os estudantes irão percorrer."
-      state={cursoQuery.data?.estado ?? 'draft'}
-      breadcrumbs={[
-        { label: 'Início', to: '/app' },
-        { label: 'Cursos', to: user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/dashboard/instituicao' },
-        { label: isEditing ? 'Editar Curso' : 'Novo Curso' }
-      ]}
-      sections={[
-        { id: 'info', label: 'Identidade' },
-        { id: 'merit', label: 'Requisitos' },
-        { id: 'curriculum', label: 'Currículo' },
-      ]}
-      actions={
-        <BuilderActionsBar
-          state={cursoQuery.data?.estado ?? 'draft'}
-          userRole={user?.role || 'instituicao'}
-          onSaveDraft={() => { submitWithState('draft'); }}
-          onSubmitReview={() => { submitWithState('review'); }}
-          onPublish={handlePublish}
-          isSubmitting={mutation.isPending || estadoMutation.isPending}
-        />
-      }
-    >
-      <BuilderSection
-        value="info"
-        title="Identidade do Curso"
-        description="Título, descrição e capa do conteúdo pedagógico."
+    <form onSubmit={(event) => { event.preventDefault(); }}>
+      <RichBuilderShell
+        title={isEditing ? 'Editar curso' : 'Criar curso'}
+        description="Organiza a identidade, os requisitos e o currículo numa sequência clara."
+        steps={[
+          { id: 'info', label: 'Informação', description: 'Identidade e enquadramento' },
+          { id: 'merit', label: 'Acesso', description: 'Requisitos de entrada' },
+          { id: 'curriculum', label: 'Currículo', description: 'Módulos e conteúdos' },
+        ]}
+        settingsPanel={(
+          <div className="space-y-8">
+            <CourseSettingsPanel
+              register={register}
+              watch={watch}
+              setValue={setValue}
+              errors={errors}
+            />
+            <BuilderActionsBar
+              state={cursoQuery.data?.estado ?? 'draft'}
+              userRole={user?.role || 'instituicao'}
+              onSaveDraft={() => { submitWithState('draft'); }}
+              onSubmitReview={() => { submitWithState('review'); }}
+              onPublish={handlePublish}
+              isSubmitting={mutation.isPending || estadoMutation.isPending}
+            />
+          </div>
+        )}
       >
-        <CourseBaseInfo 
-          register={register} 
-          errors={errors} 
-          onCapaUploaded={(url) => { setValue('capaUrl', url); }} 
-        />
-      </BuilderSection>
+        <BuilderSection
+          value="info"
+          title="Informação do curso"
+          description="Define o título, a descrição, a área vocacional e o nível."
+        >
+          <CourseBaseInfo register={register} errors={errors} />
+        </BuilderSection>
 
-      <BuilderSection
-        value="merit"
-        title="Requisitos de acesso"
-        description="Define os requisitos mínimos para o estudante iniciar este curso."
-      >
-        <CourseMeritGuard register={register} watch={watch} />
-      </BuilderSection>
+        <BuilderSection
+          value="merit"
+          title="Requisitos de acesso"
+          description="Define os requisitos mínimos para o estudante iniciar este curso."
+        >
+          <CourseMeritGuard register={register} watch={watch} />
+        </BuilderSection>
 
-      <BuilderSection
-        value="curriculum"
-        title="Currículo"
-        description="Estrutura de módulos e itens de aprendizagem."
-      >
-        <CourseCurriculum register={register} control={control} setValue={setValue} modulosArray={modulosArray} />
-      </BuilderSection>
-    </BuilderShell>
+        <BuilderSection
+          value="curriculum"
+          title="Currículo"
+          description="Organiza módulos e itens na ordem em que serão consumidos."
+        >
+          <CourseCurriculum register={register} control={control} setValue={setValue} modulosArray={modulosArray} />
+        </BuilderSection>
+      </RichBuilderShell>
+    </form>
 
     <AnimatePresence>
       {lastEventId && (

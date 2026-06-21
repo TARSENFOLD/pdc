@@ -16,9 +16,13 @@ const log = pino({ name: 'notify-hook' });
 async function resolvePerfilId(payload: BaseDomainEventPayload): Promise<string | undefined> {
   if (payload.perfilId) return String(payload.perfilId);
 
+  if (payload.autorId) {
+    const perfilId = await resolvePerfilIdFromReference(payload.autorId);
+    if (perfilId) return perfilId;
+  }
+
   const lookupUserId =
     payload.userId ||
-    payload.autorId ||
     payload.estudanteId ||
     payload.uploaderId ||
     payload.moderadorId ||
@@ -26,6 +30,22 @@ async function resolvePerfilId(payload: BaseDomainEventPayload): Promise<string 
   if (typeof lookupUserId !== 'string' && typeof lookupUserId !== 'number') return undefined;
 
   return resolvePerfilIdFromUserId(String(lookupUserId));
+}
+
+async function resolvePerfilIdFromReference(reference: string | number): Promise<string | undefined> {
+  try {
+    const byRelationId = await strapiGet<{ id: string | number }>('/perfis', {
+      'filters[id][$eq]': String(reference),
+      'fields[0]': 'id',
+      'pagination[pageSize]': '1',
+    });
+    const relationId = byRelationId.data[0]?.id;
+    if (relationId !== undefined) return String(relationId);
+  } catch (err: unknown) {
+    log.warn({ err, reference }, 'Falha ao resolver perfil por ID relacional');
+  }
+
+  return resolvePerfilIdFromUserId(reference);
 }
 
 // ── FOMO Triggers (F6 — Spec §3.2 ROADMAP_PRODUTO_DISRUPTIVO) ───────────────
@@ -60,11 +80,12 @@ async function persistNotificacao(perfilId: string, tipo: string, titulo: string
 
 async function resolvePerfilIdFromUserId(userId: string | number): Promise<string | undefined> {
   try {
-    const res = await strapiGet<{ id: string }>('/perfis', {
+    const res = await strapiGet<{ id: string | number }>('/perfis', {
       'filters[userId][$eq]': String(userId),
       'fields[0]': 'id',
     });
-    return res.data[0]?.id;
+    const perfilId = res.data[0]?.id;
+    return perfilId === undefined ? undefined : String(perfilId);
   } catch (err: unknown) {
     log.warn({ err, userId }, 'Falha ao resolver perfilId via userId');
     return undefined;

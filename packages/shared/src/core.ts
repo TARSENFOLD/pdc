@@ -201,22 +201,3 @@ export interface MutationResult {
   id: string | number;
   eventId?: string; // G15 Telemetry ID
 }
-
-export const CreateCommentPayloadSchema = z.object({
-  targetId: z.string(),
-  targetType: z.string(),
-  conteudo: z.string(),
-  parentId: z.string().optional(),
-});
-export type CreateCommentPayload = z.infer<typeof CreateCommentPayloadSchema>;
-
-export interface Comment extends Record<string, unknown> {
-  id: string;
-  userId: string;
-  conteudo: string;
-  createdAt: string;
-  autor?: {
-    nome?: string;
-    avatarUrl?: string;
-  };
-}

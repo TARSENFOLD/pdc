@@ -1,4 +1,4 @@
-import { useParams, Navigate, Link } from 'react-router-dom';
+import { useParams, Navigate, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projetosApi } from '@/lib/api/projetos';
 import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
@@ -11,30 +11,14 @@ import { SEOHead } from '@/components/layout/SEOHead';
 import { useToast } from '@/hooks/useToast';
 import { Spinner, Badge, Button, Avatar, LikeButton, BookmarkButton, RatingStars } from '@/components/ui';
 import {
-  ThumbsUp, Star, ChevronRight, Layers,
-  Users, GraduationCap, Banknote, MessageCircle, ExternalLink, GitBranch, Lock,
+  ThumbsUp, Star, ChevronRight, Layers, ExternalLink, GitBranch, Lock,
 } from 'lucide-react';
-import type { ProjetoModo } from '@pdc/shared';
-
-const MODO_CTA: Record<ProjetoModo, { label: string; icon: typeof Users }> = {
-  exposicao: { label: 'Guardar Projeto', icon: Layers },
-  colaboracao: { label: 'Pedir para Colaborar', icon: Users },
-  mentoria: { label: 'Oferecer Mentoria', icon: GraduationCap },
-  financiamento: { label: 'Manifestar Interesse', icon: Banknote },
-  feedbackComunitario: { label: 'Dar Feedback', icon: MessageCircle },
-};
-
-const MODO_LABELS: Record<ProjetoModo, string> = {
-  exposicao: 'Exposição',
-  colaboracao: 'Colaboração',
-  mentoria: 'Mentoria',
-  financiamento: 'Financiamento',
-  feedbackComunitario: 'Feedback Comunitário',
-};
+import { PROJECT_MODE_CTA, PROJECT_MODE_LABELS } from './projeto-mode-meta';
 
 export function ProjetoDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const { toast: showToast } = useToast();
 
@@ -120,7 +104,6 @@ export function ProjetoDetailPage() {
       />
 
       <div className="mx-auto max-w-4xl space-y-8">
-        {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-xs text-ink-tertiary">
           <Link to="/app" className="hover:text-accent transition-colors">Início</Link>
           <ChevronRight size={12} />
@@ -129,14 +112,14 @@ export function ProjetoDetailPage() {
           <span className="text-ink-primary">{projeto.titulo}</span>
         </nav>
 
-        {/* Hero */}
         {projeto.capaUrl && (
           <div className="aspect-[21/9] w-full overflow-hidden rounded-sm">
             <img src={projeto.capaUrl} alt={projeto.titulo} className="w-full h-full object-cover" />
           </div>
         )}
 
-        <header className="space-y-4">
+        <header className="grid gap-6 border-b border-border pb-8 md:grid-cols-[1fr_auto] md:items-end">
+          <div className="space-y-4">
           <div className="flex items-center gap-3">
             <EditorialStateBadge state={projeto.estado} />
             {projeto.area && (
@@ -147,26 +130,32 @@ export function ProjetoDetailPage() {
             )}
           </div>
 
-          <h1 className="text-2xl font-bold text-ink-primary">{projeto.titulo}</h1>
+          <h1 className="max-w-3xl text-3xl font-semibold text-ink-primary sm:text-4xl">{projeto.titulo}</h1>
 
-          {/* Author */}
           <div className="flex items-center gap-3">
             <Avatar src={projeto.autor?.foto?.url ?? undefined} fallback={projeto.autor?.nome[0] ?? 'P'} className="h-8 w-8" />
             <span className="text-sm font-semibold text-ink-primary">{projeto.autor?.nome ?? 'Autor'}</span>
           </div>
 
-          {/* Mode chips */}
           <div className="flex flex-wrap gap-2">
             {projeto.modos.map((m) => (
               <span key={m} className="px-2.5 py-1 text-xs font-semibold text-ink-secondary bg-elevated border border-border rounded-sm">
-                {MODO_LABELS[m]}
+                {PROJECT_MODE_LABELS[m]}
               </span>
             ))}
           </div>
+          </div>
+          {isOwner && (
+            <div className="flex flex-wrap gap-2">
+              <Link to={`/app/projetos/${id}/pedidos`}><Button variant="outline">Pedidos</Button></Link>
+              {projeto.modos.includes('colaboracao') && (
+                <Link to={`/app/projetos/${id}/colaboracao`}><Button>Colaboração</Button></Link>
+              )}
+            </div>
+          )}
         </header>
 
-        {/* Interactions bar */}
-        <div className="flex items-center gap-2 py-3 border-y border-border">
+        <div id="interacoes-projeto" className="flex items-center gap-2 py-3 border-b border-border">
           <RatingStars targetType="projeto" targetId={id} stats={ratingStats} />
           <div className="w-px h-5 bg-border" />
           <LikeButton targetType="projeto" targetId={id} initialCount={likeStatus?.count} initialLiked={likeStatus?.liked} />
@@ -207,10 +196,10 @@ export function ProjetoDetailPage() {
           </div>
         </div>
 
-        {/* Abstract */}
         <section className="space-y-3">
-          <h2 className="text-base font-semibold text-ink-primary">Sobre o Projeto</h2>
-          <p className="text-sm text-ink-secondary leading-relaxed">{projeto.abstract}</p>
+          <p className="text-xs font-semibold uppercase text-accent">Pitch público</p>
+          <h2 className="text-xl font-semibold text-ink-primary">O que este projeto quer mudar</h2>
+          <p className="max-w-3xl whitespace-pre-wrap text-base leading-7 text-ink-secondary">{projeto.abstract}</p>
           {projeto.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {projeto.tags.map((tag) => (
@@ -220,9 +209,8 @@ export function ProjetoDetailPage() {
           )}
         </section>
 
-        {/* Core (private content) - only shown to author and approved ACL members */}
         {projeto.core && (
-          <section className="space-y-3">
+          <section className="space-y-3 border-l-2 border-accent pl-5">
             <div className="flex items-center gap-2">
               <Lock size={16} className="text-accent" />
               <h2 className="text-base font-semibold text-ink-primary">Núcleo Técnico (Privado)</h2>
@@ -231,7 +219,6 @@ export function ProjetoDetailPage() {
           </section>
         )}
 
-        {/* Links */}
         {(projeto.repoUrl || projeto.demoUrl) && (
           <section className="flex flex-wrap gap-3">
             {projeto.repoUrl && (
@@ -249,24 +236,28 @@ export function ProjetoDetailPage() {
           </section>
         )}
 
-        {/* Contextual CTAs by mode */}
         {user && !isOwner && projeto.modos.length > 0 && (
           <QuietCard padding="md" tone="elevated" className="space-y-4">
             <h2 className="text-base font-semibold text-ink-primary">Participar</h2>
             <div className="flex flex-wrap gap-3">
               {projeto.modos.map((modo) => {
-                const cta = MODO_CTA[modo];
+                const cta = PROJECT_MODE_CTA[modo];
                 const Icon = cta.icon;
-                const isColaboracao = modo === 'colaboracao';
+                const needsAccess = modo === 'mentoria' || modo === 'financiamento';
+                if (modo === 'exposicao') return null;
                 return (
                   <Button
                     key={modo}
                     variant="outline"
                     className="rounded-sm gap-2"
-                    disabled={isColaboracao && accessRequestMutation.isPending}
+                    disabled={needsAccess && accessRequestMutation.isPending}
                     onClick={() => {
-                      if (isColaboracao) {
+                      if (modo === 'colaboracao') {
+                        navigate(`/app/projetos/${id}/colaboracao`);
+                      } else if (needsAccess) {
                         accessRequestMutation.mutate();
+                      } else {
+                        document.getElementById('interacoes-projeto')?.scrollIntoView({ behavior: 'smooth' });
                       }
                     }}
                   >
@@ -278,7 +269,6 @@ export function ProjetoDetailPage() {
           </QuietCard>
         )}
 
-        {/* Owner actions */}
         {isOwner && (
           <div className="flex items-center gap-3 pt-4 border-t border-border">
             <Link to={`/app/projetos/${id}/editar`}>

@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Trophy, ArrowLeft, Plus, X, LinkIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Trophy, Plus, X, LinkIcon } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Button } from '@/components/ui/Button';
-import { Card, Input, Badge, Spinner } from '@/components/ui';
+import { Input, Badge, Spinner } from '@/components/ui';
 import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { useMutation } from '@tanstack/react-query';
 import { conquistasApi } from '@/lib/api/conquistas';
 import { toast } from '@/hooks/useToast';
 import { CriarConquistaManualPayloadSchema, type CriarConquistaManualPayload } from '@pdc/shared';
+import BuilderShell from '@/components/builders/BuilderShell';
+import BuilderSection from '@/components/builders/BuilderSection';
 
 const CATEGORIAS = [
   'Certificação Externa',
@@ -106,30 +108,37 @@ export default function ConquistaManualComposer(): React.ReactElement {
 
   return (
     <>
-      <div className="mx-auto max-w-2xl space-y-8 pb-20 animate-in fade-in duration-700">
-        <div className="flex items-center gap-4">
-          <Link to="/app/conquistas">
-            <Button variant="ghost" size="sm" className="rounded-xl">
-              <ArrowLeft size={16} className="mr-2" /> Voltar
-            </Button>
-          </Link>
-          <div>
-            <Badge variant="info" className="bg-accent/10 text-accent border-accent/20 px-2 py-0.5 uppercase tracking-widest text-[8px] font-black mb-1">
-              Merit Registry
+      <BuilderShell
+        title="Registar conquista"
+        description="Regista realizações externas para enriquecer o teu portfólio de mérito."
+        breadcrumbs={[{ label: 'Conquistas', to: '/app/conquistas' }, { label: 'Novo registo' }]}
+        sections={[{ id: 'evidencia', label: 'Conquista e evidências' }]}
+        state="draft"
+        actions={(
+          <div className="sticky top-6 space-y-4">
+            <Badge variant="info" className="border-accent/20 bg-accent/10 text-accent">
+              Registo de mérito
             </Badge>
-            <h1 className="text-2xl font-black tracking-tight font-display">
-              Registar Conquista Manual
-            </h1>
+            <p className="text-xs leading-5 text-ink-tertiary">
+              A conquista será validada pelo ecossistema antes de integrar o perfil.
+            </p>
+            <Button
+              type="submit"
+              form="conquista-composer-form"
+              disabled={!isValid || mutation.isPending}
+              className="h-11 w-full rounded-sm bg-accent font-semibold text-white"
+            >
+              {mutation.isPending ? <Spinner size="sm" /> : 'Submeter conquista'}
+            </Button>
           </div>
-        </div>
-
-        <p className="text-ink-secondary text-sm leading-relaxed">
-          Submete realizações fora do ecossistema digital para enriquecer o teu portfólio de mérito.
-          Conquistas de autores com mais de 7 dias na plataforma são auto-aprovadas.
-        </p>
-
-        <Card className="p-8 border-white/5 bg-elevated/50">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        )}
+      >
+        <BuilderSection
+          value="evidencia"
+          title="Conquista e evidências"
+          description="Identifica a realização e inclui fontes que permitam validá-la."
+        >
+        <form id="conquista-composer-form" onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-ink-tertiary">
               Título da Conquista *
@@ -153,7 +162,7 @@ export default function ConquistaManualComposer(): React.ReactElement {
               placeholder="Descreve a conquista, o contexto, e o que aprendeste..."
               maxLength={2000}
               rows={5}
-              className="w-full rounded-2xl border border-white/10 bg-recessed/50 px-4 py-3 text-sm text-ink-primary placeholder:text-ink-tertiary/50 focus:border-accent/40 focus:outline-none focus:ring-1 focus:ring-accent/20 transition-all resize-none"
+              className="w-full resize-none rounded-sm border border-[var(--chrome-border)] bg-recessed/50 px-4 py-3 text-sm text-ink-primary transition-colors placeholder:text-ink-tertiary/50 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/20"
             />
             <p className="text-[10px] text-ink-tertiary">{descricao.length}/2000 caracteres (mín. 10)</p>
           </div>
@@ -165,7 +174,7 @@ export default function ConquistaManualComposer(): React.ReactElement {
             <select
               value={categoria}
               onChange={(e) => { setCategoria(e.target.value); }}
-              className="w-full rounded-2xl border border-white/10 bg-recessed/50 px-4 py-3 text-sm text-ink-primary focus:border-accent/40 focus:outline-none focus:ring-1 focus:ring-accent/20 transition-all"
+              className="w-full rounded-sm border border-[var(--chrome-border)] bg-recessed/50 px-4 py-3 text-sm text-ink-primary transition-colors focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/20"
             >
               <option value="">Selecionar categoria...</option>
               {CATEGORIAS.map((cat) => (
@@ -186,14 +195,14 @@ export default function ConquistaManualComposer(): React.ReactElement {
                 placeholder="https://exemplo.com/certificado.pdf"
                 className="flex-1"
               />
-              <Button type="button" variant="secondary" size="sm" onClick={addMediaUrl} className="rounded-xl">
+              <Button type="button" variant="secondary" size="sm" onClick={addMediaUrl} className="rounded-sm">
                 <Plus size={14} />
               </Button>
             </div>
             {mediaUrls.length > 0 && (
               <div className="space-y-1 mt-2">
                 {mediaUrls.map((url) => (
-                  <div key={url} className="flex items-center gap-2 bg-recessed/50 rounded-xl px-3 py-1.5 text-xs">
+                  <div key={url} className="flex items-center gap-2 rounded-sm border border-[var(--chrome-border)] bg-recessed/50 px-3 py-1.5 text-xs">
                     <LinkIcon size={10} className="text-accent shrink-0" />
                     <span className="truncate text-ink-secondary flex-1">{url}</span>
                     <button type="button" onClick={() => { removeMediaUrl(url); }} className="text-ink-tertiary hover:text-error transition-colors shrink-0">
@@ -217,7 +226,7 @@ export default function ConquistaManualComposer(): React.ReactElement {
                 placeholder="Adicionar tag..."
                 className="flex-1"
               />
-              <Button type="button" variant="secondary" size="sm" onClick={addTag} className="rounded-xl">
+              <Button type="button" variant="secondary" size="sm" onClick={addTag} className="rounded-sm">
                 <Plus size={14} />
               </Button>
             </div>
@@ -235,7 +244,7 @@ export default function ConquistaManualComposer(): React.ReactElement {
             )}
           </div>
 
-          <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+          <div className="flex items-center justify-between border-t border-[var(--chrome-border)] pt-4">
             <div className="space-y-1">
               <p className="text-[10px] text-ink-tertiary flex items-center gap-2">
                 <Trophy size={14} className="text-accent" />
@@ -243,17 +252,10 @@ export default function ConquistaManualComposer(): React.ReactElement {
               </p>
               {validationError && <p className="text-[10px] text-error">{validationError}</p>}
             </div>
-            <Button
-              type="submit"
-              disabled={!isValid || mutation.isPending}
-              className="h-12 px-8 rounded-2xl bg-accent text-white font-bold hover:bg-accent/90 transition-all disabled:opacity-50"
-            >
-              {mutation.isPending ? <Spinner size="sm" /> : 'Submeter Conquista'}
-            </Button>
           </div>
         </form>
-        </Card>
-      </div>
+        </BuilderSection>
+      </BuilderShell>
       <AnimatePresence>
         {lastEventId && (
           <motion.div

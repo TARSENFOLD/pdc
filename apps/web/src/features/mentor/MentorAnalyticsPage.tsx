@@ -59,7 +59,7 @@ export function MentorAnalyticsPage() {
         ))}
       </div>
 
-      <Card className="p-8 border-dashed border-2 border-ink-tertiary/10/40 bg-elevated/30 flex flex-col items-center justify-center text-center">
+      <Card className="p-8 border-dashed border-2 border-ink-tertiary/10 bg-elevated/30 flex flex-col items-center justify-center text-center">
         <p className="text-ink-tertiary">Mais métricas detalhadas (progresso médio, taxa de sucesso, etc.) estarão disponíveis em breve.</p>
       </Card>
     </div>

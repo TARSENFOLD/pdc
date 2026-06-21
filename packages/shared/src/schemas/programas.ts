@@ -7,6 +7,44 @@ export const CriadorTipoSchema = z.enum(['mentor', 'instituicao', 'super_admin']
 export const ModoAcessoSchema = z.enum(['livre', 'convite', 'misto']);
 export type ModoAcesso = z.infer<typeof ModoAcessoSchema>;
 
+export const ProgramaRecursosSchema = z.object({
+  materiais: z.array(z.string().min(1).max(120)),
+  infraestrutura: z.array(z.string().min(1).max(120)),
+  equipa: z.array(z.string().min(1).max(120)),
+});
+export type ProgramaRecursos = z.infer<typeof ProgramaRecursosSchema>;
+
+export const ProgramaPrecoPolicySchema = z.object({
+  modo: z.enum(['gratuito', 'pago']),
+  valor: z.number().min(0),
+  moeda: z.string().length(3),
+  bolsasDisponiveis: z.boolean(),
+  descricaoBolsas: z.string().max(500).optional(),
+}).superRefine((policy, context) => {
+  if (policy.modo === 'pago' && policy.valor <= 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'O valor deve ser positivo quando o programa é pago',
+      path: ['valor'],
+    });
+  }
+  if (policy.modo === 'gratuito' && policy.valor !== 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'O valor deve ser zero quando o programa é gratuito',
+      path: ['valor'],
+    });
+  }
+});
+export type ProgramaPrecoPolicy = z.infer<typeof ProgramaPrecoPolicySchema>;
+
+const ProgramaConteudoSchema = z.object({
+  id: z.coerce.string(),
+  titulo: z.string(),
+  capaUrl: z.string().url().optional().nullable(),
+  area: AreaVocacionalSchema.optional().nullable(),
+});
+
 export const CronogramaEtapaSchema = z.object({
   titulo: z.string().min(1).max(100),
   dataInicio: z.string().datetime().optional(),
@@ -50,7 +88,7 @@ export const ProgramaSchema = z.object({
   instituicaoNome: z.string().optional(),
   proposito: z.string().min(10).max(2000),
   metodologia: z.string().min(10).max(2000),
-  recursos: z.record(z.unknown()).optional(),
+  recursos: ProgramaRecursosSchema.optional(),
   responsavelId: z.string().optional(),
   area: AreaVocacionalSchema,
   tipo: ProgramaTipoSchema,
@@ -64,6 +102,10 @@ export const ProgramaSchema = z.object({
   experienciasIds: z.array(z.string()).optional(),
   simulacoesIds: z.array(z.string()).optional(),
   projetosIds: z.array(z.string()).optional(),
+  cursos: z.array(ProgramaConteudoSchema.extend({ nivel: z.string().optional() })).optional(),
+  experiencias: z.array(ProgramaConteudoSchema).optional(),
+  simulacoes: z.array(ProgramaConteudoSchema).optional(),
+  projetos: z.array(ProgramaConteudoSchema).optional(),
   capa: z.object({
     url: z.string().url(),
   }).optional().nullable(),
@@ -74,7 +116,7 @@ export const ProgramaSchema = z.object({
   vagas: z.number().int().min(0).optional(),
   requisitos: z.string().optional(),
   regrasMatricula: z.record(z.unknown()).optional(),
-  precoPolicy: z.record(z.unknown()).optional(),
+  precoPolicy: ProgramaPrecoPolicySchema.optional(),
   criadorTipo: CriadorTipoSchema.optional(),
   historicoEstados: z.array(z.object({
     estado: ProgramaEstadoSchema,
@@ -95,7 +137,7 @@ export const CriarProgramaPayloadSchema = z.object({
   proposito: z.string().min(10).max(2000),
   metodologia: z.string().min(10).max(2000),
   capaUrl: z.string().url().optional().nullable(),
-  recursos: z.record(z.unknown()).optional(),
+  recursos: ProgramaRecursosSchema.optional(),
   cronograma: z.array(CronogramaEtapaSchema).optional(),
   responsavelId: z.string().optional(),
   modoAcesso: ModoAcessoSchema.optional(),
@@ -113,7 +155,7 @@ export const CriarProgramaPayloadSchema = z.object({
   vagas: z.number().int().min(0).optional(),
   requisitos: z.string().optional(),
   regrasMatricula: z.record(z.unknown()).optional(),
-  precoPolicy: z.record(z.unknown()).optional(),
+  precoPolicy: ProgramaPrecoPolicySchema.optional(),
   criadorTipo: CriadorTipoSchema.optional(),
   tags: z.array(z.string()).optional(),
   profissionalShadow: z.string().optional(),

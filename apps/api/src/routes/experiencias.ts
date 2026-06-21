@@ -7,7 +7,12 @@ import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { requireApproved } from '../middleware/requireApproved.js';
 import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
-import { CriarExperienciaPayloadSchema, type Experiencia, type ExperienciaSecao } from '@pdc/shared';
+import {
+  CriarExperienciaPayloadSchema,
+  parsePainelRealidade,
+  type Experiencia,
+  type ExperienciaSecao,
+} from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { applyPublicCatalogStateFilter } from './publication-state.js';
@@ -47,6 +52,16 @@ function missingRequiredSections(secoes: ExperienciaSecao[] | undefined): string
     .map((group) => group.join('|'));
 }
 
+function normalizeExperiencia(experiencia: Experiencia): Experiencia {
+  if (!experiencia.painelRealidade) return experiencia;
+  try {
+    return { ...experiencia, painelRealidade: parsePainelRealidade(experiencia.painelRealidade) };
+  } catch (error) {
+    log.warn({ error, experienciaId: experiencia.id }, 'Falha ao normalizar painelRealidade');
+    return experiencia;
+  }
+}
+
 export const experienciaRoutes = new Hono<Vars>();
 
 // BUG-011: verifyJwt é aplicado apenas nas rotas protegidas.
@@ -69,7 +84,7 @@ experienciaRoutes.get('/', zValidator('query', experienciaQuerySchema), async (c
     if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
     applyPublicCatalogStateFilter(params);
     const res = await strapiGet<Experiencia>('/experiencias', params);
-    return c.json(toPaginatedResponse(res));
+    return c.json(toPaginatedResponse({ ...res, data: res.data.map(normalizeExperiencia) }));
   } catch {
     return c.json({ error: 'Falha ao sincronizar o catálogo de experiências' }, 502);
   }
@@ -84,7 +99,7 @@ experienciaRoutes.get('/minhas', verifyJwt, checkRole(['instituicao', 'mentor', 
       populate: 'autor,instituicao',
       sort: 'createdAt:desc',
     });
-    return c.json(toPaginatedResponse(res));
+    return c.json(toPaginatedResponse({ ...res, data: res.data.map(normalizeExperiencia) }));
   } catch {
     return c.json({ error: 'Erro ao recuperar as tuas experiências' }, 502);
   }
@@ -105,7 +120,7 @@ experienciaRoutes.get('/minhas/:id', verifyJwt, checkRole(['instituicao', 'mento
     if (experiencia.autor?.userId !== user.id && user.role !== 'super_admin') {
       return c.json({ error: 'Autoridade insuficiente' }, 403);
     }
-    return c.json(experiencia);
+    return c.json(normalizeExperiencia(experiencia));
   } catch {
     return c.json({ error: 'Falha ao carregar a experiência para edição' }, 502);
   }
@@ -156,7 +171,7 @@ experienciaRoutes.get('/:id', async (c) => {
     const res = await strapiGet<Experiencia>('/experiencias', params);
     const exp = res.data[0];
     if (!exp) return c.json({ error: 'Experiência não encontrada' }, 404);
-    return c.json(exp);
+    return c.json(normalizeExperiencia(exp));
   } catch {
     return c.json({ error: 'Falha ao carregar experiência' }, 502);
   }

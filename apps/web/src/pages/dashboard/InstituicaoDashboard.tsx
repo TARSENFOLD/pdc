@@ -15,6 +15,7 @@ import {
   Search,
   ShieldCheck,
   FlaskConical,
+  FolderKanban,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -23,6 +24,7 @@ const CTAS = [
   { label: 'Criar Programa', to: '/app/instituicao/criar-programa', icon: Briefcase },
   { label: 'Criar Curso', to: '/app/instituicao/cursos/criar', icon: ShieldCheck },
   { label: 'Criar Simulação', to: '/app/instituicao/simulacoes/criar', icon: FlaskConical },
+  { label: 'Criar Projeto', to: '/app/projetos/novo', icon: FolderKanban },
   { label: 'Criar Post', to: '/app/feed/criar', icon: MessageSquare },
   { label: 'Registar Marco', to: '/app/conquistas/criar', icon: Trophy },
   { label: 'Branding', to: '/app/instituicao/branding', icon: Palette },

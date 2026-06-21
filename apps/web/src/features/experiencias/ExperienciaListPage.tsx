@@ -21,7 +21,7 @@ function ExperienciaCard({ exp, index }: { exp: Experiencia; index: number }) {
       transition={{ delay: index * 0.05 }}
     >
       <Link to={`/app/experiencias/${exp.id}`} className="group">
-        <Card className="h-full bg-elevated/40 backdrop-blur-md border-white/5 overflow-hidden flex flex-col hover:bg-white/[0.02] hover:border-white/10 transition-all duration-500 rounded-[32px] shadow-2xl">
+        <Card className="flex h-full flex-col overflow-hidden border-border bg-elevated transition-colors duration-300 hover:border-accent/40">
           <div className="aspect-[16/10] w-full bg-[#0A0A0A] overflow-hidden relative">
             {exp.capaUrl ? (
               <img 
@@ -30,7 +30,7 @@ function ExperienciaCard({ exp, index }: { exp: Experiencia; index: number }) {
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" 
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface to-background">
+              <div className="flex h-full w-full items-center justify-center bg-recessed">
                 <Building2 size={48} className="text-ink-tertiary/20" />
               </div>
             )}
@@ -62,7 +62,7 @@ function ExperienciaCard({ exp, index }: { exp: Experiencia; index: number }) {
                 </div>
               </div>
               
-              <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent group-hover:text-white transition-all shadow-lg">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent transition-colors group-hover:bg-accent group-hover:text-white">
                   <ChevronRight size={18} strokeWidth={3} />
               </div>
             </div>

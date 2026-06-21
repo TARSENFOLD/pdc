@@ -122,8 +122,10 @@ notificacaoRoutes.put('/:id/lida', async (c) => {
 notificacaoRoutes.put('/lidas/todas', async (c) => {
   const { id } = c.get('user');
   try {
-    const data = await strapiPost<unknown>('/notificacoes/marcar-todas-lidas', { userId: id });
-    return c.json(data);
+    const data = await strapiPost<{ updated: number }>('/notificacoes/marcar-todas-lidas', {
+      userId: id,
+    });
+    return c.json(data.data);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
