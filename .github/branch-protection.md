@@ -14,12 +14,13 @@ As seguintes regras devem ser configuradas manualmente por um administrador do r
         - `web — lint + typecheck + build`
         - `api — lint + typecheck + build`
         - `shared — lint + typecheck + build`
-        - `e2e — Playwright smoke (Chromium)`
+        - `docs — link check + code references`
 3. **Require conversation resolution before merging**: Activado.
 4. **Restrict deletions**: Activado.
 5. **Block force pushes**: Activado.
 
 ## Notas Adicionais
 
+- **Playwright E2E**: `e2e — Playwright smoke (Chromium)` e `e2e — Playwright full (Chromium + Firefox)` são executados manualmente por `workflow_dispatch` com `run_e2e_smoke`/`run_e2e_full`, porque instalam browsers e infraestrutura Docker pesada. Promover novamente para gate automático exige corrigir estabilidade/tempo de execução primeiro.
 - **A11y (Axe-Core)**: Atualmente o passo de acessibilidade corre com `continue-on-error: true`, permitindo o merge mesmo com avisos. Isto será alterado na Wave 3.
 - **Merge Method**: Preferência por **Squash merging** para manter o histórico limpo.
