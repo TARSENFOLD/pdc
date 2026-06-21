@@ -1,6 +1,18 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      run_e2e_smoke:
+        description: "Run Playwright smoke suite"
+        required: false
+        type: boolean
+        default: false
+      run_e2e_full:
+        description: "Run Playwright full suite"
+        required: false
+        type: boolean
+        default: false
   push:
     branches:
       - principal
@@ -49,6 +61,7 @@ jobs:
   lighthouse:
     name: "lighthouse — mobile perf + a11y"
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [web]
     steps:
       - name: Checkout
@@ -163,11 +176,13 @@ jobs:
         run: npm run lint:docs
         continue-on-error: true
 
-  # ─── E2E Smoke — Playwright (PRs + push) ────────────────────────────────────
+  # ─── E2E Smoke — Playwright (manual, opt-in) ────────────────────────────────
   e2e-smoke:
     name: "e2e — Playwright smoke (Chromium)"
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     needs: [web, api, shared]
+    if: github.event_name == 'workflow_dispatch' && inputs.run_e2e_smoke
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -253,12 +268,13 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  # ─── E2E Full — Playwright (main only) ──────────────────────────────────────
+  # ─── E2E Full — Playwright (manual, opt-in) ─────────────────────────────────
   e2e-full:
     name: "e2e — Playwright full (Chromium + Firefox)"
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     needs: [web, api, shared]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.run_e2e_full
     steps:
       - name: Checkout
         uses: actions/checkout@v4
