@@ -1,9 +1,11 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/lib/auth/auth-context';
 import type { ReactNode } from 'react';
+import { ComplianceGate } from '@/features/auth/ComplianceGate';
+import { needsLegalCompliance } from '@/features/auth/complianceGatePolicy';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -16,6 +18,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (user && needsLegalCompliance(user)) {
+    return <ComplianceGate />;
   }
 
   return <>{children}</>;

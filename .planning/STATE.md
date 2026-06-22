@@ -72,6 +72,27 @@ Quatro waves PROD-A/B/C/D entregues sequencialmente. Objetivo: desbloquear deplo
 
 **Objetivo:** Auditoria de conformidade pós-PROD-A/B/C/D. As 4 waves declaravam "14/14 done · 0 partial · 0 missing" mas tinham **6 lacunas reais** + drift documental.
 
+### 2026-06-22 — Compliance Deep Refactor: Fundação de Dados
+
+**Caixa:** C — specs e código tinham a lei de privacidade/RBAC, mas faltava modelo
+persistente para provar consentimento, menoridade e versão de IA.
+
+**ADR:** `docs/decisoes/adr-044-fundacao-compliance-privacidade-menores-ia.md`
+
+**Entregue neste slice:**
+- contratos `@pdc/shared` para aceite legal, menoridade, encarregado e versionamento vocacional;
+- campos aditivos em `perfil` para DOB, estado de menoridade, `consents`, `contaEstado` e estado/versões de consentimento;
+- coleções Strapi `documento-legal` e `consentimento`;
+- `consentService` com escrita híbrida (`perfil.consents` + `consentimento` append-only) e auditoria;
+- registo por email a persistir consentimentos legais;
+- `isMinor` propagado no JWT e `minor.guard` criado para aplicação por rota sensível;
+- OAuth marcado como compliance pendente;
+- `perfil-vocacional` com `modelVersion`, `heuristicsVersion`, `explanationVersion`,
+  `generatedWithAiSupport` e `calculationMethod`.
+
+**Ainda fora deste slice:** reconsentimento no login, "Os meus dados", apagamento/export,
+revogação B2B, cookies/analytics, UI completa de transparência de IA e E2E happy path.
+
 ### 6 Lacunas + Gaps Documentais Detectados
 
 | ID | Lacuna | Caixa | Remediação Wave A |

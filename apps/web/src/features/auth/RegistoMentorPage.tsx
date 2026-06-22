@@ -9,6 +9,8 @@ import { AuthDivider, OAuthButtons } from './OAuthButtons';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import type { NeuralState } from '@/components/auth/NeuralConstellation';
 import type { RegistoMentorPayload, AreaVocacional } from '@pdc/shared';
+import { LegalConsentField } from './LegalConsentField';
+import { buildAceiteLegal } from './registrationCompliance';
 
 const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'SAUDE', label: 'Saúde' },
@@ -43,10 +45,13 @@ export function RegistoMentorPage() {
     areaEspecialidade: 'OUTRA',
     especialidade: '',
     areasAtuacao: ['OUTRA'],
+    aceiteLegal: buildAceiteLegal(),
   });
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docError, setDocError] = useState('');
   const [error, setError] = useState('');
+  const [legalAccepted, setLegalAccepted] = useState(false);
+  const [legalError, setLegalError] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [neuralState, setNeuralState] = useState<NeuralState>('idle');
@@ -84,13 +89,19 @@ export function RegistoMentorPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setLegalError('');
     if (form.password !== confirmPassword) {
       setPasswordError('As palavras-passe não coincidem.');
+      return;
+    }
+    if (!legalAccepted) {
+      setLegalError('A aceitação dos documentos legais é obrigatória para criar conta.');
       return;
     }
     setPasswordError('');
     mutation.mutate({
       ...form,
+      aceiteLegal: buildAceiteLegal(),
       areasAtuacao: form.areaEspecialidade ? [form.areaEspecialidade] : form.areasAtuacao,
       especialidade: form.especialidade || 'Mentor Especialista',
       documentos: docFile ? [docFile.name] : [],
@@ -165,6 +176,8 @@ export function RegistoMentorPage() {
             {docFile ? <p className="text-xs font-medium text-emerald-500 mt-1">✓ {docFile.name}</p> : null}
             {docError ? <p className="text-xs text-error mt-1">{docError}</p> : null}
           </div>
+
+          <LegalConsentField checked={legalAccepted} onCheckedChange={setLegalAccepted} error={legalError} />
 
           <Button type="submit" className="w-full" isLoading={mutation.isPending}>Submeter para Validação →</Button>
         </form>

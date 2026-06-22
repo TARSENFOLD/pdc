@@ -78,6 +78,7 @@ feedRoutes.get('/vocacional', verifyJwt, async (c) => {
     // 1. Buscar área vocacional do perfil persistido
     const resVoc = await strapiGet<{ areaMatch?: string }>('/perfil-vocacionais', {
       'filters[perfil][userId][$eq]': user.id,
+      'filters[atual][$eq]': 'true',
       'sort': 'createdAt:desc',
       'pagination[pageSize]': '1',
     });

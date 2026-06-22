@@ -3,7 +3,13 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, GraduationCap, ShieldCheck, UserCheck } from 'lucide-react';
 import { authApi } from '@/lib/api/auth';
 import { useAuth } from '@/lib/auth/auth-context';
-import type { OAuthFinalizarRoleChoice, Role } from '@pdc/shared';
+import {
+  OAuthFinalizarRoleChoiceSchema,
+  resolveEstadoMenoridade,
+  type Role,
+} from '@pdc/shared';
+import { LegalConsentField } from './LegalConsentField';
+import { buildAceiteLegal, emptyConsentimentoEncarregado } from './registrationCompliance';
 
 type OnboardingRole = Extract<Role, 'estudante' | 'mentor' | 'instituicao'>;
 
@@ -25,8 +31,12 @@ export function FinalizarOAuthPage() {
   const [nomeInstituicao, setNomeInstituicao] = useState('');
   const [tipoInstituicao, setTipoInstituicao] = useState('');
   const [documentoUrl, setDocumentoUrl] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
+  const [aceitouLegal, setAceitouLegal] = useState(false);
+  const [consentimentoEncarregado, setConsentimentoEncarregado] = useState(emptyConsentimentoEncarregado);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const estudanteMenor = role === 'estudante' && resolveEstadoMenoridade(dataNascimento) === 'menor';
 
   if (!isLoading && !user) {
     return <Navigate to="/login" replace />;
@@ -38,7 +48,12 @@ export function FinalizarOAuthPage() {
     setIsSubmitting(true);
 
     try {
-      const payload = buildPayload();
+      const parsed = OAuthFinalizarRoleChoiceSchema.safeParse(buildPayload());
+      if (!parsed.success) {
+        setError(parsed.error.issues[0]?.message ?? 'Confirma os dados obrigatórios antes de continuar.');
+        return;
+      }
+      const payload = parsed.data;
       await authApi.finalizarOAuthRole(payload);
       navigate('/app', { replace: true });
     } catch (err: unknown) {
@@ -48,10 +63,17 @@ export function FinalizarOAuthPage() {
     }
   }
 
-  function buildPayload(): OAuthFinalizarRoleChoice {
+  function buildPayload(): unknown {
+    const compliance = {
+      dataNascimento,
+      aceiteLegal: aceitouLegal ? buildAceiteLegal() : undefined,
+      ...(estudanteMenor ? { consentimentoEncarregado } : {}),
+    };
+
     if (role === 'mentor') {
       return {
         role,
+        ...compliance,
         areaEspecialidade,
         documentos: [{ tipo: 'comprovativo', url: documentoUrl }],
       };
@@ -60,13 +82,14 @@ export function FinalizarOAuthPage() {
     if (role === 'instituicao') {
       return {
         role,
+        ...compliance,
         nomeInstituicao,
         tipoInstituicao,
         documentos: [{ tipo: 'comprovativo', url: documentoUrl }],
       };
     }
 
-    return { role: 'estudante' };
+    return { role: 'estudante', ...compliance };
   }
 
   return (
@@ -118,18 +141,72 @@ export function FinalizarOAuthPage() {
 
             {role === 'mentor' && (
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Área de especialidade" value={areaEspecialidade} onChange={setAreaEspecialidade} required />
-                <Field label="URL do comprovativo" type="url" value={documentoUrl} onChange={setDocumentoUrl} required />
+                <Field id="oauth-area-especialidade" label="Área de especialidade" value={areaEspecialidade} onChange={setAreaEspecialidade} required />
+                <Field id="oauth-documento-mentor" label="URL do comprovativo" type="url" value={documentoUrl} onChange={setDocumentoUrl} required />
               </div>
             )}
 
             {role === 'instituicao' && (
               <div className="grid gap-4 md:grid-cols-3">
-                <Field label="Nome da instituição" value={nomeInstituicao} onChange={setNomeInstituicao} required />
-                <Field label="Tipo de instituição" value={tipoInstituicao} onChange={setTipoInstituicao} required />
-                <Field label="URL do comprovativo" type="url" value={documentoUrl} onChange={setDocumentoUrl} required />
+                <Field id="oauth-nome-instituicao" label="Nome da instituição" value={nomeInstituicao} onChange={setNomeInstituicao} required />
+                <Field id="oauth-tipo-instituicao" label="Tipo de instituição" value={tipoInstituicao} onChange={setTipoInstituicao} required />
+                <Field id="oauth-documento-instituicao" label="URL do comprovativo" type="url" value={documentoUrl} onChange={setDocumentoUrl} required />
               </div>
             )}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field
+                id="oauth-data-nascimento"
+                label="Data de nascimento"
+                type="date"
+                value={dataNascimento}
+                onChange={setDataNascimento}
+                required
+              />
+            </div>
+
+            {estudanteMenor && (
+              <div className="grid gap-4 rounded-lg border border-amber-400/30 bg-amber-400/10 p-4 md:grid-cols-3">
+                <Field
+                  id="oauth-encarregado-nome"
+                  label="Nome do encarregado"
+                  value={consentimentoEncarregado.nome}
+                  onChange={(nome) => { setConsentimentoEncarregado((current) => ({ ...current, nome })); }}
+                  required
+                />
+                <Field
+                  id="oauth-encarregado-email"
+                  label="Email do encarregado"
+                  type="email"
+                  value={consentimentoEncarregado.email}
+                  onChange={(email) => { setConsentimentoEncarregado((current) => ({ ...current, email })); }}
+                  required
+                />
+                <label htmlFor="oauth-encarregado-parentesco" className="block">
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-ink-tertiary">
+                    Parentesco
+                  </span>
+                  <select
+                    id="oauth-encarregado-parentesco"
+                    value={consentimentoEncarregado.parentesco}
+                    onChange={(event) => {
+                      const parentesco = event.target.value;
+                      if (parentesco === 'mae' || parentesco === 'pai' || parentesco === 'tutor_legal' || parentesco === 'outro') {
+                        setConsentimentoEncarregado((current) => ({ ...current, parentesco }));
+                      }
+                    }}
+                    className="h-12 w-full rounded-lg border border-ink-tertiary/10 bg-recessed px-4 text-sm text-ink-primary outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
+                  >
+                    <option value="tutor_legal">Tutor legal</option>
+                    <option value="mae">Mãe</option>
+                    <option value="pai">Pai</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </label>
+              </div>
+            )}
+
+            <LegalConsentField checked={aceitouLegal} onCheckedChange={setAceitouLegal} />
 
             <button
               type="submit"
@@ -145,22 +222,25 @@ export function FinalizarOAuthPage() {
 }
 
 function Field({
+  id,
   label,
   value,
   onChange,
   required,
   type = 'text',
 }: {
+  id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
-  type?: 'text' | 'url';
+  type?: 'text' | 'url' | 'date' | 'email';
 }) {
   return (
-    <label className="block">
+    <label htmlFor={id} className="block">
       <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-ink-tertiary">{label}</span>
       <input
+        id={id}
         type={type}
         required={required}
         value={value}

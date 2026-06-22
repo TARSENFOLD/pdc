@@ -5,7 +5,7 @@ import { deleteCookie, getCookie } from 'hono/cookie';
 import { jwtVerify } from 'jose';
 import { env } from '../lib/env.js';
 import { authService } from '../modules/auth/auth.service.js';
-import type { AuthVariables } from '../modules/auth/auth.middleware.js';
+import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { StrapiHttpError } from '../modules/strapi/strapi.client.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { setAuthCookies } from '../modules/auth/auth.helper.js';
@@ -14,6 +14,8 @@ import { otpRoutes } from './auth.otp.js';
 import { oauthRoutes } from './auth.oauth.js';
 import { registerRoutes } from './auth.register.js';
 import { passwordResetService } from '../modules/auth/password-reset.service.js';
+import { LegalComplianceCompletionSchema, RegistoEstudantePayloadSchema } from '@pdc/shared';
+import { authComplianceService } from '../modules/auth/auth-compliance.service.js';
 
 export const authRoutes = new Hono<{ Variables: AuthVariables }>();
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
@@ -32,12 +34,6 @@ const loginSchema = z.object({
   password: z.string().min(8),
 });
 
-const registerSchema = z.object({
-  email: normalizedEmailSchema,
-  password: z.string().min(8),
-  nome: z.string().min(2).max(100),
-});
-
 const forgotPasswordSchema = z.object({
   email: normalizedEmailSchema,
 });
@@ -53,10 +49,27 @@ authRoutes.use('/refresh', rateLimit);
 authRoutes.use('/forgot-password', rateLimit);
 authRoutes.use('/reset-password', rateLimit);
 
-authRoutes.post('/register', zValidator('json', registerSchema), async (c) => {
-  const { email, password, nome } = c.req.valid('json');
+authRoutes.post('/register', zValidator('json', RegistoEstudantePayloadSchema), async (c) => {
+  const {
+    email,
+    password,
+    nome,
+    areaInteresse,
+    nivelEnsino,
+    dataNascimento,
+    consentimentoEncarregado,
+    aceiteLegal,
+  } = c.req.valid('json');
   try {
-    const user = await authService.register(email, password, nome);
+    const user = await authService.registerWithRole(email, password, nome, 'estudante', {
+      ...(areaInteresse !== undefined ? { areasInteresse: [areaInteresse] } : {}),
+      ...(nivelEnsino !== undefined ? { nivelEnsino } : {}),
+    }, {
+      aceiteLegal,
+      dataNascimento,
+      ...(consentimentoEncarregado !== undefined ? { consentimentoEncarregado } : {}),
+      source: 'registo_email',
+    });
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -74,6 +87,25 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
       return c.json({ error: 'Credenciais inválidas' }, 401);
     }
     return c.json({ error: 'Serviço de autenticação indisponível' }, 502);
+  }
+});
+
+authRoutes.post('/compliance/legal', verifyJwt, zValidator('json', LegalComplianceCompletionSchema), async (c) => {
+  const user = c.get('user');
+  const payload = c.req.valid('json');
+  try {
+    await authComplianceService.completeLegalCompliance(user.id, user.role, payload);
+    const updatedUser = await authService.getUserById(user.id);
+    const { accessToken, refreshToken } = await authService.generateTokens(updatedUser);
+    await authService.saveRefreshToken(updatedUser.id, refreshToken);
+    setAuthCookies(c, accessToken, refreshToken);
+    return c.json(updatedUser);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Não foi possível regularizar a conta';
+    if (typeof err === 'object' && err !== null && 'status' in err && err.status === 404) {
+      return c.json({ error: message }, 404);
+    }
+    return c.json({ error: message }, 400);
   }
 });
 

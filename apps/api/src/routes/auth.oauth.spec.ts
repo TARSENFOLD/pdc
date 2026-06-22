@@ -318,6 +318,15 @@ describe('POST /finalizar/escolher-role — OAuth role finalization without OTP'
   });
 
   it('mints fresh tokens immediately after choosing mentor role', async () => {
+    const aceiteLegal = {
+      termosUso: true,
+      politicaPrivacidade: true,
+      tratamentoDados: true,
+      termosUsoVersao: 'termos-uso@2026-06-22',
+      politicaPrivacidadeVersao: 'politica-privacidade@2026-06-22',
+      tratamentoDadosVersao: 'tratamento-dados@2026-06-22',
+      aceiteEm: '2026-06-22T10:00:00.000Z',
+    };
     const provisionalToken = await makeTestToken({
       sub: 'user-42',
       role: 'estudante',
@@ -341,6 +350,8 @@ describe('POST /finalizar/escolher-role — OAuth role finalization without OTP'
       },
       body: JSON.stringify({
         role: 'mentor',
+        dataNascimento: '1990-01-01',
+        aceiteLegal,
         areaEspecialidade: 'TECNOLOGIA',
         documentos: [{ tipo: 'comprovativo', url: 'https://www.usepdc.com/docs/mentor.pdf' }],
       }),
@@ -349,6 +360,8 @@ describe('POST /finalizar/escolher-role — OAuth role finalization without OTP'
     expect(res.status).toBe(200);
     expect(escolherRoleMock).toHaveBeenCalledWith('user-42', {
       role: 'mentor',
+      dataNascimento: '1990-01-01',
+      aceiteLegal,
       areaEspecialidade: 'TECNOLOGIA',
       documentos: [{ tipo: 'comprovativo', url: 'https://www.usepdc.com/docs/mentor.pdf' }],
     });

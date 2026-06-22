@@ -2,11 +2,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { RelatorioVocacional } from './RelatorioVocacional';
 import { MemoryRouter } from 'react-router-dom';
-import { http } from '../../lib/api/http';
+import { ApiError, http } from '../../lib/api/http';
 
 vi.mock('../../lib/api/http', () => ({
+  ApiError: class ApiError extends Error {
+    constructor(
+      public readonly status: number,
+      message: string,
+      public readonly body?: unknown
+    ) {
+      super(message);
+      this.name = 'ApiError';
+    }
+  },
   http: {
     get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
@@ -19,10 +30,11 @@ describe('RelatorioVocacional (R2.T6 Integration)', () => {
     // Simular falha 404 no endpoint canónico (conforme Approach)
     vi.mocked(http.get).mockImplementation((url: string) => {
       if (url.includes('/reputacao/me')) {
-        return Promise.reject(Object.assign(new Error('Not Found'), { status: 404 }));
+        return Promise.reject(new ApiError(404, 'Not Found'));
       }
       return Promise.resolve({ patterns: [], recomendacoes: [] });
     });
+    vi.mocked(http.post).mockResolvedValue({ scoreGlobal: 0, patterns: [], recomendacoes: [] });
 
     render(
       <MemoryRouter>

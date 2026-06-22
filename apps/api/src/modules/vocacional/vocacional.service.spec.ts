@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { vocacionalService } from './vocacional.service.js';
 import { strapiGet } from '../strapi/strapi.client.js';
-import type { PerfilVocacional, StrapiListResponse } from '@pdc/shared';
+import {
+  VOCACIONAL_EXPLANATION_VERSION,
+  VOCACIONAL_HEURISTICS_VERSION,
+  VOCACIONAL_MODEL_VERSION,
+  type PerfilVocacional,
+  type StrapiListResponse,
+} from '@pdc/shared';
 
 function listResponse<T>(data: Array<T & { id: string | number }>): StrapiListResponse<T> {
   return {
@@ -34,6 +40,11 @@ describe('VocacionalService', () => {
       dimensoes: { fluidez: 7, resiliencia: 8, foco: 7 },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      modelVersion: VOCACIONAL_MODEL_VERSION,
+      heuristicsVersion: VOCACIONAL_HEURISTICS_VERSION,
+      explanationVersion: VOCACIONAL_EXPLANATION_VERSION,
+      generatedWithAiSupport: false,
+      calculationMethod: 'heuristico_deterministico',
     };
 
     const res = await vocacionalService.gerarRecomendacoes(perfil);

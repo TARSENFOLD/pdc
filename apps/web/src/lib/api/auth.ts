@@ -1,6 +1,7 @@
 import { http } from './http';
 import type {
   User,
+  LegalComplianceCompletion,
   OAuthFinalizarRoleChoice,
   RegistoEstudantePayload,
   RegistoMentorPayload,
@@ -52,4 +53,6 @@ export const authApi = {
     http.post<User>('/auth/finalizar/escolher-role', payload),
   verificarOAuthOtp: (otp: string) =>
     http.post<User>('/auth/finalizar/verificar-otp', { otp }),
+  completarComplianceLegal: (payload: LegalComplianceCompletion) =>
+    http.post<User>('/auth/compliance/legal', payload),
 };

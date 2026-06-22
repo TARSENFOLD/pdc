@@ -1,6 +1,7 @@
 import { test as setup, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { E2E_ACEITE_LEGAL, E2E_DATA_NASCIMENTO_ADULTO } from '../helpers/compliance';
 
 // `aluno` is a legacy fixture alias; both files authenticate the canonical estudante role.
 const roles = ['aluno', 'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin'] as const;
@@ -42,6 +43,14 @@ for (const role of roles) {
     // Final confirmation: must be in /app
     await expect(page).toHaveURL(/.*\/app(\/|$)/, { timeout: 20_000 });
 
+    const complianceResponse = await page.request.post('/api/auth/compliance/legal', {
+      data: {
+        dataNascimento: E2E_DATA_NASCIMENTO_ADULTO,
+        aceiteLegal: E2E_ACEITE_LEGAL,
+      },
+    });
+    expect(complianceResponse).toBeOK();
+
     if (accountRole === 'instituicao') {
       const provisionResponse = await page.request.post('/api/instituicoes/me/provisionar', {
         data: { nome: 'Instituição E2E PDC' },
@@ -49,13 +58,14 @@ for (const role of roles) {
       expect(provisionResponse).toBeOK();
     }
 
-    await page.evaluate(() => {
-      localStorage.removeItem('pdc:telemetry:pending');
-    });
-
     // Save storage state (cookies + clean localStorage)
     const storagePath = path.join(AUTH_DIR, `${role}.json`);
-    await context.storageState({ path: storagePath });
+    const storageState = await context.storageState();
+    storageState.origins = storageState.origins.map((origin) => ({
+      ...origin,
+      localStorage: origin.localStorage.filter((item) => item.name !== 'pdc:telemetry:pending'),
+    }));
+    fs.writeFileSync(storagePath, JSON.stringify(storageState, null, 2));
     await context.close();
   });
 }

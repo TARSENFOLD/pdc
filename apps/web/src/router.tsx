@@ -16,6 +16,9 @@ import { FinalizarOAuthPage } from '@/features/auth/FinalizarOAuthPage';
 import { Spinner } from '@/components/ui';
 import { TermosPage } from '@/pages/TermosPage';
 import { PrivacidadePage } from '@/pages/PrivacidadePage';
+import { CookiesPage } from '@/pages/CookiesPage';
+import { SuportePage } from '@/pages/SuportePage';
+import { LegalDocPage } from '@/pages/LegalDocPage';
 import { DashboardRedirect, RoleGuard } from './router-guards';
 import { LegacyMentorSimulacaoEditRedirect } from '@/features/simulacoes/LegacyMentorSimulacaoEditRedirect';
 
@@ -371,6 +374,9 @@ export const router = createBrowserRouter([
   { path: '/criar-conta/instituicao', element: <RegistoInstituicaoPage /> },
   { path: '/termos', element: <TermosPage /> },
   { path: '/privacidade', element: <PrivacidadePage /> },
+  { path: '/cookies', element: <CookiesPage /> },
+  { path: '/legal/:slug', element: <LegalDocPage /> },
+  { path: '/suporte', element: <SuportePage /> },
   { path: '*', element: <NotFoundPage /> },
 ], {
   future: {

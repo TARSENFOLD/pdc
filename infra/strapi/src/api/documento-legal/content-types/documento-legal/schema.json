@@ -1,0 +1,61 @@
+{
+  "kind": "collectionType",
+  "collectionName": "documentos_legais",
+  "info": {
+    "singularName": "documento-legal",
+    "pluralName": "documentos-legais",
+    "displayName": "Documento Legal",
+    "description": "Documento legal versionado para consentimentos e re-aceites"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "tipo": {
+      "type": "enumeration",
+      "enum": [
+        "termos_uso",
+        "politica_privacidade",
+        "tratamento_dados",
+        "politica_cookies",
+        "transparencia_ia",
+        "dpa"
+      ],
+      "required": true
+    },
+    "titulo": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "titulo",
+      "required": true
+    },
+    "versao": {
+      "type": "string",
+      "required": true
+    },
+    "resumo": {
+      "type": "text"
+    },
+    "conteudo": {
+      "type": "richtext",
+      "required": true
+    },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["draft", "published", "archived"],
+      "default": "draft"
+    },
+    "effectiveAt": {
+      "type": "datetime"
+    },
+    "consentimentos": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::consentimento.consentimento",
+      "mappedBy": "documentoLegal"
+    }
+  }
+}

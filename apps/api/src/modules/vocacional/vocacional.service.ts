@@ -4,6 +4,9 @@ import {
   type Curso,
   type BehaviorPattern,
   AreaVocacionalSchema,
+  VOCACIONAL_EXPLANATION_VERSION,
+  VOCACIONAL_HEURISTICS_VERSION,
+  VOCACIONAL_MODEL_VERSION,
 } from '@pdc/shared';
 import { type Recomendacao } from './vocacional.types.js';
 import { strapiGet } from '../strapi/strapi.client.js';
@@ -200,6 +203,11 @@ async function calcularPerfil(userId: string): Promise<PerfilVocacional> {
     dedicacao: Math.min(1, (perfil.xp ?? 0) / 10000),
     createdAt: now,
     updatedAt: now,
+    modelVersion: VOCACIONAL_MODEL_VERSION,
+    heuristicsVersion: VOCACIONAL_HEURISTICS_VERSION,
+    explanationVersion: VOCACIONAL_EXPLANATION_VERSION,
+    generatedWithAiSupport: false,
+    calculationMethod: 'heuristico_deterministico',
     dimensoes: {
       fluidez: dimensoes.fluidez,
       resiliencia: dimensoes.resiliencia,

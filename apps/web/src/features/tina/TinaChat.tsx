@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { DeepChat } from 'deep-chat-react';
 import { Sparkles, X, MessageSquareText, Cpu } from 'lucide-react';
 import type { Response as DeepChatResponse } from 'deep-chat/dist/types/response';
+import { AiDisclosure } from '@/components/ai/AiDisclosure';
 
 const API_URL: string = (import.meta.env['VITE_API_URL'] as string | undefined) ?? '/api';
 const AI_PROVIDER: string = (import.meta.env['VITE_AI_PROVIDER'] as string | undefined) ?? 'deepseek';
@@ -24,16 +25,40 @@ interface TinaProviderResponse {
   error?: string;
 }
 
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (!isObjectRecord(value)) return false;
+  return Object.values(value).every((item) => typeof item === 'string');
+}
+
+function isTinaProviderResponse(value: unknown): value is TinaProviderResponse {
+  if (!isObjectRecord(value)) return false;
+  return 'choices' in value || 'message' in value || 'error' in value;
+}
+
+function deepChatHeaders(response: unknown): Record<string, string> | undefined {
+  if (!isObjectRecord(response)) return undefined;
+  const headers = response['_headers'];
+  return isStringRecord(headers) ? headers : undefined;
+}
+
+function canSubmitUserMessage(value: unknown): value is { submitUserMessage: (content: { text: string }) => void } {
+  if (!isObjectRecord(value)) return false;
+  return typeof value['submitUserMessage'] === 'function';
+}
+
 function tinaResponse(response: unknown): DeepChatResponse {
-  if (typeof response !== 'object' || response === null) {
+  if (!isTinaProviderResponse(response)) {
     return { error: 'A Tina não conseguiu interpretar a resposta.' };
   }
 
-  const providerResponse = response as TinaProviderResponse;
-  const text = providerResponse.choices?.[0]?.message?.content ?? providerResponse.message?.content;
+  const text = response.choices?.[0]?.message?.content ?? response.message?.content;
   if (text) return { text };
 
-  return { error: providerResponse.error ?? 'A Tina está temporariamente indisponível.' };
+  return { error: response.error ?? 'A Tina está temporariamente indisponível.' };
 }
 
 export function TinaChat() {
@@ -42,8 +67,10 @@ export function TinaChat() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleSuggestion = useCallback((text: string) => {
-    const el = containerRef.current?.querySelector('deep-chat') as HTMLElement & { submitUserMessage?: (content: { text: string }) => void } | null;
-    el?.submitUserMessage?.({ text });
+    const el = containerRef.current?.querySelector('deep-chat');
+    if (canSubmitUserMessage(el)) {
+      el.submitUserMessage({ text });
+    }
   }, []);
 
   if (!open) {
@@ -59,7 +86,7 @@ export function TinaChat() {
             <Sparkles size={24} strokeWidth={2.5} className="animate-pulse-subtle" />
           </span>
         </div>
-        <span className="text-[10px] font-semibold tracking-widest text-accent uppercase opacity-60 group-hover:opacity-100 transition-opacity">Tina</span>
+        <span className="text-[10px] font-semibold tracking-widest text-accent uppercase">Tina</span>
       </button>
     );
   }
@@ -82,6 +109,7 @@ export function TinaChat() {
           <span className="text-[9px] font-bold uppercase tracking-widest text-accent/60">Ativa • {AI_PROVIDER}</span>
         </div>
         <div className="ml-auto flex items-center gap-3">
+          <AiDisclosure compact />
           {remaining !== null && (
             <div className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-mono text-ink-tertiary">
               {remaining} OPS
@@ -109,8 +137,7 @@ export function TinaChat() {
             { role: 'ai', text: 'Olá. Sou a Tina, a tua assistente de percurso vocacional. Como posso ajudar hoje?' },
           ]}
           responseInterceptor={(response: unknown) => {
-            const res = response as Record<string, unknown>;
-            const headers = res['_headers'] as Record<string, string> | undefined;
+            const headers = deepChatHeaders(response);
             const val = headers?.['x-ratelimit-remaining'];
             if (val) setRemaining(Number(val));
             return tinaResponse(response);

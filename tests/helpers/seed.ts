@@ -1,15 +1,5 @@
-/**
- * Seed test accounts for Playwright E2E suite.
- *
- * Creates real Strapi users and real Perfil records for each supported role.
- * Idempotent: existing users are reused, and Perfil.tipo is reconciled to the
- * expected canonical role before login is verified through the BFF.
- *
- * Requires a running Strapi and BFF. By default this script loads apps/api/.env
- * for STRAPI_URL and STRAPI_API_TOKEN.
- */
-
 import { config as loadEnv } from 'dotenv';
+import { E2E_PERFIL_COMPLIANCE } from './compliance.js';
 
 loadEnv({ path: 'apps/api/.env' });
 
@@ -60,6 +50,9 @@ interface PerfilData {
   nome: string;
   tipo: SeedRole;
   ativo: boolean;
+  dataNascimento: string;
+  estadoMenoridade: typeof E2E_PERFIL_COMPLIANCE.estadoMenoridade;
+  consentimentoEstado: typeof E2E_PERFIL_COMPLIANCE.consentimentoEstado;
 }
 
 const TEST_ACCOUNTS: TestAccount[] = [
@@ -159,12 +152,16 @@ function perfilPayload(account: TestAccount, userId: string): PerfilData & Recor
     nome: account.nome,
     tipo: account.role,
     ativo: true,
+    dataNascimento: E2E_PERFIL_COMPLIANCE.dataNascimento,
+    estadoMenoridade: E2E_PERFIL_COMPLIANCE.estadoMenoridade,
+    consentimentoEstado: E2E_PERFIL_COMPLIANCE.consentimentoEstado,
   };
 
   switch (account.role) {
     case 'mentor':
       return {
         ...base,
+        ...E2E_PERFIL_COMPLIANCE,
         areaFormacao: 'TECNOLOGIA',
         areasInteresse: ['TECNOLOGIA', 'ENGENHARIA'],
         aprovado: true,
@@ -172,19 +169,21 @@ function perfilPayload(account: TestAccount, userId: string): PerfilData & Recor
     case 'instituicao':
       return {
         ...base,
+        ...E2E_PERFIL_COMPLIANCE,
         regiao: 'Luanda',
         tipoInstituicao: 'universidade',
         aprovado: true,
       };
     case 'moderador':
-      return { ...base, funcao: 'Moderacao' };
+      return { ...base, ...E2E_PERFIL_COMPLIANCE, funcao: 'Moderacao' };
     case 'comite_cientifico':
-      return { ...base, funcao: 'Validacao Cientifica' };
+      return { ...base, ...E2E_PERFIL_COMPLIANCE, funcao: 'Validacao Cientifica' };
     case 'super_admin':
-      return { ...base, funcao: 'Operacao Interna' };
+      return { ...base, ...E2E_PERFIL_COMPLIANCE, funcao: 'Operacao Interna' };
     case 'estudante':
       return {
         ...base,
+        ...E2E_PERFIL_COMPLIANCE,
         areasInteresse: ['TECNOLOGIA'],
         nivelEnsino: 'Licenciatura',
       };
@@ -209,11 +208,6 @@ async function upsertPerfil(account: TestAccount, userId: string): Promise<void>
       method: 'POST',
       body: JSON.stringify({ data: payload }),
     });
-    return;
-  }
-
-  const current = existing.attributes ?? existing;
-  if (current.tipo === account.role && current.email === account.email && current.nome === account.nome) {
     return;
   }
 

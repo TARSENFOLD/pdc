@@ -2,11 +2,22 @@ import { test, expect } from '../helpers/fixtures';
 import AxeBuilder from '@axe-core/playwright';
 
 test.describe('Acessibilidade (Audit)', () => {
-  const publicRoutes = ['/', '/login'];
-  const protectedRoutes = ['/app/home'];
+  const publicRoutes = ['/', '/login', '/criar-conta/estudante', '/cookies', '/suporte'];
+  const protectedRoutes = ['/app/home', '/app/configuracoes'];
 
   for (const route of publicRoutes) {
     test(`deve passar na auditoria de acessibilidade de ${route} @a11y`, async ({ page }) => {
+      await page.goto(route);
+      await page.waitForLoadState('networkidle');
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze();
+      expect(results.violations).toEqual([]);
+    });
+  }
+
+  for (const route of protectedRoutes) {
+    test(`deve passar na auditoria de acessibilidade autenticada de ${route} @a11y`, async ({ estudantePage: page }) => {
       await page.goto(route);
       await page.waitForLoadState('networkidle');
       const results = await new AxeBuilder({ page })
@@ -30,7 +41,7 @@ test.describe('Acessibilidade (Audit)', () => {
       
       // Navegar para "O meu Perfil"
       await page.keyboard.press('Tab');
-      const profileLink = page.getByRole('menuitem', { name: /perfil/i });
+      const profileLink = page.getByRole('button', { name: /perfil/i });
       await expect(profileLink).toBeFocused();
       
       // Fechar com Escape
@@ -43,7 +54,7 @@ test.describe('Acessibilidade (Audit)', () => {
       await page.getByTestId('user-menu').click();
       
       const results = await new AxeBuilder({ page })
-        .include('[role="menu"]')
+        .include('[data-testid="user-menu-panel"]')
         .withTags(['wcag2a', 'wcag2aa'])
         .analyze();
       expect(results.violations).toEqual([]);
