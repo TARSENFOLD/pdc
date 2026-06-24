@@ -14,7 +14,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const Component = asChild ? Slot : 'button';
 
     const variants = {
-      primary: 'bg-accent text-ink-on-accent hover:bg-accent-soft border-transparent shadow-lg shadow-accent/10 asymmetric-a',
+      primary: 'bg-accent text-ink-on-accent hover:bg-accent-soft border-transparent shadow-lg shadow-accent/10 asymmetric-a dark:bg-[#8F451F] dark:hover:bg-[#9F4E25]',
       secondary: 'bg-recessed text-ink-primary hover:bg-canvas/50 border-border asymmetric-b',
       ghost: 'bg-transparent text-ink-secondary hover:bg-recessed border-transparent rounded-md',
       danger: 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20 rounded-md',

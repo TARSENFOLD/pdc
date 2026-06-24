@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AreaVocacionalSchema } from './schemas/enums.js';
+import { AiProfileVersionSchema } from './compliance.js';
 
 // ─── Tipos e Interfaces de Decisão Soberana ──────────────────────────────────
 
@@ -109,7 +110,7 @@ export const PerfilVocacionalSchema = z.object({
   }),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime().optional(),
-});
+}).merge(AiProfileVersionSchema);
 
 export type PerfilVocacional = z.infer<typeof PerfilVocacionalSchema>;
 

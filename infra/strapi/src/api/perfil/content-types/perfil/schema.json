@@ -150,6 +150,45 @@
     "documentos": {
       "type": "json"
     },
+    "dataNascimento": {
+      "type": "date"
+    },
+    "estadoMenoridade": {
+      "type": "enumeration",
+      "enum": ["pendente", "adulto", "menor"],
+      "default": "pendente"
+    },
+    "consentimentoEstado": {
+      "type": "enumeration",
+      "enum": ["pendente", "completo", "requer_reconsentimento", "bloqueado"],
+      "default": "pendente"
+    },
+    "consents": {
+      "type": "json"
+    },
+    "contaEstado": {
+      "type": "enumeration",
+      "enum": ["ativa", "anonimizada"],
+      "default": "ativa"
+    },
+    "anonymizedAt": {
+      "type": "datetime"
+    },
+    "legalTermsVersion": {
+      "type": "string"
+    },
+    "legalPrivacyVersion": {
+      "type": "string"
+    },
+    "legalDataProcessingVersion": {
+      "type": "string"
+    },
+    "legalAcceptedAt": {
+      "type": "datetime"
+    },
+    "guardianConsent": {
+      "type": "json"
+    },
     "notificationPreferences": {
       "type": "json"
     },

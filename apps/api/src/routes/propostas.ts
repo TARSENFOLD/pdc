@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
+import { requireAdult } from '../modules/auth/minor.guard.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
@@ -13,7 +14,7 @@ export const propostaRoutes = new Hono<Vars>();
 propostaRoutes.use('*', verifyJwt);
 
 // POST /propostas (Criar nova proposta)
-propostaRoutes.post('/', zValidator('json', CriarPropostaPayloadSchema), async (c) => {
+propostaRoutes.post('/', requireAdult(), zValidator('json', CriarPropostaPayloadSchema), async (c) => {
   const payload = c.req.valid('json');
   const { id: instituicaoId } = c.get('user');
 
@@ -60,7 +61,7 @@ propostaRoutes.get('/recebidas', async (c) => {
 });
 
 // POST /propostas/:id/responder
-propostaRoutes.post('/:id/responder', zValidator('json', z.object({ acao: z.enum(['aceitar', 'rejeitar']) })), async (c) => {
+propostaRoutes.post('/:id/responder', requireAdult(), zValidator('json', z.object({ acao: z.enum(['aceitar', 'rejeitar']) })), async (c) => {
   const id = c.req.param('id');
   const { acao } = c.req.valid('json');
   const { id: userId } = c.get('user');

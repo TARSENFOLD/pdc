@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
+import { z } from 'zod';
 import { authApi, type LoginResponse } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/http';
 import { Button, Input, PasswordInput } from '@/components/ui';
 import AuthSplitLayout from './AuthSplitLayout';
 import { AuthDivider, OAuthButtons } from './OAuthButtons';
-import type { RegistoEstudantePayload, AreaVocacional } from '@pdc/shared';
+import { resolveEstadoMenoridade, type RegistoEstudantePayload, type AreaVocacional } from '@pdc/shared';
 import type { NeuralState } from '@/components/auth/NeuralConstellation';
+import { LegalConsentField } from './LegalConsentField';
+import { buildAceiteLegal, emptyConsentimentoEncarregado } from './registrationCompliance';
 
 const AREAS: Array<{ value: AreaVocacional; label: string }> = [
   { value: 'SAUDE', label: 'Saúde' },
@@ -33,10 +36,21 @@ function isAreaVocacionalValue(value: string): value is AreaVocacional {
   return AREAS.some((a) => a.value === value);
 }
 
+function resolveSuggestedArea(value: string | null): AreaVocacional | null {
+  if (!value) return null;
+  const normalized = value.toUpperCase();
+  return isAreaVocacionalValue(normalized) ? normalized : null;
+}
+
+function getApiErrorMessage(err: ApiError): string | null {
+  const result = z.object({ error: z.string() }).safeParse(err.body);
+  return result.success ? result.data.error : null;
+}
+
 export function RegistoEstudantePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const suggestedArea = searchParams.get('area')?.toUpperCase() as AreaVocacional | null;
+  const suggestedArea = resolveSuggestedArea(searchParams.get('area'));
 
   const [form, setForm] = useState<RegistoEstudantePayload>({
     nome: '',
@@ -44,12 +58,17 @@ export function RegistoEstudantePage() {
     password: '',
     areaInteresse: 'OUTRA',
     nivelEnsino: '',
+    dataNascimento: '',
+    aceiteLegal: buildAceiteLegal(),
   });
 
   const [error, setError] = useState('');
+  const [legalAccepted, setLegalAccepted] = useState(false);
+  const [legalError, setLegalError] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [neuralState, setNeuralState] = useState<NeuralState>('idle');
+  const isMinor = resolveEstadoMenoridade(form.dataNascimento) === 'menor';
 
   // Sincronizar área sugerida vinda do Micro Desafio
   useEffect(() => {
@@ -70,8 +89,7 @@ export function RegistoEstudantePage() {
     onError: (err: unknown) => {
       let message = 'Erro ao criar conta.';
       if (err instanceof ApiError) {
-        const body = err.body as Record<string, unknown> | undefined;
-        if (typeof body?.error === 'string') message = body.error;
+        message = getApiErrorMessage(err) ?? message;
       } else if (err instanceof Error) {
         message = err.message;
       }
@@ -86,12 +104,21 @@ export function RegistoEstudantePage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setLegalError('');
     if (form.password !== confirmPassword) {
       setPasswordError('As palavras-passe não coincidem.');
       return;
     }
+    if (!legalAccepted) {
+      setLegalError('A aceitação dos documentos legais é obrigatória para criar conta.');
+      return;
+    }
+    if (isMinor && !form.consentimentoEncarregado) {
+      setError('Indica o encarregado de educação para concluir o registo.');
+      return;
+    }
     setPasswordError('');
-    mutation.mutate(form);
+    mutation.mutate({ ...form, aceiteLegal: buildAceiteLegal() });
   }
 
   return (
@@ -103,11 +130,11 @@ export function RegistoEstudantePage() {
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {error ? <div className="rounded-lg border border-error/20 bg-error/10 p-3 text-sm text-error">{error}</div> : null}
 
-          <Input label="Nome completo" required value={form.nome}
+          <Input id="registo-nome" label="Nome completo" required value={form.nome}
             onFocus={() => { setNeuralState('pulse'); }}
             onBlur={() => { setNeuralState('idle'); }}
             onChange={(e) => { handleChange('nome', e.target.value); }} />
-          <Input label="Email" type="email" required value={form.email}
+          <Input id="registo-email" label="Email" type="email" required value={form.email}
             onFocus={() => { setNeuralState('align'); }}
             onBlur={() => { setNeuralState('idle'); }}
             onChange={(e) => { handleChange('email', e.target.value); }} />
@@ -121,9 +148,44 @@ export function RegistoEstudantePage() {
             onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }} />
           {passwordError && <p className="text-xs text-error font-medium">{passwordError}</p>}
 
+          <Input id="registo-data-nascimento" label="Data de nascimento" type="date" required value={form.dataNascimento}
+            onFocus={() => { setNeuralState('focus'); }}
+            onBlur={() => { setNeuralState('idle'); }}
+            onChange={(e) => {
+              const dataNascimento = e.target.value;
+              handleChange('dataNascimento', dataNascimento);
+              if (resolveEstadoMenoridade(dataNascimento) !== 'menor') {
+                handleChange('consentimentoEncarregado', undefined);
+              } else if (!form.consentimentoEncarregado) {
+                handleChange('consentimentoEncarregado', emptyConsentimentoEncarregado());
+              }
+            }} />
+
+          {isMinor ? (
+            <div className="space-y-3 rounded-lg border border-accent/20 bg-accent/5 p-3">
+              <p className="text-xs font-semibold text-accent">Consentimento do encarregado</p>
+              <Input id="registo-encarregado-nome" label="Nome do encarregado" required value={form.consentimentoEncarregado?.nome ?? ''}
+                onChange={(e) => {
+                  handleChange('consentimentoEncarregado', {
+                    ...emptyConsentimentoEncarregado(),
+                    ...form.consentimentoEncarregado,
+                    nome: e.target.value,
+                  });
+                }} />
+              <Input id="registo-encarregado-email" label="Email do encarregado" type="email" required value={form.consentimentoEncarregado?.email ?? ''}
+                onChange={(e) => {
+                  handleChange('consentimentoEncarregado', {
+                    ...emptyConsentimentoEncarregado(),
+                    ...form.consentimentoEncarregado,
+                    email: e.target.value,
+                  });
+                }} />
+            </div>
+          ) : null}
+
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink-secondary">Área de interesse</label>
-            <select required value={form.areaInteresse}
+            <label htmlFor="registo-area-interesse" className="text-sm font-medium text-ink-secondary">Área de interesse</label>
+            <select id="registo-area-interesse" required value={form.areaInteresse}
               onFocus={() => { setNeuralState('flow'); }}
               onBlur={() => { setNeuralState('idle'); }}
               onChange={(e) => { const val = e.target.value; if (isAreaVocacionalValue(val)) handleChange('areaInteresse', val); }}
@@ -133,8 +195,8 @@ export function RegistoEstudantePage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink-secondary">Nível de ensino</label>
-            <select required value={form.nivelEnsino}
+            <label htmlFor="registo-nivel-ensino" className="text-sm font-medium text-ink-secondary">Nível de ensino</label>
+            <select id="registo-nivel-ensino" required value={form.nivelEnsino}
               onFocus={() => { setNeuralState('flow'); }}
               onBlur={() => { setNeuralState('idle'); }}
               onChange={(e) => { handleChange('nivelEnsino', e.target.value); }}
@@ -143,6 +205,8 @@ export function RegistoEstudantePage() {
               {NIVEIS.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
+
+          <LegalConsentField checked={legalAccepted} onCheckedChange={setLegalAccepted} error={legalError} />
 
           <Button type="submit" className="w-full" isLoading={mutation.isPending}>Registar e Continuar →</Button>
         </form>

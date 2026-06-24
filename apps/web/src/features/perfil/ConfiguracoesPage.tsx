@@ -6,6 +6,7 @@ import { Palette, Bell, ShieldCheck, Globe, Key, Users, Lock, Eye } from 'lucide
 import { http } from '@/lib/api/http';
 import { toast } from '@/hooks/useToast';
 import type { VisibilitySettings, PerfilCompleto, UpdatePerfilPayload, FieldVisibility } from '@pdc/shared';
+import { MeusDadosSection } from './MeusDadosSection';
 
 /**
  * NotificationPreferences - Interface local para manter a inteligência do sistema.
@@ -39,6 +40,7 @@ const TABS = [
   { id: 'privacidade', label: 'Privacidade', icon: ShieldCheck },
   { id: 'notificacoes', label: 'Notificações', icon: Bell },
   { id: 'seguranca', label: 'Segurança', icon: Key },
+  { id: 'dados', label: 'Os meus dados', icon: Lock },
 ] as const;
 
 const VISIBILITY_FIELDS: Array<{ key: keyof VisibilitySettings; label: string }> = [
@@ -224,6 +226,8 @@ export function ConfiguracoesPage() {
                 </div>
               </div>
             )}
+
+            {activeTab === 'dados' && <MeusDadosSection />}
           </div>
         </main>
       </div>

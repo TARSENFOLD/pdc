@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
+import { denyContactToMinor } from '../modules/auth/minor.guard.js';
 import {
   StrapiHttpError,
   strapiGet,
@@ -90,7 +91,7 @@ mensagensRoutes.get('/conversas', zValidator('query', mensagensQuerySchema), asy
   }
 });
 
-mensagensRoutes.post('/conversas', zValidator('json', criarConversaSchema), async (c) => {
+mensagensRoutes.post('/conversas', denyContactToMinor(), zValidator('json', criarConversaSchema), async (c) => {
   const { id: userId } = c.get('user');
   const { destinatarioId } = c.req.valid('json');
 
@@ -200,6 +201,7 @@ mensagensRoutes.get(
 
 mensagensRoutes.post(
   '/conversas/:conversaId',
+  denyContactToMinor(),
   zValidator('json', enviarMensagemSchema),
   async (c) => {
     const conversaId = c.req.param('conversaId');

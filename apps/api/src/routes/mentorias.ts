@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
+import { requireAdult } from '../modules/auth/minor.guard.js';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 
 type Vars = { Variables: AuthVariables };
@@ -18,7 +19,7 @@ interface StrapiMentoria {
 }
 
 // GET /mentorias/alunado
-mentoriaRoutes.get('/alunado', async (c) => {
+mentoriaRoutes.get('/alunado', requireAdult(), async (c) => {
   const { id: mentorId } = c.get('user');
   try {
     const res = await strapiGet<StrapiMentoria>('/mentorias', {
@@ -49,7 +50,7 @@ interface StrapiProjeto {
 }
 
 // GET /mentorias/validar-projeto/:projetoId
-mentoriaRoutes.get('/validar-projeto/:projetoId', async (c) => {
+mentoriaRoutes.get('/validar-projeto/:projetoId', requireAdult(), async (c) => {
   const projetoId = c.req.param('projetoId');
   const { id: mentorId } = c.get('user');
 

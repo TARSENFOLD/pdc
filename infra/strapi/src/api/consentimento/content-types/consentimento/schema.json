@@ -1,0 +1,99 @@
+{
+  "kind": "collectionType",
+  "collectionName": "consentimentos",
+  "info": {
+    "singularName": "consentimento",
+    "pluralName": "consentimentos",
+    "displayName": "Consentimento",
+    "description": "Registo auditável de consentimentos legais, privacidade e menoridade"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "perfil": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil"
+    },
+    "userId": {
+      "type": "string",
+      "required": true
+    },
+    "finalidade": {
+      "type": "enumeration",
+      "enum": [
+        "termos_uso",
+        "politica_privacidade",
+        "tratamento_dados",
+        "cookies_analiticos",
+        "transparencia_ia",
+        "partilha_institucional",
+        "encarregado_educacao"
+      ],
+      "required": true
+    },
+    "tipo": {
+      "type": "enumeration",
+      "enum": ["termos", "privacidade", "perfil_vocacional", "marketing", "partilha_instituicao"]
+    },
+    "versao": {
+      "type": "string"
+    },
+    "concedido": {
+      "type": "boolean",
+      "default": true
+    },
+    "estado": {
+      "type": "enumeration",
+      "enum": ["pendente", "aceite", "recusado", "revogado"],
+      "default": "pendente",
+      "required": true
+    },
+    "documentVersion": {
+      "type": "string"
+    },
+    "documentoLegal": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::documento-legal.documento-legal",
+      "inversedBy": "consentimentos"
+    },
+    "acceptedAt": {
+      "type": "datetime"
+    },
+    "serverTimestamp": {
+      "type": "datetime"
+    },
+    "revokedAt": {
+      "type": "datetime"
+    },
+    "source": {
+      "type": "enumeration",
+      "enum": ["registo_email", "oauth", "admin", "importacao_institucional", "reconsentimento"],
+      "default": "registo_email"
+    },
+    "actorRole": {
+      "type": "string"
+    },
+    "titularMenor": {
+      "type": "boolean",
+      "default": false
+    },
+    "encarregadoNome": {
+      "type": "string"
+    },
+    "encarregadoEmail": {
+      "type": "email"
+    },
+    "ipHash": {
+      "type": "string"
+    },
+    "userAgent": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

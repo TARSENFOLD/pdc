@@ -86,6 +86,21 @@
   }
 }
 
+@layer utilities {
+  .dark .text-accent {
+    color: #C97945;
+  }
+
+  .dark .text-amber,
+  .dark .text-accent\/80 {
+    color: #C97945;
+  }
+
+  .dark .hover\:text-accent:hover {
+    color: #C97945;
+  }
+}
+
 /* ─── Primitivos Utilitários (Soul & Elite) ─── */
 .glass-panel {
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));

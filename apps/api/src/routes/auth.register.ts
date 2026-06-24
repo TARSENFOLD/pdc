@@ -26,11 +26,25 @@ function getRegisterErrorStatus(err: unknown): 400 | 409 | 500 {
 }
 
 registerRoutes.post('/estudante', zValidator('json', RegistoEstudantePayloadSchema), async (c) => {
-  const { email, password, nome, areaInteresse, nivelEnsino } = c.req.valid('json');
+  const {
+    email,
+    password,
+    nome,
+    areaInteresse,
+    nivelEnsino,
+    dataNascimento,
+    consentimentoEncarregado,
+    aceiteLegal,
+  } = c.req.valid('json');
   try {
     const user = await authService.registerWithRole(email, password, nome, 'estudante', { 
       areasInteresse: [areaInteresse], 
       nivelEnsino 
+    }, {
+      aceiteLegal,
+      dataNascimento,
+      ...(consentimentoEncarregado !== undefined ? { consentimentoEncarregado } : {}),
+      source: 'registo_email',
     });
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
@@ -40,12 +54,15 @@ registerRoutes.post('/estudante', zValidator('json', RegistoEstudantePayloadSche
 });
 
 registerRoutes.post('/mentor', zValidator('json', RegistoMentorPayloadSchema), async (c) => {
-  const { email, password, nome, areaEspecialidade, documentos } = c.req.valid('json');
+  const { email, password, nome, areaEspecialidade, documentos, aceiteLegal } = c.req.valid('json');
   try {
     const user = await authService.registerWithRole(email, password, nome, 'mentor', { 
       areaFormacao: areaEspecialidade, 
       documentos: documentos ?? [], 
       aprovado: false 
+    }, {
+      aceiteLegal,
+      source: 'registo_email',
     });
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
@@ -55,13 +72,16 @@ registerRoutes.post('/mentor', zValidator('json', RegistoMentorPayloadSchema), a
 });
 
 registerRoutes.post('/instituicao', zValidator('json', RegistoInstituicaoPayloadSchema), async (c) => {
-  const { nome, email, password, regiao, tipo, documentos } = c.req.valid('json');
+  const { nome, email, password, regiao, tipo, documentos, aceiteLegal } = c.req.valid('json');
   try {
     const user = await authService.registerWithRole(email, password, nome, 'instituicao', { 
       regiao, 
       tipoInstituicao: tipo, 
       documentos: documentos ?? [], 
       aprovado: false 
+    }, {
+      aceiteLegal,
+      source: 'registo_email',
     });
     try {
       await provisionInstituicaoForUser(user.id, {

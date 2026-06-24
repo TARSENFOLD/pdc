@@ -11,6 +11,15 @@ import { ReputacaoTierSchema } from './reputation.js';
 import { ConquistaSchema } from './schemas/conquistas.js';
 import { InscricaoComCursoSchema } from './cursos.js';
 import { RoleSchema, type Role } from './schemas/enums.js';
+import {
+  AceiteLegalSchema,
+  ConsentimentoEncarregadoSchema,
+  ConsentimentoEstadoSchema,
+  ConsentStateSchema,
+  DataNascimentoSchema,
+  EstadoMenoridadeSchema,
+  resolveEstadoMenoridade,
+} from './compliance.js';
 
 export { RoleSchema, type Role };
 
@@ -111,6 +120,10 @@ const UserObjectSchema = z.object({
   oauthVerified: z.boolean().optional(),
   oauthProvider: z.enum(['google', 'linkedin']).optional(),
   onboardingCompleto: z.boolean().optional(),
+  isMinor: z.boolean().optional(),
+  estadoMenoridade: EstadoMenoridadeSchema.optional(),
+  consentimentoEstado: ConsentimentoEstadoSchema.optional(),
+  consents: ConsentStateSchema.optional(),
 });
 
 export const UserSchema = UserObjectSchema.refine(
@@ -122,18 +135,27 @@ export const UserSchema = UserObjectSchema.refine(
 );
 
 export type User = z.infer<typeof UserSchema>;
-
-// Payloads de Registo (Integritade Hotspot 3)
 export const RegistoBaseSchema = z.object({
   email: z.string().email().transform(e => e.toLowerCase().trim()),
   password: z.string().min(8).max(128),
   nome: z.string().min(3),
   documentos: z.array(z.string()).optional(),
+  aceiteLegal: AceiteLegalSchema,
 });
 
 export const RegistoEstudantePayloadSchema = RegistoBaseSchema.extend({
   areaInteresse: z.string().optional(),
   nivelEnsino: z.string().optional(),
+  dataNascimento: DataNascimentoSchema,
+  consentimentoEncarregado: ConsentimentoEncarregadoSchema.optional(),
+}).superRefine((payload, ctx) => {
+  if (resolveEstadoMenoridade(payload.dataNascimento) === 'menor' && !payload.consentimentoEncarregado) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['consentimentoEncarregado'],
+      message: 'Consentimento do encarregado é obrigatório para estudantes menores.',
+    });
+  }
 });
 
 export const RegistoMentorPayloadSchema = RegistoBaseSchema.extend({
@@ -168,6 +190,8 @@ export const UpdatePerfilPayloadSchema = z.object({
   formacaoAcademica: z.array(FormacaoAcademicaSchema).optional(),
   visibilitySettings: VisibilitySettingsSchema.optional(),
   notificationPreferences: NotificationPreferencesSchema.optional(),
+  dataNascimento: DataNascimentoSchema.optional(),
+  estadoMenoridade: EstadoMenoridadeSchema.optional(),
 });
 
 export type UpdatePerfilPayload = z.infer<typeof UpdatePerfilPayloadSchema>;
@@ -219,6 +243,9 @@ export const PerfilCompletoSchema = UserObjectSchema.extend({
   inscricoes: z.array(InscricaoComCursoSchema).optional(),
   visibilitySettings: VisibilitySettingsSchema.optional(),
   notificationPreferences: NotificationPreferencesSchema.optional(),
+  dataNascimento: DataNascimentoSchema.optional(),
+  estadoMenoridade: EstadoMenoridadeSchema.optional(),
+  consentimentoEstado: ConsentimentoEstadoSchema.optional(),
   competencias: z.array(z.string()).optional(),
   historicoProfissional: z.array(HistoricoProfissionalSchema).optional(),
   formacaoAcademica: z.array(FormacaoAcademicaSchema).optional(),

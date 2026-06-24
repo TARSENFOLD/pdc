@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { decodeJwt } from 'jose';
+import { z } from 'zod';
 
 vi.mock('../../lib/env.js', () => ({
   env: {
@@ -19,6 +20,14 @@ vi.mock('../strapi/strapi.client.js', () => ({
   strapiGet: vi.fn(),
   strapiPost: vi.fn(),
   strapiPut: vi.fn(),
+  strapiDelete: vi.fn(),
+  strapiDeleteRaw: vi.fn(),
+}));
+
+vi.mock('../consent/consent.service.js', () => ({
+  consentService: {
+    recordLegalAcceptance: vi.fn(),
+  },
 }));
 
 vi.mock('../reputation/reputation.service.js', () => ({
@@ -27,7 +36,8 @@ vi.mock('../reputation/reputation.service.js', () => ({
 }));
 
 import { authService } from './auth.service.js';
-import { strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
+import { strapiDelete, strapiDeleteRaw, strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
+import { consentService } from '../consent/consent.service.js';
 
 const BASE_USER = {
   id: 42,
@@ -49,7 +59,45 @@ const BASE_PERFIL = {
   conquistas: [],
 };
 
+const CreateStrapiUserPayloadSchema = z.object({
+  email: z.literal('user@pdc.ao'),
+  username: z.literal('user@pdc.ao'),
+  confirmed: z.literal(true),
+  role: z.literal(1),
+  password: z.string().min(1),
+});
+
+const LEGAL_ACCEPTANCE = {
+  termosUso: true,
+  politicaPrivacidade: true,
+  tratamentoDados: true,
+  termosUsoVersao: 'termos-uso@2026-06-22',
+  politicaPrivacidadeVersao: 'politica-privacidade@2026-06-22',
+  tratamentoDadosVersao: 'tratamento-dados@2026-06-22',
+} as const;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
 describe('authService.mapStrapiUser — new fields', () => {
+  it('não emite claims nulas no access token', async () => {
+    const user = authService.mapStrapiUser(BASE_USER, {
+      ...BASE_PERFIL,
+      tipo: 'instituicao',
+      onboardingCompleto: null,
+      consentimentoEstado: null,
+      estadoMenoridade: 'pendente',
+    });
+
+    const { accessToken } = await authService.generateTokens(user);
+    const claims = decodeJwt(accessToken);
+    expect(claims).not.toHaveProperty('onboardingCompleto');
+    expect(claims).not.toHaveProperty('consentimentoEstado');
+    expect(claims.estadoMenoridade).toBe('pendente');
+    expect(claims.isMinor).toBe(false);
+  });
+
   it('maps aprovado from perfil', () => {
     const user = authService.mapStrapiUser(BASE_USER, { ...BASE_PERFIL, aprovado: false });
     expect(user.aprovado).toBe(false);
@@ -85,6 +133,24 @@ describe('authService.mapStrapiUser — new fields', () => {
     expect(user.onboardingCompleto).toBe(false);
   });
 
+  it('deriva isMinor e preserva estado atual de consentimentos', () => {
+    const user = authService.mapStrapiUser(BASE_USER, {
+      ...BASE_PERFIL,
+      dataNascimento: '2010-01-01',
+      consents: {
+        termos: {
+          tipo: 'termos',
+          versao: 'termos-uso@2026-06-22',
+          concedido: true,
+          at: '2026-06-22T00:00:00.000Z',
+        },
+      },
+    });
+    expect(user.isMinor).toBe(true);
+    expect(user.estadoMenoridade).toBe('menor');
+    expect(user.consents?.termos?.concedido).toBe(true);
+  });
+
   it('leaves new fields undefined when perfil is null', () => {
     const user = authService.mapStrapiUser(BASE_USER, null);
     expect(user.aprovado).toBeUndefined();
@@ -112,6 +178,7 @@ describe('authService.generateTokens', () => {
       sub: '42',
       role: 'estudante',
       perfilId: 'perfil-1',
+      isMinor: false,
     });
   });
 
@@ -152,13 +219,9 @@ describe('authService.findOrCreateUser', () => {
 
     await authService.findOrCreateUser('USER@PDC.AO', 'Ana Ferreira');
 
-    expect(strapiPostRaw).toHaveBeenCalledWith('/users', expect.objectContaining({
-      email: 'user@pdc.ao',
-      username: 'user@pdc.ao',
-      confirmed: true,
-      role: 1,
-      password: expect.any(String) as string,
-    }));
+    const createUserCall = vi.mocked(strapiPostRaw).mock.calls[0];
+    expect(createUserCall?.[0]).toBe('/users');
+    CreateStrapiUserPayloadSchema.parse(createUserCall?.[1]);
   });
 });
 
@@ -178,5 +241,29 @@ describe('authService.registerWithRole', () => {
       'pagination[pageSize]': '1',
     });
     expect(strapiPostRaw).not.toHaveBeenCalledWith('/auth/local/register', expect.anything());
+  });
+
+  it('compensa user e perfil quando o registo append-only de consentimento falha', async () => {
+    vi.mocked(strapiGetRaw).mockResolvedValueOnce([]);
+    vi.mocked(strapiPostRaw).mockResolvedValueOnce({ user: BASE_USER });
+    vi.mocked(strapiPost).mockResolvedValueOnce({ data: { ...BASE_PERFIL }, meta: {} });
+    vi.mocked(consentService.recordLegalAcceptance).mockRejectedValueOnce(new Error('consentimento indisponível'));
+    vi.mocked(strapiGet).mockResolvedValueOnce({
+      data: [{ ...BASE_PERFIL }],
+      meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 } },
+    });
+    vi.mocked(strapiDelete).mockResolvedValueOnce({ data: { id: 'perfil-1' }, meta: {} });
+    vi.mocked(strapiDeleteRaw).mockResolvedValueOnce(undefined);
+
+    await expect(
+      authService.registerWithRole('USER@PDC.AO', 'SenhaTeste123', 'Ana Ferreira', 'estudante', {}, {
+        aceiteLegal: LEGAL_ACCEPTANCE,
+        dataNascimento: '2000-01-01',
+        source: 'registo_email',
+      }),
+    ).rejects.toThrow('consentimento indisponível');
+
+    expect(strapiDelete).toHaveBeenCalledWith('/perfis/perfil-doc-1');
+    expect(strapiDeleteRaw).toHaveBeenCalledWith('/users/42');
   });
 });

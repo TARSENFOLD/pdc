@@ -47,7 +47,30 @@
     },
     "totalEventos": { "type": "integer" },
     "dimensoes": { "type": "json" },
+    "razoes": { "type": "json" },
+    "atual": {
+      "type": "boolean",
+      "default": false
+    },
     "resumo": { "type": "text" },
+    "modelVersion": {
+      "type": "string"
+    },
+    "heuristicsVersion": {
+      "type": "string"
+    },
+    "explanationVersion": {
+      "type": "string"
+    },
+    "generatedWithAiSupport": {
+      "type": "boolean",
+      "default": false
+    },
+    "calculationMethod": {
+      "type": "enumeration",
+      "enum": ["heuristico_deterministico", "ia_assistida"],
+      "default": "heuristico_deterministico"
+    },
     "ultimoCalculoEm": { "type": "datetime" }
   }
 }

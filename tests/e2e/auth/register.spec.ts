@@ -7,13 +7,15 @@ test.describe('Autenticação - Registo', () => {
     await page.goto('/criar-conta/estudante');
     await page.getByLabel(/nome/i).fill('Test User');
     await page.getByLabel(/email/i).fill(email);
-    await page.getByLabel(/palavra-passe/i).fill('Password123!');
-    await page.getByLabel(/área de interesse/i).fill('Engenharia');
-    await page.getByLabel(/nível de ensino/i).fill('Secundário');
+    await page.getByRole('textbox', { name: 'Palavra-passe', exact: true }).fill('Password123!');
+    await page.getByRole('textbox', { name: 'Confirmar palavra-passe' }).fill('Password123!');
+    await page.getByLabel(/data de nascimento/i).fill('2000-01-01');
+    await page.getByLabel(/área de interesse/i).selectOption('ENGENHARIA');
+    await page.getByLabel(/nível de ensino/i).selectOption('Secundário');
+    await page.getByLabel(/li e aceito/i).check();
     await page.getByRole('button', { name: /registar/i }).click();
 
-    // Verificação de redirecionamento para o dashboard após registo bem-sucedido
-    await expect(page).toHaveURL(/.*dashboard/);
-    await expect(page.getByText(/bem-vindo/i)).toBeVisible();
+    // Produção segue para OTP; em dev/test com DEV_SKIP_OTP=true segue direto para /app.
+    await expect(page).toHaveURL(/.*(\/verificar|\/app).*/, { timeout: 15_000 });
   });
 });

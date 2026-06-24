@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import {
+  AceiteLegalSchema,
+  ConsentimentoEncarregadoSchema,
+  DataNascimentoSchema,
+  resolveEstadoMenoridade,
+} from '../compliance.js';
 
 export const DocumentoSchema = z.object({
   tipo: z.string().min(1),
@@ -38,18 +44,24 @@ export const OAuthFinalizarDocumentoSchema = z.object({
 
 export type OAuthFinalizarDocumento = z.infer<typeof OAuthFinalizarDocumentoSchema>;
 
+const OAuthFinalizarComplianceSchema = z.object({
+  dataNascimento: DataNascimentoSchema,
+  aceiteLegal: AceiteLegalSchema,
+  consentimentoEncarregado: ConsentimentoEncarregadoSchema.optional(),
+});
+
 // Strict per-role onboarding payloads — only admit role-specific fields
-export const OAuthFinalizarEstudantePayloadSchema = z.object({
+export const OAuthFinalizarEstudantePayloadSchema = OAuthFinalizarComplianceSchema.extend({
   role: z.literal('estudante'),
 });
 
-export const OAuthFinalizarMentorPayloadSchema = z.object({
+export const OAuthFinalizarMentorPayloadSchema = OAuthFinalizarComplianceSchema.extend({
   role: z.literal('mentor'),
   areaEspecialidade: z.string().min(1),
   documentos: z.array(OAuthFinalizarDocumentoSchema).min(1),
 });
 
-export const OAuthFinalizarInstituicaoPayloadSchema = z.object({
+export const OAuthFinalizarInstituicaoPayloadSchema = OAuthFinalizarComplianceSchema.extend({
   role: z.literal('instituicao'),
   nomeInstituicao: z.string().min(1),
   tipoInstituicao: z.string().min(1),
@@ -60,7 +72,24 @@ export const OAuthFinalizarRoleChoiceSchema = z.discriminatedUnion('role', [
   OAuthFinalizarEstudantePayloadSchema,
   OAuthFinalizarMentorPayloadSchema,
   OAuthFinalizarInstituicaoPayloadSchema,
-]);
+]).superRefine((payload, ctx) => {
+  const estadoMenoridade = resolveEstadoMenoridade(payload.dataNascimento);
+  if (payload.role === 'estudante' && estadoMenoridade === 'menor' && !payload.consentimentoEncarregado) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['consentimentoEncarregado'],
+      message: 'Consentimento do encarregado é obrigatório para menores.',
+    });
+  }
+
+  if (payload.role !== 'estudante' && estadoMenoridade === 'menor') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['dataNascimento'],
+      message: 'Mentores e instituições devem ser representados por utilizadores adultos.',
+    });
+  }
+});
 
 export type OAuthFinalizarRoleChoice = z.infer<typeof OAuthFinalizarRoleChoiceSchema>;
 

@@ -786,6 +786,90 @@ export interface ApiConquistaConquista extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiConsentimentoConsentimento
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'consentimentos';
+  info: {
+    description: 'Registo audit\u00E1vel de consentimentos legais, privacidade e menoridade';
+    displayName: 'Consentimento';
+    pluralName: 'consentimentos';
+    singularName: 'consentimento';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    acceptedAt: Schema.Attribute.DateTime;
+    actorRole: Schema.Attribute.String;
+    concedido: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    documentoLegal: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::documento-legal.documento-legal'
+    >;
+    documentVersion: Schema.Attribute.String;
+    encarregadoEmail: Schema.Attribute.Email;
+    encarregadoNome: Schema.Attribute.String;
+    estado: Schema.Attribute.Enumeration<
+      ['pendente', 'aceite', 'recusado', 'revogado']
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'pendente'>;
+    finalidade: Schema.Attribute.Enumeration<
+      [
+        'termos_uso',
+        'politica_privacidade',
+        'tratamento_dados',
+        'cookies_analiticos',
+        'transparencia_ia',
+        'partilha_institucional',
+        'encarregado_educacao',
+      ]
+    > &
+      Schema.Attribute.Required;
+    ipHash: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::consentimento.consentimento'
+    > &
+      Schema.Attribute.Private;
+    metadata: Schema.Attribute.JSON;
+    perfil: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
+    publishedAt: Schema.Attribute.DateTime;
+    revokedAt: Schema.Attribute.DateTime;
+    serverTimestamp: Schema.Attribute.DateTime;
+    source: Schema.Attribute.Enumeration<
+      [
+        'registo_email',
+        'oauth',
+        'admin',
+        'importacao_institucional',
+        'reconsentimento',
+      ]
+    > &
+      Schema.Attribute.DefaultTo<'registo_email'>;
+    tipo: Schema.Attribute.Enumeration<
+      [
+        'termos',
+        'privacidade',
+        'perfil_vocacional',
+        'marketing',
+        'partilha_instituicao',
+      ]
+    >;
+    titularMenor: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    userAgent: Schema.Attribute.String;
+    userId: Schema.Attribute.String & Schema.Attribute.Required;
+    versao: Schema.Attribute.String;
+  };
+}
+
 export interface ApiConversaConversa extends Struct.CollectionTypeSchema {
   collectionName: 'conversas';
   info: {
@@ -969,6 +1053,58 @@ export interface ApiDenunciaDenuncia extends Struct.CollectionTypeSchema {
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+  };
+}
+
+export interface ApiDocumentoLegalDocumentoLegal
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'documentos_legais';
+  info: {
+    description: 'Documento legal versionado para consentimentos e re-aceites';
+    displayName: 'Documento Legal';
+    pluralName: 'documentos-legais';
+    singularName: 'documento-legal';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    consentimentos: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::consentimento.consentimento'
+    >;
+    conteudo: Schema.Attribute.RichText & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    effectiveAt: Schema.Attribute.DateTime;
+    estado: Schema.Attribute.Enumeration<['draft', 'published', 'archived']> &
+      Schema.Attribute.DefaultTo<'draft'>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::documento-legal.documento-legal'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    resumo: Schema.Attribute.Text;
+    slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Required;
+    tipo: Schema.Attribute.Enumeration<
+      [
+        'termos_uso',
+        'politica_privacidade',
+        'tratamento_dados',
+        'politica_cookies',
+        'transparencia_ia',
+        'dpa',
+      ]
+    > &
+      Schema.Attribute.Required;
+    titulo: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    versao: Schema.Attribute.String & Schema.Attribute.Required;
   };
 }
 
@@ -1908,6 +2044,11 @@ export interface ApiPerfilVocacionalPerfilVocacional
         'OUTRA',
       ]
     >;
+    atual: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    calculationMethod: Schema.Attribute.Enumeration<
+      ['heuristico_deterministico', 'ia_assistida']
+    > &
+      Schema.Attribute.DefaultTo<'heuristico_deterministico'>;
     certeza: Schema.Attribute.Enumeration<
       ['baixa', 'media', 'alta', 'BAIXA', 'MEDIA', 'ALTA']
     >;
@@ -1917,17 +2058,23 @@ export interface ApiPerfilVocacionalPerfilVocacional
       Schema.Attribute.Private;
     dedicacao: Schema.Attribute.Float;
     dimensoes: Schema.Attribute.JSON;
+    explanationVersion: Schema.Attribute.String;
+    generatedWithAiSupport: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
+    heuristicsVersion: Schema.Attribute.String;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
       'api::perfil-vocacional.perfil-vocacional'
     > &
       Schema.Attribute.Private;
+    modelVersion: Schema.Attribute.String;
     motivacaoIntrinseca: Schema.Attribute.Float;
     perfil: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'> &
       Schema.Attribute.Required;
     potencialSucesso: Schema.Attribute.Float;
     publishedAt: Schema.Attribute.DateTime;
+    razoes: Schema.Attribute.JSON;
     resumo: Schema.Attribute.Text;
     scoreGlobal: Schema.Attribute.Float;
     totalEventos: Schema.Attribute.Integer;
@@ -1967,6 +2114,7 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
       > &
       Schema.Attribute.DefaultTo<0>;
     anoAcademico: Schema.Attribute.String;
+    anonymizedAt: Schema.Attribute.DateTime;
     aprovado: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     aprovadoEm: Schema.Attribute.DateTime;
     aprovadoPor: Schema.Attribute.String &
@@ -2001,11 +2149,23 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
         number
       > &
       Schema.Attribute.DefaultTo<0>;
+    consentimentoEstado: Schema.Attribute.Enumeration<
+      ['pendente', 'completo', 'requer_reconsentimento', 'bloqueado']
+    > &
+      Schema.Attribute.DefaultTo<'pendente'>;
+    consents: Schema.Attribute.JSON;
+    contaEstado: Schema.Attribute.Enumeration<['ativa', 'anonimizada']> &
+      Schema.Attribute.DefaultTo<'ativa'>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    dataNascimento: Schema.Attribute.Date;
     documentos: Schema.Attribute.JSON;
     email: Schema.Attribute.Email;
+    estadoMenoridade: Schema.Attribute.Enumeration<
+      ['pendente', 'adulto', 'menor']
+    > &
+      Schema.Attribute.DefaultTo<'pendente'>;
     feedPosts: Schema.Attribute.Relation<
       'oneToMany',
       'api::feed-post.feed-post'
@@ -2013,6 +2173,7 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     formacaoAcademica: Schema.Attribute.JSON;
     foto: Schema.Attribute.Media<'images'>;
     funcao: Schema.Attribute.String;
+    guardianConsent: Schema.Attribute.JSON;
     headline: Schema.Attribute.String &
       Schema.Attribute.SetMinMaxLength<{
         maxLength: 200;
@@ -2031,6 +2192,10 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
       'api::instituicao.instituicao'
     >;
     language: Schema.Attribute.String & Schema.Attribute.DefaultTo<'pt-AO'>;
+    legalAcceptedAt: Schema.Attribute.DateTime;
+    legalDataProcessingVersion: Schema.Attribute.String;
+    legalPrivacyVersion: Schema.Attribute.String;
+    legalTermsVersion: Schema.Attribute.String;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -3396,9 +3561,11 @@ declare module '@strapi/strapi' {
       'api::comment.comment': ApiCommentComment;
       'api::conquista-utilizador.conquista-utilizador': ApiConquistaUtilizadorConquistaUtilizador;
       'api::conquista.conquista': ApiConquistaConquista;
+      'api::consentimento.consentimento': ApiConsentimentoConsentimento;
       'api::conversa.conversa': ApiConversaConversa;
       'api::curso.curso': ApiCursoCurso;
       'api::denuncia.denuncia': ApiDenunciaDenuncia;
+      'api::documento-legal.documento-legal': ApiDocumentoLegalDocumentoLegal;
       'api::domain-event.domain-event': ApiDomainEventDomainEvent;
       'api::experiencia-participante.experiencia-participante': ApiExperienciaParticipanteExperienciaParticipante;
       'api::experiencia.experiencia': ApiExperienciaExperiencia;

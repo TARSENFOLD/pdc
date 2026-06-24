@@ -10,6 +10,7 @@ export * from './experiencias.js';
 export * from './telemetry.js';
 export * from './behavior-patterns.js';
 export * from './core.js';
+export * from './compliance.js';
 export * from './heuristics.js';
 export * from './heuristics-calculator.js';
 export * from './reputation.js';

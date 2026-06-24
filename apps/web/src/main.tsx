@@ -10,6 +10,7 @@ import { AuthProvider } from './lib/auth/AuthContext';
 import { BootstrapProvider } from './lib/bootstrap/BootstrapContext';
 import { ThemeProvider } from './lib/theme/ThemeContext';
 import { Toaster, InstallPrompt } from './components/ui';
+import { CookieBanner } from './components/privacy/CookieBanner';
 import './index.css';
 
 if (import.meta.env.VITE_SENTRY_DSN) {
@@ -74,6 +75,7 @@ ReactDOM.createRoot(rootElement).render(
           <AuthProvider>
             <RouterProvider router={router} future={{ v7_startTransition: true }} />
             <Toaster />
+            <CookieBanner />
             <InstallPrompt />
             <ReactQueryDevtools initialIsOpen={false} />
           </AuthProvider>

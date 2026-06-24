@@ -9,6 +9,8 @@ import { AuthDivider, OAuthButtons } from './OAuthButtons';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import type { NeuralState } from '@/components/auth/NeuralConstellation';
 import type { RegistoInstituicaoPayload } from '@pdc/shared';
+import { LegalConsentField } from './LegalConsentField';
+import { buildAceiteLegal } from './registrationCompliance';
 
 const TIPOS = [
   { value: 'universidade', label: 'Universidade' },
@@ -41,10 +43,13 @@ export function RegistoInstituicaoPage() {
     regiao: '', 
     tipo: 'universidade' as RegistoInstituicaoPayload['tipo'], 
     nif: '',
+    aceiteLegal: buildAceiteLegal(),
   });
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docError, setDocError] = useState('');
   const [error, setError] = useState('');
+  const [legalAccepted, setLegalAccepted] = useState(false);
+  const [legalError, setLegalError] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [neuralState, setNeuralState] = useState<NeuralState>('idle');
@@ -82,13 +87,19 @@ export function RegistoInstituicaoPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setLegalError('');
     if (form.password !== confirmPassword) {
       setPasswordError('As palavras-passe não coincidem.');
+      return;
+    }
+    if (!legalAccepted) {
+      setLegalError('A aceitação dos documentos legais é obrigatória para criar conta.');
       return;
     }
     setPasswordError('');
     mutation.mutate({
       ...form,
+      aceiteLegal: buildAceiteLegal(),
       nomeInstituicao: form.nome,
       documentos: docFile ? [docFile.name] : [],
     });
@@ -179,6 +190,8 @@ export function RegistoInstituicaoPage() {
             {docFile ? <p className="text-xs font-medium text-emerald-500 mt-1">✓ {docFile.name}</p> : null}
             {docError ? <p className="text-xs text-error mt-1">{docError}</p> : null}
           </div>
+
+          <LegalConsentField checked={legalAccepted} onCheckedChange={setLegalAccepted} error={legalError} />
 
           <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600" isLoading={mutation.isPending}>Registar Instituição →</Button>
         </form>

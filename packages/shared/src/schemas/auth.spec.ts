@@ -6,6 +6,19 @@ import {
   OAuthFinalizarOtpSchema,
 } from './auth.js';
 import { DomainEventName, EventPayloadSchemas } from '../domain-events.js';
+import { LEGAL_DOCUMENT_CURRENT_VERSIONS } from '../compliance.js';
+
+const ACEITE_LEGAL = {
+  termosUso: true,
+  politicaPrivacidade: true,
+  tratamentoDados: true,
+  termosUsoVersao: LEGAL_DOCUMENT_CURRENT_VERSIONS.termosUso,
+  politicaPrivacidadeVersao: LEGAL_DOCUMENT_CURRENT_VERSIONS.politicaPrivacidade,
+  tratamentoDadosVersao: LEGAL_DOCUMENT_CURRENT_VERSIONS.tratamentoDados,
+  aceiteEm: '2026-06-22T10:00:00.000Z',
+} as const;
+const DATA_NASCIMENTO_ADULTO = '1990-01-01';
+const DATA_NASCIMENTO_MENOR = '2014-01-01';
 
 describe('PerfilPendenteSchema', () => {
   it('validates a mentor pending profile', () => {
@@ -108,13 +121,19 @@ describe('AprovacaoActionSchema', () => {
 
 describe('OAuthFinalizarRoleChoiceSchema', () => {
   it('validates estudante role choice', () => {
-    const result = OAuthFinalizarRoleChoiceSchema.parse({ role: 'estudante' });
+    const result = OAuthFinalizarRoleChoiceSchema.parse({
+      role: 'estudante',
+      dataNascimento: DATA_NASCIMENTO_ADULTO,
+      aceiteLegal: ACEITE_LEGAL,
+    });
     expect(result.role).toBe('estudante');
   });
 
   it('validates mentor role choice', () => {
     const result = OAuthFinalizarRoleChoiceSchema.parse({
       role: 'mentor',
+      dataNascimento: DATA_NASCIMENTO_ADULTO,
+      aceiteLegal: ACEITE_LEGAL,
       areaEspecialidade: 'TI',
       documentos: [{ tipo: 'credencial_mentor', url: 'blob:http://localhost/doc' }],
     });
@@ -124,6 +143,8 @@ describe('OAuthFinalizarRoleChoiceSchema', () => {
   it('validates instituicao role choice', () => {
     const result = OAuthFinalizarRoleChoiceSchema.parse({
       role: 'instituicao',
+      dataNascimento: DATA_NASCIMENTO_ADULTO,
+      aceiteLegal: ACEITE_LEGAL,
       nomeInstituicao: 'ISPTEC',
       tipoInstituicao: 'Universidade',
       documentos: [{ tipo: 'credencial_instituicao', url: 'blob:http://localhost/doc' }],
@@ -143,8 +164,32 @@ describe('OAuthFinalizarRoleChoiceSchema', () => {
   it('rejects mentor role choice without uploaded documents', () => {
     expect(() => OAuthFinalizarRoleChoiceSchema.parse({
       role: 'mentor',
+      dataNascimento: DATA_NASCIMENTO_ADULTO,
+      aceiteLegal: ACEITE_LEGAL,
       areaEspecialidade: 'TI',
       documentos: [],
+    })).toThrow();
+  });
+
+  it('rejects OAuth finalization without legal acceptance and DOB', () => {
+    expect(() => OAuthFinalizarRoleChoiceSchema.parse({ role: 'estudante' })).toThrow();
+  });
+
+  it('requires guardian consent when OAuth student is a minor', () => {
+    expect(() => OAuthFinalizarRoleChoiceSchema.parse({
+      role: 'estudante',
+      dataNascimento: DATA_NASCIMENTO_MENOR,
+      aceiteLegal: ACEITE_LEGAL,
+    })).toThrow();
+  });
+
+  it('rejects minor mentor finalization', () => {
+    expect(() => OAuthFinalizarRoleChoiceSchema.parse({
+      role: 'mentor',
+      dataNascimento: DATA_NASCIMENTO_MENOR,
+      aceiteLegal: ACEITE_LEGAL,
+      areaEspecialidade: 'TI',
+      documentos: [{ tipo: 'credencial_mentor', url: 'blob:http://localhost/doc' }],
     })).toThrow();
   });
 });

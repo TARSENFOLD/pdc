@@ -1,118 +1,17 @@
 import { useEffect, useState } from 'react';
-import { http } from '../../lib/api/http';
 import { Card, Spinner, Button } from '../../components/ui';
 import { Link } from 'react-router-dom';
-import { 
-  Microscope, 
-  Activity, 
-  GraduationCap, 
-  Zap, 
-  ArrowLeft, 
-  ShieldCheck, 
-  Trophy,
-  Brain,
-  Target,
-  ChevronRight,
-  Sparkles
-} from 'lucide-react';
+import { Microscope, Activity, GraduationCap, Zap, ArrowLeft, ShieldCheck, Trophy, Brain, Target, ChevronRight, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import type { ReputacaoBreakdown, ReputacaoTier } from '@pdc/shared';
-
-interface PatternData {
-  domainId: string;
-  cognitiveFluidity: number;
-  resilienceIndex: number;
-  focusStability: number;
-  technicalScore: number;
-  tinaSummary?: {
-    fluidity?: string;
-    resilience?: string;
-    focus?: string;
-    verdict?: string;
-    lastHeuristicUpdate?: string;
-  } | undefined;
-}
-
-interface RelatorioElite {
-  patterns: PatternData[];
-  scoreGlobal: number;
-  recomendacoes: Array<{
-    id: string;
-    titulo: string;
-    matchPercentagem: number;
-    motivo: string;
-  }>;
-}
-
-interface PerfilPremiumResponse {
-  scoreGlobal: number;
-  patterns: Array<{
-    id?: string;
-    domainId: string;
-    cognitiveFluidity: number;
-    resilienceIndex: number;
-    focusStability: number;
-    technicalScore: number;
-    tinaSummary?: Record<string, unknown>;
-  }>;
-  recomendacoes: Array<{
-    id: string;
-    titulo: string;
-    matchPercentagem: number;
-    motivo: string;
-  }>;
-  lastUpdate?: string;
-}
-
-// ─── Sub-component: Sovereign Gauge ───────────────────────────────────────
-
-const CircularCerteza = ({ value, tier, label }: { value: number; tier?: ReputacaoTier | null | undefined; label: string }) => {
-  const radius = 85;
-  const circumference = 2 * Math.PI * radius;
-  const progress = (value / 100) * circumference;
-
-  return (
-    <div className="relative flex items-center justify-center group">
-      <div className="absolute inset-0 bg-accent/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-      <svg className="w-56 h-56 transform -rotate-90 relative z-10">
-        <circle
-          cx="112" cy="112" r={radius}
-          fill="transparent"
-          stroke="rgba(255,255,255,0.03)"
-          strokeWidth="12"
-        />
-        <motion.circle
-          cx="112" cy="112" r={radius}
-          fill="transparent"
-          stroke="url(#accent-gradient)"
-          strokeWidth="12"
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: circumference - progress }}
-          transition={{ duration: 2.5, ease: [0.23, 1, 0.32, 1] }}
-          strokeLinecap="round"
-        />
-        <defs>
-          <linearGradient id="accent-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="var(--color-accent)" />
-            <stop offset="100%" stopColor="#FF5C00" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <div className="absolute flex flex-col items-center justify-center text-center z-20">
-        <span className="font-mono text-5xl font-black tracking-tighter text-ink-primary">
-          {String(value)}<span className="text-accent text-2xl">%</span>
-        </span>
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-ink-tertiary mt-1">{label}</span>
-      </div>
-      {tier && (
-        <div className="absolute -bottom-2 bg-accent text-white text-[10px] font-black px-4 py-1 rounded-full shadow-xl uppercase tracking-[0.2em] animate-in zoom-in duration-1000 delay-500 z-30">
-           {tier}
-        </div>
-      )}
-    </div>
-  );
-};
+import type { ReputacaoBreakdown } from '@pdc/shared';
+import { CircularCerteza, Star } from './RelatorioVocacionalPrimitives';
+import {
+  fetchPerfilVocacional,
+  fetchReputacao,
+  isApiNotFound,
+  toRelatorioElite,
+  type RelatorioElite,
+} from './relatorioVocacional.api';
 
 export const RelatorioVocacional = () => {
   const [data, setData] = useState<RelatorioElite | null>(null);
@@ -124,33 +23,20 @@ export const RelatorioVocacional = () => {
     const fetchAll = async () => {
       try {
         const [repRes, premiumRes] = await Promise.allSettled([
-          http.get<ReputacaoBreakdown>('/reputacao/me'),
-          http.get<PerfilPremiumResponse>('/vocacional/perfil-premium'),
+          fetchReputacao(),
+          fetchPerfilVocacional(),
         ]);
 
         if (repRes.status === 'fulfilled') {
           setReputacao(repRes.value);
         } else {
-          const err = repRes.reason as { status?: number } | undefined;
-          if (err?.status === 404) setReputationDisabled(true);
+          if (isApiNotFound(repRes.reason)) setReputationDisabled(true);
         }
 
         const rep = repRes.status === 'fulfilled' ? repRes.value : null;
 
         if (premiumRes.status === 'fulfilled') {
-          const p = premiumRes.value;
-          setData({
-            scoreGlobal: p.scoreGlobal,
-            patterns: p.patterns.map((pt) => ({
-              domainId: pt.domainId,
-              cognitiveFluidity: pt.cognitiveFluidity,
-              resilienceIndex: pt.resilienceIndex,
-              focusStability: pt.focusStability,
-              technicalScore: pt.technicalScore,
-              tinaSummary: pt.tinaSummary as PatternData['tinaSummary'],
-            })),
-            recomendacoes: p.recomendacoes,
-          });
+          setData(toRelatorioElite(premiumRes.value));
         } else {
           setData({ patterns: [], scoreGlobal: rep?.score ?? 0, recomendacoes: [] });
         }
@@ -403,9 +289,3 @@ export const RelatorioVocacional = () => {
     </div>
   );
 };
-
-const Star = ({ size, className }: { size: number; className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-  </svg>
-);

@@ -1,8 +1,10 @@
 import pino from 'pino';
 import { otpService } from './otp.service.js';
 import { strapiGet, strapiPut } from '../strapi/strapi.client.js';
-import { type OAuthFinalizarRoleChoice } from '@pdc/shared';
+import { resolveEstadoMenoridade, type OAuthFinalizarRoleChoice } from '@pdc/shared';
 import { provisionInstituicaoForUser } from '../instituicoes/instituicao.provision.js';
+import { buildPerfilComplianceFields } from './auth.compliance.js';
+import { consentService } from '../consent/consent.service.js';
 
 const log = pino({ name: 'oauth-onboarding-service' });
 
@@ -18,6 +20,17 @@ function perfilPersistedId(perfil: StrapiPerfilItem): string {
   return perfil.documentId ?? String(perfil.id);
 }
 
+function semanticError(message: string, status: 400 | 404): Error & { status: 400 | 404 } {
+  return Object.assign(new Error(message), { status });
+}
+
+function assertAdultRoleEligibility(payload: OAuthFinalizarRoleChoice): void {
+  if (payload.role === 'estudante') return;
+  if (resolveEstadoMenoridade(payload.dataNascimento) === 'menor') {
+    throw semanticError('Mentores e instituições devem ser representados por utilizadores adultos.', 400);
+  }
+}
+
 export const oauthOnboardingService = {
   async escolherRole(
     userId: string,
@@ -30,12 +43,31 @@ export const oauthOnboardingService = {
     });
     const perfil = res.data[0];
     if (!perfil) {
-      throw Object.assign(new Error('Perfil não encontrado'), { status: 404 });
+      throw semanticError('Perfil não encontrado', 404);
     }
+
+    assertAdultRoleEligibility(payload);
+    const perfilId = perfilPersistedId(perfil);
+    await consentService.recordLegalAcceptance({
+      userId,
+      perfilId: perfil.id,
+      actorRole: payload.role,
+      aceiteLegal: payload.aceiteLegal,
+      source: 'oauth',
+      dataNascimento: payload.dataNascimento,
+      ...(perfil.documentId ? { perfilDocumentId: perfil.documentId } : {}),
+      ...(payload.consentimentoEncarregado ? { consentimentoEncarregado: payload.consentimentoEncarregado } : {}),
+    });
 
     // Server-authoritative fields — never overwritten by client payload
     const aprovado = payload.role === 'estudante';
     const strapiPayload: Record<string, unknown> = {
+      ...buildPerfilComplianceFields({
+        source: 'oauth',
+        dataNascimento: payload.dataNascimento,
+        aceiteLegal: payload.aceiteLegal,
+        ...(payload.consentimentoEncarregado ? { consentimentoEncarregado: payload.consentimentoEncarregado } : {}),
+      }),
       tipo: payload.role,
       aprovado,
       oauthVerified: true,
@@ -60,7 +92,6 @@ export const oauthOnboardingService = {
       });
     }
 
-    const perfilId = perfilPersistedId(perfil);
     await strapiPut<StrapiPerfilItem>(`/perfis/${perfilId}`, strapiPayload);
     log.info({ userId, perfilId, role: payload.role }, 'OAuth onboarding concluído sem OTP');
   },
@@ -78,7 +109,7 @@ export const oauthOnboardingService = {
     });
     const perfil = res.data[0];
     if (!perfil) {
-      throw Object.assign(new Error('Perfil não encontrado'), { status: 404 });
+      throw semanticError('Perfil não encontrado', 404);
     }
 
     await strapiPut<StrapiPerfilItem>(`/perfis/${perfilPersistedId(perfil)}`, {

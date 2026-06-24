@@ -53,8 +53,9 @@ export function RoleChipMenu() {
         data-testid="user-menu"
         onClick={() => { setOpen(o => !o); }}
         className="flex h-11 items-center gap-2 rounded-xl border border-[var(--glass-border-light)] px-3 transition-all hover:bg-[var(--surface-elevated)] min-w-[44px]"
-        aria-haspopup="true"
+        aria-haspopup="dialog"
         aria-expanded={open}
+        aria-controls="user-preferences-popover"
         aria-label="Menu do utilizador"
       >
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-recessed)] text-[var(--accent-terracotta)]">
@@ -68,8 +69,11 @@ export function RoleChipMenu() {
 
       {open && (
         <div
+          id="user-preferences-popover"
+          data-testid="user-menu-panel"
           className="absolute right-0 top-full mt-2 w-72 rounded-[var(--radius-xl)] border border-[var(--glass-border-light)] bg-[var(--surface-elevated)] shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200"
-          role="menu"
+          role="dialog"
+          aria-label="Preferências do utilizador"
         >
           {/* Cabeçalho: Identidade */}
           <div className="px-5 py-4 border-b border-[var(--glass-border-light)]">
@@ -79,7 +83,6 @@ export function RoleChipMenu() {
 
           <div className="p-2 space-y-1">
             <button
-              role="menuitem"
               onClick={() => { setOpen(false); navigate('/app/perfil'); }}
               className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--surface-recessed)] rounded-xl transition-colors"
             >
@@ -104,7 +107,6 @@ export function RoleChipMenu() {
 
           <div className="p-2 space-y-1 border-t border-[var(--glass-border-light)]">
             <button
-              role="menuitem"
               onClick={() => { setOpen(false); navigate('/app/ajuda'); }}
               className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--surface-recessed)] rounded-xl transition-colors"
             >

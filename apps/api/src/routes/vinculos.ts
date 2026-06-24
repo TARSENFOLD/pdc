@@ -4,6 +4,7 @@ import { z } from 'zod';
 import pino from 'pino';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
+import { requireAdult } from '../modules/auth/minor.guard.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import {
@@ -153,7 +154,7 @@ vinculoRoutes.get('/partilha', async (c) => {
 });
 
 // POST /vinculos/:id/pedir
-vinculoRoutes.post('/:id/pedir', async (c) => {
+vinculoRoutes.post('/:id/pedir', requireAdult(), async (c) => {
   const destinatarioPerfilId = c.req.param('id');
   const { id: userId } = c.get('user');
 
@@ -195,7 +196,7 @@ vinculoRoutes.post('/:id/pedir', async (c) => {
 });
 
 // PATCH /vinculos/:id/resolver
-vinculoRoutes.patch('/:id/resolver', zValidator('json', z.object({ status: z.enum(['aprovado', 'rejeitado']) })), async (c) => {
+vinculoRoutes.patch('/:id/resolver', requireAdult(), zValidator('json', z.object({ status: z.enum(['aprovado', 'rejeitado']) })), async (c) => {
   const vinculoId = c.req.param('id');
   const { status } = c.req.valid('json');
   const { id: userId } = c.get('user');

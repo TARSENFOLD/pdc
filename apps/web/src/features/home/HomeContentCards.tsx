@@ -11,7 +11,7 @@ const TIPO_LABELS: Record<string, string> = {
   post: 'COMUNIDADE',
 };
 
-export function resolveTrendingHref(item: TrendingItem): string {
+function resolveTrendingHref(item: TrendingItem): string {
   if (item.tipo === 'curso')       return `/app/cursos/${item.id}`;
   if (item.tipo === 'simulacao')   return `/app/simulacoes/${item.id}`;
   if (item.tipo === 'experiencia') return `/app/experiencias/${item.id}`;
