@@ -93,6 +93,13 @@ function getOAuthRedirectUri(c: Context<{ Variables: AuthVariables }>, provider:
   return `${origin}/auth/${provider}/callback`;
 }
 
+function redirectOAuthUnavailable(c: Context<{ Variables: AuthVariables }>, provider: 'google' | 'linkedin') {
+  log.error({ provider }, 'OAuth callback unavailable');
+  const url = new URL('/login', env.OAUTH_REDIRECT_BASE_URL);
+  url.searchParams.set('error', 'oauth_unavailable');
+  return c.redirect(url.toString());
+}
+
 oauthRoutes.get('/google', async (c) => {
   const state = createOAuthState();
   await persistOAuthState(state);
@@ -148,7 +155,7 @@ oauthRoutes.get('/google/callback', async (c) => {
     return c.redirect(`${env.OAUTH_REDIRECT_BASE_URL}/app`);
   } catch (err) {
     log.error({ err }, 'Google callback error');
-    return c.json({ error: 'Internal server error' }, 500);
+    return redirectOAuthUnavailable(c, 'google');
   }
 });
 
@@ -171,37 +178,43 @@ oauthRoutes.get('/linkedin/callback', async (c) => {
   const isValidState = await consumeOAuthState(state);
   if (!isValidState) return c.json({ error: 'Invalid state' }, 400);
 
-  const tokenRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      code: code || '',
-      client_id: env.LINKEDIN_CLIENT_ID || '',
-      client_secret: env.LINKEDIN_CLIENT_SECRET || '',
-      redirect_uri: getOAuthRedirectUri(c, 'linkedin'),
-    }),
-  });
-  const tokens = await tokenRes.json() as { access_token: string };
-  const userRes = await fetch('https://api.linkedin.com/v2/userinfo', {
-    headers: { Authorization: `Bearer ${tokens.access_token}` },
-  });
-  const liUser = await userRes.json() as { email?: string; name?: string };
-  if (!liUser.email) return c.json({ error: 'Email não disponível da conta LinkedIn' }, 400);
-  const user = await authService.findOrCreateUser(liUser.email, liUser.name ?? liUser.email);
-  const { accessToken, refreshToken } = await authService.generateTokens(user);
-  await authService.saveRefreshToken(user.id, refreshToken);
-  setAuthCookies(c, accessToken, refreshToken);
+  try {
+    const tokenRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code || '',
+        client_id: env.LINKEDIN_CLIENT_ID || '',
+        client_secret: env.LINKEDIN_CLIENT_SECRET || '',
+        redirect_uri: getOAuthRedirectUri(c, 'linkedin'),
+      }),
+    });
+    if (!tokenRes.ok) return c.json({ error: 'Token error' }, 400);
+    const tokens = await tokenRes.json() as { access_token: string };
+    const userRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    const liUser = await userRes.json() as { email?: string; name?: string };
+    if (!liUser.email) return c.json({ error: 'Email não disponível da conta LinkedIn' }, 400);
+    const user = await authService.findOrCreateUser(liUser.email, liUser.name ?? liUser.email);
+    const { accessToken, refreshToken } = await authService.generateTokens(user);
+    await authService.saveRefreshToken(user.id, refreshToken);
+    setAuthCookies(c, accessToken, refreshToken);
 
-  void authService.setOauthProvider(user.id, 'linkedin').catch((err: unknown) => {
-    log.error({ err, userId: user.id }, 'Failed to set oauthProvider');
-  });
+    void authService.setOauthProvider(user.id, 'linkedin').catch((err: unknown) => {
+      log.error({ err, userId: user.id }, 'Failed to set oauthProvider');
+    });
 
-  if (!user.oauthVerified || !user.onboardingCompleto) {
-    const upgradeParam = user.onboardingCompleto === false ? '?upgrade=true' : '';
-    return c.redirect(`${env.OAUTH_REDIRECT_BASE_URL}/criar-conta/finalizar${upgradeParam}`);
+    if (!user.oauthVerified || !user.onboardingCompleto) {
+      const upgradeParam = user.onboardingCompleto === false ? '?upgrade=true' : '';
+      return c.redirect(`${env.OAUTH_REDIRECT_BASE_URL}/criar-conta/finalizar${upgradeParam}`);
+    }
+    return c.redirect(`${env.OAUTH_REDIRECT_BASE_URL}/app`);
+  } catch (err) {
+    log.error({ err }, 'LinkedIn callback error');
+    return redirectOAuthUnavailable(c, 'linkedin');
   }
-  return c.redirect(`${env.OAUTH_REDIRECT_BASE_URL}/app`);
 });
 
 const verificarOtpSchema = z.object({
