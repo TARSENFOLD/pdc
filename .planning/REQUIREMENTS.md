@@ -139,8 +139,8 @@
 
 | ID | Item | Origem | Estado |
 | --- | --- | --- | --- |
-| D1 | `apps/api/src/modules/analysis/heuristics.engine.ts` paralelo a `@pdc/shared/heuristics` — consolidar em W3 | `R3-1` | `[ ]` |
-| D2 | `apps/web/src/features/feed/FeedPage.tsx` contém 4 `any` — limpar em `W4-T2` | `R3-1` | `[ ]` |
+| D1 | `apps/api/src/modules/analysis/heuristics.engine.ts` paralelo a `@pdc/shared/heuristics` — consolidar em W3 | `R3-1` | `[x]` — engine é thin wrapper de 25 linhas que delega 100% para `@pdc/shared/heuristics-calculator` (auditado 2026-07-04). |
+| D2 | `apps/web/src/features/feed/FeedPage.tsx` — zero casts `as any` confirmado por grep (auditado 2026-07-04) | `R3-1` | `[x]` |
 | D3 | Métrica `domain_events_failed_total` em logs; exporter Prometheus/Sentry pendente | `R3-1` | `[ ]` |
 | D4 | Naming mismatch de conquistas — `EVENT_TO_TRIGGER_MAP` implementado em conquistas.engine.ts | `T-FIX-3` | `[x]` — mapeamento corrige handler→engine. Condições p/ eventos não-cliente (vinculos) precisam queries Strapi directas (ver DIVIDA_TECNICA). |
 | D5 | Outbox Replay scheduler co-located com BFF main (risco de saturação) | Análise técnica | `[x]` ✅ outbox-worker daemon isolado |
@@ -151,14 +151,14 @@
 
 | ID | Descrição | Spec | Estado |
 | --- | --- | --- | --- |
-| BUG-01 | Edge `validEvents` ReferenceError no POST | E2 | `[~]` |
+| BUG-01 | Edge `validEvents` ReferenceError no POST | E2 | `[x]` — variável `validEvents` não existe no Edge; POST usa `processedEvents.length` (auditado 2026-07-04). |
 | BUG-02 | Drift de áreas: 4 vs 15 inconsistente (F10) | E1 | `[x]` |
 | BUG-03 | Viewport `user-scalable=no` bloqueia a11y | D1 | `[x]` — já correcto: `width=device-width, initial-scale=1.0, viewport-fit=cover` sem `user-scalable=no` |
 | BUG-04 | Manifest `theme_color` Amber vs Dark Elite | D1 | `[x]` — corrigido para `#0E0D0C` (Dark Elite) em 2026-04-30 |
 | BUG-05 | OTP Twilio mockado (Impede onboarding real) — `REQ-1-010` | E4 | `[x]` |
 | BUG-06 | Telemetria `payload` vs `dados` (D20 mismatch) | Auditoria | `[x]` |
-| BUG-07 | Missing `Tentativa.metadata` no CMS (D21) | Auditoria | `[ ]` |
-| BUG-08 | Drift nomenclature datas (D22: StartAt vs Início) | Auditoria | `[ ]` |
+| BUG-07 | Missing `Tentativa.metadata` no CMS (D21) | Auditoria | `[x]` — campo `metadata` presente no schema Strapi (`api::tentativa.tentativa`) e BFF envia em POST/PUT (auditado 2026-07-04). |
+| BUG-08 | Drift nomenclature datas (D22: `startedAt`/`finishedAt` vs `dataInicio`/`dataFim`) | Auditoria | `[~]` — BFF/shared usam `dataInicio`/`dataFim`; schema Strapi ainda contém `startedAt`/`finishedAt` (não usados em código). Requer migração de schema para remover duplicados. |
 | BUG-09 | Outbox Replay manual-only | Auditoria | `[x]` |
 | BUG-10 | Cloudflare R2 Keys expostas em plain text | Auditoria | `[-]` | Deferido: gestão operacional (secrets manager / env encriptadas no host). Não é problema de código. Verificar na checklist de deploy. |
 
@@ -181,4 +181,4 @@ Para detalhes field-level sobre cada requisito, consultar:
 | Pesos Vocacionais (11 tipos) | `docs/ROADMAP_PRODUTO_DISRUPTIVO.md` §Tier 1 |
 
 ---
-*Última auditoria: 9 de Maio de 2026 · WA-T06: C3/C4 cross-link DT-17+ adicionado; numeração C2=Tipo1/C3=Tipo2/C4=Tipo3 confirmada correcta; BUG-05 mantém `[x]`. Phase G compliance pass documentada em STATE.md.*
+*Última auditoria: 4 de Julho de 2026 · H2-T6: reconciliação de D1/D2/BUG-01/BUG-07/BUG-08 após Integrity Hardening H1/H2.*
