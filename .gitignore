@@ -12,6 +12,7 @@ build/
 **/.env
 **/.env.*
 !.env.example
+!.env.hetzner.example
 !**/.env.example
 .env.local
 .env.production

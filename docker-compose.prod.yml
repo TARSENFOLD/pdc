@@ -1,0 +1,135 @@
+# ─── PDC v2 — Produção no Hetzner VPS ───────────────────────────────────────
+# Este ficheiro é usado pelo workflow .github/workflows/deploy-vps.yml e pelo
+# script scripts/deploy-vps.sh. Nunca commites valores reais de env; usa o ficheiro
+# /opt/pdc/.env no VPS.
+#
+# Arquitectura: Internet → Cloudflare DNS → Hetzner VPS → Traefik → API/Strapi
+# BD/Cache/Storage/Email/AI continuam em serviços cloud (Neon, Upstash, R2, etc.)
+
+name: pdc-prod
+
+services:
+  # ─── Traefik: reverse proxy + SSL automático ────────────────────────────────
+  traefik:
+    image: traefik:v3.3
+    container_name: pdc-traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=caetanocj275@gmail.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--ping=true"
+      - "--log.level=INFO"
+      - "--accesslog=true"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - pdc-letsencrypt:/letsencrypt
+    networks:
+      - pdc-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.usepdc.com`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.middlewares=traefik-auth"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$H6uskkkW$$IgXLP7ewSu8UxQpLWsdlf/"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # ─── BFF Hono API ───────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pdc-api
+    restart: unless-stopped
+    env_file:
+      - /opt/pdc/.env
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      API_URL: https://api.usepdc.com
+      FRONTEND_URL: https://usepdc.com
+      STRAPI_URL: https://cms.usepdc.com
+    depends_on:
+      - traefik
+    networks:
+      - pdc-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pdc-api.rule=Host(`api.usepdc.com`)"
+      - "traefik.http.routers.pdc-api.entrypoints=websecure"
+      - "traefik.http.routers.pdc-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.pdc-api.loadbalancer.server.port=3001"
+      - "traefik.http.services.pdc-api.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.pdc-api.loadbalancer.healthcheck.interval=10s"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ─── Strapi CMS ─────────────────────────────────────────────────────────────
+  strapi:
+    build:
+      context: ./infra/strapi
+      dockerfile: Dockerfile
+    container_name: pdc-strapi
+    restart: unless-stopped
+    env_file:
+      - /opt/pdc/.env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 1337
+    depends_on:
+      - traefik
+    networks:
+      - pdc-network
+    volumes:
+      - pdc-strapi-uploads:/opt/app/public/uploads
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pdc-strapi.rule=Host(`cms.usepdc.com`)"
+      - "traefik.http.routers.pdc-strapi.entrypoints=websecure"
+      - "traefik.http.routers.pdc-strapi.tls.certresolver=letsencrypt"
+      - "traefik.http.services.pdc-strapi.loadbalancer.server.port=1337"
+      - "traefik.http.services.pdc-strapi.loadbalancer.healthcheck.path=/"
+      - "traefik.http.services.pdc-strapi.loadbalancer.healthcheck.interval=30s"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:1337/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+networks:
+  pdc-network:
+    driver: bridge
+
+volumes:
+  pdc-letsencrypt:
+    driver: local
+  pdc-strapi-uploads:
+    driver: local
