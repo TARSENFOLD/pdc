@@ -76,6 +76,13 @@ const envSchema = z.object({
   LTI_PRIVATE_KEY: z.string().optional(),
   LTI_PUBLIC_KEY: z.string().optional(),
   LTI_KEY_ID: z.string().default('pdc-lti-key-1'),
+
+  // Internal account provisioning (CLI only)
+  PDC_INTERNAL_ACCOUNT_EMAIL: z.string().email().optional(),
+  PDC_INTERNAL_ACCOUNT_PASSWORD: z.string().min(12).optional(),
+  PDC_INTERNAL_ACCOUNT_NAME: z.string().trim().min(3).optional(),
+  PDC_INTERNAL_ACCOUNT_ROLE: z.enum(['super_admin', 'moderador', 'comite_cientifico']).optional(),
+  PDC_INTERNAL_ACCOUNT_RESET_PASSWORD: z.enum(['true', 'false']).default('false'),
 });
 
 export type Env = z.infer<typeof envSchema>;
