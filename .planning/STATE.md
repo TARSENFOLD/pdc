@@ -257,10 +257,10 @@ Sessão de governança com foco em eliminar casts cegos, fallbacks silenciosos e
 
 ### Próximos Passos Recomendados
 
-1. **H2-T2 (completar)**: centralizar validação de env vars restantes (ex: `SENTRY_DSN`, `EDGE_PUBLIC_URL`) e actualizar `.env.example`.
+1. **H2-T2 (done)**: env vars centralizadas em `apps/api/src/lib/env.ts` (incl. `SENTRY_DSN`, `EDGE_PUBLIC_URL`); `.env.example` sincronizado (`7f17842`).
 2. **H2-T3 (done)**: builds `.strapi/dist-*` antigos removidos com `sudo` (4 diretórios).
-3. **H2-T4 (continuar)**: reconciliar `REQUIREMENTS.md` NF1/NF3 e actualizar `DIVIDA_TECNICA_CONHECIDA.md` se necessário.
-4. **CI**: aproveitar cache ESLint nos workflows (cache restore entre runs).
+3. **H2-T4 (done)**: `NF1` mantém `[x]` — zero `any` confirmado; `NF3` mantém `[~]` por decisão explícita do utilizador (Rule of 300 sem alterações até trabalho futuro nos ficheiros).
+4. **CI (done)**: cache ESLint adicionado aos workflows (`6fc0aa2`).
 
 ---
 
