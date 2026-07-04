@@ -158,7 +158,7 @@
 | BUG-05 | OTP Twilio mockado (Impede onboarding real) — `REQ-1-010` | E4 | `[x]` |
 | BUG-06 | Telemetria `payload` vs `dados` (D20 mismatch) | Auditoria | `[x]` |
 | BUG-07 | Missing `Tentativa.metadata` no CMS (D21) | Auditoria | `[x]` — campo `metadata` presente no schema Strapi (`api::tentativa.tentativa`) e BFF envia em POST/PUT (auditado 2026-07-04). |
-| BUG-08 | Drift nomenclature datas (D22: `startedAt`/`finishedAt` vs `dataInicio`/`dataFim`) | Auditoria | `[~]` — BFF/shared usam `dataInicio`/`dataFim`; schema Strapi ainda contém `startedAt`/`finishedAt` (não usados em código). Requer migração de schema para remover duplicados. |
+| BUG-08 | Drift nomenclature datas (D22: `startedAt`/`finishedAt` vs `dataInicio`/`dataFim`) | Auditoria | `[x]` — campos `startedAt`/`finishedAt` removidos do schema Strapi `api::tentativa.tentativa`; contrato canónico `dataInicio`/`dataFim` preservado. Ver ADR-045 (auditado 2026-07-04). |
 | BUG-09 | Outbox Replay manual-only | Auditoria | `[x]` |
 | BUG-10 | Cloudflare R2 Keys expostas em plain text | Auditoria | `[-]` | Deferido: gestão operacional (secrets manager / env encriptadas no host). Não é problema de código. Verificar na checklist de deploy. |
 

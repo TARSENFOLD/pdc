@@ -3,7 +3,7 @@
 > Inventário honesto de problemas técnicos identificados, classificados e documentados.
 > **Nenhum destes foi "varrido para debaixo do tapete"** — todos são decisões conscientes com justificação.
 >
-> Última actualização: 9 de Maio de 2026 · FIX-002: DT-13/DT-22 reconciliados pós-PROD-E (PE-T01..T04 concluídos)
+> Última actualização: 4 de Julho de 2026 · H2-T7: BUG-08 resolvido (remoção de `startedAt`/`finishedAt` em `tentativa`, ADR-045); D1/D2 reconciliados; DT-23 adicionado.
 
 ---
 
@@ -119,6 +119,7 @@ const items = await mapConcurrent(candidates, async (cand) => {
 | ~~DT-15~~ | Scoring telemetry-driven Tipo 2/3 | **Corrigido** — `sim-2-3.engine.ts` implementado (212 linhas: `aggregateLabEvent` + `derivePerSession` + `finalizeSession` + `handleLabEvent`; idempotência Redis); flags `SIM_TIPO_2/3_PUBLISH_ENABLED` promovidas para `STABLE` (PE-T03) |
 | ~~DT-13~~ | `moderacao.ts` motivo de rejeição perdido | **Corrigido** — `moderacao.service.ts` unificado criado; `motivoRejeicao` persistido em todos os tipos de conteúdo; evento `CONTEUDO_REJEITADO` emitido via outbox (PE-T02) |
 | ~~DT-22~~ | Evento `CONTEUDO_REJEITADO` ausente em `domain-events.ts` | **Corrigido** — `DomainEventName.CONTEUDO_REJEITADO = 'conteudo.rejeitado'` definido em `packages/shared/src/domain-events.ts` (linha 105) com payload `{ targetType, targetId, rejeitadorId, motivo }`; emitido em `moderacao.service.ts` via outbox (PE-T02) |
+| ~~DT-23~~ | Drift nomenclature datas em `tentativa` (`startedAt`/`finishedAt` vs `dataInicio`/`dataFim`) | **Corrigido** — campos duplicados removidos do schema Strapi `api::tentativa.tentativa`; contrato canónico `dataInicio`/`dataFim` mantido em BFF e `@pdc/shared`. Ver ADR-045. |
 
 ---
 
@@ -221,4 +222,4 @@ const items = await mapConcurrent(candidates, async (cand) => {
 ---
 
 *Regra de Ouro: Se não está documentado aqui, não existe como dívida técnica consciente.*
-*Última actualização: 9 de Maio de 2026 · FIX-002: DT-13, DT-15 e DT-22 movidos para "Resolvidos" — PROD-E concluído (PE-T01..T04 done); drift documental corrigido.*
+*Última actualização: 4 de Julho de 2026 · H2-T7: DT-23 (BUG-08) resolvido; ADR-045 criado; D1/D2 reconciliados com REQUIREMENTS.md.*
