@@ -60,6 +60,57 @@ export interface PublicProfileResult {
 }
 
 /**
+ * Convert a raw Strapi profile response into the canonical StrapiPerfil shape.
+ * This is NOT a cast — it validates the presence of the id and returns a typed object.
+ */
+function pickDefined<T extends Record<string, unknown>>(obj: T): { [K in keyof T]: T[K] } {
+  const result = {} as { [K in keyof T]: T[K] };
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key as keyof T] = value as T[keyof T];
+    }
+  }
+  return result;
+}
+
+export function toStrapiPerfil(raw: unknown): StrapiPerfil {
+  if (raw == null || typeof raw !== 'object') {
+    throw new Error('Raw perfil must be an object');
+  }
+  const record = raw as Record<string, unknown>;
+  if (record.id == null) {
+    throw new Error('Raw perfil must have an id');
+  }
+  return pickDefined({
+    id: (typeof record.id === 'number' || typeof record.id === 'string' || typeof record.id === 'boolean') ? String(record.id) : '',
+    nome: typeof record.nome === 'string' ? record.nome : undefined,
+    tipo: typeof record.tipo === 'string' ? record.tipo : undefined,
+    bio: typeof record.bio === 'string' ? record.bio : undefined,
+    headline: typeof record.headline === 'string' ? record.headline : undefined,
+    telefone: typeof record.telefone === 'string' ? record.telefone : undefined,
+    website: typeof record.website === 'string' ? record.website : undefined,
+    regiao: typeof record.regiao === 'string' ? record.regiao : undefined,
+    socialLinks: record.socialLinks,
+    areasInteresse: record.areasInteresse,
+    competencias: record.competencias,
+    historicoProfissional: record.historicoProfissional,
+    formacaoAcademica: record.formacaoAcademica,
+    reputacao: typeof record.reputacao === 'number' ? record.reputacao : undefined,
+    reputacaoTier: typeof record.reputacaoTier === 'string' ? (record.reputacaoTier as ReputacaoTier) : undefined,
+    avatarUrl: typeof record.avatarUrl === 'string' ? record.avatarUrl : undefined,
+    bannerUrl: typeof record.bannerUrl === 'string' ? record.bannerUrl : undefined,
+    foto: record.foto && typeof record.foto === 'object' ? (record.foto as { url?: string } | null) : undefined,
+    capa: record.capa && typeof record.capa === 'object' ? (record.capa as { url?: string } | null) : undefined,
+    conquistas: Array.isArray(record.conquistas) ? record.conquistas as StrapiPerfil['conquistas'] : undefined,
+    visibilitySettings: record.visibilitySettings as VisibilitySettings | null | undefined,
+    notificationPreferences: record.notificationPreferences,
+    email: typeof record.email === 'string' ? record.email : undefined,
+    userId: typeof record.userId === 'string' ? record.userId : undefined,
+  }) as StrapiPerfil;
+}
+
+
+/**
  * Serialize a Strapi perfil for public consumption.
  * Respects field-level visibilitySettings.
  * Invariant: fields marked 'privado' are NEVER exposed.

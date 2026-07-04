@@ -5,6 +5,7 @@ import {
   setCanonicalUserRole,
 } from '../modules/auth/internal-account.service.js';
 import { strapiGetRaw, strapiPostRaw } from '../modules/strapi/strapi.client.js';
+import { env } from '../lib/env.js';
 
 const ProvisionInputSchema = z.object({
   email: z.string().email().transform((value) => value.toLowerCase().trim()),
@@ -33,11 +34,11 @@ async function authenticatedRoleId(): Promise<string | number> {
 
 async function main(): Promise<void> {
   const input = ProvisionInputSchema.parse({
-    email: process.env['PDC_INTERNAL_ACCOUNT_EMAIL'],
-    password: process.env['PDC_INTERNAL_ACCOUNT_PASSWORD'],
-    name: process.env['PDC_INTERNAL_ACCOUNT_NAME'],
-    role: process.env['PDC_INTERNAL_ACCOUNT_ROLE'],
-    resetPassword: process.env['PDC_INTERNAL_ACCOUNT_RESET_PASSWORD'] ?? 'false',
+    email: env.PDC_INTERNAL_ACCOUNT_EMAIL,
+    password: env.PDC_INTERNAL_ACCOUNT_PASSWORD,
+    name: env.PDC_INTERNAL_ACCOUNT_NAME,
+    role: env.PDC_INTERNAL_ACCOUNT_ROLE,
+    resetPassword: env.PDC_INTERNAL_ACCOUNT_RESET_PASSWORD,
   });
 
   const users = await strapiGetRaw<StrapiUser[]>('/users', {

@@ -18,6 +18,24 @@ Os 7 roles canónicos (ver `specs/IMPORTANTE/03`): `estudante`, `mentor`, `insti
 ## 2. Integridade Técnica (Zero Any)
 A tipagem estrita é inegociável. O uso de `any` em novos códigos é proibido. Casos legados devem ser saneados durante a refatoração temática. O `@pdc/shared` é a única fonte de verdade para contratos.
 
+### 2.1 — Proibição de Casts Cegos
+**Casts como `as unknown as X`, `as any as X`, ou `as string` para valores potencialmente indefinidos são banidos.** Um cast cego mascara a quebra de um contrato e transforma um erro de tipo num bug de runtime. Quando um valor vem de uma fonte externa (Strapi, API, localStorage, query params), deve ser validado com Zod, type-guards ou narrowing explícito.
+
+> ❌ Banido: `const title = event.title as string`  // title pode ser undefined
+> ❌ Banido: `const perfil = raw as unknown as StrapiPerfil` // contrato não verificado
+> ✅ Correto: `const parsed = StrapiPerfilSchema.safeParse(raw)` ou type-guard com validação estrutural.
+
+### 2.2 — Proibição de Fallbacks Silenciosos
+**Fallbacks como `|| {}`, `|| []`, `|| ''`, `|| 0` para mascarar dados inexistentes são banidos quando podem esconder bugs de lógica.** Se um valor esperado não está presente, o código deve falhar explícita e semanticamente (lançar erro, devolver 404/422, ou mostrar estado de erro na UI), nunca substituir silenciosamente por um valor default.
+
+> ❌ Banido: `const config = TIPO_CONFIG[tipo] || { label: '?', icon: null }` // esconde tipo inválido
+> ❌ Banido: `const score = perfil.reputacao || 0` quando 0 não é semanticamente equivalente a "ausente"
+> ✅ Correto: validar com Zod; se opcional, usar `??` com tratamento explícito do caso `undefined`; se obrigatório, lançar erro semântico.
+
+Exceção legítima: defaults declarativos em schemas Zod (`z.string().default('')`) ou valores de configuração onde o default é parte intencional do domínio.
+
+
+
 ## 3. Rule of 300
 Nenhum ficheiro fonte deve ultrapassar **300 linhas**. Ficheiros que excedam este limite devem ser modularizados imediatamente.
 
@@ -77,4 +95,4 @@ O ficheiro `.env.example` é uma **fixture intencional**. Contém credenciais de
 O limite de 300 linhas é verificado em CI. Ficheiros que excedam o limite impedem o merge, excepto na whitelist explícita (ex: `packages/shared/src/index.ts`).
 
 ---
-*Última validação: 2026-05-04 · Fonte de verdade: `specs/IMPORTANTE/01–06`.*
+*Última validação: 2026-07-04 · Fonte de verdade: `specs/IMPORTANTE/01–06`. Adicionadas proibições de casts cegos e fallbacks silenciosos (§2.1, §2.2).*

@@ -23,6 +23,6 @@
       "@pdc/shared": ["../../packages/shared/src/index"]
     }
   },
-  "include": ["src", "scripts", "../../packages/shared/src"],
+  "include": ["src", "scripts", "vitest.config.ts", "vitest.setup.ts", "../../packages/shared/src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

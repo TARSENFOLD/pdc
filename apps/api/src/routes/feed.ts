@@ -18,7 +18,7 @@ async function buildFeed(userId: string, weights: FeedWeights, limit = 50) {
     'filters[userId][$eq]': userId,
     'fields': 'areasInteresse',
   });
-  const areaInteresse = resPerfil.data[0]?.areasInteresse?.[0] || '';
+  const areaInteresse = resPerfil.data[0]?.areasInteresse?.[0] ?? undefined;
 
   const candidates = await fetchCandidates();
 

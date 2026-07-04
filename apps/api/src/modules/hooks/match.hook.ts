@@ -156,9 +156,18 @@ export const matchHook: EcosystemHook<MatchPayload> = {
            const dna = dnaMap.get(String(estudante.id));
            if (!dna) return; // Sem histórico = Bloqueado das recomendações premium
 
-           if (regrasAcesso.minFluidez && (dna.cognitiveFluidity || 0) < regrasAcesso.minFluidez) return;
-           if (regrasAcesso.minResiliencia && (dna.resilienceIndex || 0) < regrasAcesso.minResiliencia) return;
-           if (regrasAcesso.minFoco && (dna.focusStability || 0) < regrasAcesso.minFoco) return;
+           if (regrasAcesso.minFluidez) {
+             const cf = dna.cognitiveFluidity;
+             if (cf !== undefined && Number.isFinite(cf) && cf < regrasAcesso.minFluidez) return;
+           }
+           if (regrasAcesso.minResiliencia) {
+             const ri = dna.resilienceIndex;
+             if (ri !== undefined && Number.isFinite(ri) && ri < regrasAcesso.minResiliencia) return;
+           }
+           if (regrasAcesso.minFoco) {
+             const fs = dna.focusStability;
+             if (fs !== undefined && Number.isFinite(fs) && fs < regrasAcesso.minFoco) return;
+           }
 
            // Boost de afinidade por superação das expectativas do autor
            if (dna.cognitiveFluidity && regrasAcesso.minFluidez && dna.cognitiveFluidity > regrasAcesso.minFluidez + 2) {

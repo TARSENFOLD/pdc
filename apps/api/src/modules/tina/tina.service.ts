@@ -90,8 +90,11 @@ Regras:
     stream: boolean,
     role?: Role,
   ): Promise<Response> {
-    const lastMessage = messages[messages.length - 1]?.content || '';
-    
+    const lastMessage = messages[messages.length - 1]?.content;
+    if (!lastMessage) {
+      return new Response(JSON.stringify({ error: 'Mensagem ausente ou vazia' }), { status: 400 });
+    }
+
     const guard = validarMensagem(lastMessage);
     if (!guard.valida) {
       return new Response(JSON.stringify({ error: guard.motivo }), { status: 400 });

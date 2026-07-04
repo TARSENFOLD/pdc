@@ -23,6 +23,20 @@ export const DenunciaSchema = z.object({
 
 export type Denuncia = z.infer<typeof DenunciaSchema>;
 
+export const DenuncianteSchema = z.object({
+  id: z.string(),
+  nome: z.string(),
+  email: z.string().email(),
+  avatarUrl: z.string().url().optional().nullable(),
+});
+export type Denunciante = z.infer<typeof DenuncianteSchema>;
+
+export const DenunciaComDetalhesSchema = DenunciaSchema.extend({
+  denunciante: DenuncianteSchema.optional().nullable(),
+});
+export type DenunciaComDetalhes = z.infer<typeof DenunciaComDetalhesSchema>;
+
+
 export const CriarDenunciaPayloadSchema = z.object({
   conteudoId: z.string(),
   conteudoTipo: z.string(),

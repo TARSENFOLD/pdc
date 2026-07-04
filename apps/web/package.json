@@ -8,8 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "copy:sync": "npx tsx scripts/sync-copy.ts",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "eslint --cache .",
+    "lint:fix": "eslint --cache . --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:e2e:a11y": "npx playwright test ../../tests/e2e/a11y.spec.ts --config ../../playwright.config.ts"

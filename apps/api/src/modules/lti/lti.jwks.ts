@@ -1,15 +1,19 @@
 import { exportJWK, importPKCS8, importSPKI } from 'jose';
+import { env } from '../../lib/env.js';
 
-const PRIVATE_KEY = process.env['LTI_PRIVATE_KEY'] || '';
-const PUBLIC_KEY = process.env['LTI_PUBLIC_KEY'] || '';
-export const KEY_ID = process.env['LTI_KEY_ID'] || 'pdc-lti-key-1';
+function requireLtiKey(name: 'LTI_PRIVATE_KEY' | 'LTI_PUBLIC_KEY'): string {
+  const value = env[name];
+  if (!value) {
+    throw new Error(`${name} não configurada`);
+  }
+  return value;
+}
+
+export const KEY_ID = env.LTI_KEY_ID;
 
 export async function getPublicJwks() {
-  if (!PUBLIC_KEY) {
-    throw new Error('LTI_PUBLIC_KEY não configurada');
-  }
-
-  const jwk = await exportJWK(await importSPKI(PUBLIC_KEY, 'RS256'));
+  const publicKey = requireLtiKey('LTI_PUBLIC_KEY');
+  const jwk = await exportJWK(await importSPKI(publicKey, 'RS256'));
 
   return {
     keys: [
@@ -24,8 +28,6 @@ export async function getPublicJwks() {
 }
 
 export async function getPrivateKey() {
-  if (!PRIVATE_KEY) {
-    throw new Error('LTI_PRIVATE_KEY não configurada');
-  }
-  return importPKCS8(PRIVATE_KEY, 'RS256');
+  const privateKey = requireLtiKey('LTI_PRIVATE_KEY');
+  return importPKCS8(privateKey, 'RS256');
 }

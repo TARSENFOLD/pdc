@@ -38,34 +38,40 @@ export class StrapiHttpError extends Error {
  * Normalise Strapi v4 (nested `attributes`) responses to flat format.
  * If already flat (v5), returns unchanged. Preserves `meta` for pagination.
  */
-export function normalizeStrapiResponse<T>(response: T): T {
-  if (response == null || typeof response !== 'object') return response;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === 'object';
+}
 
-  const res = response as unknown as Record<string, unknown>;
-  const data = res['data'];
+function hasData(value: unknown): value is Record<string, unknown> & { data: unknown } {
+  return isRecord(value) && 'data' in value;
+}
+
+export function normalizeStrapiResponse<T>(response: T): T {
+  if (!hasData(response)) return response;
+  const data = response.data;
 
   if (data == null) return response;
 
   if (Array.isArray(data)) {
-    res['data'] = data.map((item: unknown) => {
-      if (typeof item === 'object' && item !== null && 'attributes' in item) {
-        const entry = item as Record<string, unknown> & { attributes: Record<string, unknown> };
-        const { id, documentId, attributes } = entry;
-        const normalized: Record<string, unknown> = {
-          ...attributes,
-          id,
-        };
-        if (documentId !== undefined) normalized['documentId'] = documentId;
-        return normalized;
+    const normalized = data.map((item: unknown) => {
+      if (isRecord(item) && 'attributes' in item) {
+        const attributes = item.attributes;
+        if (!isRecord(attributes)) return item;
+        const result: Record<string, unknown> = { ...attributes };
+        if (item.id !== undefined) result.id = item.id;
+        if (item.documentId !== undefined) result.documentId = item.documentId;
+        return result;
       }
       return item;
     });
-  } else if (typeof data === 'object' && 'attributes' in data) {
-    const entry = data as Record<string, unknown> & { attributes: Record<string, unknown> };
-    const { id, documentId, attributes } = entry;
-    const normalized: Record<string, unknown> = { ...attributes, id };
-    if (documentId !== undefined) normalized['documentId'] = documentId;
-    res['data'] = normalized;
+    (response as Record<string, unknown>).data = normalized;
+  } else if (isRecord(data) && 'attributes' in data) {
+    const attributes = data.attributes;
+    if (!isRecord(attributes)) return response;
+    const result: Record<string, unknown> = { ...attributes };
+    if (data.id !== undefined) result.id = data.id;
+    if (data.documentId !== undefined) result.documentId = data.documentId;
+    (response as Record<string, unknown>).data = result;
   }
 
   return response;

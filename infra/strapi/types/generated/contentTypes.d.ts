@@ -2873,7 +2873,6 @@ export interface ApiTentativaTentativa extends Struct.CollectionTypeSchema {
     duracaoSegundos: Schema.Attribute.Integer;
     executorTipo: Schema.Attribute.Enumeration<['tipo1', 'tipo2', 'tipo3']>;
     feedback: Schema.Attribute.Text;
-    finishedAt: Schema.Attribute.DateTime;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -2892,7 +2891,6 @@ export interface ApiTentativaTentativa extends Struct.CollectionTypeSchema {
       'api::simulacao.simulacao'
     > &
       Schema.Attribute.Required;
-    startedAt: Schema.Attribute.DateTime;
     status: Schema.Attribute.Enumeration<
       ['em_progresso', 'concluida', 'falhou', 'cancelada']
     >;

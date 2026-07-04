@@ -24,24 +24,55 @@
     },
     "executorTipo": {
       "type": "enumeration",
-      "enum": ["tipo1", "tipo2", "tipo3"]
+      "enum": [
+        "tipo1",
+        "tipo2",
+        "tipo3"
+      ]
     },
     "status": {
       "type": "enumeration",
-      "enum": ["em_progresso", "concluida", "falhou", "cancelada"]
+      "enum": [
+        "em_progresso",
+        "concluida",
+        "falhou",
+        "cancelada"
+      ]
     },
-    "score": { "type": "decimal", "default": 0 },
-    "areaScore": { "type": "json" },
-    "feedback": { "type": "text" },
-    "sugestao": { "type": "text" },
-    "tentativaNum": { "type": "integer", "required": true },
-    "duracaoSegundos": { "type": "integer" },
-    "startedAt": { "type": "datetime" },
-    "finishedAt": { "type": "datetime" },
-    "dataInicio": { "type": "datetime" },
-    "dataFim": { "type": "datetime" },
-    "metadata": { "type": "json" },
-    "logsExecucao": { "type": "json" },
-    "outputExecucao": { "type": "json" }
+    "score": {
+      "type": "decimal",
+      "default": 0
+    },
+    "areaScore": {
+      "type": "json"
+    },
+    "feedback": {
+      "type": "text"
+    },
+    "sugestao": {
+      "type": "text"
+    },
+    "tentativaNum": {
+      "type": "integer",
+      "required": true
+    },
+    "duracaoSegundos": {
+      "type": "integer"
+    },
+    "dataInicio": {
+      "type": "datetime"
+    },
+    "dataFim": {
+      "type": "datetime"
+    },
+    "metadata": {
+      "type": "json"
+    },
+    "logsExecucao": {
+      "type": "json"
+    },
+    "outputExecucao": {
+      "type": "json"
+    }
   }
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '@/lib/auth/auth-context';
 import { authApi } from '@/lib/api/auth';
@@ -21,6 +21,7 @@ function getErrorBody(error: unknown): { error?: string } | undefined {
 export default function LoginPage() {
   const formRef = useRef<HTMLFormElement>(null);
   const { t } = useTranslation('common');
+  const [searchParams] = useSearchParams();
 
   const [neuralState, setNeuralState] = useState<NeuralState>('idle');
   const [email, setEmail] = useState('');
@@ -33,6 +34,7 @@ export default function LoginPage() {
   const { track } = useTelemetry();
   const navigate = useNavigate();
   const from = '/app';
+  const oauthError = searchParams.get('error');
 
   const handleWarpComplete = useCallback(() => {
     navigate(from, { replace: true });
@@ -69,6 +71,12 @@ export default function LoginPage() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (oauthError === 'oauth_unavailable') {
+      setError('Não foi possível concluir a autenticação externa. Tenta novamente dentro de instantes.');
+    }
+  }, [oauthError]);
 
   if (!isAuthLoading && user && neuralState !== 'warp') {
     return <Navigate to={from} replace />;

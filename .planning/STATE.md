@@ -227,6 +227,43 @@ revogação B2B, cookies/analytics, UI completa de transparência de IA e E2E ha
 
 **Relatório completo:** `docs/audit/MASTER--audit-report.md`
 
+## Integrity Hardening H1/H2 — 2026-07-04
+
+Sessão de governança com foco em eliminar casts cegos, fallbacks silenciosos e otimizar a ferramenta de lint/typecheck. Todo o trabalho foi realizado na branch `cleanup/h1-casts-fallbacks-lint` para facilitar revisão do CodeRabbit.
+
+### Commits
+
+| Commit | Escopo | Resumo |
+|--------|--------|--------|
+| `06568fc` | H1 | Remove casts cegos, corrige fallbacks silenciosos críticos, otimiza lint/typecheck |
+| `a0b2563` | H2-T1 | Corrige fallbacks silenciosos restantes em serviços core |
+| `f0ea775` | H2-T3 | Ignora builds `.strapi/dist*` no gitignore |
+
+### Alterações de Governança
+
+- **`.planning/CONSTITUTION.md`**: adicionadas proibições formais de casts cegos (`as unknown as`, `as any as X`, `as string` para undefined) e fallbacks silenciosos (`|| {}`, `|| []`, `|| ''`, `|| 0`).
+- **Type safety**: 5 casts cegos em produção substituídos por type-guards/Zod; `as unknown as` em produção reduzido a mocks de testes/infra justificados.
+- **Env vars**: LTI, DeepSeek, OAuth e telemetria passam a validar ausência de credenciais e falhar semanticamente em vez de enviar strings vazias.
+- **Lint/Typecheck**: cache ESLint ativado em API e web; lint passa de ~25-30s para ~1s após cache warm.
+- **Lixo**: removidos `gammu.conf`, `ler_mensagens.sh`.
+
+### Métricas Atualizadas
+
+- **Ficheiros >300 linhas**: 28 mapeados (não tocados por decisão explícita).
+- **`any` explícito em produção**: ~0.
+- **`as unknown as` restantes**: 13 (quase todos em testes/infra; 1 em mock Redis).
+- **Fallbacks silenciosos críticos**: 6 corrigidos em H1 + 6 corrigidos em H2-T1.
+- **Builds Strapi antigos**: removidos 4 backups `dist-permission-blocked-20260622-*` com `sudo`; `.gitignore` actualizado em H2-T3 para evitar versionamento futuro.
+
+### Próximos Passos Recomendados
+
+1. **H2-T2 (done)**: env vars centralizadas em `apps/api/src/lib/env.ts` (incl. `SENTRY_DSN`, `EDGE_PUBLIC_URL`); `.env.example` sincronizado (`7f17842`).
+2. **H2-T3 (done)**: builds `.strapi/dist-*` antigos removidos com `sudo` (4 diretórios).
+3. **H2-T4 (done)**: `NF1` mantém `[x]` — zero `any` confirmado; `NF3` mantém `[~]` por decisão explícita do utilizador (Rule of 300 sem alterações até trabalho futuro nos ficheiros).
+4. **CI (done)**: cache ESLint adicionado aos workflows (`6fc0aa2`).
+
+---
+
 ## Lições Aprendidas
 
 ### AP-06 — Scripts ad-hoc na raiz são proibidos (2026-04-26)
@@ -268,5 +305,5 @@ Claim falsa de "5× `as any`" no MASTER report e IMPORTANTE/02 NF1 — zero `any
 - **Auditoria completa:** `docs/audit/MASTER--audit-report.md`
 
 ---
-*Última actualização: 9 de Maio de 2026 · FIX-002: PROD-E marcado concluído (PE-T01..T04 done); DT-13/DT-15 movidos para "Resolvidos" em DIVIDA; AP-09 adicionado; métricas codebase actualizadas. Total ADRs: 32.*
+*Última actualização: 4 de Julho de 2026 · H1/H2: Integrity Hardening (casts cegos, fallbacks silenciosos, lint cache); builds Strapi .gitignore. Total ADRs: 32.*
 *Regra de Ouro: Se não está documentado aqui, não aconteceu.*

@@ -308,6 +308,25 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: expect.stringContaining('Email') as string });
   });
+
+  it('redirects to login with a controlled error when persistence is unavailable', async () => {
+    authServiceMock.findOrCreateUser.mockRejectedValue(new Error('Strapi timeout'));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: 'linkedin-at' }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ email: 'user@pdc.ao', name: 'LinkedIn User' }), { status: 200 }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const state = makeOAuthState();
+    const res = await oauthRoutes.request(`/linkedin/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('http://localhost:5173/login?error=oauth_unavailable');
+  });
 });
 
 describe('POST /finalizar/escolher-role — OAuth role finalization without OTP', () => {

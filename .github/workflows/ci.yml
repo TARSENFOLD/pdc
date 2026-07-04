@@ -48,6 +48,14 @@ jobs:
       - name: Build shared package
         run: npm run build -w packages/shared
 
+      - name: Cache ESLint (apps/web)
+        uses: actions/cache@v4
+        with:
+          path: apps/web/.eslintcache
+          key: ${{ runner.os }}-eslint-web-${{ hashFiles('package-lock.json', 'apps/web/eslint.config.mjs', 'apps/web/eslint.config.js') }}
+          restore-keys: |
+            ${{ runner.os }}-eslint-web-
+
       - name: Lint (apps/web)
         run: npm run lint -w apps/web
 
@@ -117,6 +125,14 @@ jobs:
       - name: Build shared package
         run: npm run build -w packages/shared
 
+      - name: Cache ESLint (apps/api)
+        uses: actions/cache@v4
+        with:
+          path: apps/api/.eslintcache
+          key: ${{ runner.os }}-eslint-api-${{ hashFiles('package-lock.json', 'apps/api/eslint.config.mjs', 'apps/api/eslint.config.js') }}
+          restore-keys: |
+            ${{ runner.os }}-eslint-api-
+
       - name: Lint (apps/api)
         run: npm run lint -w apps/api
 
@@ -142,6 +158,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Cache ESLint (packages/shared)
+        uses: actions/cache@v4
+        with:
+          path: packages/shared/.eslintcache
+          key: ${{ runner.os }}-eslint-shared-${{ hashFiles('package-lock.json', 'packages/shared/eslint.config.mjs', 'packages/shared/eslint.config.js') }}
+          restore-keys: |
+            ${{ runner.os }}-eslint-shared-
 
       - name: Lint (packages/shared)
         run: npm run lint -w packages/shared

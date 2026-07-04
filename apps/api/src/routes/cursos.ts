@@ -65,8 +65,8 @@ cursoRoutes.get('/', optionalJwt, zValidator('query', cursoQuerySchema), async (
         let blocked = false;
         let reason = '';
         if (rules && pattern) {
-          if (rules.minFluidez && (pattern.cognitiveFluidity || 0) < rules.minFluidez) { blocked = true; reason = 'Fluidez insuficiente'; }
-          if (rules.minResiliencia && (pattern.resilienceIndex || 0) < rules.minResiliencia) { blocked = true; reason = 'Resiliência insuficiente'; }
+          if (rules.minFluidez && Number.isFinite(pattern.cognitiveFluidity) && pattern.cognitiveFluidity < rules.minFluidez) { blocked = true; reason = 'Fluidez insuficiente'; }
+          if (rules.minResiliencia && Number.isFinite(pattern.resilienceIndex) && pattern.resilienceIndex < rules.minResiliencia) { blocked = true; reason = 'Resiliência insuficiente'; }
         }
         return { ...curso, bloqueado: blocked, motivoBloqueio: reason };
       });

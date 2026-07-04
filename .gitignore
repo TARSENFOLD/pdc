@@ -57,6 +57,7 @@ infra/strapi/.cache/
 infra/strapi/dist/
 infra/strapi/exports/
 infra/strapi/public/uploads/
+infra/strapi/.strapi/dist*/
 
 *.timestamp-*.mjs
 
@@ -71,3 +72,5 @@ lint_output.txt
 apps/web/lint-errors.txt
 tests/.auth/*.json
 secrets.txt
+
+.eslintcache
