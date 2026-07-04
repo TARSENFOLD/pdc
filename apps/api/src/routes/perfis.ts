@@ -5,7 +5,7 @@ import { UpdatePerfilPayloadSchema, DomainEventName, type UpdatePerfilPayload } 
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPut, strapiPutRaw } from '../modules/strapi/strapi.client.js';
-import { serializePublicProfile, serializePrivateProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
+import { serializePublicProfile, serializePrivateProfile, toStrapiPerfil, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
 import { getTier } from '../modules/reputation/reputation.service.js';
 import { eventBus } from '../modules/events/event-bus.js';
 
@@ -236,7 +236,7 @@ perfilRoutes.get('/:id', async (c) => {
       }
     }
 
-    const profileData = first as unknown as StrapiPerfil;
+    const profileData = toStrapiPerfil(first);
     profileData.reputacaoTier = getTier(profileData.reputacao ?? 0);
     return c.json({ data: serializePublicProfile(profileData, isConnected) });
   } catch (err) {

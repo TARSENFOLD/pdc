@@ -19,6 +19,23 @@ function signOAuthStatePayload(payload: string): string {
   return createHmac('sha256', env.JWT_SECRET).update(payload).digest('base64url');
 }
 
+
+function requireOAuthEnv(provider: 'google' | 'linkedin'): { clientId: string; clientSecret: string } {
+  if (provider === 'google') {
+    const clientId = env.GOOGLE_CLIENT_ID;
+    const clientSecret = env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      throw new Error('OAuth google não configurado: GOOGLE_CLIENT_ID ou GOOGLE_CLIENT_SECRET em falta');
+    }
+    return { clientId, clientSecret };
+  }
+  const clientId = env.LINKEDIN_CLIENT_ID;
+  const clientSecret = env.LINKEDIN_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error('OAuth linkedin não configurado: LINKEDIN_CLIENT_ID ou LINKEDIN_CLIENT_SECRET em falta');
+  }
+  return { clientId, clientSecret };
+}
 function createOAuthState(): string {
   const nonce = randomUUID();
   const issuedAt = Math.floor(Date.now() / 1000).toString();
@@ -104,8 +121,9 @@ oauthRoutes.get('/google', async (c) => {
   const state = createOAuthState();
   await persistOAuthState(state);
   const redirectUri = getOAuthRedirectUri(c, 'google');
+  const { clientId } = requireOAuthEnv('google');
   const params = new URLSearchParams({
-    client_id: env.GOOGLE_CLIENT_ID || '',
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'openid email profile',
@@ -118,16 +136,18 @@ oauthRoutes.get('/google/callback', async (c) => {
   const { code, state } = c.req.query();
   const isValidState = await consumeOAuthState(state);
   if (!isValidState) return c.json({ error: 'Invalid state' }, 400);
+  if (!code) return c.json({ error: 'Código de autorização ausente' }, 400);
 
   try {
+    const { clientId, clientSecret } = requireOAuthEnv('google');
     const redirectUri = getOAuthRedirectUri(c, 'google');
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        code: code || '',
-        client_id: env.GOOGLE_CLIENT_ID || '',
-        client_secret: env.GOOGLE_CLIENT_SECRET || '',
+        code: code,
+        client_id: clientId,
+        client_secret: clientSecret,
         redirect_uri: redirectUri,
         grant_type: 'authorization_code',
       }),
@@ -163,8 +183,9 @@ oauthRoutes.get('/linkedin', async (c) => {
   const state = createOAuthState();
   await persistOAuthState(state);
   const redirectUri = getOAuthRedirectUri(c, 'linkedin');
+  const { clientId } = requireOAuthEnv('linkedin');
   const params = new URLSearchParams({
-    client_id: env.LINKEDIN_CLIENT_ID || '',
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'openid email profile',
@@ -177,16 +198,18 @@ oauthRoutes.get('/linkedin/callback', async (c) => {
   const { code, state } = c.req.query();
   const isValidState = await consumeOAuthState(state);
   if (!isValidState) return c.json({ error: 'Invalid state' }, 400);
+  if (!code) return c.json({ error: 'Código de autorização ausente' }, 400);
 
   try {
+    const { clientId, clientSecret } = requireOAuthEnv('linkedin');
     const tokenRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
-        code: code || '',
-        client_id: env.LINKEDIN_CLIENT_ID || '',
-        client_secret: env.LINKEDIN_CLIENT_SECRET || '',
+        code: code,
+        client_id: clientId,
+        client_secret: clientSecret,
         redirect_uri: getOAuthRedirectUri(c, 'linkedin'),
       }),
     });

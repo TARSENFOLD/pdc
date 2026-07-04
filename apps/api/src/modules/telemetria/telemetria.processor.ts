@@ -5,6 +5,7 @@ import {
   analyzeFluidity, 
   analyzeResilience, 
   analyzeFocus, 
+  TelemetriaEventoSchema,
   type BehaviorPattern,
   type TelemetriaEvento
 } from '@pdc/shared';
@@ -15,6 +16,27 @@ const log = pino({ name: 'telemetria-processor' });
 function asSummaryRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? value as Record<string, unknown> : {};
 }
+function toTelemetriaEvento(raw: TelemetriaRaw): TelemetriaEvento | null {
+  const parsed = TelemetriaEventoSchema.safeParse({
+    eventId: typeof raw.payload.eventId === 'string' ? raw.payload.eventId : (typeof raw.id === 'number' || typeof raw.id === 'string' ? String(raw.id) : ''),
+    tipo: raw.tipo,
+    payload: raw.payload,
+    timestamp: raw.timestamp,
+    clientTimestamp: typeof raw.clientTimestamp === 'number' ? raw.clientTimestamp : new Date(raw.clientTimestamp).getTime(),
+    sessionId: typeof raw.payload.sessionId === 'string' ? raw.payload.sessionId : undefined,
+    correlationId: typeof raw.payload.correlationId === 'string' ? raw.payload.correlationId : undefined,
+    url: typeof raw.payload.url === 'string' ? raw.payload.url : undefined,
+    targetType: typeof raw.payload.targetType === 'string' ? raw.payload.targetType : undefined,
+    targetId: typeof raw.payload.targetId === 'string' ? raw.payload.targetId : undefined,
+    visibilityState: raw.visibilityState,
+  });
+  if (!parsed.success) {
+    log.warn({ rawId: raw.id, errors: parsed.error.errors }, 'Evento de telemetria inválido descartado do processamento');
+    return null;
+  }
+  return parsed.data;
+}
+
 
 interface TelemetriaRaw {
   id: number;
@@ -94,7 +116,8 @@ export const telemetriaProcessor = {
       const meanTime = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 2000;
       const fluidity = heuristicsEngine.calculateFluidity(times);
       const resilience = heuristicsEngine.calculateResilience(timesPosError, meanTime);
-      const hesitation = heuristicsEngine.calculateHesitation(events as unknown as TelemetriaEvento[]);
+      const validEvents = events.map(toTelemetriaEvento).filter((e): e is TelemetriaEvento => e !== null);
+      const hesitation = heuristicsEngine.calculateHesitation(validEvents);
       
       const lastEvent = events[events.length - 1];
       const firstEvent = events[0];

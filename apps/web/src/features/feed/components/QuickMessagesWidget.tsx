@@ -6,16 +6,6 @@ import { FeedCardSkeleton } from '@/components/ui/Skeleton';
 import { mensagensApi } from '@/lib/api/mensagens';
 import { MessageSquare } from 'lucide-react';
 
-interface ConversaInfo {
-  id: string;
-  interlocutorId: string;
-  interlocutorNome: string;
-  interlocutorFoto?: string;
-  ultimaMensagem?: string;
-  naoLidas: number;
-  updatedAt: string;
-}
-
 export function QuickMessagesWidget() {
   const { t } = useTranslation();
   const { data, isLoading } = useQuery({
@@ -32,7 +22,7 @@ export function QuickMessagesWidget() {
     );
   }
 
-  const conversas = (data?.data ?? []) as unknown as ConversaInfo[];
+  const conversas = data?.data ?? [];
 
   return (
     <Card className="bg-[var(--chrome-surface)] border-[var(--chrome-border)] rounded-sm p-0 overflow-hidden">

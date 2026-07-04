@@ -15,8 +15,8 @@
     "start:outbox-worker": "node dist/modules/outbox/outbox-worker.js",
     "replay-outbox": "node dist/modules/outbox/outbox-worker.js",
     "provision:internal-account": "node dist/src/cli/provision-internal-account.js",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "eslint --cache .",
+    "lint:fix": "eslint --cache . --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

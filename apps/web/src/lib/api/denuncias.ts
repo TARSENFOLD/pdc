@@ -1,6 +1,7 @@
 import { http } from './http.js';
 import type { 
   Denuncia, 
+  DenunciaComDetalhes, 
   DenunciaListParams, 
   Pagination, 
   CriarDenunciaPayload, 
@@ -18,7 +19,7 @@ export const denunciasApi = {
   },
 
   getById: (id: string) =>
-    http.get<{ data: Denuncia }>(`/denuncias/${id}`),
+    http.get<{ data: DenunciaComDetalhes }>(`/denuncias/${id}`),
 
   resolver: (id: string, body: ResolverDenunciaPayload) =>
     http.put(`/denuncias/${id}/resolver`, body),

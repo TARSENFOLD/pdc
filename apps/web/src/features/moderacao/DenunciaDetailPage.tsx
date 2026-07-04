@@ -4,12 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { denunciasApi } from '@/lib/api/denuncias';
 import { Spinner, Card, Badge, Button, Avatar } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
-import type { Denuncia, DenunciaAccao, User } from '@pdc/shared';
-
-// Tipo estendido para incluir o denunciante se o BFF popular
-interface DenunciaComDetalhes extends Denuncia {
-  denunciante?: User;
-}
+import type { DenunciaComDetalhes, DenunciaAccao } from '@pdc/shared';
 
 export function DenunciaDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,9 +14,9 @@ export function DenunciaDetailPage() {
   const [accao, setAccao] = useState<DenunciaAccao>('remover_conteudo');
   const [nota, setNota] = useState('');
 
-  const { data: denuncia, isLoading } = useQuery({
+  const { data: denuncia, isLoading } = useQuery<DenunciaComDetalhes | undefined>({
     queryKey: ['denuncias', id],
-    queryFn: () => denunciasApi.getById(id ?? '').then(res => res.data as unknown as DenunciaComDetalhes),
+    queryFn: () => denunciasApi.getById(id ?? '').then(res => res.data),
     enabled: !!id,
   });
 
