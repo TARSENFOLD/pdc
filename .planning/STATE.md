@@ -253,12 +253,12 @@ Sessão de governança com foco em eliminar casts cegos, fallbacks silenciosos e
 - **`any` explícito em produção**: ~0.
 - **`as unknown as` restantes**: 13 (quase todos em testes/infra; 1 em mock Redis).
 - **Fallbacks silenciosos críticos**: 6 corrigidos em H1 + 6 corrigidos em H2-T1.
-- **Builds Strapi antigos**: 4 backups com timestamp identificados (~56MB) — remoção física bloqueada por permissões de root; `.gitignore` actualizado para evitar versionamento futuro.
+- **Builds Strapi antigos**: removidos 4 backups `dist-permission-blocked-20260622-*` com `sudo`; `.gitignore` actualizado em H2-T3 para evitar versionamento futuro.
 
 ### Próximos Passos Recomendados
 
 1. **H2-T2 (completar)**: centralizar validação de env vars restantes (ex: `SENTRY_DSN`, `EDGE_PUBLIC_URL`) e actualizar `.env.example`.
-2. **H2-T3 (completar)**: remover manualmente os builds `.strapi/dist-*` antigos com permissão de root.
+2. **H2-T3 (done)**: builds `.strapi/dist-*` antigos removidos com `sudo` (4 diretórios).
 3. **H2-T4 (continuar)**: reconciliar `REQUIREMENTS.md` NF1/NF3 e actualizar `DIVIDA_TECNICA_CONHECIDA.md` se necessário.
 4. **CI**: aproveitar cache ESLint nos workflows (cache restore entre runs).
 
