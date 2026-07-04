@@ -71,6 +71,11 @@ const envSchema = z.object({
 
   // Dev
   DEV_SKIP_OTP: z.string().optional(),
+
+  // LTI (Learning Tools Interoperability)
+  LTI_PRIVATE_KEY: z.string().optional(),
+  LTI_PUBLIC_KEY: z.string().optional(),
+  LTI_KEY_ID: z.string().default('pdc-lti-key-1'),
 });
 
 export type Env = z.infer<typeof envSchema>;

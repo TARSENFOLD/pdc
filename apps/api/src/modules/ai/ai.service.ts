@@ -6,7 +6,7 @@ import { env } from '../../lib/env.js';
 
 const log = pino({ name: 'ai-service' });
 
-const DEEPSEEK_API_KEY = env.DEEPSEEK_API_KEY || '';
+const DEEPSEEK_API_KEY = env.DEEPSEEK_API_KEY;
 const DEEPSEEK_BASE_URL = env.DEEPSEEK_BASE_URL;
 const DEEPSEEK_MODEL = env.DEEPSEEK_MODEL;
 const OLLAMA_BASE_URL = env.OLLAMA_BASE_URL;
@@ -46,6 +46,10 @@ export const aiService = {
     };
 
     const fullMessages = [systemMessage, ...messages];
+
+    if (!DEEPSEEK_API_KEY) {
+      throw new Error('DEEPSEEK_API_KEY não configurada');
+    }
 
     try {
       const controller = new AbortController();

@@ -98,7 +98,7 @@ function mapSim(d: StrapiSimulacao): SimulacaoPublica {
     validadoAcademicamente: d.validadoAcademicamente ?? false,
     estado: parseOptional(EstadoEditorialSchema, d.estado) ?? 'published',
     tipoSimulacao: d.tipoSimulacao || 'tipo1',
-    autorId: d.autorId || '',
+    autorId: d.autorId ?? '',
     criteriosAvaliacao: d.criteriosAvaliacao || { pesos: { fluidez: 40, resiliencia: 30, foco: 30 } },
     rating: d.rating ?? 0,
     tentativasMaximas: d.tentativasMaximas ?? 0,
