@@ -1,0 +1,71 @@
+name: Deploy VPS (Hetzner)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'Dockerfile'
+      - 'apps/api/**'
+      - 'infra/strapi/**'
+      - 'docker-compose.prod.yml'
+      - 'packages/shared/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-vps.yml'
+
+env:
+  NODE_VERSION: "24"
+  VPS_HOST: ${{ secrets.VPS_HOST }}
+  VPS_USER: ${{ secrets.VPS_USER }}
+  VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+  VPS_DEPLOY_DIR: /opt/pdc
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_key
+          chmod 600 ~/.ssh/vps_key
+          cat >> ~/.ssh/config <<EOL
+          Host vps
+            HostName ${{ secrets.VPS_HOST }}
+            User ${{ secrets.VPS_USER }}
+            IdentityFile ~/.ssh/vps_key
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOL
+
+      - name: Sync repo to VPS
+        run: |
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='apps/web/node_modules' \
+            --exclude='apps/api/node_modules' \
+            --exclude='infra/strapi/node_modules' \
+            --exclude='packages/shared/node_modules' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ env.VPS_DEPLOY_DIR }}
+
+      - name: Deploy services on VPS
+        run: |
+          ssh vps "cd ${{ env.VPS_DEPLOY_DIR }} && bash scripts/deploy-vps.sh"
+
+      - name: Health check API
+        run: |
+          sleep 15
+          curl -sf "https://api.usepdc.com/health" || exit 1
+
+      - name: Health check Strapi
+        run: |
+          curl -sf "https://cms.usepdc.com/" || exit 1
