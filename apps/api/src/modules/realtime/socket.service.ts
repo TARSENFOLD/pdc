@@ -67,4 +67,12 @@ export const socketService = {
     if (!io) return;
     io.to(`user:${userId}`).emit('conquista_desbloqueada', conquista);
   },
+
+  close(): Promise<void> {
+    if (!io) return Promise.resolve();
+
+    const currentIo = io;
+    io = undefined;
+    return currentIo.close();
+  },
 };

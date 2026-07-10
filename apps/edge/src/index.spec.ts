@@ -113,6 +113,32 @@ describe('POST /telemetria/batch', () => {
     expect(body.deduped).toBe(0);
   });
 
+  it('ignora perfilId enviado pelo cliente e preserva identidade verificada pelo JWS', async () => {
+    let capturedQueueBody: string[] | undefined;
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(REDIS_OK, { status: 200 }))
+      .mockImplementationOnce((_url: string, init: RequestInit) => {
+        capturedQueueBody = JSON.parse(init.body as string) as string[];
+        return new Response(JSON.stringify({ result: 1 }), { status: 200 });
+      }),
+    );
+
+    const req = new Request('http://edge/telemetria/batch', {
+      method: 'POST',
+      body: JSON.stringify({
+        events: [{ ...VALID_EVENT, perfilId: 'perfil-spoofado' }],
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const res = await app.fetch(req, makeEnv());
+
+    expect(res.status).toBe(202);
+    const queuedItem = capturedQueueBody?.[0];
+    if (!queuedItem) throw new Error('Evento não foi enviado para a fila Redis');
+    const queuedEvent = JSON.parse(queuedItem) as { perfilId: string };
+    expect(queuedEvent.perfilId).toBe('perfil-test-456');
+  });
+
   it('deduplica evento já visto e devolve count=0 deduped=1', async () => {
     vi.stubGlobal('fetch', vi.fn()
       // pipeline SET NX → null (key already exists)
