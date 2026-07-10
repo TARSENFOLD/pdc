@@ -195,7 +195,8 @@ const server = serve({
 });
 
 // ─── ECOSSISTEMA G15 ───
-import './modules/outbox/outbox-worker.js';
+// O replay do outbox corre num processo isolado via `npm run start:outbox-worker -w @pdc/api`.
+// Não importar o daemon aqui: evita D5 (co-location/performance bottleneck no BFF).
 import { eventBus } from './modules/events/event-bus.js';
 import { rankingHook } from './modules/hooks/ranking.hook.js';
 import { feedHook } from './modules/hooks/feed.hook.js';

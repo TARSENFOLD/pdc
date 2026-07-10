@@ -10,6 +10,7 @@ import { useNotificacoes } from '@/lib/realtime/useNotificacoes';
 import FocusHeader from './FocusHeader';
 import FocusModeProvider from './FocusModeProvider';
 import { isFocusMode } from './focus-routes';
+import { WebPushOptIn } from '@/components/notifications/WebPushOptIn';
 
 const SIDEBAR_WIDTH = 260;
 const SIDEBAR_COLLAPSED_WIDTH = 64;
@@ -131,6 +132,7 @@ export default function AppLayout(): React.JSX.Element {
         )}
       </AnimatePresence>
 
+      {!drawerOpen && <WebPushOptIn />}
       <TinaChat />
     </div>
   );

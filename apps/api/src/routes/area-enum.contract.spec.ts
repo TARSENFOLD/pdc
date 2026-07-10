@@ -25,7 +25,7 @@ vi.mock('@upstash/ratelimit', () => {
 });
 
 import { Hono } from 'hono';
-import { LandingVereditoSchema } from '@pdc/shared';
+import { LandingVereditoSchema, RoleSchema } from '@pdc/shared';
 import { catalogoRoutes } from './catalogo.js';
 import { landingRoutes } from './landing.js';
 
@@ -60,6 +60,29 @@ const CANONICAL_AREAS = [
 ] as const;
 
 const LEGACY_AREAS = ['AGRONOMIA', 'OUTRO'] as const;
+
+const AREA_SCHEMAS = [
+  ['perfil-vocacional', '../../../../infra/strapi/src/api/perfil-vocacional/content-types/perfil-vocacional/schema.json'],
+  ['programa', '../../../../infra/strapi/src/api/programa/content-types/programa/schema.json'],
+  ['projeto', '../../../../infra/strapi/src/api/projeto/content-types/projeto/schema.json'],
+  ['simulacao', '../../../../infra/strapi/src/api/simulacao/content-types/simulacao/schema.json'],
+  ['experiencia', '../../../../infra/strapi/src/api/experiencia/content-types/experiencia/schema.json'],
+] as const;
+
+const CANONICAL_ROLES = RoleSchema.options;
+
+interface StrapiSchemaWithArea {
+  attributes: { area: { enum: string[] } };
+}
+
+interface StrapiSchemaWithTipo {
+  attributes: { tipo: { enum: string[] } };
+}
+
+function loadSchema(pathFromRoutes: string): unknown {
+  const schemaUrl = new URL(pathFromRoutes, import.meta.url);
+  return JSON.parse(readFileSync(schemaUrl, 'utf8'));
+}
 
 describe('AreaVocacional Enum Contract', () => {
   let app: Hono;
@@ -115,17 +138,32 @@ describe('AreaVocacional Enum Contract', () => {
     },
   );
 
-  it('mantém o enum de Programa no Strapi alinhado às 15 áreas canónicas', () => {
-    const schemaUrl = new URL(
-      '../../../../infra/strapi/src/api/programa/content-types/programa/schema.json',
-      import.meta.url,
-    );
-    const schema = JSON.parse(readFileSync(schemaUrl, 'utf8')) as {
-      attributes: { area: { enum: string[] } };
-    };
+  it.each(AREA_SCHEMAS)(
+    'mantém o enum de área de %s alinhado às 15 áreas canónicas',
+    (_name, path) => {
+      const schema = loadSchema(path) as StrapiSchemaWithArea;
+      expect([...schema.attributes.area.enum].sort()).toEqual([...CANONICAL_AREAS].sort());
+    },
+  );
 
-    expect(schema.attributes.area.enum).toEqual(CANONICAL_AREAS);
+  it('mantém o enum de tipo de Perfil alinhado às 7 roles canónicas', () => {
+    const schema = loadSchema(
+      '../../../../infra/strapi/src/api/perfil/content-types/perfil/schema.json',
+    ) as StrapiSchemaWithTipo;
+
+    expect([...schema.attributes.tipo.enum].sort()).toEqual([...CANONICAL_ROLES].sort());
   });
+
+  const areaSchemas = AREA_SCHEMAS.map(([, path]) => loadSchema(path) as StrapiSchemaWithArea);
+
+  it.each(LEGACY_AREAS)(
+    'nenhum schema Strapi de área pode conter o valor legado %s',
+    (area) => {
+      for (const schema of areaSchemas) {
+        expect(schema.attributes.area.enum).not.toContain(area);
+      }
+    },
+  );
 
   it.each(CANONICAL_AREAS)(
     'POST /landing/pulse deve aceitar área canónica %s',

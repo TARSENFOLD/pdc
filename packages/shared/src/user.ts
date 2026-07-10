@@ -10,7 +10,7 @@ import {
 import { ReputacaoTierSchema } from './reputation.js';
 import { ConquistaSchema } from './schemas/conquistas.js';
 import { InscricaoComCursoSchema } from './cursos.js';
-import { RoleSchema, type Role } from './schemas/enums.js';
+import { RoleSchema, type Role, LegacyRoleSchema, type LegacyRole } from './schemas/enums.js';
 import {
   AceiteLegalSchema,
   ConsentimentoEncarregadoSchema,
@@ -21,7 +21,7 @@ import {
   resolveEstadoMenoridade,
 } from './compliance.js';
 
-export { RoleSchema, type Role };
+export { RoleSchema, type Role, LegacyRoleSchema, type LegacyRole };
 
 /** Normalise a role from persistent storage — maps legacy 'aluno' → 'estudante'. */
 export function normalizeTipo(tipo: string): Role {

@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import pino from 'pino';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
@@ -7,7 +7,19 @@ import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { requireApproved } from '../middleware/requireApproved.js';
 import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet, strapiPost, strapiPut, strapiDelete } from '../modules/strapi/strapi.client.js';
-import { CriarProjetoPayloadSchema, GerirACLSchema, VotoProjetoPayloadSchema, TransicaoEstadoPayloadSchema, type Projeto, type ACLEntry, type Voto, type HistoricoEstado } from '@pdc/shared';
+import {
+  CriarProjetoPayloadSchema,
+  GerirACLSchema,
+  ResponderPedidoAcessoCoreSchema,
+  SolicitarAcessoCoreSchema,
+  VotoProjetoPayloadSchema,
+  TransicaoEstadoPayloadSchema,
+  type Projeto,
+  type ACLEntry,
+  type PedidoAcesso,
+  type Voto,
+  type HistoricoEstado,
+} from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { toPaginatedResponse } from './pagination.js';
@@ -29,6 +41,12 @@ interface StrapiProjeto extends Omit<Projeto, 'autor' | 'id'> {
   documentId?: string;
   autor?: { id: string | number; userId: string };
   acessoCoreACL?: ACLEntry[];
+}
+
+interface StrapiPedidoAcesso extends Omit<PedidoAcesso, 'id' | 'projeto'> {
+  id: string | number;
+  documentId?: string;
+  projeto?: { id: string | number; documentId?: string } | string | number;
 }
 
 type OptionalUser = NonNullable<OptionalAuthVariables['user']>;
@@ -58,6 +76,40 @@ function filterCoreField(projeto: StrapiProjeto, perfilId: string | null): Parti
 
 function firstProjeto(data: StrapiProjeto[] | StrapiProjeto): StrapiProjeto | null {
   return Array.isArray(data) ? data[0] ?? null : data;
+}
+
+function firstPedidoAcesso(data: StrapiPedidoAcesso[] | StrapiPedidoAcesso): StrapiPedidoAcesso | null {
+  return Array.isArray(data) ? data[0] ?? null : data;
+}
+
+function normalizeAclEntry(pedido: StrapiPedidoAcesso): ACLEntry | null {
+  const perfilId = pedido.perfilSolicitante?.id;
+  if (perfilId === undefined) return null;
+  return {
+    perfilId,
+    estado: pedido.status,
+    solicitadoEm: pedido.createdAt ?? new Date().toISOString(),
+    ...(pedido.dataResposta ? { respondidoEm: pedido.dataResposta } : {}),
+  };
+}
+
+function mergeAclEntry(acl: ACLEntry[], next: ACLEntry): ACLEntry[] {
+  const index = acl.findIndex((entry) => entry.perfilId === next.perfilId);
+  if (index === -1) return [...acl, next];
+  return acl.map((entry, i) => (i === index ? next : entry));
+}
+
+function removeAclEntry(acl: ACLEntry[], perfilId: string): ACLEntry[] {
+  return acl.filter((entry) => entry.perfilId !== perfilId);
+}
+
+function pedidoAcessoId(pedido: StrapiPedidoAcesso): string {
+  return pedido.documentId ?? String(pedido.id);
+}
+
+function getCanonicalAcl(projeto: StrapiProjeto): ACLEntry[] | null {
+  if (!Array.isArray(projeto.acessoCoreACL)) return null;
+  return projeto.acessoCoreACL;
 }
 
 function canModerateProjetos(user: OptionalUser | undefined): boolean {
@@ -230,13 +282,17 @@ projetoRoutes.put('/:id',
   }
 );
 
-// POST /projetos/:id/solicitar-acesso — requer autenticação
-projetoRoutes.post('/:id/solicitar-acesso', verifyJwt, async (c) => {
+async function criarPedidoAcessoCore(c: Context<Vars>) {
   const id = c.req.param('id');
   if (!id) return c.json({ error: 'Projeto não encontrado' }, 404);
-  const userId = c.get('user').id;
+  const user = c.get('user');
+  if (!user) return c.json({ error: 'Autenticação obrigatória' }, 401);
+  const userId = user.id;
 
   try {
+    const rawBody = await c.req.json().catch(() => ({})) as unknown;
+    const parsedBody = SolicitarAcessoCoreSchema.safeParse(rawBody);
+    if (!parsedBody.success) return c.json({ error: 'Pedido inválido', issues: parsedBody.error.flatten().fieldErrors }, 400);
     const perfilId = await resolvePerfilId(userId);
     if (!perfilId) return c.json({ error: 'Identidade não localizada' }, 404);
 
@@ -244,7 +300,11 @@ projetoRoutes.post('/:id/solicitar-acesso', verifyJwt, async (c) => {
     const project = firstProjeto(resGet.data);
     if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
 
-    const acl = project.acessoCoreACL ?? [];
+    const acl = getCanonicalAcl(project);
+    if (acl === null) {
+      log.warn({ projetoId: id }, 'Projeto sem acessoCoreACL inicializado — recusar mutação');
+      return c.json({ error: 'ACL do projeto não inicializada' }, 409);
+    }
     if (acl.some(entry => entry.perfilId === perfilId)) {
       return c.json({ error: 'Pedido já existe ou acesso já concedido' }, 400);
     }
@@ -254,13 +314,35 @@ projetoRoutes.post('/:id/solicitar-acesso', verifyJwt, async (c) => {
       return c.json({ error: 'Autor do projeto não identificado' }, 502);
     }
 
+    if (String(autorId) === perfilId) {
+      return c.json({ error: 'O autor já tem acesso ao Core' }, 400);
+    }
+
+    const existingPedidos = await strapiGet<StrapiPedidoAcesso>('/projeto-acesso-pedidos', {
+      'filters[projeto][documentId][$eq]': id,
+      'filters[perfilSolicitante][id][$eq]': perfilId,
+      'filters[status][$in][0]': 'pendente',
+      'filters[status][$in][1]': 'aprovado',
+      'fields[0]': 'id',
+    });
+    if (existingPedidos.data.length > 0) {
+      return c.json({ error: 'Pedido já existe ou acesso já concedido' }, 400);
+    }
+
     const newEntry: ACLEntry = {
       perfilId,
       estado: 'pendente',
       solicitadoEm: new Date().toISOString(),
     };
 
-    await strapiPut(`/projetos/${id}`, { acessoCoreACL: [...acl, newEntry] });
+    const pedido = await strapiPost<StrapiPedidoAcesso>('/projeto-acesso-pedidos', {
+      projeto: id,
+      perfilSolicitante: perfilId,
+      motivo: parsedBody.data.motivo,
+      status: 'pendente',
+    });
+
+    await strapiPut(`/projetos/${id}`, { acessoCoreACL: mergeAclEntry(acl, newEntry) });
 
     await eventBus.publishWithOutbox(DomainEventName.PROJETO_ACESSO_SOLICITADO, {
       projetoId: id,
@@ -268,9 +350,49 @@ projetoRoutes.post('/:id/solicitar-acesso', verifyJwt, async (c) => {
       targetId: autorId,
     });
 
-    return c.json({ success: true });
-  } catch {
+    return c.json({ success: true, pedido: pedido.data });
+  } catch (err) {
+    log.error({ err }, 'Erro ao solicitar acesso');
     return c.json({ error: 'Erro ao solicitar acesso' }, 502);
+  }
+}
+
+// POST /projetos/:id/pedidos-acesso — rota canónica G5/E3
+projetoRoutes.post('/:id/pedidos-acesso', verifyJwt, rateLimitContentCreate, criarPedidoAcessoCore);
+
+// POST /projetos/:id/solicitar-acesso — alias retrocompatível
+projetoRoutes.post('/:id/solicitar-acesso', verifyJwt, rateLimitContentCreate, criarPedidoAcessoCore);
+
+// GET /projetos/:id/pedidos-acesso — apenas autor/moderação lista pedidos rastreáveis
+const pedidosAcessoQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+projetoRoutes.get('/:id/pedidos-acesso', verifyJwt, zValidator('query', pedidosAcessoQuerySchema), async (c) => {
+  const id = c.req.param('id');
+  if (!id) return c.json({ error: 'Projeto não encontrado' }, 404);
+  const user = c.get('user');
+  const { page, pageSize } = c.req.valid('query');
+
+  try {
+    const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
+    const project = firstProjeto(resGet.data);
+    if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
+    if (project.autor?.userId !== user.id && !canModerateProjetos(user)) {
+      return c.json({ error: 'Apenas o autor pode ver pedidos de acesso' }, 403);
+    }
+
+    const pedidos = await strapiGet<StrapiPedidoAcesso>('/projeto-acesso-pedidos', {
+      'filters[projeto][documentId][$eq]': id,
+      populate: 'perfilSolicitante.foto,projeto',
+      sort: 'createdAt:desc',
+      'pagination[page]': String(page),
+      'pagination[pageSize]': String(pageSize),
+    });
+    return c.json({ data: pedidos.data, pagination: pedidos.meta.pagination });
+  } catch {
+    return c.json({ error: 'Erro ao carregar pedidos de acesso' }, 502);
   }
 });
 
@@ -293,7 +415,11 @@ projetoRoutes.patch('/:id/acl',
         return c.json({ error: 'Apenas o autor pode gerir o acesso ao Core' }, 403);
       }
 
-      const acl = project.acessoCoreACL ?? [];
+      const acl = getCanonicalAcl(project);
+      if (acl === null) {
+        log.warn({ projetoId: id }, 'Projeto sem acessoCoreACL inicializado — recusar mutação');
+        return c.json({ error: 'ACL do projeto não inicializada' }, 409);
+      }
       const entryIdx = acl.findIndex(e => e.perfilId === perfilId);
       if (entryIdx === -1) return c.json({ error: 'Solicitação não encontrada' }, 404);
 
@@ -305,8 +431,41 @@ projetoRoutes.patch('/:id/acl',
         return c.json({ error: 'Autor do projeto não identificado' }, 502);
       }
 
+      if (acao === 'remover') {
+        const pedidosRemovidos = await strapiGet<StrapiPedidoAcesso>('/projeto-acesso-pedidos', {
+          'filters[projeto][documentId][$eq]': id,
+          'filters[perfilSolicitante][id][$eq]': perfilId,
+          sort: 'createdAt:desc',
+          'pagination[pageSize]': '1',
+        });
+        const pedidoRemovido = pedidosRemovidos.data[0];
+        if (pedidoRemovido !== undefined) {
+          await strapiPut(`/projeto-acesso-pedidos/${pedidoAcessoId(pedidoRemovido)}`, {
+            status: 'rejeitado',
+            dataResposta: new Date().toISOString(),
+          });
+        }
+        await strapiPut(`/projetos/${id}`, { acessoCoreACL: removeAclEntry(acl, perfilId) });
+        return c.json({ success: true });
+      }
+
       entry.estado = acao === 'aprovar' ? 'aprovado' : 'rejeitado';
       entry.respondidoEm = new Date().toISOString();
+
+      const pedidos = await strapiGet<StrapiPedidoAcesso>('/projeto-acesso-pedidos', {
+        'filters[projeto][documentId][$eq]': id,
+        'filters[perfilSolicitante][id][$eq]': perfilId,
+        sort: 'createdAt:desc',
+        'pagination[pageSize]': '1',
+      });
+      const pedido = pedidos.data[0];
+      if (pedido !== undefined) {
+        const pedidoId = pedido.documentId ?? String(pedido.id);
+        await strapiPut(`/projeto-acesso-pedidos/${pedidoId}`, {
+          status: entry.estado,
+          dataResposta: entry.respondidoEm,
+        });
+      }
 
       await strapiPut(`/projetos/${id}`, { acessoCoreACL: acl });
 
@@ -324,6 +483,70 @@ projetoRoutes.patch('/:id/acl',
       return c.json({ error: 'Erro ao gerir ACL' }, 502);
     }
   }
+);
+
+// PATCH /projetos/:id/pedidos-acesso/:pedidoId — resposta canónica por pedido rastreável
+projetoRoutes.patch('/:id/pedidos-acesso/:pedidoId',
+  verifyJwt,
+  zValidator('json', ResponderPedidoAcessoCoreSchema),
+  async (c) => {
+    const id = c.req.param('id');
+    const pedidoId = c.req.param('pedidoId');
+    if (!id || !pedidoId) return c.json({ error: 'Pedido não encontrado' }, 404);
+    const { status } = c.req.valid('json');
+    const userId = c.get('user').id;
+
+    try {
+      const resGet = await strapiGet<StrapiProjeto>(`/projetos/${id}`, { populate: 'autor' });
+      const project = firstProjeto(resGet.data);
+      if (!project) return c.json({ error: 'Projeto não encontrado' }, 404);
+      if (project.autor?.userId !== userId) {
+        return c.json({ error: 'Apenas o autor pode gerir o acesso ao Core' }, 403);
+      }
+
+      const pedidoGet = await strapiGet<StrapiPedidoAcesso>(`/projeto-acesso-pedidos/${pedidoId}`, {
+        populate: 'perfilSolicitante,projeto',
+      });
+      const pedido = firstPedidoAcesso(pedidoGet.data);
+      if (!pedido) return c.json({ error: 'Pedido não encontrado' }, 404);
+      if (pedido.status !== 'pendente') {
+        return c.json({ error: 'Pedido já foi respondido' }, 400);
+      }
+      const pedidoProjeto = typeof pedido.projeto === 'object' ? pedido.projeto : undefined;
+      if (pedidoProjeto?.documentId !== id && String(pedidoProjeto?.id) !== id) {
+        return c.json({ error: 'Pedido não pertence ao projeto' }, 400);
+      }
+
+      const acl = getCanonicalAcl(project);
+      if (acl === null) {
+        log.warn({ projetoId: id }, 'Projeto sem acessoCoreACL inicializado — recusar mutação');
+        return c.json({ error: 'ACL do projeto não inicializada' }, 409);
+      }
+
+      const entry = normalizeAclEntry({ ...pedido, status });
+      if (!entry) return c.json({ error: 'Pedido sem perfil solicitante' }, 502);
+      entry.respondidoEm = new Date().toISOString();
+
+      await strapiPut(`/projeto-acesso-pedidos/${pedidoId}`, {
+        status,
+        dataResposta: entry.respondidoEm,
+      });
+
+      await strapiPut(`/projetos/${id}`, {
+        acessoCoreACL: mergeAclEntry(acl, entry),
+      });
+
+      const autorId = String(project.autor.id);
+      await eventBus.publishWithOutbox(
+        status === 'aprovado' ? DomainEventName.PROJETO_ACESSO_CONCEDIDO : DomainEventName.PROJETO_ACESSO_RECUSADO,
+        { projetoId: id, autorId, targetId: entry.perfilId },
+      );
+
+      return c.json({ success: true });
+    } catch {
+      return c.json({ error: 'Erro ao responder pedido de acesso' }, 502);
+    }
+  },
 );
 
 // GET /projetos/:id/votos — contagens públicas + estado do utilizador autenticado

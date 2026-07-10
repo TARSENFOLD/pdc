@@ -63,6 +63,11 @@ const envSchema = z.object({
   R2_BUCKET: z.string().default('pdc-media'),
   R2_PUBLIC_URL: z.string().url().optional().or(z.literal('')),
 
+  // Web Push (VAPID)
+  WEB_PUSH_PUBLIC_KEY: z.string().regex(/^[A-Za-z0-9_-]+$/, 'WEB_PUSH_PUBLIC_KEY must be base64url').optional().or(z.literal('')),
+  WEB_PUSH_PRIVATE_KEY: z.string().regex(/^[A-Za-z0-9_-]+$/, 'WEB_PUSH_PRIVATE_KEY must be base64url').optional().or(z.literal('')),
+  WEB_PUSH_SUBJECT: z.string().regex(/^(mailto:|https:)/, 'WEB_PUSH_SUBJECT must start with mailto: or https:').optional().or(z.literal('')),
+
   // SEO & Rates
   SEO_BOT_RENDER_ENABLED: z.string().default('true'),
   TINA_RATE_LIMIT_PER_USER: z.string().default('20'),
@@ -87,17 +92,46 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
-function hasValue(value: string | undefined): boolean {
-  return typeof value === 'string' && value.trim().length > 0;
+function isPlaceholder(value: string): boolean {
+  return /^<[^>]+>$/.test(value.trim());
+}
+
+function hasValue(value: string | undefined): value is string {
+  return typeof value === 'string' && value.trim().length > 0 && !isPlaceholder(value);
 }
 
 function collectProductionMissingVars(parsedEnv: Env): string[] {
   const missing: string[] = [];
 
-  if (!hasValue(parsedEnv.R2_PUBLIC_URL)) missing.push('R2_PUBLIC_URL required in production');
-  if (!hasValue(parsedEnv.R2_ACCOUNT_ID)) missing.push('R2_ACCOUNT_ID required in production');
-  if (!hasValue(parsedEnv.R2_ACCESS_KEY_ID)) missing.push('R2_ACCESS_KEY_ID required in production');
-  if (!hasValue(parsedEnv.R2_SECRET_ACCESS_KEY)) missing.push('R2_SECRET_ACCESS_KEY required in production');
+  const requiredInProduction: Array<[keyof Env, string]> = [
+    ['API_URL', 'API_URL required in production'],
+    ['FRONTEND_URL', 'FRONTEND_URL required in production'],
+    ['STRAPI_URL', 'STRAPI_URL required in production'],
+    ['STRAPI_API_TOKEN', 'STRAPI_API_TOKEN required in production'],
+    ['JWT_SECRET', 'JWT_SECRET required in production'],
+    ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_URL required in production'],
+    ['UPSTASH_REDIS_REST_TOKEN', 'UPSTASH_REDIS_REST_TOKEN required in production'],
+    ['R2_PUBLIC_URL', 'R2_PUBLIC_URL required in production'],
+    ['R2_ACCOUNT_ID', 'R2_ACCOUNT_ID required in production'],
+    ['R2_ACCESS_KEY_ID', 'R2_ACCESS_KEY_ID required in production'],
+    ['R2_SECRET_ACCESS_KEY', 'R2_SECRET_ACCESS_KEY required in production'],
+    ['WEB_PUSH_PUBLIC_KEY', 'WEB_PUSH_PUBLIC_KEY required in production'],
+    ['WEB_PUSH_PRIVATE_KEY', 'WEB_PUSH_PRIVATE_KEY required in production'],
+    ['WEB_PUSH_SUBJECT', 'WEB_PUSH_SUBJECT required in production'],
+  ];
+  for (const [key, message] of requiredInProduction) {
+    if (!hasValue(parsedEnv[key])) missing.push(message);
+  }
+  if (parsedEnv.AI_PROVIDER === 'deepseek' && !hasValue(parsedEnv.DEEPSEEK_API_KEY)) {
+    missing.push('DEEPSEEK_API_KEY required in production when AI_PROVIDER=deepseek');
+  }
+
+  // Defense-in-depth (spec: Auth Fix): DEV_SKIP_OTP e proibido em producao.
+  // O BFF recusa o boot se esta variavel estiver activa em NODE_ENV=production,
+  // independentemente de o guard do auth.otp.ts a filtrar. Camada extra de seguranca.
+  if (parsedEnv.DEV_SKIP_OTP === 'true') {
+    missing.push('DEV_SKIP_OTP must not be enabled in production (security: OTP bypass disabled)');
+  }
 
   const hasSendGrid = hasValue(parsedEnv.SENDGRID_API_KEY);
   const hasResend = hasValue(parsedEnv.RESEND_API_KEY);
@@ -128,7 +162,7 @@ function logRuntimeEnvStatus(parsedEnv: Env): void {
 
     if (!parsedEnv.SENTRY_DSN) log.warn('SENTRY_DSN ausente em produção.');
     if (!parsedEnv.TWILIO_ACCOUNT_SID || !parsedEnv.TWILIO_AUTH_TOKEN || !parsedEnv.TWILIO_PHONE_NUMBER) {
-      log.warn('Credenciais Twilio ausentes em produção — OTP SMS não funcionará. Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_PHONE_NUMBER no Railway.');
+      log.warn('Credenciais Twilio ausentes em produção — OTP SMS não funcionará. Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_PHONE_NUMBER no VPS Hetzner (ficheiro .env em /opt/pdc).');
     }
     return;
   }

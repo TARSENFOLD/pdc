@@ -12,6 +12,22 @@ export const RoleSchema = z.enum([
 
 export type Role = z.infer<typeof RoleSchema>;
 
+/**
+ * Tolerant role schema for reading legacy values from persistent storage.
+ * Legacy 'aluno' and 'admin' are accepted (case-insensitive) and coerced to canonical values.
+ */
+const LEGACY_ROLE_MAP: Record<string, Role> = { aluno: 'estudante', admin: 'super_admin' };
+
+export const LegacyRoleSchema = z.union([
+  RoleSchema,
+  z.preprocess(
+    (val) => (typeof val === 'string' ? LEGACY_ROLE_MAP[val.toLowerCase()] ?? val : val),
+    RoleSchema,
+  ),
+]);
+
+export type LegacyRole = z.infer<typeof LegacyRoleSchema>;
+
 export const AreaVocacionalSchema = z.enum([
   'SAUDE',
   'ENGENHARIA',

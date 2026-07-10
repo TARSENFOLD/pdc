@@ -22,20 +22,31 @@ if ! command -v docker &>/dev/null; then
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
   apt update
   apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-  usermod -aG docker "${PDC_USER}"
 fi
+usermod -aG docker "${PDC_USER}"
 
 echo "[setup-vps] A configurar firewall (UFW) — apenas 22, 80, 443..."
-if command -v ufw &>/dev/null; then
-  ufw default deny incoming
-  ufw default allow outgoing
-  ufw allow 22/tcp
-  ufw allow 80/tcp
-  ufw allow 443/tcp
-  ufw --force enable
+if ! command -v ufw &>/dev/null; then
+  apt update
+  apt install -y ufw || {
+    echo "[setup-vps] ERRO: não foi possível instalar UFW. Firewall não configurado." >&2
+    exit 1
+  }
 fi
 
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw --force enable
+
 echo "[setup-vps] A criar ficheiro de env de exemplo em ${DEPLOY_DIR}/.env.example..."
+if [[ -f ".env.hetzner.example" ]]; then
+  cp .env.hetzner.example "${DEPLOY_DIR}/.env.example"
+  chown "${PDC_USER}:${PDC_USER}" "${DEPLOY_DIR}/.env.example"
+  echo "[setup-vps] Template copiado de .env.hetzner.example."
+else
 cat <<EOENV > "${DEPLOY_DIR}/.env.example"
 # Copiar para ${DEPLOY_DIR}/.env e preencher com valores reais
 NODE_ENV=production
@@ -51,6 +62,7 @@ APP_KEYS=<k1>,<k2>,<k3>,<k4>
 API_TOKEN_SALT=<salt>
 ADMIN_JWT_SECRET=<secret>
 TRANSFER_TOKEN_SALT=<salt>
+ENCRYPTION_KEY=<secret>
 UPSTASH_REDIS_REST_URL=<url>
 UPSTASH_REDIS_REST_TOKEN=<token>
 R2_ACCOUNT_ID=<id>
@@ -64,5 +76,6 @@ SENTRY_DSN=<dsn>
 RESEND_API_KEY=<key>
 RESEND_FROM_EMAIL=no-reply@usepdc.com
 EOENV
+fi
 
 echo "[setup-vps] Setup concluído. Cria ${DEPLOY_DIR}/.env e corre 'docker compose up -d'."

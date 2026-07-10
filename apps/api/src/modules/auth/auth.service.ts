@@ -7,12 +7,13 @@ import {
   REFRESH_TOKEN_TTL,
 } from './auth.constants.js';
 import { createHash, randomUUID } from 'node:crypto';
-import { ConsentStateSchema, resolveEstadoMenoridade, type User, type Role } from '@pdc/shared';
+import { ConsentStateSchema, DomainEventName, resolveEstadoMenoridade, type User, type Role } from '@pdc/shared';
 import { strapiDelete, strapiDeleteRaw, strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
 import { resolvePerfilAvatar } from '../perfil/perfil-media.js';
 import { buildPerfilComplianceFields, type RegistrationComplianceInput } from './auth.compliance.js';
 import { consentService } from '../consent/consent.service.js';
+import { eventBus } from '../events/event-bus.js';
 import {
   resolveRole,
   type StrapiPerfilData,
@@ -156,7 +157,16 @@ export const authService = {
         });
       }
 
-      return await this.getUserById(userId);
+      const user = await this.getUserById(userId);
+      try {
+        await eventBus.publishWithOutbox(DomainEventName.PERFIL_CRIADO, {
+          perfilId: String(perfil.data.id),
+          role,
+        });
+      } catch (eventError) {
+        log.error({ eventError, userId }, 'Falha ao publicar PERFIL_CRIADO; registo mantém-se válido');
+      }
+      return user;
     } catch (err) {
       if (userId) try { await this.rollbackRegistration(userId); } catch (rollbackError) { log.error({ rollbackError, userId }, 'Falha na compensação do registo'); }
       throw err;
@@ -239,7 +249,7 @@ export const authService = {
     });
     const userId = newUser.id.toString();
 
-    await strapiPost('/perfis', {
+    const perfil = await strapiPost('/perfis', {
       userId,
       nome,
       tipo: 'estudante',
@@ -249,7 +259,12 @@ export const authService = {
       ...buildPerfilComplianceFields({ source: 'oauth' }),
     });
 
-    return this.getUserById(userId);
+    const user = await this.getUserById(userId);
+    await eventBus.publishWithOutbox(DomainEventName.PERFIL_CRIADO, {
+      perfilId: String(perfil.data.id),
+      role: 'estudante',
+    });
+    return user;
   },
 
   async setOauthProvider(userId: string, provider: 'google' | 'linkedin'): Promise<void> {
@@ -264,6 +279,10 @@ export const authService = {
     if (!perfil.oauthProvider) {
       const perfilId = perfil.documentId ?? String(perfil.id);
       await strapiPut(`/perfis/${perfilId}`, { oauthProvider: provider });
+      await eventBus.publishWithOutbox(DomainEventName.OAUTH_VINCULADO, {
+        userId,
+        provider,
+      });
     }
   },
 

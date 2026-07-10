@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { VinculoTipo, VinculoStatus } from '@pdc/shared';
 import { Button } from './Button';
 import { http } from '@/lib/api/http';
+import { vinculosApi } from '@/lib/api/vinculos';
 
 export interface ConectarButtonProps {
   targetId: string;
@@ -33,9 +34,7 @@ export function ConectarButton({ targetId, connectionType, onConnected }: Conect
 
   // Criar vínculo
   const criarMutation = useMutation({
-    mutationFn: async () => {
-      return http.post(`/vinculos`, { receiverId: targetId, connectionType });
-    },
+    mutationFn: () => vinculosApi.criar(targetId, connectionType),
     onSuccess: () => {
       setStatus({ status: 'pendente', vinculoId: null, isSender: true });
       void qc.invalidateQueries({ queryKey: ['vinculos'] });
@@ -46,10 +45,12 @@ export function ConectarButton({ targetId, connectionType, onConnected }: Conect
   // Aceitar/Rejeitar
   const aceitarRejeitar = useMutation({
     mutationFn: async (acao: 'aceitar' | 'rejeitar') => {
-      return http.patch(`/vinculos/${String(status?.vinculoId)}`, { acao });
+      const vinculoId = status?.vinculoId;
+      if (!vinculoId) throw new Error('Pedido de vínculo inválido.');
+      return vinculosApi.aceitarRejeitar(vinculoId, acao);
     },
     onSuccess: (_, acao) => {
-      setStatus((prev: VinculoStatus | null) => prev ? { ...prev, estado: acao === 'aceitar' ? 'connected' : 'declined' } : null);
+      setStatus((prev: VinculoStatus | null) => prev ? { ...prev, status: acao === 'aceitar' ? 'aprovado' : 'rejeitado' } : null);
       void qc.invalidateQueries({ queryKey: ['vinculos'] });
       onConnected?.();
     },
@@ -111,6 +112,15 @@ export function ConectarButton({ targetId, connectionType, onConnected }: Conect
     return (
       <Button variant="ghost" size="sm" disabled className="text-success">
         ✓ Conectado
+      </Button>
+    );
+  }
+
+  // Estado: rejeitado
+  if (status?.status === 'rejeitado') {
+    return (
+      <Button variant="ghost" size="sm" disabled className="text-ink-tertiary">
+        ✕ Recusado
       </Button>
     );
   }

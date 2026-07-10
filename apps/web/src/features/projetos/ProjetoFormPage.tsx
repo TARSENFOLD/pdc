@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projetosApi } from '@/lib/api/projetos';
@@ -8,8 +8,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Input, Select, Spinner } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
 import { BuilderShell, BuilderSection, BuilderUploadZone, BuilderActionsBar } from '@/components/builders';
-import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
-import { motion, AnimatePresence } from 'motion/react';
 import { Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
 import { ProjetoTagSelector } from './components/ProjetoTagSelector';
@@ -28,8 +26,6 @@ export function ProjetoFormPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
   const isEdit = !!id;
-  const [lastEventId, setLastEventId] = useState<string | null>(null);
-  const [savedId, setSavedId] = useState<string | null>(null);
   const pendingActionRef = useRef<'draft' | 'review' | 'publish'>('draft');
 
   const { data: rawProjeto, isLoading } = useQuery({
@@ -79,7 +75,6 @@ export function ProjetoFormPage() {
       void qc.invalidateQueries({ queryKey: ['projetos'] });
 
       const newId = saved.data?.id || saved.id;
-      if (newId) setSavedId(newId);
       const targetId = newId || projetoId;
       const action = pendingActionRef.current;
 
@@ -107,12 +102,7 @@ export function ProjetoFormPage() {
 
       // Default: draft save
       toast({ title: isEdit ? 'Projeto atualizado' : 'Projeto criado com sucesso' });
-      const eventId = saved.eventId || saved.data?.eventId;
-      if (eventId) {
-        setLastEventId(eventId);
-      } else {
-        navigate(`/app/projetos/${targetId}`);
-      }
+      navigate(`/app/projetos/${targetId}`);
     },
     onError: (err: { response?: { data?: { error?: string } } }) => toast({
       title: 'Erro ao guardar projeto',
@@ -270,28 +260,6 @@ export function ProjetoFormPage() {
       </BuilderSection>
     </BuilderShell>
 
-    <AnimatePresence>
-      {lastEventId && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-canvas/95 backdrop-blur-md"
-        >
-          <div className="w-full max-w-xl">
-            <EcosystemImpactPanel 
-              eventId={lastEventId} 
-              variant="full"
-              onComplete={() => {
-                const targetId = savedId || id;
-                const path = targetId ? `/app/projetos/${targetId}` : '/app/projetos';
-                setTimeout(() => { navigate(path); }, 3000);
-              }}
-            />
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
     </>
   );
 }

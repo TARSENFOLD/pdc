@@ -39,7 +39,7 @@ instituicaoRoutes.post('/me/provisionar', async (c) => {
   const rawBody = await c.req.text();
   if (rawBody.trim() !== '') {
     try {
-      body = JSON.parse(rawBody) as unknown;
+      body = z.unknown().parse(JSON.parse(rawBody));
     } catch {
       return c.json({ error: 'JSON inválido no corpo do pedido' }, 400);
     }

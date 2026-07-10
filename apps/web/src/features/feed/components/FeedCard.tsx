@@ -14,19 +14,34 @@ import { FeedCardComments } from './FeedCardComments';
 import { FeedCardContent } from './FeedCardContent';
 import { FeedCardEngagement, FeedCardHeader } from './FeedCardChrome';
 import { FeedCardModals } from './FeedCardModals';
+import { InteractionTargetTypeSchema } from '@pdc/shared';
 interface FeedCardProps {
   item: FeedItem;
 }
+
+function resolveInteractionTarget(item: FeedItem): { targetType: InteractionTargetType; targetId: string } | null {
+  if (item.tipo === 'partilha') {
+    return item.originalPost ? { targetType: 'post', targetId: item.originalPost.id } : null;
+  }
+  const targetType = InteractionTargetTypeSchema.options.find((t) => t === item.tipo);
+  if (!targetType) return null;
+  return { targetType, targetId: item.id };
+}
+
 export function FeedCard({ item }: FeedCardProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const isOwner = user?.id === item.userId;
-  const targetType: InteractionTargetType = item.tipo === 'conquista' ? 'conquista' : 'post';
+  const interactionTarget = resolveInteractionTarget(item);
+  const interactionsEnabled = interactionTarget !== null;
+  const targetType = interactionTarget?.targetType ?? 'post';
+  const targetId = interactionTarget?.targetId ?? item.id;
   const likeStatusQuery = useQuery({
-    queryKey: ['like-status', targetType, item.id],
-    queryFn: () => likeApi.getStatus(targetType, item.id),
+    queryKey: ['like-status', targetType, targetId],
+    queryFn: () => likeApi.getStatus(targetType, targetId),
     staleTime: 30_000,
+    enabled: interactionsEnabled,
   });
 
   const [liked, setLiked] = useState(false);
@@ -50,34 +65,35 @@ export function FeedCard({ item }: FeedCardProps) {
     setLikesCount(likeData.count);
   }, [likeData]);
   const bookmarkStatusQuery = useQuery({
-    queryKey: ['bookmark-status', targetType, item.id],
-    queryFn: () => bookmarkApi.getStatus(targetType, item.id),
+    queryKey: ['bookmark-status', targetType, targetId],
+    queryFn: () => bookmarkApi.getStatus(targetType, targetId),
     staleTime: 30_000,
+    enabled: interactionsEnabled,
   });
   const shareStatusQuery = useQuery({
-    queryKey: ['share-status', targetType, item.id],
-    queryFn: () => sharesApi.status(targetType, item.id),
+    queryKey: ['share-status', targetType, targetId],
+    queryFn: () => sharesApi.status(targetType, targetId),
     staleTime: 30_000,
-    enabled: isInternalShareOpen,
+    enabled: isInternalShareOpen && interactionsEnabled,
   });
   useEffect(() => {
     if (bookmarkStatusQuery.data) setBookmarked(bookmarkStatusQuery.data.bookmarked);
   }, [bookmarkStatusQuery.data]);
   const commentsQuery = useQuery({
-    queryKey: ['comments', targetType, item.id],
-    queryFn: () => commentsApi.list(targetType, item.id),
-    enabled: isCommentOpen,
+    queryKey: ['comments', targetType, targetId],
+    queryFn: () => commentsApi.list(targetType, targetId),
+    enabled: isCommentOpen && interactionsEnabled,
   });
 
   const commentMutation = useMutation({
     mutationFn: (conteudo: string) => commentsApi.create({
-      targetId: item.id,
+      targetId,
       targetType,
       conteudo,
     }),
     onSuccess: () => {
       setCommentText('');
-      void queryClient.invalidateQueries({ queryKey: ['comments', targetType, item.id] });
+      void queryClient.invalidateQueries({ queryKey: ['comments', targetType, targetId] });
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
     },
     onError: () => {
@@ -90,7 +106,7 @@ export function FeedCard({ item }: FeedCardProps) {
 
   const handleSubmitComment = () => {
     const trimmed = commentText.trim();
-    if (!trimmed || commentMutation.isPending) return;
+    if (!trimmed || commentMutation.isPending || !interactionsEnabled) return;
     commentMutation.mutate(trimmed);
   };
   const conteudo = item.corpo || item.descricao || '';
@@ -99,14 +115,18 @@ export function FeedCard({ item }: FeedCardProps) {
 
   const relativeTime = formatDistanceToNow(new Date(item.createdAt), { addSuffix: true, locale: pt });
   const likeMutation = useMutation({
-    mutationFn: () => likeApi.toggle({ targetId: item.id, targetType }),
+    mutationFn: () => {
+      if (!interactionTarget) throw new Error('Tipo de conteúdo não suporta interações.');
+      return likeApi.toggle(interactionTarget);
+    },
     onMutate: () => {
       setLiked((prev) => !prev);
-      setLikesCount((prev) => liked ? prev - 1 : prev + 1);
+      setLikesCount((prev) => Math.max(0, liked ? prev - 1 : prev + 1));
     },
     onSuccess: (res) => {
       setLiked(res.liked);
-      void queryClient.invalidateQueries({ queryKey: ['like-status', targetType, item.id] });
+      setLikesCount(res.count);
+      void queryClient.invalidateQueries({ queryKey: ['like-status', targetType, targetId] });
     },
     onError: () => {
       setLiked(likeData?.liked ?? false);
@@ -115,13 +135,16 @@ export function FeedCard({ item }: FeedCardProps) {
     }
   });
   const bookmarkMutation = useMutation({
-    mutationFn: () => bookmarkApi.toggle({ targetId: item.id, targetType }),
+    mutationFn: () => {
+      if (!interactionTarget) throw new Error('Tipo de conteúdo não suporta interações.');
+      return bookmarkApi.toggle(interactionTarget);
+    },
     onMutate: () => {
       setBookmarked((prev) => !prev);
     },
     onSuccess: (res) => {
       setBookmarked(res.bookmarked);
-      void queryClient.invalidateQueries({ queryKey: ['bookmark-status', targetType, item.id] });
+      void queryClient.invalidateQueries({ queryKey: ['bookmark-status', targetType, targetId] });
       void queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
     },
     onError: () => {
@@ -130,8 +153,10 @@ export function FeedCard({ item }: FeedCardProps) {
     }
   });
   const registerShareMutation = useMutation({
-    mutationFn: (canal: 'whatsapp' | 'email' | 'outro') =>
-      sharesApi.create({ targetId: item.id, targetType, canal }),
+    mutationFn: (canal: 'whatsapp' | 'email' | 'outro') => {
+      if (!interactionTarget) throw new Error('Tipo de conteúdo não suporta interações.');
+      return sharesApi.create({ targetId: interactionTarget.targetId, targetType: interactionTarget.targetType, canal });
+    },
     onSuccess: (res) => {
       setSharesCount(res.count);
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
@@ -163,19 +188,22 @@ export function FeedCard({ item }: FeedCardProps) {
     setIsShareModalOpen(false);
   };
   const internalShareMutation = useMutation({
-    mutationFn: () => sharesApi.create({
-      targetId: item.id,
-      targetType,
+    mutationFn: () => {
+      if (!interactionTarget) throw new Error('Tipo de conteúdo não suporta interações.');
+      return sharesApi.create({
+      targetId: interactionTarget.targetId,
+      targetType: interactionTarget.targetType,
       canal: 'interno',
       nota: shareNote.trim() || undefined,
-    }),
+      });
+    },
     onSuccess: (res) => {
       setSharesCount(res.count);
       setShareNote('');
       setIsInternalShareOpen(false);
       setIsShareModalOpen(false);
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
-      void queryClient.invalidateQueries({ queryKey: ['share-status', targetType, item.id] });
+      void queryClient.invalidateQueries({ queryKey: ['share-status', targetType, targetId] });
       toast({ title: 'Republicado', description: 'A publicação aparece agora no teu feed e perfil.', variant: 'success' });
     },
     onError: (error: unknown) => {
@@ -233,14 +261,18 @@ export function FeedCard({ item }: FeedCardProps) {
         sharesCount={sharesCount}
         liked={liked}
         bookmarked={bookmarked}
-        likePending={likeMutation.isPending}
-        bookmarkPending={bookmarkMutation.isPending}
+        likePending={likeMutation.isPending || !interactionsEnabled}
+        bookmarkPending={bookmarkMutation.isPending || !interactionsEnabled}
         onLike={() => { likeMutation.mutate(); }}
         onComment={() => {
+          if (!interactionsEnabled) return;
           setIsCommentOpen((open) => !open);
           setTimeout(() => commentRef.current?.focus(), 100);
         }}
-        onShare={() => { void handleShare(); }}
+        onShare={() => {
+          if (!interactionsEnabled) return;
+          void handleShare();
+        }}
         onBookmark={() => { bookmarkMutation.mutate(); }}
       />
 

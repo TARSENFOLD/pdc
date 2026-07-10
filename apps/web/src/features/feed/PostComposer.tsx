@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Image as ImageIcon, LoaderCircle, Send, Video, X } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
 import { CriarPostPayloadSchema, type CriarPostPayload } from '@pdc/shared';
-import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { feedApi } from '@/lib/api/feed';
@@ -27,7 +25,6 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
   const { t } = useTranslation();
   const [corpo, setCorpo] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [lastEventId, setLastEventId] = useState<string | null>(null);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -41,9 +38,6 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
       void queryClient.invalidateQueries({ queryKey: ['feed'] });
       setCorpo('');
       setMediaUrls([]);
-      if (post.estado === 'aprovada' && post.eventId) {
-        setLastEventId(post.eventId);
-      }
       toast({
         title: post.estado === 'aprovada' ? 'Publicação no feed' : 'Publicação em revisão',
         description: post.estado === 'aprovada'
@@ -51,7 +45,7 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
           : 'A tua publicação será revista antes de aparecer no feed.',
         variant: 'success',
       });
-      if (!isInline && (post.estado !== 'aprovada' || !post.eventId)) {
+      if (!isInline) {
         navigate('/app/feed', { replace: true });
       }
     },
@@ -145,20 +139,18 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
         )}
 
         <div className="flex justify-between items-center mt-2">
-          {isInline ? (
-            <div className="flex items-center gap-2 bg-[var(--surface-elevated)] border border-[var(--chrome-border)] rounded-md px-1 py-1">
-              <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(event) => { handleFile(event.target.files?.[0]); event.target.value = ''; }} />
-              <input ref={videoInputRef} type="file" accept="video/mp4" className="hidden" onChange={(event) => { handleFile(event.target.files?.[0]); event.target.value = ''; }} />
-              <button type="button" onClick={() => { imageInputRef.current?.click(); }} disabled={uploadMutation.isPending || mediaUrls.length >= 10} className="text-[var(--ink-tertiary)] hover:text-[var(--ink-primary)] hover:bg-[var(--chrome-surface)] transition-colors flex items-center gap-2 px-3 py-1.5 rounded-sm text-[11px] font-bold tracking-widest uppercase disabled:opacity-50">
-                {uploadMutation.isPending ? <LoaderCircle size={14} className="animate-spin" /> : <ImageIcon size={14} />}
-                {t('feed.addPhoto', 'Foto')}
-              </button>
-              <div className="w-[1px] h-4 bg-[var(--chrome-border)]"></div>
-              <button type="button" onClick={() => { videoInputRef.current?.click(); }} disabled={uploadMutation.isPending || mediaUrls.length >= 10} className="text-[var(--ink-tertiary)] hover:text-[var(--ink-primary)] hover:bg-[var(--chrome-surface)] transition-colors flex items-center justify-center px-3 py-1.5 rounded-sm disabled:opacity-50" title={t('feed.addVideo', 'Adicionar vídeo')}>
-                <Video size={14} />
-              </button>
-            </div>
-          ) : <div />}
+          <div className="flex items-center gap-2 bg-[var(--surface-elevated)] border border-[var(--chrome-border)] rounded-md px-1 py-1">
+            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(event) => { handleFile(event.target.files?.[0]); event.target.value = ''; }} />
+            <input ref={videoInputRef} type="file" accept="video/mp4" className="hidden" onChange={(event) => { handleFile(event.target.files?.[0]); event.target.value = ''; }} />
+            <button type="button" onClick={() => { imageInputRef.current?.click(); }} disabled={uploadMutation.isPending || mediaUrls.length >= 10} className="text-[var(--ink-tertiary)] hover:text-[var(--ink-primary)] hover:bg-[var(--chrome-surface)] transition-colors flex items-center gap-2 px-3 py-1.5 rounded-sm text-[11px] font-bold tracking-widest uppercase disabled:opacity-50">
+              {uploadMutation.isPending ? <LoaderCircle size={14} className="animate-spin" /> : <ImageIcon size={14} />}
+              {t('feed.addPhoto', 'Foto')}
+            </button>
+            <div className="w-[1px] h-4 bg-[var(--chrome-border)]"></div>
+            <button type="button" onClick={() => { videoInputRef.current?.click(); }} disabled={uploadMutation.isPending || mediaUrls.length >= 10} className="text-[var(--ink-tertiary)] hover:text-[var(--ink-primary)] hover:bg-[var(--chrome-surface)] transition-colors flex items-center justify-center px-3 py-1.5 rounded-sm disabled:opacity-50" title={t('feed.addVideo', 'Adicionar vídeo')}>
+              <Video size={14} />
+            </button>
+          </div>
           {isInline && (
             <Button
               type="submit"
@@ -175,15 +167,7 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
   );
 
   if (isInline) {
-    return (
-      <>
-        {form}
-        <ComposerImpactOverlay
-          eventId={lastEventId}
-          onComplete={() => { setLastEventId(null); }}
-        />
-      </>
-    );
+    return form;
   }
 
   return (
@@ -220,33 +204,7 @@ export function PostComposerForm({ variant = 'page' }: PostComposerFormProps): R
           {form}
         </BuilderSection>
       </BuilderShell>
-      <ComposerImpactOverlay
-        eventId={lastEventId}
-        onComplete={() => {
-          setLastEventId(null);
-          navigate('/app/feed', { replace: true });
-        }}
-      />
     </>
-  );
-}
-
-function ComposerImpactOverlay({ eventId, onComplete }: { eventId: string | null; onComplete: () => void }): React.ReactElement {
-  return (
-    <AnimatePresence>
-      {eventId && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-canvas/95 p-6 backdrop-blur-md"
-        >
-          <div className="w-full max-w-xl">
-            <EcosystemImpactPanel eventId={eventId} variant="full" onComplete={onComplete} />
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
   );
 }
 

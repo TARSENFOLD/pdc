@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CriarCursoPayloadSchema, type MutationResult } from '@pdc/shared';
+import { CriarCursoPayloadSchema } from '@pdc/shared';
 import type { z } from 'zod';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,8 +12,6 @@ import { CourseMeritGuard } from './components/CourseMeritGuard';
 import { CourseCurriculum } from './components/CourseCurriculum';
 import { CourseSettingsPanel } from './components/CourseSettingsPanel';
 import { RichBuilderShell, BuilderSection, BuilderActionsBar } from '@/components/builders';
-import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
-import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/lib/auth/auth-context';
 import { Spinner } from '@/components/ui';
 
@@ -38,7 +36,6 @@ export function SovereignCourseBuilder() {
   const { id: cursoId } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [lastEventId, setLastEventId] = useState<string | null>(null);
   const isEditing = Boolean(cursoId);
 
   const form = useForm<FormValues>({
@@ -107,16 +104,10 @@ export function SovereignCourseBuilder() {
     mutationFn: (data: FormValues) => isEditing && cursoId
       ? cursosApi.update(cursoId, data)
       : cursosApi.create(data),
-    onSuccess: (res) => {
-      const result = res as MutationResult;
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
       toast({ title: 'Curso Materializado!', description: 'O impacto no ecossistema foi disparado.' });
-
-      if (result.eventId) {
-        setLastEventId(result.eventId);
-      } else {
-        navigate(user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/dashboard/instituicao');
-      }
+      navigate(user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/dashboard/instituicao');
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -217,28 +208,6 @@ export function SovereignCourseBuilder() {
       </RichBuilderShell>
     </form>
 
-    <AnimatePresence>
-      {lastEventId && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-canvas/95 backdrop-blur-md"
-        >
-          <div className="w-full max-w-xl">
-            <EcosystemImpactPanel 
-              eventId={lastEventId} 
-              variant="full"
-              onComplete={() => {
-                setTimeout(() => {
-                  navigate(user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/dashboard/instituicao');
-                }, 3000);
-              }}
-            />
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
     </>
   );
 }

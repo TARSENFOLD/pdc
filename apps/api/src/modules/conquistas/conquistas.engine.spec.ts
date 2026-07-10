@@ -80,4 +80,75 @@ describe('ConquistaEngine', () => {
     const unlocked = await conquistaEngine.verificarConquistas('user-1', DomainEventName.PROJETO_ACESSO_CONCEDIDO);
     expect(unlocked.some(c => c.slug === 'colaborador-projeto')).toBe(true);
   });
+
+  it('deve desbloquear impacto viral quando conteúdo autoral atinge 100 likes', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([])) // conquista viral-likes ainda não desbloqueada
+      .mockResolvedValueOnce(listResponse([{ id: 9, userId: 'user-viral' }])) // perfil do user
+      .mockResolvedValueOnce(listResponse([{ id: 'proj-1', documentId: 'proj-doc-1' }])) // projetos autorais
+      .mockResolvedValueOnce({
+        data: [{ id: 'like-1' }],
+        meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 100 } },
+      })
+      .mockResolvedValueOnce({
+        data: [],
+        meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 0 } },
+      }) // likes do target
+      .mockResolvedValueOnce(listResponse([{ id: 9, userId: 'user-viral' }])); // getPerfilId no unlock
+    vi.mocked(strapiPost)
+      .mockResolvedValueOnce(postResponse({ id: 'new-viral', slug: 'viral-likes' }))
+      .mockResolvedValueOnce(postResponse({ id: 'junction-viral' }));
+
+    const unlocked = await conquistaEngine.verificarConquistas('user-viral', DomainEventName.LIKE_ADICIONADO);
+
+    expect(unlocked.some(c => c.slug === 'viral-likes')).toBe(true);
+    expect(strapiGet).toHaveBeenCalledWith('/projetos', expect.objectContaining({
+      'filters[autor][id][$eq]': '9',
+    }));
+    expect(strapiGet).toHaveBeenCalledWith('/likes', expect.objectContaining({
+      'filters[targetType][$eq]': 'projeto',
+      'filters[targetId][$eq]': 'proj-1',
+    }));
+  });
+
+  it('não desbloqueia impacto viral quando nenhum conteúdo autoral atinge o limiar', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([])) // conquista viral-likes ainda não desbloqueada
+      .mockResolvedValueOnce(listResponse([{ id: 9, userId: 'user-normal' }])) // perfil do user
+      .mockResolvedValueOnce(listResponse([{ id: 'proj-1', documentId: 'proj-doc-1' }])) // projetos
+      .mockResolvedValueOnce({
+        data: [{ id: 'like-1' }],
+        meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 99 } },
+      })
+      .mockResolvedValueOnce({
+        data: [{ id: 'like-2' }],
+        meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 99 } },
+      })
+      .mockResolvedValueOnce(listResponse([])); // feed-posts
+
+    const unlocked = await conquistaEngine.verificarConquistas('user-normal', DomainEventName.LIKE_ADICIONADO);
+
+    expect(unlocked.some(c => c.slug === 'viral-likes')).toBe(false);
+    expect(strapiPost).not.toHaveBeenCalled();
+  });
+
+  it('usa fast-path referencia quando LIKE_ADICIONADO traz targetType:targetId', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([])) // conquista viral-likes ainda não desbloqueada
+      .mockResolvedValueOnce(listResponse([{ id: 9, userId: 'user-viral' }])) // perfil do user
+      .mockResolvedValueOnce(listResponse([{ id: 'proj-1', autor: { id: 9 }, documentId: 'proj-doc-1' }])) // verifyAuthorship /projetos/proj-1
+      .mockResolvedValueOnce({
+        data: [{ id: 'like-1' }],
+        meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 100 } },
+      })
+      .mockResolvedValueOnce(listResponse([{ id: 9, userId: 'user-viral' }]));
+    vi.mocked(strapiPost)
+      .mockResolvedValueOnce(postResponse({ id: 'new-viral', slug: 'viral-likes' }))
+      .mockResolvedValueOnce(postResponse({ id: 'junction-viral' }));
+
+    const unlocked = await conquistaEngine.verificarConquistas('user-viral', DomainEventName.LIKE_ADICIONADO, 'projeto:proj-1');
+
+    expect(unlocked.some(c => c.slug === 'viral-likes')).toBe(true);
+    expect(strapiGet).not.toHaveBeenCalledWith('/projetos', expect.objectContaining({ 'pagination[page]': '1' }));
+  });
 });

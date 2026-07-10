@@ -76,9 +76,110 @@ async function flushTelemetryQueue() {
     if (res.ok) {
       await clearQueue();
     }
-  } catch {
-    // Silently fail — events remain in IDB for next retry
+  } catch (err) {
+    console.warn('[SW] Telemetry flush failed; events remain queued for retry', {
+      error: err instanceof Error ? err.name : 'unknown',
+    });
   }
+}
+
+function isRecord(value) {
+  return typeof value === 'object' && value !== null;
+}
+
+function parseServiceWorkerMessage(data) {
+  if (!isRecord(data)) {
+    return { ok: false, reason: 'message_data_absent_or_invalid' };
+  }
+
+  if (data.type === 'SKIP_WAITING') {
+    return { ok: true, type: 'SKIP_WAITING' };
+  }
+
+  if (data.type === 'QUEUE_TELEMETRY') {
+    const payload = data.payload;
+    if (!isRecord(payload) || !Array.isArray(payload.events)) {
+      return { ok: false, reason: 'queue_telemetry_payload_invalid' };
+    }
+    return { ok: true, type: 'QUEUE_TELEMETRY', events: payload.events };
+  }
+
+  return { ok: false, reason: 'unknown_message_type' };
+}
+
+function parsePushPayload(data) {
+  if (!data) {
+    return {
+      title: 'PDC',
+      options: { body: 'Tens uma nova atualização.', data: { url: '/app/notificacoes' } },
+    };
+  }
+
+  try {
+    const payload = data.json();
+    const title = typeof payload.title === 'string' && payload.title.length > 0 ? payload.title : 'PDC';
+    const body = typeof payload.body === 'string' ? payload.body : 'Tens uma nova atualização.';
+    const url = typeof payload.url === 'string' ? payload.url : '/app/notificacoes';
+    return {
+      title,
+      options: {
+        body,
+        icon: typeof payload.icon === 'string' ? payload.icon : '/icons/icon-192.png',
+        badge: typeof payload.badge === 'string' ? payload.badge : '/icons/icon-192.png',
+        tag: typeof payload.tag === 'string' ? payload.tag : undefined,
+        data: { ...(isRecord(payload.data) ? payload.data : {}), url },
+      },
+    };
+  } catch (err) {
+    console.warn('[SW] Invalid push payload', { error: err?.name });
+    return {
+      title: 'PDC',
+      options: { body: 'Tens uma nova atualização.', data: { url: '/app/notificacoes' } },
+    };
+  }
+}
+
+function normalizeNotificationUrl(url) {
+  try {
+    const target = new URL(url, self.location.origin);
+    if (target.origin !== self.location.origin) {
+      return new URL('/app/notificacoes', self.location.origin).href;
+    }
+    return target.href;
+  } catch {
+    return new URL('/app/notificacoes', self.location.origin).href;
+  }
+}
+
+async function focusOrOpenClient(url) {
+  const targetUrl = normalizeNotificationUrl(url);
+  try {
+    const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const matching = windowClients.find((client) => client.url === targetUrl);
+    if (matching && 'focus' in matching) {
+      await matching.focus();
+      return;
+    }
+    for (const client of windowClients) {
+      if ('focus' in client) {
+        if ('navigate' in client) {
+          try {
+            const navigatedClient = await client.navigate(targetUrl);
+            await (navigatedClient ?? client).focus();
+            return;
+          } catch (err) {
+            console.warn('[SW] Client navigation skipped', { error: err?.name });
+          }
+        } else {
+          await client.focus();
+          return;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[SW] Focus attempt failed, falling back to openWindow', { error: err?.name });
+  }
+  await clients.openWindow(targetUrl);
 }
 
 // ─── Caching strategies ───────────────────────────────────────────────────────
@@ -171,14 +272,19 @@ self.addEventListener('activate', (event) => {
 // ─── Message handler ──────────────────────────────────────────────────────────
 
 self.addEventListener('message', (event) => {
-  const { type, payload } = event.data || {};
-
-  if (type === 'SKIP_WAITING') {
-    self.skipWaiting();
+  const message = parseServiceWorkerMessage(event.data);
+  if (!message.ok) {
+    console.warn('[SW] Ignoring invalid message', { reason: message.reason });
+    return;
   }
 
-  if (type === 'QUEUE_TELEMETRY' && Array.isArray(payload?.events)) {
-    enqueueEvents(payload.events)
+  if (message.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+
+  if (message.type === 'QUEUE_TELEMETRY') {
+    enqueueEvents(message.events)
       .then(() => {
         if ('sync' in self.registration) {
           return self.registration.sync.register('pdc-telemetry').catch((err) => {
@@ -187,7 +293,7 @@ self.addEventListener('message', (event) => {
         }
       })
       .catch((err) => {
-         console.warn('[SW] Failed to queue telemetry', { error: err?.name, eventCount: payload.events.length });
+         console.warn('[SW] Failed to queue telemetry', { error: err?.name, eventCount: message.events.length });
       });
   }
 });
@@ -198,6 +304,20 @@ self.addEventListener('sync', (event) => {
   if (event.tag === 'pdc-telemetry') {
     event.waitUntil(flushTelemetryQueue());
   }
+});
+
+// ─── Web Push ─────────────────────────────────────────────────────────────────
+
+self.addEventListener('push', (event) => {
+  const payload = parsePushPayload(event.data);
+  event.waitUntil(self.registration.showNotification(payload.title, payload.options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const data = event.notification.data;
+  const url = isRecord(data) && typeof data.url === 'string' ? data.url : '/app/notificacoes';
+  event.waitUntil(focusOrOpenClient(url));
 });
 
 // ─── Fetch handler ────────────────────────────────────────────────────────────

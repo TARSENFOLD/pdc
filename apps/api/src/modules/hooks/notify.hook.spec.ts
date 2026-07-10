@@ -16,6 +16,12 @@ vi.mock('../realtime/socket.service.js', () => ({
   },
 }));
 
+vi.mock('../push/web-push.service.js', () => ({
+  webPushService: {
+    enviarNotificacao: vi.fn().mockResolvedValue({ attempted: 0, sent: 0, failed: 0, removedExpired: 0 }),
+  },
+}));
+
 vi.mock('pino', () => ({
   default: vi.fn(() => ({ warn: vi.fn(), error: vi.fn(), info: vi.fn() })),
 }));
@@ -23,8 +29,10 @@ vi.mock('pino', () => ({
 import { notifyHook } from './notify.hook.js';
 import { strapiGet, strapiPost } from '../strapi/strapi.client.js';
 import { socketService } from '../realtime/socket.service.js';
+import { webPushService } from '../push/web-push.service.js';
 
 const emitirNotificacaoMock = vi.mocked(socketService)['emitirNotificacao'];
+const enviarWebPushMock = vi.mocked(webPushService)['enviarNotificacao'];
 
 function listResponse<T extends { id: string | number }>(data: T[]) {
   return {
@@ -78,6 +86,29 @@ describe('notifyHook — FOMO triggers', () => {
       'user-dest',
       expect.objectContaining({ tipo: 'vinculo_pedido', titulo: 'Nova solicitação de conexão' }),
     );
+    expect(enviarWebPushMock).toHaveBeenCalledWith(
+      'perfil-dest-1',
+      expect.objectContaining({ title: 'Nova solicitação de conexão', tag: 'evt-test-uuid' }),
+    );
+  });
+
+  it('VINCULO_SOLICITADO: persiste notificação mesmo quando Web Push falha', async () => {
+    vi.mocked(strapiGet).mockResolvedValue(listResponse([{ id: 'perfil-dest-1' }]));
+    enviarWebPushMock.mockRejectedValueOnce(new Error('push down'));
+
+    const event = makeEvent(DomainEventName.VINCULO_SOLICITADO, {
+      destinatarioId: 'user-dest',
+      solicitanteId: 'user-sol',
+    });
+
+    const result = await notifyHook.execute(event, emptyContext);
+
+    expect(result).toEqual({ status: 'sent' });
+    expect(strapiPost).toHaveBeenCalledWith(
+      '/notificacoes',
+      expect.objectContaining({ perfil: 'perfil-dest-1', tipo: 'vinculo_pedido' }),
+    );
+    expect(enviarWebPushMock).toHaveBeenCalled();
   });
 
   it('VINCULO_APROVADO: persists vinculo_aprovado notification and emits socket to solicitante', async () => {
@@ -199,7 +230,12 @@ describe('notifyHook — publicação de conteúdo', () => {
       perfil: '9',
       tipo: 'sucesso',
       titulo: 'Actividade Processada',
+      entreguePor: { inApp: true, webPush: false },
     }));
+    expect(enviarWebPushMock).toHaveBeenCalledWith(
+      '9',
+      expect.objectContaining({ title: 'Actividade Processada', tag: 'evt-test-uuid' }),
+    );
     expect(result).toEqual({ status: 'sent' });
   });
 });

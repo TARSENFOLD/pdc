@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import pino from 'pino';
+import { CriarVinculoPayloadSchema } from '@pdc/shared';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { requireAdult } from '../modules/auth/minor.guard.js';
@@ -39,6 +40,23 @@ interface StrapiVinculo extends StrapiEntityReference {
   destinatario: StrapiPerfilMini;
   status: string;
   criadoEm: string;
+}
+
+async function findVinculoEntrePerfis(
+  aId: string,
+  bId: string,
+  opts: { populate?: string } = {},
+) {
+  return strapiGet<StrapiVinculo>('/vinculos', {
+    'filters[$or][0][$and][0][solicitante][id][$eq]': aId,
+    'filters[$or][0][$and][1][destinatario][id][$eq]': bId,
+    'filters[$or][1][$and][0][solicitante][id][$eq]': bId,
+    'filters[$or][1][$and][1][destinatario][id][$eq]': aId,
+    'filters[status][$in][0]': 'pendente',
+    'filters[status][$in][1]': 'aprovado',
+    'pagination[pageSize]': '1',
+    ...(opts.populate ? { populate: opts.populate } : {}),
+  });
 }
 
 // GET /vinculos
@@ -153,10 +171,56 @@ vinculoRoutes.get('/partilha', async (c) => {
   }
 });
 
+function isSameProfile(solicitante: StrapiPerfilMini, destinatario: StrapiPerfilMini, userId: string): boolean {
+  return destinatario.userId === userId || String(destinatario.id) === String(solicitante.id);
+}
+
+// GET /vinculos/status?targetId=perfilId — estado do vínculo com outro perfil
+vinculoRoutes.get('/status', zValidator('query', z.object({ targetId: z.string().min(1) })), async (c) => {
+  const { targetId } = c.req.valid('query');
+  const { id: userId } = c.get('user');
+
+  try {
+    const [solicitanteRes, destinatarioPerfil] = await Promise.all([
+      strapiGet<StrapiPerfilMini>('/perfis', {
+        'filters[userId][$eq]': userId,
+        'pagination[pageSize]': '1',
+      }),
+      findStrapiEntity<StrapiPerfilMini>('perfis', targetId),
+    ]);
+    const solicitantePerfil = solicitanteRes.data[0];
+
+    if (!solicitantePerfil || !destinatarioPerfil) {
+      return c.json({ error: 'Perfil não encontrado' }, 404);
+    }
+
+    if (isSameProfile(solicitantePerfil, destinatarioPerfil, userId)) {
+      return c.json({ error: 'Não podes criar vínculo contigo mesmo' }, 400);
+    }
+
+    const existing = await findVinculoEntrePerfis(String(solicitantePerfil.id), String(destinatarioPerfil.id), { populate: 'solicitante,destinatario' });
+    const vinculo = existing.data[0];
+
+    if (!vinculo) {
+      return c.json({ status: null, vinculoId: null, isSender: false });
+    }
+
+    return c.json({
+      status: vinculo.status,
+      vinculoId: String(vinculo.documentId ?? vinculo.id),
+      isSender: vinculo.solicitante.userId === userId,
+    });
+  } catch (err) {
+    log.error({ err, targetId, userId }, 'Erro ao consultar estado do vínculo');
+    return c.json({ error: 'Erro ao consultar estado do vínculo' }, 502);
+  }
+});
+
 // POST /vinculos/:id/pedir
-vinculoRoutes.post('/:id/pedir', requireAdult(), async (c) => {
+vinculoRoutes.post('/:id/pedir', requireAdult(), zValidator('json', CriarVinculoPayloadSchema.omit({ receiverId: true })), async (c) => {
   const destinatarioPerfilId = c.req.param('id');
   const { id: userId } = c.get('user');
+  const { connectionType } = c.req.valid('json');
 
   try {
     const [solicitanteRes, destinatarioPerfil] = await Promise.all([
@@ -172,20 +236,32 @@ vinculoRoutes.post('/:id/pedir', requireAdult(), async (c) => {
       return c.json({ error: 'Perfil não encontrado' }, 404);
     }
 
+    if (isSameProfile(solicitantePerfil, destinatarioPerfil, userId)) {
+      return c.json({ error: 'Não podes criar vínculo contigo mesmo' }, 400);
+    }
+
+    const existing = await findVinculoEntrePerfis(String(solicitantePerfil.id), String(destinatarioPerfil.id));
+
+    if (existing.data.length > 0) {
+      return c.json({ error: 'Já existe um vínculo ou pedido pendente com este perfil' }, 409);
+    }
+
     const resPost = await strapiPost<StrapiVinculo>('/vinculos', {
       senderId: userId,
       receiverId: destinatarioPerfil.userId,
+      connectionType,
+      tipo: connectionType,
       solicitante: solicitantePerfil.documentId ?? solicitantePerfil.id,
-      destinatario: destinatarioPerfilId,
+      destinatario: destinatarioPerfil.documentId ?? destinatarioPerfil.id,
       status: 'pendente',
       criadoEm: new Date().toISOString()
     });
 
     // G15: Impacto no Ecossistema
     await eventBus.publishWithOutbox(DomainEventName.VINCULO_SOLICITADO, {
-      vinculoId: resPost.data.id,
+      vinculoId: String(resPost.data.documentId ?? resPost.data.id),
       solicitanteId: String(solicitantePerfil.id),
-      destinatarioId: destinatarioPerfilId
+      destinatarioId: destinatarioPerfil.userId
     });
 
     return c.json(resPost.data, 201);

@@ -25,8 +25,7 @@
         "SAUDE", "ENGENHARIA", "TECNOLOGIA", "DIREITO", "GESTAO",
         "EDUCACAO", "ARTES", "CIENCIAS_AGRARIAS", "CIENCIAS_SOCIAIS",
         "COMUNICACAO", "CIENCIAS_NATURAIS", "ARQUITETURA",
-        "TURISMO_HOTELARIA", "DESPORTO", "OUTRA",
-        "AGRONOMIA", "OUTRO"
+        "TURISMO_HOTELARIA", "DESPORTO", "OUTRA"
       ]
     },
     "estado": {
@@ -38,6 +37,13 @@
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::perfil.perfil"
+    },
+    "pedidosAcesso": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::projeto-acesso-pedido.projeto-acesso-pedido",
+      "mappedBy": "projeto",
+      "description": "Pedidos auditáveis de acesso ao core privado do projeto"
     },
     "colaboradores": { "type": "json", "description": "⚠️ DEPRECATED — usar acessoCoreACL. Mantido por retrocompatibilidade." },
     "tags": { "type": "json" },

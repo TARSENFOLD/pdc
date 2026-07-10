@@ -211,7 +211,7 @@ revogação B2B, cookies/analytics, UI completa de transparência de IA e E2E ha
 | ID | Descrição | Status |
 |----|-----------|--------|
 | D1 | Heurísticas paralelas (duplicação shared vs engine) | ⏳ |
-| D5 | Outbox Co-location (Performance bottleneck) | ✅ (outbox-worker daemon) — sync com REQUIREMENTS D5 |
+| D5 | Outbox Co-location (Performance bottleneck) | ✅ (outbox-worker daemon isolado; `index.ts` sem side-effect) — sync com REQUIREMENTS D5 |
 | D6 | Midnight Rollover (Race Condition na Telemetria) | ✅ (SET NX EX 7d) — sync com REQUIREMENTS D6 |
 
 ## Epic de Remediação (Fase D — POR EXECUTAR)

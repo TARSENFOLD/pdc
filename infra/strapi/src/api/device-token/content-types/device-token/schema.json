@@ -1,0 +1,64 @@
+{
+  "kind": "collectionType",
+  "collectionName": "device_tokens",
+  "info": {
+    "singularName": "device-token",
+    "pluralName": "device-tokens",
+    "displayName": "Device Token",
+    "description": "Tokens e subscriptions de push por perfil (web/APNs/FCM)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "indexes": [
+    {
+      "name": "unique_device_token_per_profile",
+      "columns": [
+        "perfilId",
+        "token",
+        "platform"
+      ],
+      "unique": true,
+      "description": "TODO: migrar para coluna perfil_id da relacao apos backfill auditado; atualmente usa perfilId para compatibilidade."
+    }
+  ],
+  "attributes": {
+    "perfil": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "inversedBy": "deviceTokens",
+      "required": true
+    },
+    "perfilId": {
+      "type": "string",
+      "required": true,
+      "description": "Compatibilidade de migração; fonte canónica é a relação perfil. Remover após backfill auditado."
+    },
+    "token": {
+      "type": "text",
+      "required": true
+    },
+    "platform": {
+      "type": "enumeration",
+      "enum": [
+        "web",
+        "ios",
+        "android"
+      ],
+      "required": true
+    },
+    "endpoint": {
+      "type": "text"
+    },
+    "p256dh": {
+      "type": "text"
+    },
+    "auth": {
+      "type": "text"
+    },
+    "ultimoUso": {
+      "type": "datetime"
+    }
+  }
+}

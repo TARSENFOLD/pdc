@@ -2500,6 +2500,46 @@ export interface ApiProjetoProjeto extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiProjetoAcessoPedidoProjetoAcessoPedido
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'projeto_acesso_pedidos';
+  info: {
+    displayName: 'Projeto Acesso Pedido';
+    pluralName: 'projeto-acesso-pedidos';
+    singularName: 'projeto-acesso-pedido';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    dataResposta: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::projeto-acesso-pedido.projeto-acesso-pedido'
+    > &
+      Schema.Attribute.Private;
+    motivo: Schema.Attribute.Text;
+    perfilSolicitante: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::perfil.perfil'
+    > &
+      Schema.Attribute.Required;
+    projeto: Schema.Attribute.Relation<'manyToOne', 'api::projeto.projeto'> &
+      Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    status: Schema.Attribute.Enumeration<['pendente', 'aprovado', 'rejeitado']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'pendente'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiPropostaProposta extends Struct.CollectionTypeSchema {
   collectionName: 'propostas';
   info: {
@@ -3586,6 +3626,7 @@ declare module '@strapi/strapi' {
       'api::perfil.perfil': ApiPerfilPerfil;
       'api::post.post': ApiPostPost;
       'api::programa.programa': ApiProgramaPrograma;
+      'api::projeto-acesso-pedido.projeto-acesso-pedido': ApiProjetoAcessoPedidoProjetoAcessoPedido;
       'api::projeto.projeto': ApiProjetoProjeto;
       'api::proposta.proposta': ApiPropostaProposta;
       'api::qa-pergunta.qa-pergunta': ApiQaPerguntaQaPergunta;

@@ -1,10 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authServiceMock = vi.hoisted(() => ({
   verifyRefreshToken: vi.fn(),
   revokeRefreshToken: vi.fn(),
   login: vi.fn(),
 }));
+
+const publishWithOutboxMock = vi.hoisted(() => vi.fn().mockResolvedValue({ id: 'evt-auth-1' }));
 
 vi.mock('../lib/env.js', () => ({
   env: {
@@ -24,8 +26,13 @@ vi.mock('../modules/auth/auth.service.js', () => ({
   },
 }));
 
+vi.mock('../modules/events/event-bus.js', () => ({
+  eventBus: { publishWithOutbox: publishWithOutboxMock },
+}));
+
 import { authRoutes } from './auth.js';
 import { StrapiHttpError } from '../modules/strapi/strapi.client.js';
+import { DomainEventName } from '../modules/events/types.js';
 
 describe('GET /auth/me', () => {
   it('returns null instead of 401 when there is no session cookie', async () => {
@@ -48,6 +55,11 @@ describe('GET /auth/me', () => {
 });
 
 describe('POST /auth/logout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    publishWithOutboxMock.mockResolvedValue({ id: 'evt-auth-1' });
+  });
+
   it('is idempotent and clears cookies even when access token is absent', async () => {
     const res = await authRoutes.request('/logout', { method: 'POST' });
 
@@ -68,6 +80,7 @@ describe('POST /auth/logout', () => {
     expect(res.status).toBe(200);
     expect(authServiceMock.verifyRefreshToken).toHaveBeenCalledWith('refresh-1');
     expect(authServiceMock.revokeRefreshToken).toHaveBeenCalledWith('user-1', 'refresh-1');
+    expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.LOGOUT, { userId: 'user-1' });
   });
 });
 

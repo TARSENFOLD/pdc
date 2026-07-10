@@ -151,7 +151,15 @@ export async function persistirReputacao(perfilId: string): Promise<number> {
  * Mark a profile for async recalculation.
  */
 export async function marcarParaRecalculo(perfilId: string, motivo: string): Promise<void> {
-  await redis.sadd(RECALC_QUEUE_KEY, perfilId);
+  try {
+    await Promise.all([
+      redis.sadd(RECALC_QUEUE_KEY, perfilId),
+      redis.del(`reputation:${perfilId}`),
+    ]);
+  } catch (err) {
+    log.warn({ err, perfilId }, 'Falha ao marcar perfil para recálculo de reputação');
+    throw err;
+  }
   log.info({ perfilId, motivo }, 'Perfil marcado para recálculo de reputação');
 }
 

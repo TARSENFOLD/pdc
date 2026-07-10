@@ -187,16 +187,24 @@ export interface CreateLtiPlataformaPayload {
   ativo?: boolean;
 }
 
-export interface LtiScore {
-  userId: string;
-  scoreGiven: number;
-  scoreMaximum: number;
-  comment?: string;
-  activityId: string;
-  timestamp: string;
-  activityProgress: string;
-  gradingProgress: string;
-}
+export const LtiScoreSchema = z.object({
+  userId: z.string().min(1),
+  scoreGiven: z.number().min(0).optional(),
+  scoreMaximum: z.number().positive().optional(),
+  comment: z.string().optional(),
+  activityId: z.string().min(1),
+  timestamp: z.string().datetime({ offset: true }),
+  activityProgress: z.enum(['Initialized', 'Started', 'InProgress', 'Submitted', 'Completed']),
+  gradingProgress: z.enum(['FullyGraded', 'Pending', 'PendingManual', 'Failed', 'NotReady']),
+}).refine((v) => {
+  if (v.scoreGiven === undefined || v.scoreMaximum === undefined) return true;
+  return v.scoreGiven <= v.scoreMaximum;
+}, {
+  message: 'scoreGiven must not exceed scoreMaximum',
+  path: ['scoreGiven'],
+});
+
+export type LtiScore = z.infer<typeof LtiScoreSchema>;
 
 export interface MutationResult {
   id: string | number;

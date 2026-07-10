@@ -1,5 +1,5 @@
 import { http } from './http.js';
-import type { Projeto, CriarProjetoPayload, ProjetoFilters, ProjetoEstado } from '@pdc/shared';
+import type { Projeto, CriarProjetoPayload, ProjetoFilters, ProjetoEstado, PedidoAcesso } from '@pdc/shared';
 
 export const projetosApi = {
   list: (filters?: ProjetoFilters) => {
@@ -35,10 +35,16 @@ export const projetosApi = {
   gerirACL: (id: string, perfilId: string, acao: 'aprovar' | 'rejeitar' | 'remover') =>
     http.patch<{ success: boolean }>(`/projetos/${id}/acl`, { perfilId, acao }),
 
+  listAccessRequests: (id: string) =>
+    http.get<{ data: PedidoAcesso[] }>(`/projetos/${id}/pedidos-acesso`),
+
+  respondAccessRequest: (id: string, pedidoId: string, status: 'aprovado' | 'rejeitado') =>
+    http.patch<{ success: boolean }>(`/projetos/${id}/pedidos-acesso/${pedidoId}`, { status }),
+
   remove: (id: string) => http.delete<{ ok: boolean }>(`/projetos/${id}`),
 
-  requestAccess: (id: string) =>
-    http.post<{ success: boolean }>(`/projetos/${id}/solicitar-acesso`, {}),
+  requestAccess: (id: string, motivo?: string) =>
+    http.post<{ success: boolean; pedido?: PedidoAcesso }>(`/projetos/${id}/pedidos-acesso`, motivo ? { motivo } : {}),
 
   getVotes: (id: string) =>
     http.get<{ endorsements: number; votos_count: number; endorsed: boolean; voted: boolean }>(`/projetos/${id}/votos`),

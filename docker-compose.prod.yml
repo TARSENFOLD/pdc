@@ -11,23 +11,28 @@ name: pdc-prod
 services:
   # ─── Traefik: reverse proxy + SSL automático ────────────────────────────────
   traefik:
-    image: traefik:v3.3
+    image: traefik:v3.7.0@sha256:eb328e2c806c53aafbbace6c451fa54d268961261a85452fcf0fb752a30c17be
     container_name: pdc-traefik
     restart: unless-stopped
     command:
-      - "--api.dashboard=true"
+      - "--api.dashboard=false"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=caetanocj275@gmail.com"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--ping=true"
       - "--log.level=INFO"
       - "--accesslog=true"
+    environment:
+      DOCKER_API_VERSION: "1.44"
+    env_file:
+      - /opt/pdc/.env
     ports:
       - "80:80"
       - "443:443"
@@ -36,17 +41,16 @@ services:
       - pdc-letsencrypt:/letsencrypt
     networks:
       - pdc-network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.usepdc.com`)"
-      - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.traefik.middlewares=traefik-auth"
-      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$$apr1$$H6uskkkW$$IgXLP7ewSu8UxQpLWsdlf/"
     deploy:
       resources:
         limits:
           memory: 128M
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # ─── BFF Hono API ───────────────────────────────────────────────────────────
   api:
@@ -62,9 +66,12 @@ services:
       PORT: 3001
       API_URL: https://api.usepdc.com
       FRONTEND_URL: https://usepdc.com
-      STRAPI_URL: https://cms.usepdc.com
+      STRAPI_URL: http://strapi:1337
     depends_on:
-      - traefik
+      traefik:
+        condition: service_started
+      strapi:
+        condition: service_healthy
     networks:
       - pdc-network
     labels:
@@ -80,7 +87,13 @@ services:
         limits:
           memory: 1G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -111,14 +124,14 @@ services:
       - "traefik.http.routers.pdc-strapi.entrypoints=websecure"
       - "traefik.http.routers.pdc-strapi.tls.certresolver=letsencrypt"
       - "traefik.http.services.pdc-strapi.loadbalancer.server.port=1337"
-      - "traefik.http.services.pdc-strapi.loadbalancer.healthcheck.path=/"
+      - "traefik.http.services.pdc-strapi.loadbalancer.healthcheck.path=/_health"
       - "traefik.http.services.pdc-strapi.loadbalancer.healthcheck.interval=30s"
     deploy:
       resources:
         limits:
           memory: 2G
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:1337/ || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:1337/_health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5

@@ -145,6 +145,18 @@ export const GerirACLSchema = z.object({
 
 export type GerirACLPayload = z.infer<typeof GerirACLSchema>;
 
+export const SolicitarAcessoCoreSchema = z.object({
+  motivo: z.string().trim().min(10).max(500).optional(),
+});
+
+export type SolicitarAcessoCorePayload = z.infer<typeof SolicitarAcessoCoreSchema>;
+
+export const ResponderPedidoAcessoCoreSchema = z.object({
+  status: z.enum(['aprovado', 'rejeitado']),
+});
+
+export type ResponderPedidoAcessoCorePayload = z.infer<typeof ResponderPedidoAcessoCoreSchema>;
+
 // Schema para votar/endorsar um projeto
 export const VotoProjetoPayloadSchema = z.object({
   tipo: z.enum(['endorsement', 'voto']),
@@ -153,9 +165,15 @@ export const VotoProjetoPayloadSchema = z.object({
 
 export type VotoProjetoPayload = z.infer<typeof VotoProjetoPayloadSchema>;
 
+export const ProjetoRefSchema = z.object({
+  id: z.coerce.string(),
+  documentId: z.string().optional(),
+});
+
 export const PedidoAcessoSchema = z.object({
-  id: z.string().or(z.number()),
-  projeto: z.string().or(z.number()).optional(),
+  id: z.coerce.string(),
+  documentId: z.string().optional(),
+  projeto: z.union([z.string(), z.number(), ProjetoRefSchema]).optional(),
   perfilSolicitante: PerfilPublicoSchema.optional(),
   motivo: z.string().optional(),
   status: z.enum(['pendente', 'aprovado', 'rejeitado']),

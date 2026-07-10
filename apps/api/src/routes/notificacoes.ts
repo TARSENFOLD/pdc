@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { env } from '../lib/env.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import {
@@ -22,6 +23,15 @@ type Vars = { Variables: AuthVariables };
 export const notificacaoRoutes = new Hono<Vars>();
 
 notificacaoRoutes.use('*', verifyJwt);
+
+// GET /notificacoes/push/public-key — chave pública VAPID para subscription no browser.
+notificacaoRoutes.get('/push/public-key', (c) => {
+  const publicKey = env.WEB_PUSH_PUBLIC_KEY;
+  if (!publicKey) {
+    return c.json({ error: 'Web Push não configurado' }, 503);
+  }
+  return c.json({ publicKey });
+});
 
 // GET /notificacoes — lista notificações do utilizador autenticado
 notificacaoRoutes.get('/', async (c) => {
@@ -147,6 +157,7 @@ notificacaoRoutes.post('/push/register', async (c) => {
   const { token, platform, endpoint, p256dh, auth } = parsed.data;
   try {
     const data = await strapiPost<unknown>('/device-tokens', {
+      perfil: perfilId,
       perfilId,
       token,
       platform,
@@ -175,7 +186,8 @@ notificacaoRoutes.delete('/push/unregister', async (c) => {
   }
   try {
     const existing = await strapiGet<Record<string, unknown>>('/device-tokens', {
-      'filters[perfilId][$eq]': perfilId,
+      'filters[$or][0][perfil][id][$eq]': perfilId,
+      'filters[$or][1][perfilId][$eq]': perfilId,
       'filters[token][$eq]': parsed.data.token,
       'pagination[pageSize]': '1',
     });

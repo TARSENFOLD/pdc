@@ -377,7 +377,7 @@ export default function EditPerfilPage(): React.JSX.Element | null {
     }
     setIsUploadingBanner(true);
     try {
-      const res = await mediaApi.upload(file);
+      const res = await mediaApi.upload(file, 'capa');
       save({ bannerUrl: res.url });
     } catch (error) {
       console.error('Banner upload failed:', error);

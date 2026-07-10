@@ -1,17 +1,96 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import pino from 'pino';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { getItemStats, fetchCandidates, mapConcurrent, toFeedItem, buildFeatures, calcRecencyScore, calcScore, HYDRATION_CONCURRENCY, type StrapiEntity } from './feed.helpers.js';
 import { getWeights, setWeights } from '../modules/feed/feed.weights.js';
-import { UpdateFeedWeightsPayloadSchema } from '@pdc/shared';
-import type { FeedItem, FeedWeights, FeedItemTipo } from '@pdc/shared';
+import { redis } from '../lib/redis.js';
+import { AreaVocacionalSchema, UpdateFeedWeightsPayloadSchema } from '@pdc/shared';
+import type { FeedItem, FeedWeights, FeedItemTipo, FeedSource } from '@pdc/shared';
 
 type Vars = { Variables: AuthVariables };
 export const feedRoutes = new Hono<Vars>();
+const log = pino({ name: 'feed-routes' });
 
 // ─── Shared feed pipeline ────────────────────────────────────────────────────
+
+interface FeedEntryRecord {
+  id: string | number;
+  entityType?: FeedItemTipo;
+  entityId?: string;
+  autorId?: string;
+  titulo?: string;
+  corpo?: string;
+  area?: string;
+  source?: FeedSource;
+  instituicaoId?: string;
+  score?: number;
+  eventId?: string;
+  publicadoEm?: string;
+  createdAt?: string;
+}
+
+function mapFeedEntry(entry: FeedEntryRecord): FeedItem | null {
+  if (!entry.entityType || !entry.entityId || !entry.publicadoEm) return null;
+  const parsedArea = AreaVocacionalSchema.safeParse(entry.area);
+  return {
+    id: entry.entityId,
+    tipo: entry.entityType,
+    titulo: entry.titulo ?? entry.entityType,
+    corpo: entry.corpo,
+    userId: entry.autorId ?? entry.entityId,
+    createdAt: entry.publicadoEm,
+    timestamp: entry.publicadoEm,
+    area: parsedArea.success ? parsedArea.data : undefined,
+    score: entry.score ?? 0,
+    source: entry.source,
+    metadata: {
+      feedEntryId: String(entry.id),
+      eventId: entry.eventId,
+    },
+  } satisfies FeedItem;
+}
+
+type FeedEntriesMeta = { total: number; fromFeedEntries: true; areaMatch?: string; instituicaoNome?: string };
+
+async function readFeedEntries(
+  source: FeedSource,
+  area?: string,
+  limit = 50,
+  cacheScope?: string,
+  extraMeta?: { areaMatch?: string; instituicaoNome?: string },
+): Promise<{ data: FeedItem[]; meta: FeedEntriesMeta } | null> {
+  const cacheKey = `feed:${source}:${cacheScope ?? area ?? 'all'}`;
+  const cached = await redis.get<{ data: FeedItem[]; meta: FeedEntriesMeta }>(cacheKey).catch(() => null);
+  if (cached) return cached;
+
+  try {
+    const params: Record<string, string> = {
+      'filters[source][$eq]': source,
+      sort: 'score:desc,publicadoEm:desc',
+      'pagination[pageSize]': String(limit),
+    };
+    if (area) params['filters[area][$eq]'] = area;
+    if (source === 'institucional' && cacheScope) params['filters[instituicaoId][$eq]'] = cacheScope;
+
+    const res = await strapiGet<FeedEntryRecord>('/feed-entries', params);
+    if (res.data.length === 0) return null;
+
+    const data = res.data.flatMap((entry) => {
+      const item = mapFeedEntry(entry);
+      return item ? [item] : [];
+    });
+    if (data.length === 0) return null;
+    const result = { data, meta: { total: data.length, fromFeedEntries: true as const, ...extraMeta } };
+    await redis.set(cacheKey, result, { ex: 300 }).catch(() => undefined);
+    return result;
+  } catch (err) {
+    log.warn({ err, source, area, cacheScope }, 'Falha ao ler feed-entries canónicas');
+    return null;
+  }
+}
 
 async function buildFeed(userId: string, weights: FeedWeights, limit = 50) {
   const resPerfil = await strapiGet<{ id: string | number; areasInteresse?: string[] }>('/perfis', {
@@ -41,6 +120,8 @@ async function buildFeed(userId: string, weights: FeedWeights, limit = 50) {
 feedRoutes.get('/', verifyJwt, async (c) => {
   const user = c.get('user');
   try {
+    const fromEntries = await readFeedEntries('geral');
+    if (fromEntries) return c.json(fromEntries);
     return c.json(await buildFeed(user.id, await getWeights('geral')));
   } catch {
     return c.json({ error: 'Erro ao processar feed' }, 502);
@@ -50,6 +131,8 @@ feedRoutes.get('/', verifyJwt, async (c) => {
 feedRoutes.get('/geral', verifyJwt, async (c) => {
   const user = c.get('user');
   try {
+    const fromEntries = await readFeedEntries('geral');
+    if (fromEntries) return c.json(fromEntries);
     return c.json(await buildFeed(user.id, await getWeights('geral')));
   } catch {
     return c.json({ error: 'Erro ao processar feed' }, 502);
@@ -61,6 +144,8 @@ feedRoutes.get('/geral', verifyJwt, async (c) => {
 feedRoutes.get('/trending', verifyJwt, async (c) => {
   const user = c.get('user');
   try {
+    const fromEntries = await readFeedEntries('trending');
+    if (fromEntries) return c.json(fromEntries);
     const weights = await getWeights('trending');
     const result = await buildFeed(user.id, weights);
     return c.json(result);
@@ -86,8 +171,13 @@ feedRoutes.get('/vocacional', verifyJwt, async (c) => {
 
     if (!areaMatch) {
       // Sem perfil vocacional persistido — delega para feed geral
+      const fromEntries = await readFeedEntries('geral');
+      if (fromEntries) return c.json(fromEntries);
       return c.json(await buildFeed(user.id, await getWeights('geral')));
     }
+
+    const fromEntries = await readFeedEntries('vocacional', areaMatch, 50, undefined, { areaMatch });
+    if (fromEntries) return c.json(fromEntries);
 
     // 2. Filtrar candidatos pela área vocacional
     const candidates = await fetchCandidates();
@@ -130,10 +220,15 @@ feedRoutes.get('/institucional', verifyJwt, async (c) => {
 
     if (!instituicao?.nome) {
       // Utilizador sem instituição — delega para feed geral
+      const fromEntries = await readFeedEntries('geral');
+      if (fromEntries) return c.json(fromEntries);
       return c.json(await buildFeed(user.id, await getWeights('geral')));
     }
 
     const instituicaoNome = instituicao.nome;
+    const instituicaoId = instituicao.id !== undefined ? String(instituicao.id) : instituicaoNome;
+    const fromEntries = await readFeedEntries('institucional', undefined, 50, instituicaoId, { instituicaoNome });
+    if (fromEntries) return c.json(fromEntries);
 
     // 2. Buscar experiências da instituição (principal tipo de conteúdo B2B)
     const [experiencias, feedPosts] = await Promise.all([
