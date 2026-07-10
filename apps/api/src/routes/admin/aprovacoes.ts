@@ -35,6 +35,11 @@ adminAprovacoesRoutes.get('/pendentes', async (c) => {
   if (!tipoResult.success) {
     return c.json({ error: 'Tipo inválido. Use mentor ou instituicao.' }, 400);
   }
+  if (tipoResult.data === 'instituicao') {
+    return c.json({
+      error: 'A verificação institucional usa /instituicoes/admin/pendentes e /instituicoes/admin/:id/estado.',
+    }, 410);
+  }
 
   try {
     const pendentes = await aprovacaoService.listarPendentes(tipoResult.data);
@@ -61,6 +66,7 @@ adminAprovacoesRoutes.post(
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 404) return c.json({ error: 'Perfil não encontrado' }, 404);
+      if (status === 410) return c.json({ error: 'Instituições usam o fluxo canónico de verificação institucional.' }, 410);
       log.error({ err, perfilId }, '[aprovacoes] erro ao aprovar perfil');
       return c.json({ error: 'Erro ao aprovar perfil' }, 500);
     }
@@ -85,6 +91,7 @@ adminAprovacoesRoutes.post(
     } catch (err) {
       const status = (err as { status?: number }).status;
       if (status === 404) return c.json({ error: 'Perfil não encontrado' }, 404);
+      if (status === 410) return c.json({ error: 'Instituições usam o fluxo canónico de verificação institucional.' }, 410);
       log.error({ err, perfilId }, '[aprovacoes] erro ao rejeitar perfil');
       return c.json({ error: 'Erro ao rejeitar perfil' }, 500);
     }

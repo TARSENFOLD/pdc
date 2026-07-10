@@ -220,7 +220,9 @@ O PDC será o lugar de referência para preparar e decidir percursos académicos
 
 - Gateway de pagamento em produção (fase comercial posterior).
 - Turborepo / Nx (over-engineering para o estágio atual).
-- Upload de vídeos > 50MB (usar embed YouTube/Vimeo).
+- Upload profissional de vídeos > 50MB no fluxo rápido. Vídeos longos usam o
+  Video Service canónico: metadata no Strapi, bytes no R2 ou provider externo,
+  URLs assinadas pelo BFF e multipart/processamento assíncrono quando habilitado.
 - Antifraude biométrico avançado.
 
 *Última validação: 29 de Abril de 2026 · Fonte de verdade: este documento.*

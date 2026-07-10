@@ -23,6 +23,12 @@
     },
     "titulo": { "type": "string", "required": true },
     "url": { "type": "string" },
+    "video": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::video.video"
+    },
+    "videoId": { "type": "string" },
     "conteudo": { "type": "richtext" },
     "duracaoMin": { "type": "integer" },
     "ordem": { "type": "integer", "default": 0 },

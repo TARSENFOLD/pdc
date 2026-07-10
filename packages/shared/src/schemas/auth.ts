@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TipoInstituicaoSchema } from './instituicoes-base.js';
 import {
   AceiteLegalSchema,
   ConsentimentoEncarregadoSchema,
@@ -64,8 +65,7 @@ export const OAuthFinalizarMentorPayloadSchema = OAuthFinalizarComplianceSchema.
 export const OAuthFinalizarInstituicaoPayloadSchema = OAuthFinalizarComplianceSchema.extend({
   role: z.literal('instituicao'),
   nomeInstituicao: z.string().min(1),
-  tipoInstituicao: z.string().min(1),
-  documentos: z.array(OAuthFinalizarDocumentoSchema).min(1),
+  tipoInstituicao: TipoInstituicaoSchema,
 });
 
 export const OAuthFinalizarRoleChoiceSchema = z.discriminatedUnion('role', [

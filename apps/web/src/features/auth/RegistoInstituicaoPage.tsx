@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '@/lib/api/auth';
@@ -14,8 +14,12 @@ import { buildAceiteLegal } from './registrationCompliance';
 
 const TIPOS = [
   { value: 'universidade', label: 'Universidade' },
-  { value: 'escola_tecnica', label: 'Escola Técnica' },
+  { value: 'instituto', label: 'Instituto' },
+  { value: 'escola', label: 'Escola' },
   { value: 'centro_formacao', label: 'Centro de Formação' },
+  { value: 'empresa', label: 'Empresa' },
+  { value: 'ong', label: 'ONG' },
+  { value: 'laboratorio', label: 'Laboratório' },
   { value: 'outro', label: 'Outro' }
 ] as const;
 
@@ -33,8 +37,6 @@ function isValidRegiao(value: string): value is Regiao {
   return (REGIOES as readonly string[]).includes(value);
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-
 export function RegistoInstituicaoPage() {
   const [form, setForm] = useState({
     nome: '', 
@@ -45,8 +47,6 @@ export function RegistoInstituicaoPage() {
     nif: '',
     aceiteLegal: buildAceiteLegal(),
   });
-  const [docFile, setDocFile] = useState<File | null>(null);
-  const [docError, setDocError] = useState('');
   const [error, setError] = useState('');
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [legalError, setLegalError] = useState('');
@@ -54,7 +54,6 @@ export function RegistoInstituicaoPage() {
   const [passwordError, setPasswordError] = useState('');
   const [neuralState, setNeuralState] = useState<NeuralState>('idle');
   const [success, setSuccess] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const mutation = useMutation({
     mutationFn: (payload: RegistoInstituicaoPayload) => authApi.registarInstituicao(payload),
@@ -75,15 +74,6 @@ export function RegistoInstituicaoPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    setDocError('');
-    if (!file) { setDocFile(null); return; }
-    if (file.type !== 'application/pdf') { setDocError('Apenas ficheiros PDF.'); setDocFile(null); return; }
-    if (file.size > MAX_FILE_SIZE) { setDocError('Ficheiro excede 10 MB.'); setDocFile(null); return; }
-    setDocFile(file);
-  }
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -101,7 +91,6 @@ export function RegistoInstituicaoPage() {
       ...form,
       aceiteLegal: buildAceiteLegal(),
       nomeInstituicao: form.nome,
-      documentos: docFile ? [docFile.name] : [],
     });
   }
 
@@ -181,14 +170,6 @@ export function RegistoInstituicaoPage() {
                 {REGIOES.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink-secondary">Documento de acreditação (PDF, máx 10 MB)</label>
-            <input ref={fileRef} type="file" accept=".pdf" onChange={handleFileChange}
-              className="block w-full text-sm text-ink-secondary file:mr-4 file:rounded-md file:border-0 file:bg-emerald-500/10 file:text-emerald-400 file:px-3 file:py-2 file:text-xs file:font-bold hover:file:bg-emerald-500/20 cursor-pointer" />
-            {docFile ? <p className="text-xs font-medium text-emerald-500 mt-1">✓ {docFile.name}</p> : null}
-            {docError ? <p className="text-xs text-error mt-1">{docError}</p> : null}
           </div>
 
           <LegalConsentField checked={legalAccepted} onCheckedChange={setLegalAccepted} error={legalError} />

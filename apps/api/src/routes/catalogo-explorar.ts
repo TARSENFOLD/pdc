@@ -21,6 +21,7 @@ interface CatalogoExplorarEntity {
   areaInteresse?: string;
   regiao?: string;
   avatarUrl?: string;
+  logoUrl?: string;
 }
 
 type CatalogoField = keyof Omit<CatalogoExplorarEntity, 'id'>;
@@ -40,7 +41,7 @@ const CONFIGS: Record<ExplorarItemTipo, ExplorarConfig> = {
   simulacao: { endpoint: '/simulacoes', titleField: 'titulo', descField: 'descricao', areaField: 'area', capaField: 'capaUrl' },
   experiencia: { endpoint: '/experiencias', titleField: 'titulo', descField: 'descricao', areaField: 'area', capaField: 'capaUrl' },
   mentor: { endpoint: '/perfis', titleField: 'nome', descField: 'bio', areaField: 'areaInteresse', capaField: 'avatarUrl', isMentor: true },
-  instituicao: { endpoint: '/perfis', titleField: 'nome', descField: 'bio', areaField: 'regiao', capaField: 'avatarUrl', isInstituicao: true },
+  instituicao: { endpoint: '/instituicoes', titleField: 'nome', descField: 'descricao', areaField: 'regiao', capaField: 'logoUrl', isInstituicao: true },
   perfil: { endpoint: '/perfis', titleField: 'nome', descField: 'bio', areaField: 'regiao', capaField: 'avatarUrl' },
 };
 
@@ -84,7 +85,7 @@ catalogoExplorarRoutes.get('/', async (c) => {
       params['filters[role][name][$eq]'] = 'mentor';
       params['filters[aprovado][$eq]'] = 'true';
     } else if (cfg.isInstituicao) {
-      params['filters[role][name][$eq]'] = 'instituicao';
+      params['filters[estado][$eq]'] = 'verified';
     } else {
       applyPublicCatalogStateFilter(params);
     }

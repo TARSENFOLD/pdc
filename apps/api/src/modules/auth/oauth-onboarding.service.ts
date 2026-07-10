@@ -80,15 +80,10 @@ export const oauthOnboardingService = {
         strapiPayload.documentos = payload.documentos;
       }
     } else if (payload.role === 'instituicao') {
-      strapiPayload.nomeInstituicao = payload.nomeInstituicao;
-      strapiPayload.tipoInstituicao = payload.tipoInstituicao;
-      if (payload.documentos.length > 0) {
-        strapiPayload.documentos = payload.documentos;
-      }
       await provisionInstituicaoForUser(userId, {
         nome: payload.nomeInstituicao,
+        nomeLegal: payload.nomeInstituicao,
         tipo: payload.tipoInstituicao,
-        documentos: payload.documentos,
       });
     }
 

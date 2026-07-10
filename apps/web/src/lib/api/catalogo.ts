@@ -1,7 +1,7 @@
 import { http } from './http';
 import {
   CursoPublico, SimulacaoPublica, ExperienciaPublica,
-  MentorPublico, InstituicaoPublica, PerfilCompleto,
+  MentorPublico, InstituicaoPublicaDetalhada, PerfilCompleto,
   ExplorarResultado, CatalogoMeta, ExplorarItemTipo, AreaVocacional, PerfilPublicoBasico, Role,
 } from '@pdc/shared';
 
@@ -59,10 +59,10 @@ export const catalogoApi = {
     http.get<DetailResponse<MentorPublico>>(`/catalogo/mentores/${id}`).then((r) => r.data),
 
   getInstituicoes: (f?: InstituicaoFiltersPublic) =>
-    http.get<CatalogoResponse<InstituicaoPublica>>(`/catalogo/instituicoes${qs({ ...f })}`),
+    http.get<CatalogoResponse<InstituicaoPublicaDetalhada>>(`/catalogo/instituicoes${qs({ ...f })}`),
 
   getInstituicao: (slug: string) =>
-    http.get<DetailResponse<InstituicaoPublica>>(`/catalogo/instituicoes/${slug}`).then((r) => r.data),
+    http.get<DetailResponse<InstituicaoPublicaDetalhada>>(`/catalogo/instituicoes/${slug}`).then((r) => r.data),
 
   getPessoas: (f?: PessoaFiltersPublic) => {
     const { pageSize, ...rest } = f ?? {};

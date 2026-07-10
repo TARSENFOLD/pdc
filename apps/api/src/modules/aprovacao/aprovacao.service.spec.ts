@@ -130,6 +130,19 @@ describe('aprovacaoService', () => {
       expect(redisDelMock).not.toHaveBeenCalled();
       expect(publishWithOutboxMock).not.toHaveBeenCalled();
     });
+
+    it('rejects instituicao approval through legacy perfil flow', async () => {
+      vi.mocked(strapiGet).mockResolvedValue(
+        perfilListResponse([{ id: '5', userId: '20', tipo: 'instituicao' }]),
+      );
+
+      await expect(aprovacaoService.aprovarPerfil('5', 'admin-1')).rejects.toMatchObject({
+        status: 410,
+      });
+      expect(strapiPut).not.toHaveBeenCalled();
+      expect(redisDelMock).not.toHaveBeenCalled();
+      expect(publishWithOutboxMock).not.toHaveBeenCalled();
+    });
   });
 
   describe('rejeitarPerfil', () => {
@@ -183,6 +196,19 @@ describe('aprovacaoService', () => {
         status: 500,
         message: 'Perfil sem userId associado',
       });
+      expect(strapiPut).not.toHaveBeenCalled();
+      expect(redisDelMock).not.toHaveBeenCalled();
+      expect(publishWithOutboxMock).not.toHaveBeenCalled();
+    });
+
+    it('rejects instituicao rejection through legacy perfil flow', async () => {
+      vi.mocked(strapiGet).mockResolvedValue(
+        perfilListResponse([{ id: '7', userId: '30', tipo: 'instituicao' }]),
+      );
+
+      await expect(
+        aprovacaoService.rejeitarPerfil('7', 'admin-1', 'Documentos em falta e ilegíveis'),
+      ).rejects.toMatchObject({ status: 410 });
       expect(strapiPut).not.toHaveBeenCalled();
       expect(redisDelMock).not.toHaveBeenCalled();
       expect(publishWithOutboxMock).not.toHaveBeenCalled();

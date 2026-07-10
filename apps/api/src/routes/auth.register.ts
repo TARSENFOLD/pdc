@@ -72,12 +72,9 @@ registerRoutes.post('/mentor', zValidator('json', RegistoMentorPayloadSchema), a
 });
 
 registerRoutes.post('/instituicao', zValidator('json', RegistoInstituicaoPayloadSchema), async (c) => {
-  const { nome, email, password, regiao, tipo, documentos, aceiteLegal } = c.req.valid('json');
+  const { nome, nomeInstituicao, email, password, regiao, tipo, nif, aceiteLegal } = c.req.valid('json');
   try {
-    const user = await authService.registerWithRole(email, password, nome, 'instituicao', { 
-      regiao, 
-      tipoInstituicao: tipo, 
-      documentos: documentos ?? [], 
+    const user = await authService.registerWithRole(email, password, nome, 'instituicao', {
       aprovado: false 
     }, {
       aceiteLegal,
@@ -85,10 +82,11 @@ registerRoutes.post('/instituicao', zValidator('json', RegistoInstituicaoPayload
     });
     try {
       await provisionInstituicaoForUser(user.id, {
-        nome,
+        nome: nomeInstituicao,
+        nomeLegal: nomeInstituicao,
         tipo,
+        nif,
         ...(regiao !== undefined ? { regiao } : {}),
-        ...(documentos !== undefined ? { documentos } : {}),
       });
     } catch (error) {
       try {

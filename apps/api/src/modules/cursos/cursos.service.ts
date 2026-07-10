@@ -122,6 +122,7 @@ async function syncCursoItems(moduloId: string, existingItems: ExistingModuloIte
       tipo: item.tipo,
       conteudo: item.conteudo,
       url: item.url,
+      videoId: item.videoId,
       ordem: item.ordem,
       modulo: moduloId,
     };

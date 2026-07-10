@@ -3,7 +3,7 @@
 > Inventário honesto de problemas técnicos identificados, classificados e documentados.
 > **Nenhum destes foi "varrido para debaixo do tapete"** — todos são decisões conscientes com justificação.
 >
-> Última actualização: 4 de Julho de 2026 · H2-T7: BUG-08 resolvido (remoção de `startedAt`/`finishedAt` em `tentativa`, ADR-045); D1/D2 reconciliados; DT-23 adicionado.
+> Última actualização: 10 de Julho de 2026 · ADR-036 implementada em modo aditivo; DT-24 adicionado para backfill operacional de instituições legadas.
 
 ---
 
@@ -100,6 +100,27 @@ const items = await mapConcurrent(candidates, async (cand) => {
 1. Batch `getItemStats` — aceitar array de IDs, retornar map
 2. Single Strapi query com filtros `[$in]` em vez de N queries individuais
 3. Pré-computar stats em background worker
+
+---
+
+## 🔵 Operacional / Migração
+
+### DT-24 — Backfill de instituições canónicas em produção
+
+**Ficheiro:** `infra/strapi/scripts/migrate-instituicoes-canonicas.ts`
+
+**Problema:** Produção pode conter perfis antigos com `tipo = instituicao` e sem relação `instituicaoGerida`. O fluxo novo já cria `instituicao` canónica, mas dados históricos precisam de backfill.
+
+**Estado:** Código de migração aditiva/idempotente existe. Falta execução controlada no ambiente de produção com Strapi disponível e validação pós-run.
+
+**Risco:** Perfis institucionais legados podem não conseguir editar a entidade canónica até serem ligados a `instituicaoGerida`.
+
+**Para executar:**
+1. Fazer backup/ snapshot antes do run.
+2. Executar a rotina Strapi `migrateInstituicoesCanonicas` em janela controlada.
+3. Verificar contadores `migrated`, `skipped`, `failed` nos logs.
+4. Reexecutar para confirmar idempotência (`skipped` esperado, `failed=0`).
+5. Só depois considerar ADR futura para remover campos legados de `perfil`.
 
 ---
 

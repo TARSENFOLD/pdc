@@ -106,14 +106,14 @@ const QUICK_ACTIONS_BY_ROLE: Record<string, QuickActionItem[]> = {
     { label: 'Relatórios', to: '/app/dashboard/instituicao', icon: 'BarChart2', variant: 'secondary' },
   ],
   moderador: [
-    { label: 'Aprovações', to: '/app/admin/aprovacoes', icon: 'CheckCircle', variant: 'primary' },
+    { label: 'Aprovações', to: '/app/moderacao/aprovacoes', icon: 'CheckCircle', variant: 'primary' },
     { label: 'Moderação', to: '/app/moderacao', icon: 'Shield', variant: 'secondary' },
     { label: 'Simulações', to: '/app/simulacoes', icon: 'FlaskConical', variant: 'secondary' },
     { label: 'Feed', to: '/app/feed', icon: 'Zap', variant: 'secondary' },
     { label: 'Dashboard', to: '/app/dashboard/moderador', icon: 'BarChart2', variant: 'secondary' },
   ],
   super_admin: [
-    { label: 'Aprovações', to: '/app/admin/aprovacoes', icon: 'CheckCircle', variant: 'primary' },
+    { label: 'Aprovações', to: '/app/moderacao/aprovacoes', icon: 'CheckCircle', variant: 'primary' },
     { label: 'Moderação', to: '/app/moderacao', icon: 'Shield', variant: 'secondary' },
     { label: 'Dashboard', to: '/app/dashboard/admin', icon: 'BarChart2', variant: 'secondary' },
     { label: 'Feed', to: '/app/feed', icon: 'Zap', variant: 'secondary' },
@@ -238,7 +238,7 @@ async function computeHomeSummary(userId: string, role: string): Promise<HomeSum
   const inProgressTentativa = tentativasRes.data.find((t) => t.status === 'em_progresso');
   let nextDirective: HomeSummary['nextDirective'] = null;
   if (role === 'super_admin' || role === 'moderador') {
-    nextDirective = { label: 'Aprovar perfis pendentes', to: '/app/admin/aprovacoes', type: 'review', description: 'Perfis aguardam aprovação' };
+    nextDirective = { label: 'Rever conteúdos pendentes', to: '/app/moderacao/aprovacoes', type: 'review', description: 'Conteúdos aguardam moderação' };
   } else if (inProgressInscricao?.curso) {
     nextDirective = { label: `Continua "${inProgressInscricao.curso.titulo ?? 'o curso'}"`, to: `/app/cursos/${String(inProgressInscricao.curso.id)}`, type: 'learning', description: `${String(inProgressInscricao.progressoPercentual ?? 0)}% concluído` };
   } else if (inProgressTentativa?.simulacao) {

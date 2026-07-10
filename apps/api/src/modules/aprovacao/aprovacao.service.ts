@@ -105,6 +105,9 @@ export const aprovacaoService = {
     if (!perfil) {
       throw Object.assign(new Error('Perfil não encontrado'), { status: 404 });
     }
+    if (perfil.tipo === 'instituicao') {
+      throw Object.assign(new Error('Instituições são verificadas pelo fluxo institucional canónico'), { status: 410 });
+    }
 
     const userId = requirePerfilUserId(perfil);
 
@@ -144,6 +147,9 @@ export const aprovacaoService = {
     const perfil = res.data[0];
     if (!perfil) {
       throw Object.assign(new Error('Perfil não encontrado'), { status: 404 });
+    }
+    if (perfil.tipo === 'instituicao') {
+      throw Object.assign(new Error('Instituições são verificadas pelo fluxo institucional canónico'), { status: 410 });
     }
 
     const userId = requirePerfilUserId(perfil);

@@ -68,6 +68,24 @@ Quatro waves PROD-A/B/C/D entregues sequencialmente. Objetivo: desbloquear deplo
 
 ---
 
+## 2026-07-10 — Separação Canónica Instituição vs Perfil Gestor
+
+**Caixa:** C — ADR-036 já aceitava que `perfil.tipo = instituicao` misturava conta gestora e dados organizacionais.
+
+**Decisão implementada:** `perfil.tipo = instituicao` permanece apenas como role/RBAC da conta gestora. A fonte canónica da organização é `instituicao`.
+
+**Entregue neste slice:**
+- registo institucional exige `nomeInstituicao`, `tipo` canónico e `nif`;
+- registo/OAuth deixam de persistir `nomeInstituicao`, `tipoInstituicao` e documentos organizacionais no `perfil`;
+- `provisionInstituicaoForUser` cria/retorna `instituicao` com `nomeLegal`, `tipo`, `nif`, `regiao` e `estado=draft`;
+- catálogo público e explorar passam a ler instituições de `/instituicoes`, não de `/perfis`;
+- `/admin/aprovacoes` fica restrito a perfis pessoais; instituições usam `/instituicoes/admin/pendentes` e `/instituicoes/admin/:id/estado`;
+- UI pública institucional remove link para `/perfil/:slug`; documentos reais entram pelo editor institucional autenticado.
+
+**Migração operacional:** `infra/strapi/scripts/migrate-instituicoes-canonicas.ts` é a rotina aditiva/idempotente para backfill de perfis institucionais antigos sem `instituicaoGerida`. Executar em produção somente com janela controlada e Strapi disponível.
+
+---
+
 ## Phase G — Compliance Pass (Wave A, 2026-05-09)
 
 **Objetivo:** Auditoria de conformidade pós-PROD-A/B/C/D. As 4 waves declaravam "14/14 done · 0 partial · 0 missing" mas tinham **6 lacunas reais** + drift documental.

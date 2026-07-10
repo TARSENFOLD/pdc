@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../../lib/env.js';
 import fs from 'node:fs';
@@ -51,6 +51,20 @@ export async function generatePresignedUrl(
     Bucket: env.R2_BUCKET,
     Key: key,
     ContentType: mimeType,
+  });
+  return getSignedUrl(getS3(), command, { expiresIn: expiresInSeconds });
+}
+
+export async function generatePresignedReadUrl(
+  key: string,
+  expiresInSeconds = 900
+): Promise<string> {
+  if (!isR2Configured()) {
+    return getPublicUrl(key);
+  }
+  const command = new GetObjectCommand({
+    Bucket: env.R2_BUCKET,
+    Key: key,
   });
   return getSignedUrl(getS3(), command, { expiresIn: expiresInSeconds });
 }

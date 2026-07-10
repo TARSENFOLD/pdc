@@ -57,7 +57,20 @@ Draft · Depende de `spec:G15`, `spec:F1` (OG dinâmico).
   - **Persistência**: timestamp de última regeneração para evitar thundering herd.
   - **Impacto**: utilizador troca avatar → 30s depois aparece em todas as superfícies (perfil, feed, comments) sem cache stale.
 
-### G8-T4 — Background processing para mídia pesada
+### G8-T4 — Video Service + background processing para mídia pesada
+
+- `Video` é entidade própria e referenciável por Curso, Experiência, Post e
+  Simulação. O conteúdo guarda `videoId`; URLs soltas permanecem legado.
+- Modos canónicos:
+  - `external`: YouTube, Vimeo, Loom ou outro provider autorizado.
+  - `quick_upload`: upload rápido para R2, limite por endpoint/tipo, ideal para
+    posts e demonstrações.
+  - `professional_upload`: multipart para R2/provider, processamento assíncrono
+    e publicação apenas após `ready`.
+- Strapi guarda apenas metadados: provider, visibilidade, duração, thumbnail,
+  chave original, streamUrl, legendas, capítulos, status e owner.
+- BFF gera URL de playback assinada para `protected/private`; público pode usar
+  CDN direta quando a política permitir.
 
 - Vídeos > 10 MB: enfileira processamento em Upstash queue.
 - Worker Railway separado faz: thumbnail extraction, transcoding (se necessário), upload de variantes a R2.

@@ -58,6 +58,14 @@ function listResponse<T extends { id: string | number }>(data: T[]): StrapiListR
 describe('webPushService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.doMock('../../lib/env.js', () => ({
+      env: {
+        WEB_PUSH_PUBLIC_KEY: 'public-key',
+        WEB_PUSH_PRIVATE_KEY: 'private-key',
+        WEB_PUSH_SUBJECT: 'mailto:ops@usepdc.com',
+      },
+    }));
+    vi.mocked(webPush.sendNotification).mockResolvedValue({ statusCode: 201, body: '', headers: {} });
     // Garante um módulo fresco ligado ao vi.mock(env) deste ficheiro, evitando
     // contaminação por cache de import entre ficheiros no mesmo worker vitest
     // (o side-effect top-level configureVapid() deve correr com o env mockado correcto).

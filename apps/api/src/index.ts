@@ -46,6 +46,7 @@ import { mentoriaRoutes } from './routes/mentorias.js';
 import { projetoRoutes } from './routes/projetos.js';
 import { vocacionalRoutes } from './routes/vocacional.js';
 import { mediaRoutes, mediaPublicRoutes } from './routes/media.js';
+import { videoRoutes } from './routes/videos.js';
 import { notificacaoRoutes } from './routes/notificacoes.js';
 import { perfilRoutes } from './routes/perfis.js';
 import { denunciaRoutes } from './routes/denuncias.js';
@@ -169,6 +170,7 @@ app.route('/vocacional', vocacionalRoutes);
 app.route('/media', mediaPublicRoutes);
 // Protected media endpoints require authenticated users.
 app.route('/media', mediaRoutes);
+app.route('/videos', videoRoutes);
 app.route('/notificacoes', notificacaoRoutes);
 app.route('/perfis', perfilRoutes);
 app.route('/data-rights', dataRightsRoutes);
