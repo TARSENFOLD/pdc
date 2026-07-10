@@ -7,14 +7,22 @@ import {
   type FeedEventPayload
 } from '@pdc/shared';
 import { strapiPost } from '../strapi/strapi.client.js';
+import { redis } from '../../lib/redis.js';
 import pino from 'pino';
+import { resolveFeedEntityId, resolveFeedEntityType } from '../feed/feed-entity.resolver.js';
 
 const log = pino({ name: 'feed-hook' });
 
-function resolveEntityId(payload: FeedEventPayload): string | undefined {
-  const raw = payload.cursoId ?? payload.simulacaoId ?? payload.experienciaId ?? payload.projetoId ?? payload.postId ?? payload.programaId ?? payload.id;
-  if (typeof raw === 'string' || typeof raw === 'number') return String(raw);
-  return undefined;
+async function invalidateFeedCache(source: string, area?: string, instituicaoId?: string | number): Promise<void> {
+  const institutionalKey = instituicaoId ? `feed:${source}:${String(instituicaoId)}` : `feed:${source}:all`;
+  const results = await Promise.allSettled([
+    redis.del(institutionalKey),
+    redis.del(`feed:${source}:${area ?? 'all'}`),
+    redis.del('feed:trending:all'),
+  ]);
+  for (const r of results) {
+    if (r.status === 'rejected') log.warn({ err: r.reason }, 'Falha ao invalidar cache de feed');
+  }
 }
 
 export const feedHook: EcosystemHook = {
@@ -29,7 +37,8 @@ export const feedHook: EcosystemHook = {
       DomainEventName.CURSO_PUBLICADO,
       DomainEventName.SIMULACAO_PUBLICADA,
       DomainEventName.EXPERIENCIA_PUBLICADA,
-      DomainEventName.PROJETO_PUBLICADO,
+       DomainEventName.PROJETO_PUBLICADO,
+       DomainEventName.PROGRAMA_PUBLICADO,
       DomainEventName.POST_PUBLICADO
     ];
 
@@ -44,20 +53,25 @@ export const feedHook: EcosystemHook = {
       // REGRA G15: Decidir fonte (Institucional vs Vocacional)
       // Se tiver instituicaoId no payload (vindo do BFF), vai para Institucional
       const source = payload.instituicaoId ? 'institucional' : 'vocacional';
-      const entityId = resolveEntityId(payload);
+      const entityId = resolveFeedEntityId(payload);
       if (!entityId) return { status: 'fatal_error', reason: 'entityId-missing' };
+      const entityType = resolveFeedEntityType(event.name);
+      if (!entityType) return { status: 'skipped', reason: 'event-not-eligible-for-feed' };
 
       await strapiPost<unknown>('/feed-entries', {
-        entityType: event.name.split('.')[0], // 'curso', 'simulacao', etc
+        entityType,
         entityId,
-        autorId: String(autorId),
+        autorId: String(autorId ?? ''),
         titulo: payload.titulo,
         corpo: payload.descricao || payload.conteudo,
         area: payload.area,
         source,
+        instituicaoId: payload.instituicaoId ? String(payload.instituicaoId) : undefined,
         eventId: event.id, // Idempotência via Unique Constraint no Strapi
         publicadoEm: event.timestamp
       });
+
+      await invalidateFeedCache(source, payload.area, payload.instituicaoId);
 
       return { status: 'sent', data: { source } };
     } catch (err) {

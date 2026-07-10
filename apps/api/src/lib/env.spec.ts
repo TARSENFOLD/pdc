@@ -22,6 +22,12 @@ function setBaseEnv(nodeEnv: 'development' | 'production' | 'test' = 'production
     'SENDGRID_API_KEY',
     'SENDGRID_FROM_EMAIL',
     'RESEND_API_KEY',
+    'UPSTASH_REDIS_REST_URL',
+    'UPSTASH_REDIS_REST_TOKEN',
+    'DEEPSEEK_API_KEY',
+    'WEB_PUSH_PUBLIC_KEY',
+    'WEB_PUSH_PRIVATE_KEY',
+    'WEB_PUSH_SUBJECT',
   ]) {
     Reflect.deleteProperty(process.env, key);
   }
@@ -35,6 +41,26 @@ function setBaseEnv(nodeEnv: 'development' | 'production' | 'test' = 'production
   process.env.JWT_SECRET = 'test-jwt-secret-for-ci-minimum-32-chars';
 }
 
+function setRequiredProductionIntegrations(): void {
+  process.env.R2_ACCOUNT_ID = 'account-id';
+  process.env.R2_ACCESS_KEY_ID = 'access-key';
+  process.env.R2_SECRET_ACCESS_KEY = 'secret-key';
+  process.env.R2_PUBLIC_URL = 'https://media.example.com';
+  process.env.UPSTASH_REDIS_REST_URL = 'https://redis.example.com';
+  process.env.UPSTASH_REDIS_REST_TOKEN = 'redis-token';
+  process.env.DEEPSEEK_API_KEY = 'deepseek-key';
+  process.env.RESEND_API_KEY = 'resend-key';
+  process.env.WEB_PUSH_PUBLIC_KEY = 'web-push-public-key';
+  process.env.WEB_PUSH_PRIVATE_KEY = 'web-push-private-key';
+  process.env.WEB_PUSH_SUBJECT = 'mailto:ops@usepdc.com';
+}
+
+function setSendGridOnly(): void {
+  process.env.SENDGRID_API_KEY = 'sendgrid-key';
+  process.env.SENDGRID_FROM_EMAIL = 'no-reply@example.com';
+  Reflect.deleteProperty(process.env, 'RESEND_API_KEY');
+}
+
 describe('env boot validation', () => {
   afterEach(() => {
     restoreEnv();
@@ -44,32 +70,56 @@ describe('env boot validation', () => {
 
   it('falha em produção quando R2_PUBLIC_URL está ausente', async () => {
     setBaseEnv('production');
-    process.env.R2_ACCOUNT_ID = 'account-id';
-    process.env.R2_ACCESS_KEY_ID = 'access-key';
-    process.env.R2_SECRET_ACCESS_KEY = 'secret-key';
-    process.env.SENDGRID_API_KEY = 'sendgrid-key';
-    process.env.SENDGRID_FROM_EMAIL = 'no-reply@example.com';
+    setRequiredProductionIntegrations();
+    Reflect.deleteProperty(process.env, 'R2_PUBLIC_URL');
+    setSendGridOnly();
 
     await expect(import('./env.js')).rejects.toThrow(/R2_PUBLIC_URL required in production/);
   });
 
   it('falha em produção quando nenhum provider de email está configurado', async () => {
     setBaseEnv('production');
-    process.env.R2_ACCOUNT_ID = 'account-id';
-    process.env.R2_ACCESS_KEY_ID = 'access-key';
-    process.env.R2_SECRET_ACCESS_KEY = 'secret-key';
-    process.env.R2_PUBLIC_URL = 'https://media.example.com';
+    setRequiredProductionIntegrations();
+    Reflect.deleteProperty(process.env, 'RESEND_API_KEY');
 
     await expect(import('./env.js')).rejects.toThrow(/SENDGRID_API_KEY or RESEND_API_KEY required in production/);
   });
 
+  it('falha em produção quando variável obrigatória ainda contém placeholder', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    process.env.STRAPI_API_TOKEN = '<your-strapi-api-token>';
+
+    await expect(import('./env.js')).rejects.toThrow(/STRAPI_API_TOKEN required in production/);
+  });
+
+  it('falha em produção quando VAPID web-push não está configurado', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    Reflect.deleteProperty(process.env, 'WEB_PUSH_PRIVATE_KEY');
+
+    await expect(import('./env.js')).rejects.toThrow(/WEB_PUSH_PRIVATE_KEY required in production/);
+  });
+
+  it('falha em produção quando DEV_SKIP_OTP está activo (security guard)', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    process.env.DEV_SKIP_OTP = 'true';
+
+    await expect(import('./env.js')).rejects.toThrow(/DEV_SKIP_OTP must not be enabled in production/);
+  });
+
+  it('falha em produção quando WEB_PUSH_SUBJECT não usa mailto: nem https:', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    process.env.WEB_PUSH_SUBJECT = 'ops@usepdc.com';
+
+    await expect(import('./env.js')).rejects.toThrow(/WEB_PUSH_SUBJECT must start with mailto: or https:/);
+  });
+
   it('aceita produção quando R2 e um provider de email estão configurados', async () => {
     setBaseEnv('production');
-    process.env.R2_ACCOUNT_ID = 'account-id';
-    process.env.R2_ACCESS_KEY_ID = 'access-key';
-    process.env.R2_SECRET_ACCESS_KEY = 'secret-key';
-    process.env.R2_PUBLIC_URL = 'https://media.example.com';
-    process.env.RESEND_API_KEY = 'resend-key';
+    setRequiredProductionIntegrations();
 
     const { validateEnv } = await import('./env.js');
 
@@ -77,6 +127,7 @@ describe('env boot validation', () => {
       NODE_ENV: 'production',
       R2_PUBLIC_URL: 'https://media.example.com',
       RESEND_API_KEY: 'resend-key',
+      WEB_PUSH_SUBJECT: 'mailto:ops@usepdc.com',
     });
   });
 
