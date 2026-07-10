@@ -10,10 +10,27 @@ import pino from 'pino';
 import { getAuthCookieOptions, setAuthCookies } from '../modules/auth/auth.helper.js';
 import { env } from '../lib/env.js';
 import { randomUUID } from 'node:crypto';
-import type { User } from '@pdc/shared';
+import { DomainEventName, type User } from '@pdc/shared';
+import { eventBus } from '../modules/events/event-bus.js';
 
 const log = pino({ name: 'otp-routes' });
 export const otpRoutes = new Hono<{ Variables: AuthVariables }>();
+
+function requestIp(c: Context<{ Variables: AuthVariables }>): string | undefined {
+  return c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || undefined;
+}
+
+async function publishLogin(c: Context<{ Variables: AuthVariables }>, userId: string): Promise<void> {
+  const ip = requestIp(c);
+  try {
+    await eventBus.publishWithOutbox(DomainEventName.LOGIN, {
+      userId,
+      ...(ip ? { ip } : {}),
+    });
+  } catch (err) {
+    log.error({ err, userId }, 'Falha ao publicar LOGIN');
+  }
+}
 
 export async function initiate2faChallenge(c: Context<{ Variables: AuthVariables }>, user: User) {
   const allowOtpBypass = env.NODE_ENV === 'development' || env.NODE_ENV === 'test';
@@ -24,6 +41,7 @@ export async function initiate2faChallenge(c: Context<{ Variables: AuthVariables
     const { accessToken, refreshToken } = await authService.generateTokens(user);
     await authService.saveRefreshToken(user.id, refreshToken);
     setAuthCookies(c, accessToken, refreshToken);
+    await publishLogin(c, user.id);
     return c.json(user);
   }
 
@@ -127,6 +145,7 @@ otpRoutes.post('/verify', zValidator('json', otpVerifySchema), async (c) => {
     setAuthCookies(c, accessToken, refreshToken);
     deleteCookie(c, 'auth_challenge');
     await redis.del(`auth_challenge:${challengeId}`);
+    await publishLogin(c, user.id);
     return c.json(user);
   } catch {
     return c.json({ error: 'Erro interno' }, 500);

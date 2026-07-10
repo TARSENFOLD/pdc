@@ -1,5 +1,6 @@
 import { http } from '../api/http.js';
 import type { TelemetriaTipo, TelemetriaEvento, TelemetriaSummary } from '@pdc/shared';
+import { z } from 'zod';
 
 // Re-export shared types so existing consumers keep working
 export type { TelemetriaTipo, TelemetriaEvento } from '@pdc/shared';
@@ -42,7 +43,7 @@ function isCircuitState(value: unknown): value is CircuitState {
 }
 
 function parseJson(text: string): unknown {
-  return JSON.parse(text) as unknown;
+  return z.unknown().parse(JSON.parse(text));
 }
 
 function isTelemetryEventArray(value: unknown): value is TelemetriaEvento[] {
@@ -145,7 +146,7 @@ export const telemetriaService = {
       }
     }
 
-    // 2. Fallback Seguro para BFF (Railway)
+    // 2. Fallback Seguro para BFF (VPS Hetzner)
     // Apenas se tivermos token ou se o circuito estiver aberto mas for crítico.
     // Se não houver token, o BFF vai dar 401. Evitamos a chamada para limpar logs.
     if (!token) {

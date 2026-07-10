@@ -24,6 +24,7 @@ const INTERACTION_TARGET_TYPES = new Set<string>([
   'curso',
   'simulacao',
   'experiencia',
+  'programa',
   'projeto',
   'mentor',
   'instituicao',

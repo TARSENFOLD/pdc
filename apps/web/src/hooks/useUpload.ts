@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { UploadResultSchema, type UploadResult } from '@pdc/shared';
+import { z } from 'zod';
 
 function parseJson(text: string): unknown {
-  return JSON.parse(text) as unknown;
+  return z.unknown().parse(JSON.parse(text));
 }
 
 function getUploadErrorMessage(value: unknown): string {

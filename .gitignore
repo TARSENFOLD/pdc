@@ -74,4 +74,9 @@ apps/web/lint-errors.txt
 tests/.auth/*.json
 secrets.txt
 
+# Large media files (never commit binaries >10MB)
+*.webm
+assets/img/*.jpg
+!assets/img/.gitkeep
+
 .eslintcache

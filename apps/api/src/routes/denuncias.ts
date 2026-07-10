@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import pino from 'pino';
 import { DenunciaComDetalhesSchema, type DenunciaComDetalhes } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
@@ -8,8 +9,11 @@ import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.clien
 import { rateLimitDenuncias } from '../middleware/rateLimit.js';
 import { toPaginatedResponse } from './pagination.js';
 import { writeAuditLog } from '../middleware/audit.js';
+import { eventBus } from '../modules/events/event-bus.js';
+import { DomainEventName } from '../modules/events/types.js';
 
 type Vars = { Variables: AuthVariables };
+const log = pino({ name: 'routes:denuncias' });
 
 const createSchema = z.object({
   conteudoId: z.string().min(1),
@@ -120,7 +124,21 @@ denunciaRoutes.post('/', rateLimitDenuncias, zValidator('json', createSchema), a
       estado: 'pendente',
       criadaEm: new Date().toISOString(),
     });
-    return c.json(data, 201);
+    const event = await eventBus.publishWithOutbox(DomainEventName.DENUNCIA_CRIADA, {
+      autorId: denuncianteId,
+      targetType: body.conteudoTipo,
+      targetId: body.conteudoId,
+      denunciaId: data.data.id,
+    }).catch((err: unknown) => {
+      log.error({ err, denunciaId: data.data.id }, 'Denúncia criada; falha ao publicar evento no outbox');
+      return undefined;
+    });
+    const responseBody = {
+      data: data.data,
+      meta: data.meta,
+      eventId: event?.id,
+    };
+    return c.json(responseBody, 201);
   } catch (err) {
     return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
   }
@@ -181,6 +199,14 @@ denunciaRoutes.put(
         userAgent: c.req.header('user-agent'),
         detalhes: { accao: body.accao, nota: body.nota },
       }).catch(() => {});
+
+      await eventBus.publishWithOutbox(DomainEventName.DENUNCIA_RESOLVIDA, {
+        denunciaId: id,
+        resolutorId: c.get('user').id,
+        acao: body.accao,
+      }).catch((err: unknown) => {
+        log.error({ err, denunciaId: id }, 'Denúncia resolvida; falha ao publicar evento no outbox');
+      });
 
       return c.json(data);
     } catch (err) {

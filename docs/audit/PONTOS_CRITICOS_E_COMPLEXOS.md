@@ -73,13 +73,13 @@
 **Diagnóstico corrigido pela auditoria.**
 
 - `apps/api/src/modules/auth/otp.service.ts:126` — `sendOtpSms()` chama a API Twilio **real** (`https://api.twilio.com/...`). Não é sandbox.
-- `otp.service.ts:47` — Bypass `DEV_SKIP_OTP=true + otp=000000` tem **tripla protecção**: `NODE_ENV !== 'production'` AND `DEV_SKIP_OTP === 'true'` AND URL não contém `pdc-strapi.railway.app`. Robusto.
-- **Risco real identificado:** As variáveis `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` são **opcionais** no `env.ts` — se não configuradas em Railway, `sendOtpSms` lança `Error('Variáveis Twilio não configuradas')` silenciosamente no fluxo de registo.
+- `auth.otp.ts:36-39` — Bypass `DEV_SKIP_OTP=true` tem **Guard Duplo + hardening env**: `NODE_ENV === 'development'/'test'` AND `DEV_SKIP_OTP === 'true'` (runtime) + `env.ts` recusa boot se `DEV_SKIP_OTP=true` em produção (boot-time). Não existe codigo mestre 000000 nem verificação de dominio Railway (obsoleto após migração Hetzner ADR-046). Robusto. Ver `docs/guia-tecnico/dev-skip-otp.md` (revisto 2026-07-10).
+- **Risco real identificado:** As variáveis `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` são **opcionais** no `env.ts` — se não configuradas em produção, `sendOtpSms` lança `Error('Variáveis Twilio não configuradas')` silenciosamente no fluxo de registo.
 - `TWILIO_FROM` no `.env.example` aponta para `+15005550006` (número de teste Twilio) — se copiado para produção, SMS nunca chega.
 
-**Impacto real:** Não é mock — é **configuração incompleta**. Funciona se as credenciais Twilio de produção estiverem no Railway.
+**Impacto real:** Não é mock — é **configuração incompleta**. Funciona se as credenciais Twilio de produção estiverem no VPS Hetzner.
 
-**Fix mínimo:** 1. Confirmar que Railway tem `TWILIO_PHONE_NUMBER` com número real angolano/internacional. 2. Tornar as vars obrigatórias no `env.ts` para `NODE_ENV=production`.
+**Fix mínimo:** 1. Confirmar que o VPS Hetzner tem `TWILIO_PHONE_NUMBER` com número real angolano/internacional. 2. Tornar as vars obrigatórias no `env.ts` para `NODE_ENV=production`.
 
 **Ref:** `apps/api/src/modules/auth/otp.service.ts:126` · `apps/api/.env.example:23`
 

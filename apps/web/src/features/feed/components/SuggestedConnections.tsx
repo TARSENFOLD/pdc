@@ -15,7 +15,8 @@ export function SuggestedConnections() {
     queryFn: vinculosApi.sugestoes,
   });
   const connectMutation = useMutation({
-    mutationFn: (perfilId: string) => vinculosApi.criar(perfilId),
+    mutationFn: ({ id, role }: { id: string; role: string }) =>
+      vinculosApi.criar(id, role === 'mentor' ? 'student-mentor' : 'student-student'),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['vinculos'] });
       toast({ title: 'Pedido enviado', description: 'O pedido de vínculo foi enviado.', variant: 'success' });
@@ -81,7 +82,7 @@ export function SuggestedConnections() {
                 </div>
               </div>
               <button 
-                onClick={() => { connectMutation.mutate(perfil.id); }}
+                onClick={() => { connectMutation.mutate({ id: perfil.id, role: perfil.role }); }}
                 disabled={connectMutation.isPending}
                 className="shrink-0 ml-2 w-7 h-7 flex items-center justify-center rounded-sm text-[var(--ink-tertiary)] hover:text-[var(--accent-terracotta)] hover:bg-[var(--surface-elevated)] transition-colors"
                 title={t('common.conectar', 'Conectar')}

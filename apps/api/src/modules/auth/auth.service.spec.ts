@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { decodeJwt } from 'jose';
 import { z } from 'zod';
+import { DomainEventName } from '@pdc/shared';
+
+const publishWithOutboxMock = vi.hoisted(() => vi.fn().mockResolvedValue({ id: 'evt-auth-1' }));
 
 vi.mock('../../lib/env.js', () => ({
   env: {
@@ -33,6 +36,12 @@ vi.mock('../consent/consent.service.js', () => ({
 vi.mock('../reputation/reputation.service.js', () => ({
   getReputacao: vi.fn().mockResolvedValue(0),
   getTier: vi.fn().mockReturnValue('BRONZE'),
+}));
+
+vi.mock('../events/event-bus.js', () => ({
+  eventBus: {
+    publishWithOutbox: publishWithOutboxMock,
+  },
 }));
 
 import { authService } from './auth.service.js';
@@ -201,6 +210,10 @@ describe('authService.setOauthProvider', () => {
     await authService.setOauthProvider('42', 'linkedin');
 
     expect(strapiPut).toHaveBeenCalledWith('/perfis/perfil-doc-1', { oauthProvider: 'linkedin' });
+    expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.OAUTH_VINCULADO, {
+      userId: '42',
+      provider: 'linkedin',
+    });
   });
 });
 
@@ -222,6 +235,10 @@ describe('authService.findOrCreateUser', () => {
     const createUserCall = vi.mocked(strapiPostRaw).mock.calls[0];
     expect(createUserCall?.[0]).toBe('/users');
     CreateStrapiUserPayloadSchema.parse(createUserCall?.[1]);
+    expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.PERFIL_CRIADO, {
+      perfilId: 'perfil-1',
+      role: 'estudante',
+    });
   });
 });
 
@@ -265,5 +282,25 @@ describe('authService.registerWithRole', () => {
 
     expect(strapiDelete).toHaveBeenCalledWith('/perfis/perfil-doc-1');
     expect(strapiDeleteRaw).toHaveBeenCalledWith('/users/42');
+    expect(publishWithOutboxMock).not.toHaveBeenCalledWith(DomainEventName.PERFIL_CRIADO, expect.anything());
+  });
+
+  it('emite PERFIL_CRIADO após registo email bem-sucedido', async () => {
+    vi.mocked(strapiGetRaw)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(BASE_USER);
+    vi.mocked(strapiPostRaw).mockResolvedValueOnce({ user: BASE_USER });
+    vi.mocked(strapiPost).mockResolvedValueOnce({ data: { ...BASE_PERFIL }, meta: {} });
+    vi.mocked(strapiGet).mockResolvedValueOnce({
+      data: [{ ...BASE_PERFIL }],
+      meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 } },
+    });
+
+    await authService.registerWithRole('USER@PDC.AO', 'SenhaTeste123', 'Ana Ferreira', 'mentor', { areaFormacao: 'Engenharia' });
+
+    expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.PERFIL_CRIADO, {
+      perfilId: 'perfil-1',
+      role: 'mentor',
+    });
   });
 });

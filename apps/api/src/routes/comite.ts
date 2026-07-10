@@ -1,12 +1,16 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import pino from 'pino';
 import { zValidator } from '@hono/zod-validator';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { strapiGet, strapiPut, strapiPost } from '../modules/strapi/strapi.client.js';
 import { writeAuditLog } from '../middleware/audit.js';
+import { eventBus } from '../modules/events/event-bus.js';
+import { DomainEventName } from '../modules/events/types.js';
 
 type Vars = { Variables: AuthVariables };
+const log = pino({ name: 'routes:comite' });
 
 interface StrapiItem {
   id: string;
@@ -118,6 +122,17 @@ comiteRoutes.put(
         userAgent: c.req.header('user-agent'),
         detalhes: { parecer },
       }).catch(() => {});
+
+      await eventBus.publishWithOutbox(
+        acao === 'aprovar' ? DomainEventName.COMITE_APROVOU : DomainEventName.COMITE_REJEITOU,
+        {
+          targetType: tipo,
+          targetId: id,
+          membroId: user.id,
+        },
+      ).catch((err: unknown) => {
+        log.error({ err, tipo, id, acao }, 'Falha ao publicar evento de validação do comité');
+      });
 
       return c.json({ success: true, estado: novoEstado });
     } catch (err) {

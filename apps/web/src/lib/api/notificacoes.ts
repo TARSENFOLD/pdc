@@ -1,5 +1,17 @@
 import { http } from './http';
-import type { Notificacao, ContadorNotificacoes, PaginationParams } from '@pdc/shared';
+import type { Notificacao, ContadorNotificacoes, PaginationParams, WebPushSubscriptionPayload } from '@pdc/shared';
+
+export interface PushPublicKeyResponse {
+  publicKey: string;
+}
+
+export interface PushRegisterPayload {
+  token: string;
+  platform: 'web';
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
 
 export const notificacoesApi = {
   list: (params?: PaginationParams) => {
@@ -18,4 +30,19 @@ export const notificacoesApi = {
 
   getContador: () => 
     http.get<ContadorNotificacoes>('/notificacoes/contador'),
+
+  getPushPublicKey: () =>
+    http.get<PushPublicKeyResponse>('/notificacoes/push/public-key'),
+
+  registerWebPush: (subscription: WebPushSubscriptionPayload) =>
+    http.post<{ data: unknown }>('/notificacoes/push/register', {
+      token: subscription.endpoint,
+      platform: 'web',
+      endpoint: subscription.endpoint,
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth,
+    } satisfies PushRegisterPayload),
+
+  unregisterWebPush: (endpoint: string) =>
+    http.delete<{ ok: true }>('/notificacoes/push/unregister', { token: endpoint }),
 };

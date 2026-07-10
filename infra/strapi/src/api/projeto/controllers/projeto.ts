@@ -35,7 +35,12 @@ export default factories.createCoreController('api::projeto.projeto', ({ strapi 
 
         if (!projeto) return null;
 
-        const acl: AclEntry[] = projeto.acessoCoreACL || [];
+        if (!Array.isArray(projeto.acessoCoreACL)) {
+          strapi.log.warn('Projeto sem acessoCoreACL inicializado — negar mutação silenciosa', { projetoId: id });
+          throw new Error('Projeto ACL inválida');
+        }
+
+        const acl: AclEntry[] = projeto.acessoCoreACL;
         if (acl.some((entry) => String(entry.perfilId) === String(perfilId))) {
           return 'exists';
         }

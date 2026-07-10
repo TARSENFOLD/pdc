@@ -2,30 +2,27 @@ name: Deploy VPS (Hetzner)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-      - develop
-    paths:
-      - 'Dockerfile'
-      - 'apps/api/**'
-      - 'infra/strapi/**'
-      - 'docker-compose.prod.yml'
-      - 'packages/shared/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/deploy-vps.yml'
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
 
 env:
-  NODE_VERSION: "24"
   VPS_HOST: ${{ secrets.VPS_HOST }}
   VPS_USER: ${{ secrets.VPS_USER }}
   VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
   VPS_DEPLOY_DIR: /opt/pdc
 
+concurrency:
+  group: deploy-vps-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
+    # Só corre se o CI tiver terminado com sucesso. Manual dispatch ignora este guard.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,13 +32,17 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_key
           chmod 600 ~/.ssh/vps_key
+          if [ -z "${{ secrets.VPS_HOST_KEY }}" ]; then
+            echo "VPS_HOST_KEY secret is required for pinned host-key verification." >&2
+            exit 1
+          fi
+          echo "${{ secrets.VPS_HOST_KEY }}" >> ~/.ssh/known_hosts
           cat >> ~/.ssh/config <<EOL
           Host vps
             HostName ${{ secrets.VPS_HOST }}
             User ${{ secrets.VPS_USER }}
             IdentityFile ~/.ssh/vps_key
-            StrictHostKeyChecking no
-            UserKnownHostsFile /dev/null
+            StrictHostKeyChecking yes
           EOL
 
       - name: Sync repo to VPS
@@ -55,7 +56,7 @@ jobs:
             --exclude='packages/shared/node_modules' \
             --exclude='.env' \
             --exclude='.env.*' \
-            ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ env.VPS_DEPLOY_DIR }}
+            ./ vps:${{ env.VPS_DEPLOY_DIR }}
 
       - name: Deploy services on VPS
         run: |
@@ -63,9 +64,26 @@ jobs:
 
       - name: Health check API
         run: |
-          sleep 15
-          curl -sf "https://api.usepdc.com/health" || exit 1
+          wait_for() {
+            local url="$1" tries="${2:-24}"
+            for i in $(seq 1 "$tries"); do
+              curl -sf --max-time 10 "$url" >/dev/null && return 0
+              sleep 5
+            done
+            echo "Health check failed: $url" >&2
+            return 1
+          }
+          wait_for "https://api.usepdc.com/health"
 
       - name: Health check Strapi
         run: |
-          curl -sf "https://cms.usepdc.com/" || exit 1
+          wait_for() {
+            local url="$1" tries="${2:-24}"
+            for i in $(seq 1 "$tries"); do
+              curl -sf --max-time 10 "$url" >/dev/null && return 0
+              sleep 5
+            done
+            echo "Health check failed: $url" >&2
+            return 1
+          }
+          wait_for "https://cms.usepdc.com/_health"

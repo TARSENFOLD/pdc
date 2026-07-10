@@ -28,3 +28,30 @@ export const NotificacaoRealtimeSchema = z.object({
 });
 
 export type NotificacaoRealtime = z.infer<typeof NotificacaoRealtimeSchema>;
+
+export const WebPushSubscriptionKeysSchema = z.object({
+  p256dh: z.string().min(1),
+  auth: z.string().min(1),
+});
+
+export const WebPushSubscriptionSchema = z.object({
+  endpoint: z.string().url(),
+  keys: WebPushSubscriptionKeysSchema,
+});
+
+export type WebPushSubscriptionPayload = z.infer<typeof WebPushSubscriptionSchema>;
+
+export const WebPushNotificationPayloadSchema = z.object({
+  title: z.string().min(1).max(100),
+  body: z.string().min(1).max(500),
+  url: z.string().max(2048).optional(),
+  icon: z.string().max(2048).optional(),
+  badge: z.string().max(2048).optional(),
+  tag: z.string().max(128).optional(),
+  data: z.record(z.unknown()).optional(),
+}).refine(
+  (payload) => new TextEncoder().encode(JSON.stringify(payload)).length <= 4096,
+  { message: 'Payload excede o limite seguro de tamanho para Web Push (4KB)' },
+);
+
+export type WebPushNotificationPayload = z.infer<typeof WebPushNotificationPayloadSchema>;

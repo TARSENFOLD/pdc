@@ -45,6 +45,10 @@ describe('interactionRoutes', () => {
       data: [],
       meta: { pagination: { page: 1, pageSize: 25, pageCount: 0, total: 0 } },
     });
+    vi.mocked(strapiGet).mockResolvedValueOnce({
+      data: [],
+      meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
+    });
     vi.mocked(strapiPost).mockResolvedValueOnce({
       data: { id: 1 },
       meta: {},
@@ -57,6 +61,7 @@ describe('interactionRoutes', () => {
     });
 
     expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ liked: true, count: 1 });
     expect(strapiPost).toHaveBeenCalledWith('/likes', expect.objectContaining({
       actor: 'perfil-doc-7',
       targetType: 'post',
@@ -101,6 +106,10 @@ describe('interactionRoutes', () => {
       data: [{ id: 4, documentId: 'like-doc-4', targetType: 'post', targetId: 'post-1' }],
       meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
     } as StrapiListResponse<StrapiInteractionEntity>);
+    vi.mocked(strapiGet).mockResolvedValueOnce({
+      data: [],
+      meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
+    });
 
     const response = await app.request('/interactions/like', {
       method: 'POST',
@@ -109,7 +118,7 @@ describe('interactionRoutes', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ liked: false });
+    expect(await response.json()).toEqual({ liked: false, count: 0 });
     expect(strapiDelete).toHaveBeenCalledWith('/likes/like-doc-4');
     expect(strapiPost).not.toHaveBeenCalled();
   });

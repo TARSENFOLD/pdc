@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Plus, X, LinkIcon } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
 import { Button } from '@/components/ui/Button';
 import { Input, Badge, Spinner } from '@/components/ui';
-import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
 import { useMutation } from '@tanstack/react-query';
 import { conquistasApi } from '@/lib/api/conquistas';
 import { toast } from '@/hooks/useToast';
@@ -32,7 +30,6 @@ export default function ConquistaManualComposer(): React.ReactElement {
   const [mediaInput, setMediaInput] = useState('');
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [lastEventId, setLastEventId] = useState<string | null>(null);
 
   const addTag = () => {
     const t = tagInput.trim();
@@ -66,13 +63,9 @@ export default function ConquistaManualComposer(): React.ReactElement {
   const mutation = useMutation({
     mutationFn: (payload: CriarConquistaManualPayload) =>
       conquistasApi.createManual(payload),
-    onSuccess: (res) => {
+    onSuccess: () => {
       toast({ title: 'Conquista submetida!', description: 'A tua conquista será validada pelo ecossistema.', variant: 'success' });
-      if (res.eventId) {
-        setLastEventId(res.eventId);
-      } else {
-        navigate('/app/conquistas');
-      }
+      navigate('/app/conquistas');
     },
     onError: (error: unknown) => {
       toast({
@@ -256,24 +249,6 @@ export default function ConquistaManualComposer(): React.ReactElement {
         </form>
         </BuilderSection>
       </BuilderShell>
-      <AnimatePresence>
-        {lastEventId && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-canvas/95 p-6 backdrop-blur-md"
-          >
-            <div className="w-full max-w-xl">
-              <EcosystemImpactPanel
-                eventId={lastEventId}
-                variant="full"
-                onComplete={() => { navigate('/app/conquistas'); }}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

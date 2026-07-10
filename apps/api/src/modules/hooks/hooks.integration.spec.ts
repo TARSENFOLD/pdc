@@ -65,13 +65,16 @@ describe('G15: EcosystemHooks Integration', () => {
     eventBus.registerHook(notifyHook);
     
     // Mock robusto de resposta de perfil (incluindo userId para achievement)
-    vi.mocked(strapiGet).mockResolvedValue(listResponse([{
+    vi.mocked(strapiGet).mockImplementation((path: string) => {
+      if (path === '/match-suggestions') return Promise.resolve(listResponse([]));
+      return Promise.resolve(listResponse([{
         id: 'autor-1', 
         role: 'mentor', 
         reputacao: 100, 
         areasInteresse: ['Tecnologia'],
         userId: 'user-123' 
       }]));
+    });
 
     // Mock padrão de POST
     vi.mocked(strapiPost).mockResolvedValue(singleResponse({ id: 100 }));

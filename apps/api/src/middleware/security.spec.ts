@@ -1,21 +1,43 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 
+const productionEnv = {
+  NODE_ENV: 'production',
+  API_URL: 'https://api.example.com',
+  FRONTEND_URL: 'https://app.example.com',
+  STRAPI_URL: 'https://strapi.example.com',
+  STRAPI_API_TOKEN: 'strapi-token',
+  JWT_SECRET: 'jwt-secret-123456789012345678901234567890',
+  UPSTASH_REDIS_REST_URL: 'https://redis.upstash.io',
+  UPSTASH_REDIS_REST_TOKEN: 'redis-token',
+  R2_PUBLIC_URL: 'https://media.example.com',
+  R2_ACCOUNT_ID: 'account',
+  R2_ACCESS_KEY_ID: 'access',
+  R2_SECRET_ACCESS_KEY: 'secret',
+  WEB_PUSH_PUBLIC_KEY: 'web-push-public',
+  WEB_PUSH_PRIVATE_KEY: 'web-push-private',
+  WEB_PUSH_SUBJECT: 'mailto:ops@example.com',
+  RESEND_API_KEY: 'resend-key',
+  RESEND_FROM_EMAIL: 'no-reply@example.com',
+  DEEPSEEK_API_KEY: 'deepseek-key',
+  AI_PROVIDER: 'deepseek',
+  SENTRY_DSN: 'https://public@example.ingest.sentry.io/123',
+  EDGE_PUBLIC_URL: 'https://edge.example.com',
+};
+
 describe('securityMiddleware CSP', () => {
+  beforeEach(() => {
+    Object.entries(productionEnv).forEach(([key, value]) => {
+      vi.stubEnv(key, value);
+    });
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.resetModules();
   });
 
   it('remove unsafe-inline de script-src em produção e inclui destinos de conexão', async () => {
-    vi.stubEnv('NODE_ENV', 'production');
-    vi.stubEnv('R2_PUBLIC_URL', 'https://media.example.com/assets');
-    vi.stubEnv('SENTRY_DSN', 'https://public@example.ingest.sentry.io/123');
-    vi.stubEnv('EDGE_PUBLIC_URL', 'https://edge.example.com');
-    vi.stubEnv('R2_ACCOUNT_ID', 'account');
-    vi.stubEnv('R2_ACCESS_KEY_ID', 'access');
-    vi.stubEnv('R2_SECRET_ACCESS_KEY', 'secret');
-    vi.stubEnv('RESEND_API_KEY', 'resend-key');
 
     const { securityMiddleware } = await import('./security.js');
     const app = new Hono();
@@ -33,15 +55,6 @@ describe('securityMiddleware CSP', () => {
   });
 
   it('produção: connect-src não contém wildcard https: — lista apenas origins explícitos', async () => {
-    vi.stubEnv('NODE_ENV', 'production');
-    vi.stubEnv('R2_PUBLIC_URL', 'https://media.example.com/assets');
-    vi.stubEnv('SENTRY_DSN', 'https://public@example.ingest.sentry.io/123');
-    vi.stubEnv('EDGE_PUBLIC_URL', 'https://edge.example.com');
-    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://redis.upstash.io');
-    vi.stubEnv('R2_ACCOUNT_ID', 'account');
-    vi.stubEnv('R2_ACCESS_KEY_ID', 'access');
-    vi.stubEnv('R2_SECRET_ACCESS_KEY', 'secret');
-    vi.stubEnv('RESEND_API_KEY', 'resend-key');
 
     const { securityMiddleware } = await import('./security.js');
     const app = new Hono();
@@ -59,12 +72,6 @@ describe('securityMiddleware CSP', () => {
   });
 
   it('inclui frame-src com youtube/vimeo e mantém frame-ancestors none', async () => {
-    vi.stubEnv('NODE_ENV', 'production');
-    vi.stubEnv('R2_PUBLIC_URL', 'https://media.example.com/assets');
-    vi.stubEnv('R2_ACCOUNT_ID', 'account');
-    vi.stubEnv('R2_ACCESS_KEY_ID', 'access');
-    vi.stubEnv('R2_SECRET_ACCESS_KEY', 'secret');
-    vi.stubEnv('RESEND_API_KEY', 'resend-key');
 
     const { securityMiddleware } = await import('./security.js');
     const app = new Hono();

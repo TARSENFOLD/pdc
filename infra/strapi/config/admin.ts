@@ -1,24 +1,34 @@
 import type { Core } from '@strapi/strapi';
+import { requireProductionEnv } from './env-validation';
 
-const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Admin => ({
-  auth: {
-    secret: env('ADMIN_JWT_SECRET'),
-  },
-  apiToken: {
-    salt: env('API_TOKEN_SALT'),
-  },
-  transfer: {
-    token: {
-      salt: env('TRANSFER_TOKEN_SALT'),
+const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Admin => {
+  requireProductionEnv([
+    'ADMIN_JWT_SECRET',
+    'API_TOKEN_SALT',
+    'TRANSFER_TOKEN_SALT',
+    'ENCRYPTION_KEY',
+  ]);
+
+  return {
+    auth: {
+      secret: env('ADMIN_JWT_SECRET'),
     },
-  },
-  secrets: {
-    encryptionKey: env('ENCRYPTION_KEY'),
-  },
-  flags: {
-    nps: env.bool('FLAG_NPS', true),
-    promoteEE: env.bool('FLAG_PROMOTE_EE', true),
-  },
-});
+    apiToken: {
+      salt: env('API_TOKEN_SALT'),
+    },
+    transfer: {
+      token: {
+        salt: env('TRANSFER_TOKEN_SALT'),
+      },
+    },
+    secrets: {
+      encryptionKey: env('ENCRYPTION_KEY'),
+    },
+    flags: {
+      nps: env.bool('FLAG_NPS', true),
+      promoteEE: env.bool('FLAG_PROMOTE_EE', true),
+    },
+  };
+};
 
 export default config;
