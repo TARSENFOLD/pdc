@@ -1,4 +1,5 @@
 import { parse, type ConnectionOptions } from 'pg-connection-string';
+import { requireProductionEnv } from './env-validation';
 
 type EnvGetter = {
   (key: string, defaultValue?: string): string;
@@ -7,6 +8,8 @@ type EnvGetter = {
 };
 
 export default ({ env }: { env: EnvGetter }) => {
+  requireProductionEnv(['DATABASE_URL']);
+
   const connectionUrl = env('DATABASE_URL');
   const config: Partial<ConnectionOptions> = connectionUrl ? parse(connectionUrl) : {};
 
@@ -26,4 +29,3 @@ export default ({ env }: { env: EnvGetter }) => {
     },
   };
 };
-
