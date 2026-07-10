@@ -62,6 +62,9 @@ jobs:
       - name: Type check (apps/web)
         run: npm run typecheck -w apps/web
 
+      - name: Unit tests (apps/web)
+        run: npm test -w apps/web
+
       - name: Build (apps/web)
         run: npm run build -w apps/web
 
@@ -139,6 +142,9 @@ jobs:
       - name: Type check (apps/api)
         run: npm run typecheck -w apps/api
 
+      - name: Unit tests (apps/api)
+        run: npm test -w apps/api
+
       - name: Build (apps/api)
         run: npm run build -w apps/api
 
@@ -172,6 +178,9 @@ jobs:
 
       - name: Type check (packages/shared)
         run: npm run typecheck -w packages/shared
+
+      - name: Unit tests (packages/shared)
+        run: npm test -w packages/shared
 
       - name: Build (packages/shared)
         run: npm run build -w packages/shared
