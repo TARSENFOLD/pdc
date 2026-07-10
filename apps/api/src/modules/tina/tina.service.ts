@@ -9,6 +9,7 @@ import {
   type LandingVeredito,
   type Role,
 } from '@pdc/shared';
+import { z } from 'zod';
 import { env } from '../../lib/env.js';
 import { tinaContextService } from './tina-context.service.js';
 
@@ -26,24 +27,59 @@ interface AiChatResponse {
   message?: { content: string };
 }
 
-function isPerguntasResponse(value: unknown): value is { perguntas: unknown[] } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'perguntas' in value &&
-    Array.isArray(value.perguntas)
-  );
-}
+const JsonObjectSchema = z.record(z.string(), z.unknown());
+
+const PerguntaDesafioSchema = z.object({
+  texto: z.string().min(1),
+  opcoes: z.array(z.object({
+    emoji: z.string().min(1),
+    texto: z.string().min(1),
+  })).min(2),
+});
+
+const PerguntasDesafioResponseSchema = z.object({
+  perguntas: z.array(PerguntaDesafioSchema),
+});
 
 function extractAiContent(data: AiChatResponse): string {
-  return data.choices?.[0]?.message.content ?? data.message?.content ?? '';
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- payload externo pode omitir message em runtime
+  return data.choices?.[0]?.message?.content ?? data.message?.content ?? '';
 }
 
-function extractJsonObject(content: string): unknown {
-  const normalized = content.replace(/```json|```/g, '').trim();
-  const match = normalized.match(/\{[\s\S]*\}/);
-  if (!match) return null;
-  return JSON.parse(match[0]) as unknown;
+export function extractJsonObject(content: string): unknown {
+  const normalized = content.trim();
+  const start = normalized.indexOf('{');
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < normalized.length; i += 1) {
+    const char = normalized[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+    } else if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return JsonObjectSchema.parse(JSON.parse(normalized.slice(start, i + 1)));
+      }
+    }
+  }
+
+  return null;
 }
 
 export const tinaService = {
@@ -142,8 +178,8 @@ Retorna APENAS um JSON no formato:
     const content = extractAiContent(data);
 
     try {
-      const parsed: unknown = JSON.parse(content.replace(/```json|```/g, ''));
-      return isPerguntasResponse(parsed) ? parsed.perguntas : [];
+      const parsed = PerguntasDesafioResponseSchema.parse(extractJsonObject(content));
+      return parsed.perguntas;
     } catch {
       return [];
     }

@@ -249,6 +249,12 @@
       "target": "api::feed-post.feed-post",
       "mappedBy": "autor"
     },
+    "deviceTokens": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::device-token.device-token",
+      "mappedBy": "perfil"
+    },
     "motivoRejeicao": {
       "type": "string",
       "maxLength": 500

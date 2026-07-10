@@ -1,1 +1,0 @@
-export { EcosystemImpactPanel } from './EcosystemImpactPanel';

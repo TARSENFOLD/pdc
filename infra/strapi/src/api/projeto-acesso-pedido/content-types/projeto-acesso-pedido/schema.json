@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "projeto_acesso_pedidos",
+  "info": {
+    "singularName": "projeto-acesso-pedido",
+    "pluralName": "projeto-acesso-pedidos",
+    "displayName": "Projeto Acesso Pedido"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "projeto": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::projeto.projeto",
+      "required": true
+    },
+    "perfilSolicitante": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::perfil.perfil",
+      "required": true
+    },
+    "motivo": {
+      "type": "text"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["pendente", "aprovado", "rejeitado"],
+      "default": "pendente",
+      "required": true
+    },
+    "dataResposta": {
+      "type": "datetime"
+    }
+  }
+}

@@ -2,7 +2,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
@@ -19,10 +23,24 @@
     "exactOptionalPropertyTypes": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@pdc/shared": ["../../packages/shared/src/index"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@pdc/shared": [
+        "../../packages/shared/src/index"
+      ]
     }
   },
-  "include": ["src", "scripts", "vitest.config.ts", "vitest.setup.ts", "../../packages/shared/src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": [
+    "src",
+    "vitest.setup.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/shared"
+    },
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
 }

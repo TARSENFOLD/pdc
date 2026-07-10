@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm, useFieldArray, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,8 +8,6 @@ import { simulacoesApi } from '@/lib/api/simulacoes';
 import { Button, Input, Select, Spinner } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
 import { BuilderShell, BuilderSection, BuilderUploadZone, BuilderActionsBar } from '@/components/builders';
-import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
-import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Globe } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -35,7 +33,6 @@ export function CriarSimulacaoPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [lastEventId, setLastEventId] = useState<string | null>(null);
 
   const { data: simData, isLoading: isLoadingSim } = useQuery({
     queryKey: ['simulacoes', simulacaoId],
@@ -81,15 +78,10 @@ export function CriarSimulacaoPage() {
 
   const mutation = useMutation({
     mutationFn: (data: CriarSimulacaoPayload) => isEditing ? simulacoesApi.editar(simulacaoId, data) : simulacoesApi.criar(data),
-    onSuccess: (res) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['simulacoes'] });
       toast({ title: isEditing ? 'Simulação Atualizada' : 'Simulação Materializada!' });
-
-      if (res.eventId) {
-        setLastEventId(res.eventId);
-      } else {
-        navigate('/app/mentor/simulacoes');
-      }
+      navigate('/app/mentor/simulacoes');
     },
     onError: (err: { response?: { data?: { error?: string } }; message: string }) => {
       toast({ title: 'Falha na materialização', description: err.response?.data?.error || err.message, variant: 'error' });
@@ -268,26 +260,6 @@ export function CriarSimulacaoPage() {
       </BuilderSection>
     </BuilderShell>
 
-    <AnimatePresence>
-      {lastEventId && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-canvas/95 backdrop-blur-md"
-        >
-          <div className="w-full max-w-xl">
-            <EcosystemImpactPanel 
-              eventId={lastEventId} 
-              variant="full"
-              onComplete={() => {
-                setTimeout(() => { navigate('/app/mentor/simulacoes'); }, 3000);
-              }}
-            />
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
     </>
   );
 }

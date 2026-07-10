@@ -27,7 +27,8 @@ export const rankingHook: EcosystemHook = {
       DomainEventName.POST_PUBLICADO,
       DomainEventName.TENTATIVA_CONCLUIDA,
       DomainEventName.COMENTARIO_CRIADO,
-      DomainEventName.LIKE_ADICIONADO
+      DomainEventName.LIKE_ADICIONADO,
+      DomainEventName.RATING_CRIADO
     ];
 
     if (!meritEvents.includes(event.name)) {

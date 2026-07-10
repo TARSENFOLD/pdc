@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { UpdatePerfilPayloadSchema, PerfilCompletoSchema } from './user.js';
+import {
+  LegacyRoleSchema,
+  normalizeTipo,
+  PerfilCompletoSchema,
+  UpdatePerfilPayloadSchema,
+} from './user.js';
 
 describe('perfil contracts', () => {
   it('uses visibilitySettings as the canonical privacy payload key', () => {
@@ -93,5 +98,37 @@ describe('perfil contracts', () => {
     });
 
     expect(result.visibilitySettings?.bio).toBe('publico');
+  });
+});
+
+describe('role normalization (legacy → canonical)', () => {
+  it('normalizes legacy aluno to estudante', () => {
+    expect(normalizeTipo('aluno')).toBe('estudante');
+  });
+
+  it('normalizes legacy admin to super_admin', () => {
+    expect(normalizeTipo('admin')).toBe('super_admin');
+  });
+
+  it('keeps canonical roles unchanged', () => {
+    expect(normalizeTipo('estudante')).toBe('estudante');
+    expect(normalizeTipo('mentor')).toBe('mentor');
+    expect(normalizeTipo('super_admin')).toBe('super_admin');
+  });
+
+  it('falls back to estudante for unknown roles', () => {
+    expect(normalizeTipo('superuser')).toBe('estudante');
+  });
+
+  it('coerces legacy roles via LegacyRoleSchema', () => {
+    expect(LegacyRoleSchema.parse('aluno')).toBe('estudante');
+    expect(LegacyRoleSchema.parse('admin')).toBe('super_admin');
+  });
+
+  it('accepts all canonical roles via LegacyRoleSchema', () => {
+    const roles = ['estudante', 'mentor', 'instituicao', 'comite_cientifico', 'moderador', 'super_admin', 'patrocinador'] as const;
+    for (const role of roles) {
+      expect(LegacyRoleSchema.parse(role)).toBe(role);
+    }
   });
 });

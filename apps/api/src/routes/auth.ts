@@ -14,8 +14,9 @@ import { otpRoutes } from './auth.otp.js';
 import { oauthRoutes } from './auth.oauth.js';
 import { registerRoutes } from './auth.register.js';
 import { passwordResetService } from '../modules/auth/password-reset.service.js';
-import { LegalComplianceCompletionSchema, RegistoEstudantePayloadSchema } from '@pdc/shared';
+import { DomainEventName, LegalComplianceCompletionSchema, RegistoEstudantePayloadSchema } from '@pdc/shared';
 import { authComplianceService } from '../modules/auth/auth-compliance.service.js';
+import { eventBus } from '../modules/events/event-bus.js';
 
 export const authRoutes = new Hono<{ Variables: AuthVariables }>();
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
@@ -137,7 +138,10 @@ authRoutes.post('/logout', async (c) => {
   const refreshToken = getCookie(c, 'refresh_token');
   if (refreshToken) {
     const verified = await authService.verifyRefreshToken(refreshToken);
-    if (verified) await authService.revokeRefreshToken(verified.userId, refreshToken);
+    if (verified) {
+      await authService.revokeRefreshToken(verified.userId, refreshToken);
+      await eventBus.publishWithOutbox(DomainEventName.LOGOUT, { userId: verified.userId });
+    }
   }
   deleteCookie(c, 'access_token');
   deleteCookie(c, 'refresh_token');

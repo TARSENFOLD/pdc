@@ -70,6 +70,27 @@ async function fetchCandidateProfiles(area: string): Promise<StrapiEstudanteMatc
   return candidates;
 }
 
+const EVENT_TO_MATCH_TYPE: Readonly<Partial<Record<DomainEventName, 'curso' | 'simulacao' | 'experiencia' | 'programa' | 'projeto'>>> = {
+  [DomainEventName.CURSO_PUBLICADO]: 'curso',
+  [DomainEventName.SIMULACAO_PUBLICADA]: 'simulacao',
+  [DomainEventName.EXPERIENCIA_PUBLICADA]: 'experiencia',
+  [DomainEventName.PROGRAMA_PUBLICADO]: 'programa',
+  [DomainEventName.PROJETO_PUBLICADO]: 'projeto',
+};
+
+function resolveMatchEntityType(eventName: DomainEventName): 'curso' | 'simulacao' | 'experiencia' | 'programa' | 'projeto' | null {
+  return EVENT_TO_MATCH_TYPE[eventName] ?? null;
+}
+
+async function suggestionAlreadyExists(eventId: string, estudanteId: string | number): Promise<boolean> {
+  const existing = await strapiGet<unknown>('/match-suggestions', {
+    'filters[eventId][$eq]': eventId,
+    'filters[estudante][id][$eq]': String(estudanteId),
+    'pagination[pageSize]': '1',
+  });
+  return existing.data.length > 0;
+}
+
 /**
  * Hook 3: MATCH
  * Gera sugestões para o Match Terminal baseadas em afinidade, tier e DNA Biomecânico.
@@ -81,13 +102,7 @@ export const matchHook: EcosystemHook<MatchPayload> = {
   idempotencyKey: (event) => `match:${event.id}`,
 
   async execute(event: DomainEvent<MatchPayload>): Promise<EcosystemHookResult> {
-    const matchableEvents = [
-      DomainEventName.CURSO_PUBLICADO,
-      DomainEventName.SIMULACAO_PUBLICADA,
-      DomainEventName.EXPERIENCIA_PUBLICADA,
-      DomainEventName.PROGRAMA_PUBLICADO,
-      DomainEventName.PROJETO_PUBLICADO,
-    ];
+    const matchableEvents = Object.keys(EVENT_TO_MATCH_TYPE) as DomainEventName[];
 
     if (!matchableEvents.includes(event.name)) {
       return { status: 'skipped', reason: 'not-a-matchable-event' };
@@ -95,7 +110,8 @@ export const matchHook: EcosystemHook<MatchPayload> = {
 
     const { area, autorId, regrasAcesso } = event.payload;
     const rawEntityId = event.payload.cursoId || event.payload.simulacaoId || event.payload.experienciaId || event.payload.projetoId || event.payload.postId || event.payload.programaId || event.payload.id;
-    const entityType = event.name.split('.')[0];
+    const entityType = resolveMatchEntityType(event.name);
+    if (!entityType) return { status: 'skipped', reason: 'unmapped-entity-type' };
 
     if (!area) return { status: 'skipped', reason: 'missing-area-for-match' };
     if (!rawEntityId) return { status: 'fatal_error', reason: 'entityId-missing' };
@@ -176,6 +192,9 @@ export const matchHook: EcosystemHook<MatchPayload> = {
         }
 
         if (affinityScore >= minScore) {
+          const exists = await suggestionAlreadyExists(event.id, estudante.id).catch(() => false);
+          if (exists) return;
+
           await strapiPost('/match-suggestions', {
             estudante: estudante.id,
             entityType,
@@ -184,7 +203,7 @@ export const matchHook: EcosystemHook<MatchPayload> = {
             tierMinimo: autorTier.charAt(0) + autorTier.slice(1).toLowerCase(),
             expiraEm: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             eventId: event.id
-          }).catch(() => null);
+          });
           matchesCreated++;
         }
       });

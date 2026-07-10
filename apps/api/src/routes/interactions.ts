@@ -32,6 +32,27 @@ const log = pino({ name: 'routes:interactions' });
 
 interactionRoutes.use('*', verifyJwt);
 
+async function countInteractions(
+  endpoint: '/likes' | '/partilhas',
+  targetType: string,
+  targetId: string,
+  extraFilters?: Record<string, string>,
+): Promise<number> {
+  try {
+    const countReq = await strapiGet<unknown>(endpoint, {
+      'filters[targetType][$eq]': targetType,
+      'filters[targetId][$eq]': targetId,
+      ...(extraFilters ? extraFilters : {}),
+      'pagination[withCount]': 'true',
+      'pagination[pageSize]': '1',
+    });
+    return countReq.meta.pagination.total || 0;
+  } catch (err: unknown) {
+    log.error({ err, endpoint, targetType, targetId }, 'Falha ao obter contagem de interações');
+    return 0;
+  }
+}
+
 // ─── LIKES ────────────────────────────────────────────────────────────────────
 
 interactionRoutes.post('/like', rateLimitInteractions, zValidator('json', ToggleLikePayloadSchema), async (c) => {
@@ -54,7 +75,7 @@ interactionRoutes.post('/like', rateLimitInteractions, zValidator('json', Toggle
     const existing = res.data[0];
     const idToDelete = existing?.documentId ?? existing?.id;
     if (idToDelete) await strapiDelete(`/likes/${String(idToDelete)}`);
-    return c.json({ liked: false });
+    return c.json({ liked: false, count: await countInteractions('/likes', targetType, targetId) } satisfies LikeStatus);
   } else {
     // Cria novo
     await strapiPost('/likes', {
@@ -70,7 +91,7 @@ interactionRoutes.post('/like', rateLimitInteractions, zValidator('json', Toggle
     }).catch((err: unknown) => {
       log.error({ err, userId: user.id, targetType, targetId }, 'Like persistido; falha ao publicar evento no outbox');
     });
-    return c.json({ liked: true });
+    return c.json({ liked: true, count: await countInteractions('/likes', targetType, targetId) } satisfies LikeStatus);
   }
 });
 
@@ -83,13 +104,6 @@ interactionRoutes.get('/like/status', zValidator('query', z.object({
   const perfil = await getInteractionPerfil(user.id);
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
 
-  const countReq = await strapiGet<unknown>('/likes', {
-    'filters[targetType][$eq]': targetType,
-    'filters[targetId][$eq]': targetId,
-    'pagination[withCount]': 'true',
-    'pagination[limit]': '1',
-  });
-
   const exactUserReq = await strapiGet<StrapiInteractionEntity>('/likes', {
     'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
     'filters[targetType][$eq]': targetType,
@@ -98,7 +112,7 @@ interactionRoutes.get('/like/status', zValidator('query', z.object({
 
   const response: LikeStatus = {
     liked: exactUserReq.data.length > 0,
-    count: countReq.meta.pagination.total || 0,
+    count: await countInteractions('/likes', targetType, targetId),
   };
 
   return c.json(response);
@@ -193,15 +207,11 @@ interactionRoutes.post('/share', rateLimitInteractions, zValidator('json', Share
   const current = existing.data[0];
 
   if (current) {
-    const all = await strapiGet<unknown>('/partilhas', {
-      'filters[targetType][$eq]': payload.targetType,
-      'filters[targetId][$eq]': payload.targetId,
-      'pagination[pageSize]': '1',
-    });
+    const count = await countInteractions('/partilhas', payload.targetType, payload.targetId);
     return c.json({
       shared: payload.canal === 'interno',
       shareId: current.documentId ?? String(current.id),
-      count: all.meta.pagination.total,
+      count,
     } satisfies ShareStatus);
   }
 

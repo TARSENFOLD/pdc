@@ -37,7 +37,7 @@
     },
     "tipo": {
       "type": "enumeration",
-      "enum": ["aluno-mentor", "mentor-instituicao", "aluno-instituicao"]
+      "enum": ["student-student", "student-mentor", "student-institution", "mentor-institution"]
     },
     "mensagem": { "type": "text", "maxLength": 300 },
     "documentoUrl": { "type": "string" },

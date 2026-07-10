@@ -78,6 +78,11 @@ describe('projetoRoutes E2E contracts', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(strapiGet).mockReset();
+    vi.mocked(strapiPost).mockReset();
+    vi.mocked(strapiPut).mockReset();
+    vi.mocked(strapiDelete).mockReset();
+    publishWithOutboxMock.mockReset().mockResolvedValue({ id: 'evt-1' });
   });
 
   // ─── Catalog ────────────────────────────────────────────────────────────────
@@ -315,7 +320,9 @@ describe('projetoRoutes E2E contracts', () => {
     it('adiciona entrada ACL pendente e emite evento', async () => {
       vi.mocked(strapiGet)
         .mockResolvedValueOnce(listResponse([{ id: 'perfil-req' }]))           // resolvePerfilId
-        .mockResolvedValueOnce(listResponse([{ ...baseProjeto, acessoCoreACL: [] }])); // load projeto
+        .mockResolvedValueOnce(listResponse([{ ...baseProjeto, acessoCoreACL: [] }])) // load projeto
+        .mockResolvedValueOnce(listResponse([]));                                 // check duplicados canónicos
+      vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({ id: 'pedido-1' }));
       vi.mocked(strapiPut).mockResolvedValueOnce(singleResponse({ id: 'proj-1' }));
 
       const res = await app.request('/projetos/proj-1/solicitar-acesso', {
@@ -359,15 +366,21 @@ describe('projetoRoutes E2E contracts', () => {
 
   describe('PATCH /projetos/:id/acl', () => {
     it('autor aprova pedido de acesso — PROJETO_ACESSO_CONCEDIDO emitido', async () => {
-      vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
-        ...baseProjeto,
-        acessoCoreACL: [{
-          perfilId: 'perfil-req',
-          estado: 'pendente' as const,
-          solicitadoEm: '2026-01-01T00:00:00.000Z',
-        }],
-        autor: { id: 'perfil-autor', userId: 'user-autor', nome: 'Ana' },
-      }]));
+      vi.mocked(strapiGet)
+        .mockResolvedValueOnce(listResponse([{
+          ...baseProjeto,
+          acessoCoreACL: [{
+            perfilId: 'perfil-req',
+            estado: 'pendente' as const,
+            solicitadoEm: '2026-01-01T00:00:00.000Z',
+          }],
+          autor: { id: 'perfil-autor', userId: 'user-autor', nome: 'Ana' },
+        }]))
+        .mockResolvedValueOnce(listResponse([{
+          id: 'pedido-1',
+          perfilSolicitante: { id: 'perfil-req' },
+          status: 'pendente',
+        }]));
       vi.mocked(strapiPut).mockResolvedValueOnce(singleResponse({ id: 'proj-1' }));
 
       const res = await app.request('/projetos/proj-1/acl', {

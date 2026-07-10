@@ -1,15 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CriarProgramaPayloadSchema, type CriarProgramaPayload, type Programa } from '@pdc/shared';
+import { CriarProgramaPayloadSchema, type CriarProgramaPayload } from '@pdc/shared';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { programasApi } from '@/lib/api/programas';
 import { Spinner } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
 import { BuilderShell, BuilderActionsBar } from '@/components/builders';
-import { EcosystemImpactPanel } from '@/components/ecosystem/EcosystemImpactPanel';
-import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/lib/auth/auth-context';
 import ProgramaFormSections from './programas/ProgramaFormSections';
 
@@ -43,7 +41,6 @@ export default function CriarProgramaPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [lastEventId, setLastEventId] = useState<string | null>(null);
 
   const form = useForm<CriarProgramaPayload>({
     resolver: zodResolver(CriarProgramaPayloadSchema),
@@ -146,15 +143,10 @@ export default function CriarProgramaPage() {
           toast({ title: 'Programa Atualizado!' });
           navigate('/app/instituicao/programas');
         } else {
-          const res = await createMutation.mutateAsync(data);
+          await createMutation.mutateAsync(data);
           invalidateAll();
           toast({ title: 'Programa Materializado!', description: 'O ecossistema foi atualizado com a nova oferta.' });
-          const mutRes = res as Programa & { eventId?: string };
-          if (mutRes.eventId) {
-            setLastEventId(mutRes.eventId);
-          } else {
-            navigate('/app/instituicao/programas');
-          }
+          navigate('/app/instituicao/programas');
         }
       } catch {
         // erros tratados pelos onError de cada mutation
@@ -231,26 +223,6 @@ export default function CriarProgramaPage() {
         <ProgramaFormSections form={form} />
       </BuilderShell>
 
-      <AnimatePresence>
-        {lastEventId && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-canvas/95 backdrop-blur-md"
-          >
-            <div className="w-full max-w-xl">
-              <EcosystemImpactPanel
-                eventId={lastEventId}
-                variant="full"
-                onComplete={() => {
-                  setTimeout(() => { navigate('/app/dashboard/instituicao'); }, 3000);
-                }}
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

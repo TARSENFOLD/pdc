@@ -1,9 +1,9 @@
 import { http } from './http';
-import type { Vinculo, VinculoComPerfil, PerfilPublicoBasico } from '@pdc/shared';
+import type { Vinculo, VinculoComPerfil, PerfilPublicoBasico, VinculoTipo } from '@pdc/shared';
 
 export const vinculosApi = {
-  criar: (perfilId: string) =>
-    http.post<Vinculo>(`/vinculos/${perfilId}/pedir`, {}),
+  criar: (perfilId: string, connectionType: VinculoTipo) =>
+    http.post<Vinculo>(`/vinculos/${perfilId}/pedir`, { connectionType }),
 
   getPendentes: () =>
     http.get<{ data: VinculoComPerfil[] }>('/vinculos/pendentes'),

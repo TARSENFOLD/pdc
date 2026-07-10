@@ -9,9 +9,41 @@ import {
 } from '@pdc/shared';
 import { socketService } from '../realtime/socket.service.js';
 import { strapiPost, strapiGet } from '../strapi/strapi.client.js';
+import { webPushService } from '../push/web-push.service.js';
 import pino from 'pino';
 
 const log = pino({ name: 'notify-hook' });
+
+interface NotificationEnvelope {
+  tipo: string;
+  titulo: string;
+  mensagem: string;
+  eventId: string;
+}
+
+function webPushPayloadFromNotification(notification: NotificationEnvelope) {
+  return {
+    title: notification.titulo,
+    body: notification.mensagem,
+    tag: notification.eventId,
+    data: {
+      eventId: notification.eventId,
+      tipo: notification.tipo,
+    },
+  };
+}
+
+async function sendWebPush(perfilId: string, notification: NotificationEnvelope): Promise<void> {
+  try {
+    const summary = await webPushService.enviarNotificacao(
+      perfilId,
+      webPushPayloadFromNotification(notification),
+    );
+    log.info({ perfilId, eventId: notification.eventId, summary }, 'Web Push fanout processado');
+  } catch (err: unknown) {
+    log.warn({ err, perfilId, eventId: notification.eventId }, 'Web Push fanout falhou');
+  }
+}
 
 async function resolvePerfilId(payload: BaseDomainEventPayload): Promise<string | undefined> {
   if (payload.perfilId) return String(payload.perfilId);
@@ -63,6 +95,7 @@ interface FomoPayload {
 }
 
 async function persistNotificacao(perfilId: string, tipo: string, titulo: string, mensagem: string, eventId: string): Promise<void> {
+  const notification = { tipo, titulo, mensagem, eventId };
   try {
     await strapiPost<unknown>('/notificacoes', {
       perfil: perfilId,
@@ -71,8 +104,10 @@ async function persistNotificacao(perfilId: string, tipo: string, titulo: string
       mensagem,
       corpo: mensagem,
       eventId,
+      entreguePor: { inApp: true, webPush: false },
       lida: false,
     });
+    await sendWebPush(perfilId, notification);
   } catch (err: unknown) {
     log.warn({ err, perfilId, tipo }, 'FOMO: falha ao persistir notificação');
   }
@@ -262,15 +297,22 @@ export const notifyHook: EcosystemHook = {
         
         // 2. Persistência de Notificação de Conquista
         if (pId) {
-          await strapiPost<unknown>('/notificacoes', {
-            perfil: pId,
+          const notification = {
             tipo: 'conquista',
             titulo: `Conquista Desbloqueada: ${conquista.titulo}`,
-            mensagem: conquista.descricao, // Novo schema Strapi (obrigatório)
-            corpo: conquista.descricao, // Retrocompatibilidade
+            mensagem: conquista.descricao,
             eventId: event.id,
+          };
+          await strapiPost<unknown>('/notificacoes', {
+            perfil: pId,
+            tipo: notification.tipo,
+            titulo: notification.titulo,
+            mensagem: notification.mensagem, // Novo schema Strapi (obrigatório)
+            corpo: notification.mensagem, // Retrocompatibilidade
+            eventId: event.id,
+            entreguePor: { inApp: true, webPush: false },
             lida: false
-          }).catch((err: unknown) => {
+          }).then(async () => sendWebPush(pId, notification)).catch((err: unknown) => {
             log.error({ err }, 'Falha ao persistir notificação de conquista');
           });
         }
@@ -281,15 +323,23 @@ export const notifyHook: EcosystemHook = {
     if (pId) {
       try {
         const mensagemAudit = `O teu evento ${event.name} foi integrado no ecossistema.`;
+        const notification = {
+          tipo: 'sucesso',
+          titulo: 'Actividade Processada',
+          mensagem: mensagemAudit,
+          eventId: event.id,
+        };
         await strapiPost<unknown>('/notificacoes', {
           perfil: pId,
-          tipo: 'sucesso', // Semântica real para o audit trail de sucesso
-          titulo: 'Actividade Processada',
-          mensagem: mensagemAudit, // Novo schema Strapi (obrigatório)
-          corpo: mensagemAudit, // Retrocompatibilidade
+          tipo: notification.tipo, // Semântica real para o audit trail de sucesso
+          titulo: notification.titulo,
+          mensagem: notification.mensagem, // Novo schema Strapi (obrigatório)
+          corpo: notification.mensagem, // Retrocompatibilidade
           eventId: event.id,
+          entreguePor: { inApp: true, webPush: false },
           lida: false
         });
+        await sendWebPush(pId, notification);
       } catch (err: unknown) {
         log.error({ err }, 'Falha ao persistir log de notificação');
       }

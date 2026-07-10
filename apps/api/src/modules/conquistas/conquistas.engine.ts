@@ -24,6 +24,18 @@ interface StrapiPerfilRecord {
   reputacao?: number;
 }
 
+interface AuthoredTargetRecord {
+  id: string | number;
+  documentId?: string;
+}
+
+const VIRAL_LIKES_THRESHOLD = 100;
+
+const LIKE_TARGET_COLLECTIONS: Readonly<Record<string, string>> = {
+  projeto: '/projetos',
+  post: '/feed-posts',
+};
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 async function countTelemetria(userId: string, tipo: string): Promise<number> {
@@ -60,10 +72,124 @@ function thresholdCondition(
   };
 }
 
+async function getPerfilIdString(userId: string): Promise<string | null> {
+  const res = await strapiGet<StrapiPerfilRecord>('/perfis', {
+    'filters[userId][$eq]': userId,
+    'pagination[pageSize]': '1',
+    'fields[0]': 'id',
+  });
+  const perfilId = res.data[0]?.id;
+  return perfilId === undefined ? null : String(perfilId);
+}
+
+async function countLikesForTarget(targetType: string, targetId: string): Promise<number> {
+  const res = await strapiGet<unknown>('/likes', {
+    'filters[targetType][$eq]': targetType,
+    'filters[targetId][$eq]': targetId,
+    'pagination[pageSize]': '1',
+  });
+  return res.meta.pagination.total;
+}
+
+async function listAuthoredTargets(collectionPath: string, perfilId: string, page: number): Promise<{
+  data: AuthoredTargetRecord[];
+  pageCount: number;
+}> {
+  const targets = await strapiGet<AuthoredTargetRecord>(collectionPath, {
+    'filters[autor][id][$eq]': perfilId,
+    'fields[0]': 'id',
+    'fields[1]': 'documentId',
+    'pagination[page]': String(page),
+    'pagination[pageSize]': '100',
+  });
+  return { data: targets.data, pageCount: targets.meta.pagination.pageCount };
+}
+
+function targetIdVariants(target: AuthoredTargetRecord): string[] {
+  const ids = [String(target.id)];
+  if (target.documentId && target.documentId !== String(target.id)) {
+    ids.push(target.documentId);
+  }
+  return ids;
+}
+
+async function pageHasViralTarget(targetType: string, targets: AuthoredTargetRecord[], concurrency: number): Promise<boolean> {
+  const allChecks = targets.flatMap((target) => targetIdVariants(target).map((targetId) => async () => {
+    try {
+      const likes = await countLikesForTarget(targetType, targetId);
+      return likes >= VIRAL_LIKES_THRESHOLD;
+    } catch (err: unknown) {
+      log.warn({ err, targetType, targetId }, 'Falha ao contar likes para conquista viral');
+      return false;
+    }
+  }));
+
+  for (let i = 0; i < allChecks.length; i += concurrency) {
+    const batch = allChecks.slice(i, i + concurrency);
+    const results = await Promise.all(batch.map((check) => check()));
+    if (results.some(Boolean)) return true;
+  }
+  return false;
+}
+
+async function hasViralLikedContent(userId: string, referencia?: string): Promise<boolean> {
+  try {
+    const perfilId = await getPerfilIdString(userId);
+    if (!perfilId) return false;
+
+    // Otimização: quando o evento LIKE_ADICIONADO trouxer o target, verificar apenas esse.
+    // referencia tem o formato 'targetType:targetId' (ex: 'projeto:42').
+    if (referencia) {
+      const [targetType, ...rest] = referencia.split(':');
+      const targetId = rest.join(':');
+      const collectionPath = LIKE_TARGET_COLLECTIONS[targetType ?? ''];
+      if (targetType && targetId && collectionPath) {
+        const isAuthor = await verifyAuthorship(collectionPath, perfilId, targetId);
+        if (isAuthor) {
+          const likes = await countLikesForTarget(targetType, targetId);
+          if (likes >= VIRAL_LIKES_THRESHOLD) return true;
+        }
+      }
+    }
+
+    const VIRAL_CONCURRENCY = 8;
+    for (const [targetType, collectionPath] of Object.entries(LIKE_TARGET_COLLECTIONS)) {
+      let page = 1;
+      let pageCount = 1;
+      do {
+        const targets = await listAuthoredTargets(collectionPath, perfilId, page);
+        pageCount = targets.pageCount;
+        if (await pageHasViralTarget(targetType, targets.data, VIRAL_CONCURRENCY)) return true;
+        page += 1;
+      } while (page <= pageCount);
+    }
+
+    return false;
+  } catch (err: unknown) {
+    log.warn({ err, userId }, 'Falha ao avaliar conquista viral-likes');
+    return false;
+  }
+}
+
+async function verifyAuthorship(collectionPath: string, perfilId: string, targetId: string): Promise<boolean> {
+  try {
+    const res = await strapiGet<{ autor?: { id?: string | number } }>(`${collectionPath}/${targetId}`, {
+      'fields[0]': 'id',
+      populate: 'autor',
+    });
+    const data = Array.isArray(res.data) ? res.data[0] : res.data;
+    const autorId = data?.autor?.id;
+    return autorId !== undefined && String(autorId) === perfilId;
+  } catch {
+    return false;
+  }
+}
+
 // ── Strategy A: DomainEventName → trigger string mapping (ADR-008.bis) ─────
 export const EVENT_TO_TRIGGER_MAP: Readonly<Record<string, string>> = {
   [DomainEventName.TENTATIVA_CONCLUIDA]:        'simulacao.concluida',
   [DomainEventName.CURSO_CONCLUIDO]:            DomainEventName.CURSO_CONCLUIDO,
+  [DomainEventName.VINCULO_APROVADO]:           DomainEventName.VINCULO_APROVADO,
   [DomainEventName.VINCULO_CONNECTED]:          DomainEventName.VINCULO_CONNECTED,
   [DomainEventName.LOGIN]:                      DomainEventName.LOGIN,
   [DomainEventName.MENTORIA_ACEITE]:            DomainEventName.MENTORIA_ACEITE,
@@ -281,7 +407,7 @@ export const REGRAS: readonly ConquistaRule[] = [
     trigger: DomainEventName.LIKE_ADICIONADO,
     titulo: 'Impacto Viral',
     descricao: 'Um dos seus posts ou projetos recebeu 100 likes',
-    condition: () => Promise.resolve(false), // TODO: Implementar lógica de agregação por autor
+    condition: hasViralLikedContent,
   },
   {
     slug: 'mestre-da-experiencia',

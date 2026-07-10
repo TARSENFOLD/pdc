@@ -17,7 +17,7 @@ import type {
 // ─── Likes ────────────────────────────────────────────────────────────────────
 export const likeApi = {
   toggle: async (payload: ToggleLikePayload) => {
-    return http.post<{ liked: boolean }>('/interactions/like', payload);
+    return http.post<LikeStatus>('/interactions/like', payload);
   },
   getStatus: async (targetType: InteractionTargetType, targetId: string) => {
     return http.get<LikeStatus>(`/interactions/like/status?${new URLSearchParams({ targetType, targetId }).toString()}`);

@@ -144,6 +144,12 @@ async function writeAuditLog(client: Client, reports: MigrationReport[], rollbac
 
 async function main() {
   const args = process.argv.slice(2);
+
+  if (process.env.NODE_ENV === "production" && !args.includes("--force")) {
+    console.error("🚫 Refusing to run migration in production without --force");
+    process.exit(1);
+    return;
+  }
   const dryRun = args.includes('--dry-run');
   const rollback = args.includes('--rollback');
 

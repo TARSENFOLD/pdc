@@ -18,11 +18,9 @@ const redisInstance = hasRedis
     })
   : null;
 
-/**
- * redis (Sovereign Instance)
- * No patamar mundial, se o Redis ausente, usamos um mock rigoroso.
- */
-export const redis = (redisInstance || {
+const redisUnavailableError = () => new Error('Redis não configurado: operação EVAL indisponível no mock local');
+
+const redisMock = {
   get: <T>(_key: string): Promise<T | null> => Promise.resolve(null),
   set: (_key: string, _value: unknown, _opts?: { ex?: number; nx?: boolean; px?: number }): Promise<'OK' | null> => Promise.resolve('OK'),
   del: (_key: string): Promise<number> => Promise.resolve(1),
@@ -32,7 +30,15 @@ export const redis = (redisInstance || {
   expire: (_key: string, _seconds: number): Promise<0 | 1> => Promise.resolve(1),
   rpop: <T>(_key: string): Promise<T | null> => Promise.resolve(null),
   lpush: (_key: string, ..._elements: unknown[]): Promise<number> => Promise.resolve(1),
+  rpush: (_key: string, ..._elements: unknown[]): Promise<number> => Promise.resolve(1),
+  llen: (_key: string): Promise<number> => Promise.resolve(0),
   lrem: (_key: string, _count: number, _element: unknown): Promise<number> => Promise.resolve(1),
   rpoplpush: <T>(_source: string, _destination: string): Promise<T | null> => Promise.resolve(null),
-  eval: <T>(_script: string, _keys: string[], _args: unknown[]): Promise<T> => Promise.resolve(null as unknown as T),
-}) as PdcRedis;
+  eval: <TData = unknown>(_script: string, _keys: string[], _args: unknown[]): Promise<TData> => Promise.reject(redisUnavailableError()),
+} satisfies Pick<PdcRedis, 'get' | 'set' | 'del' | 'sadd' | 'sismember' | 'incr' | 'expire' | 'rpop' | 'lpush' | 'rpush' | 'llen' | 'lrem' | 'rpoplpush' | 'eval'>;
+
+/**
+ * redis (Sovereign Instance)
+ * No patamar mundial, se o Redis ausente, usamos um mock rigoroso.
+ */
+export const redis = (redisInstance ?? redisMock) as PdcRedis;
