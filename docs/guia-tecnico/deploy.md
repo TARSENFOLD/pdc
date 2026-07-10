@@ -63,11 +63,11 @@ bash scripts/setup-vps.sh
 Depois, criar `/opt/pdc/.env` a partir de `.env.hetzner.example` e preencher com valores reais:
 
 ```bash
-scp .env.hetzner.example cj@167.235.29.64:/opt/pdc/.env.example
+scp .env.hetzner.example cj@167.235.29.64:/tmp/pdc.env
 ssh cj@167.235.29.64
-sudo cp /opt/pdc/.env.example /opt/pdc/.env
+sudo install -m 600 /tmp/pdc.env /opt/pdc/.env
+rm /tmp/pdc.env
 sudo nano /opt/pdc/.env
-sudo chmod 600 /opt/pdc/.env
 ```
 
 Subir serviços:
@@ -78,17 +78,29 @@ cd /opt/pdc
 sudo docker compose -f docker-compose.prod.yml up -d
 ```
 
-### Deploy automático
+### Deploy automático (gated por CI)
 
-O workflow `.github/workflows/deploy-vps.yml` faz deploy automático em cada push para `main` ou `develop` que afecte código da API, Strapi, Dockerfile ou compose.
+O pipeline de deploy está **gated pelo CI**: nenhum deploy corre sem que o workflow `CI` termine com sucesso.
+
+**Fluxo canónico:**
+
+1. Push/merge para `main` → dispara o workflow `CI` (lint + typecheck + **testes unitários** + build).
+2. Quando `CI` termina com `success`, o GitHub dispara automaticamente:
+   - `deploy-vps.yml` (Hetzner VPS — API + Strapi)
+   - `deploy-web.yml` (Cloudflare Pages — frontend)
+   - `deploy-edge.yml` (Cloudflare Workers — edge)
+3. Se `CI` falhar (lint, typecheck, testes ou build), **nenhum deploy corre**.
+
+> **Branch protection obrigatória**: configura `main` com required status checks `web — lint + typecheck + build`, `api — lint + typecheck + build`, `shared — lint + typecheck + build` e exige review approval antes do merge.
 
 Secrets necessários no GitHub:
 
 - `VPS_HOST`: `167.235.29.64`
 - `VPS_USER`: `cj`
 - `VPS_SSH_KEY`: chave privada SSH completa
+- `VPS_HOST_KEY`: impressão digital da chave do host (via `ssh-keyscan`) para verificação pinned
 
-Deploy manual equivalente:
+Deploy manual equivalente (bypass do gate, usar só em emergências):
 
 ```bash
 bash scripts/deploy-vps.sh

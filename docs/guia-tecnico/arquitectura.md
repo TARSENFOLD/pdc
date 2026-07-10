@@ -97,7 +97,7 @@ O PDC v2 utiliza dois padrões de tokens distintos para isolar autoridade e gara
 | **Edge Runtime** | Cloudflare Workers | Wrangler 3.0 | — |
 | **BFF Framework** | Hono | 4.12.14 | — |
 | **Runtime BFF** | Node.js | 24.13.0 | — |
-| **Base de Dados** | PostgreSQL | 16 | Via Railway |
+| **Base de Dados** | PostgreSQL | 16 | Via Neon (cloud, externo) |
 | **CMS** | Strapi | 5.42.1 | Headless Soberano |
 | **Cache & Queue** | Upstash Redis | 1.34.0 | Global Low Latency |
 | **Storage** | Cloudflare R2 | SDK v3 | Compatível com S3 |
@@ -107,7 +107,7 @@ O PDC v2 utiliza dois padrões de tokens distintos para isolar autoridade e gara
 | **IA Generativa** | DeepSeek | V3 / R1 | — |
 | **Observabilidade** | Sentry | 10.47.0 | — |
 | **Deploy Frontend** | Cloudflare Pages | — | Coordenado com spec:E5 |
-| **Deploy BFF** | Railway | — | — |
+| **Deploy BFF** | VPS Hetzner (Docker) | — | Traefik + docker-compose |
 
 ---
 
