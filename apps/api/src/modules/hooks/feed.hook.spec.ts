@@ -30,6 +30,36 @@ describe('feedHook', () => {
     vi.clearAllMocks();
   });
 
+  it.each([
+    [DomainEventName.CURSO_PUBLICADO, 'cursoId', 'curso', 'curso-1'],
+    [DomainEventName.SIMULACAO_PUBLICADA, 'simulacaoId', 'simulacao', 'sim-1'],
+    [DomainEventName.EXPERIENCIA_PUBLICADA, 'experienciaId', 'experiencia', 'exp-1'],
+    [DomainEventName.PROGRAMA_PUBLICADO, 'programaId', 'programa', 'prog-1'],
+    [DomainEventName.PROJETO_PUBLICADO, 'projetoId', 'projeto', 'proj-1'],
+    [DomainEventName.POST_PUBLICADO, 'postId', 'post', 'post-1'],
+  ] as const)('propaga %s para feed-entry %s', async (eventName, idField, entityType, entityId) => {
+    const result = await feedHook.execute({
+      id: `event-${entityType}-1`,
+      name: eventName,
+      payload: {
+        [idField]: entityId,
+        autorId: 'perfil-1',
+        titulo: `Título ${entityType}`,
+        area: 'TECNOLOGIA',
+      },
+      timestamp: '2026-07-05T12:00:00.000Z',
+      correlationId: `event-${entityType}-1`,
+    }, context);
+
+    expect(result.status).toBe('sent');
+    expect(strapiPost).toHaveBeenCalledWith('/feed-entries', expect.objectContaining({
+      entityType,
+      entityId,
+      autorId: 'perfil-1',
+      eventId: `event-${entityType}-1`,
+    }));
+  });
+
   it('normaliza post.published para entityType post e invalida caches de feed', async () => {
     const result = await feedHook.execute({
       id: 'event-post-1',
@@ -103,6 +133,19 @@ describe('feedHook', () => {
     }, context);
 
     expect(result.status).toBe('fatal_error');
+    expect(strapiPost).not.toHaveBeenCalled();
+  });
+
+  it('returns fatal_error and does not persist orphan feed entry when autorId is missing', async () => {
+    const result = await feedHook.execute({
+      id: 'event-curso-sem-autor',
+      name: DomainEventName.CURSO_PUBLICADO,
+      payload: { cursoId: 'curso-1', titulo: 'Sem autor' },
+      timestamp: '2026-07-05T12:00:00.000Z',
+      correlationId: 'event-curso-sem-autor',
+    }, context);
+
+    expect(result).toEqual({ status: 'fatal_error', reason: 'autorId-missing' });
     expect(strapiPost).not.toHaveBeenCalled();
   });
 });

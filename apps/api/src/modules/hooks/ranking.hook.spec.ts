@@ -89,4 +89,38 @@ describe('rankingHook', () => {
     expect(result).toEqual({ status: 'sent' });
     expect(reputationService.marcarParaRecalculo).toHaveBeenCalledWith('perfil-avaliador-1', DomainEventName.RATING_CRIADO);
   });
+
+  it.each([
+    [DomainEventName.PROGRAMA_PUBLICADO, { programaId: 'programa-1', autorId: 'perfil-inst-1', titulo: 'Programa', area: 'TECNOLOGIA', instituicaoId: 'inst-1' }, 'perfil-inst-1'],
+    [DomainEventName.PARTILHA_CRIADA, { autorId: 'perfil-share-1', targetType: 'post', targetId: 'post-1' }, 'perfil-share-1'],
+  ] as const)('inclui %s como sinal de ranking/reputação', async (eventName, payload, expectedPerfilId) => {
+    const result = await rankingHook.execute({
+      id: `evt-${eventName}`,
+      name: eventName,
+      payload,
+      timestamp: '2026-07-05T12:00:00.000Z',
+      correlationId: `evt-${eventName}`,
+    }, context);
+
+    expect(result).toEqual({ status: 'sent' });
+    expect(reputationService.marcarParaRecalculo).toHaveBeenCalledWith(expectedPerfilId, eventName);
+  });
+
+  it('recalcula ambos os perfis quando vínculo é aprovado', async () => {
+    const result = await rankingHook.execute({
+      id: 'evt-vinculo-aprovado-1',
+      name: DomainEventName.VINCULO_APROVADO,
+      payload: {
+        vinculoId: 'vinculo-1',
+        solicitanteId: 'perfil-sol-1',
+        destinatarioId: 'perfil-dest-1',
+      },
+      timestamp: '2026-07-05T12:00:00.000Z',
+      correlationId: 'evt-vinculo-aprovado-1',
+    }, context);
+
+    expect(result).toEqual({ status: 'sent' });
+    expect(reputationService.marcarParaRecalculo).toHaveBeenCalledWith('perfil-sol-1', DomainEventName.VINCULO_APROVADO);
+    expect(reputationService.marcarParaRecalculo).toHaveBeenCalledWith('perfil-dest-1', DomainEventName.VINCULO_APROVADO);
+  });
 });

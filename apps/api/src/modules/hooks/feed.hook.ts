@@ -37,8 +37,8 @@ export const feedHook: EcosystemHook = {
       DomainEventName.CURSO_PUBLICADO,
       DomainEventName.SIMULACAO_PUBLICADA,
       DomainEventName.EXPERIENCIA_PUBLICADA,
-       DomainEventName.PROJETO_PUBLICADO,
-       DomainEventName.PROGRAMA_PUBLICADO,
+      DomainEventName.PROJETO_PUBLICADO,
+      DomainEventName.PROGRAMA_PUBLICADO,
       DomainEventName.POST_PUBLICADO
     ];
 
@@ -57,11 +57,15 @@ export const feedHook: EcosystemHook = {
       if (!entityId) return { status: 'fatal_error', reason: 'entityId-missing' };
       const entityType = resolveFeedEntityType(event.name);
       if (!entityType) return { status: 'skipped', reason: 'event-not-eligible-for-feed' };
+      if (!autorId) {
+        log.warn({ eventName: event.name, eventId: event.id }, 'feedHook sem autorId — entrada ignorada');
+        return { status: 'fatal_error', reason: 'autorId-missing' };
+      }
 
       await strapiPost<unknown>('/feed-entries', {
         entityType,
         entityId,
-        autorId: String(autorId ?? ''),
+        autorId: String(autorId),
         titulo: payload.titulo,
         corpo: payload.descricao || payload.conteudo,
         area: payload.area,
