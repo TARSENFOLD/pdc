@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
+import { z } from 'zod';
 import { DomainEventName } from '@pdc/shared';
 import { adminRoutes } from './admin.js';
-import { strapiGet, strapiGetRaw } from '../modules/strapi/strapi.client.js';
+import { strapiGet, strapiGetRaw, strapiPutRaw } from '../modules/strapi/strapi.client.js';
 import { setCanonicalUserRole } from '../modules/auth/internal-account.service.js';
 import { writeAuditLog } from '../middleware/audit.js';
 
@@ -53,6 +54,11 @@ interface PerfilFixture {
   nome: string;
   tipo: string;
 }
+
+const SuspenderPayloadSchema = z.object({
+  bloqueado: z.literal(true),
+  suspendidoEm: z.string(),
+});
 
 describe('adminRoutes internal accounts', () => {
   const app = new Hono().route('/', adminRoutes);
@@ -127,5 +133,28 @@ describe('adminRoutes internal accounts', () => {
     expect(response.status).toBe(200);
     expect(setCanonicalUserRole).toHaveBeenCalledWith('9', 'moderador');
     expect(await response.json()).toMatchObject({ id: '9', role: 'moderador' });
+  });
+
+  it('audita suspensão de utilizador', async () => {
+    vi.mocked(strapiPutRaw).mockResolvedValue({ id: '9', blocked: true });
+
+    const response = await app.request('/utilizadores/9/suspender', {
+      method: 'PUT',
+      headers: {
+        'x-forwarded-for': '203.0.113.10',
+        'user-agent': 'vitest',
+      },
+    });
+
+    expect(response.status).toBe(200);
+    const putCall = vi.mocked(strapiPutRaw).mock.calls[0];
+    expect(putCall?.[0]).toBe('/users/9');
+    expect(SuspenderPayloadSchema.parse(putCall?.[1])).toMatchObject({ bloqueado: true });
+    expect(writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      accao: 'admin_suspender_utilizador',
+      recurso: '/users/9',
+      ip: '203.0.113.10',
+      userAgent: 'vitest',
+    }));
   });
 });

@@ -155,6 +155,13 @@ adminRoutes.put(
         bloqueado: true,
         suspendidoEm: new Date().toISOString(),
       });
+      await writeAuditLog({
+        actor: c.get('user'),
+        accao: 'admin_suspender_utilizador',
+        recurso: `/users/${String(id)}`,
+        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
+        userAgent: c.req.header('user-agent'),
+      }).catch(() => {});
       return c.json(data);
     } catch (err) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);

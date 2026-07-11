@@ -16,7 +16,7 @@ type Vars = { Variables: AuthVariables };
 interface StrapiVinculo {
   id: string | number;
   status?: string;
-  solicitante?: { userId?: string; id?: string };
+  solicitante?: { userId?: string; id?: string | number };
 }
 
 interface StrapiPerfilRaw {
@@ -182,16 +182,24 @@ perfilRoutes.get('/estudantes-vinculados', checkRole(['instituicao', 'super_admi
       populate: 'solicitante',
     });
 
-    const studentIds = resVinculos.data.map((v) => v.solicitante?.userId).filter(Boolean) as string[];
+    const studentIds = resVinculos.data
+      .map((v) => v.solicitante?.userId)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
     if (studentIds.length === 0) {
       return c.json({ data: [] });
     }
-    const students = await Promise.all(
-      studentIds.map((sid) =>
-        strapiGet<StrapiPerfilRaw>(`/users/${sid}`, { populate: 'role,avatar' })
-      )
+    const userIdFilters = Object.fromEntries(
+      studentIds.map((studentId, index) => [`filters[userId][$in][${String(index)}]`, studentId]),
     );
-    return c.json({ data: students.map(s => s.data[0]) });
+    const perfis = await strapiGet<StrapiPerfilRaw>('/perfis', {
+      ...userIdFilters,
+      populate: 'foto,capa,conquistas',
+      'pagination[pageSize]': String(studentIds.length),
+    });
+
+    return c.json({
+      data: perfis.data.map((perfil) => serializePublicProfile(toStrapiPerfil(perfil), true)),
+    });
   } catch (err) {
     const message = (err as Error).message || 'Erro interno';
     return c.json({ error: message }, 502);

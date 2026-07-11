@@ -208,7 +208,7 @@ feedPostRoutes.get('/:id', verifyJwt, async (c) => {
 feedPostRoutes.post(
   '/',
   verifyJwt,
-  checkRole(['estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin']),
+  checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
   requireApproved(),
   rateLimitContentCreate,
   zValidator('json', CriarPostPayloadSchema),
@@ -323,7 +323,7 @@ feedPostRoutes.patch(
 feedPostRoutes.put(
   '/:id',
   verifyJwt,
-  checkRole(['estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin']),
+  checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
   zValidator('json', CriarPostPayloadSchema),
   async (c) => {
     const id = c.req.param('id');

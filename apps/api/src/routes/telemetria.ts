@@ -75,6 +75,19 @@ export const telemetriaRoutes = new Hono<Vars>();
 
 telemetriaRoutes.use('*', verifyJwt);
 
+async function hasApprovedMentorVinculo(mentorPerfilId: string, targetPerfilId: string): Promise<boolean> {
+  const vinculos = await strapiGet<{ id: string | number }>('/vinculos', {
+    'filters[$or][0][solicitante][id][$eq]': mentorPerfilId,
+    'filters[$or][0][destinatario][id][$eq]': targetPerfilId,
+    'filters[$or][1][solicitante][id][$eq]': targetPerfilId,
+    'filters[$or][1][destinatario][id][$eq]': mentorPerfilId,
+    'filters[status][$eq]': 'aprovado',
+    'filters[tipo][$eq]': 'student-mentor',
+    'pagination[pageSize]': '1',
+  });
+  return vinculos.data.length > 0;
+}
+
 // POST / — single event
 telemetriaRoutes.post('/', rateLimitTelemetry, zValidator('json', TelemetriaEventoSchema), async (c) => {
   const user = c.get('user');
@@ -154,14 +167,23 @@ telemetriaRoutes.get('/patterns', async (c) => {
   const user = c.get('user');
   const { perfilId } = c.req.query();
 
-  // Segurança Soberana: Mentor pode ver perfis, Estudante vê apenas o seu
-  if (perfilId && user.role !== 'mentor' && user.role !== 'super_admin') {
-    return c.json({ error: 'Acesso negado ao Oráculo' }, 403);
-  }
-
   try {
     const resolvedPerfilId = perfilId || await resolvePerfilId(user.id);
     if (!resolvedPerfilId) return c.json([]);
+
+    const requesterPerfilId = user.perfilId ?? await resolvePerfilId(user.id);
+    const isOwnProfile = requesterPerfilId === resolvedPerfilId;
+    const allowed = isOwnProfile
+      || user.role === 'super_admin'
+      || (
+        user.role === 'mentor'
+        && requesterPerfilId !== null
+        && await hasApprovedMentorVinculo(requesterPerfilId, resolvedPerfilId)
+      );
+
+    if (!allowed) {
+      return c.json({ error: 'Acesso negado ao Oráculo' }, 403);
+    }
 
     const res = await strapiGet<BehaviorPattern>('/behavior-patterns', {
       'filters[perfil][id][$eq]': resolvedPerfilId,
