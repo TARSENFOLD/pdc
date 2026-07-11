@@ -1,0 +1,49 @@
+{
+  "kind": "collectionType",
+  "collectionName": "videos",
+  "info": {
+    "singularName": "video",
+    "pluralName": "videos",
+    "displayName": "Video",
+    "description": "Metadata canónica de vídeo; bytes vivem em R2 ou provider externo"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "provider": {
+      "type": "enumeration",
+      "enum": ["youtube", "vimeo", "loom", "r2", "bunny", "mux", "cloudflare"],
+      "required": true
+    },
+    "mode": {
+      "type": "enumeration",
+      "enum": ["external", "quick_upload", "professional_upload"],
+      "required": true
+    },
+    "visibility": {
+      "type": "enumeration",
+      "enum": ["public", "protected", "private"],
+      "default": "protected",
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["draft", "pending_upload", "uploaded", "processing", "ready", "failed", "archived"],
+      "default": "draft",
+      "required": true
+    },
+    "ownerId": { "type": "string", "required": true },
+    "title": { "type": "string", "required": true },
+    "durationSeconds": { "type": "integer" },
+    "sizeBytes": { "type": "biginteger" },
+    "mimeType": { "type": "string" },
+    "thumbnailUrl": { "type": "string" },
+    "originalKey": { "type": "string" },
+    "streamUrl": { "type": "string" },
+    "externalUrl": { "type": "string" },
+    "chapters": { "type": "json" },
+    "subtitles": { "type": "json" },
+    "failureReason": { "type": "string", "maxLength": 500 }
+  }
+}

@@ -477,7 +477,7 @@ export default function PerfilShowcase(): React.JSX.Element {
               )}
             </div>
 
-            <h1 className="text-2xl font-black tracking-tight text-ink-primary font-display leading-tight mb-1">
+            <h1 data-testid="page-hero-title" className="text-2xl font-black tracking-tight text-ink-primary font-display leading-tight mb-1">
               {p.nome}
             </h1>
             

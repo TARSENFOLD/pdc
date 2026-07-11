@@ -17,6 +17,7 @@ export const ItemModuloSchema = z.object({
   tipo: z.enum(['video', 'pdf', 'texto', 'quiz', 'tarefa', 'iframe']),
   conteudo: z.string().optional(),
   url: OptionalNullableUrlSchema,
+  videoId: z.string().optional(),
   ordem: z.number(),
   duracaoMinutos: z.number().optional(),
 });
@@ -107,6 +108,7 @@ export const CriarCursoPayloadSchema = z.object({
       tipo: z.enum(['video', 'pdf', 'texto', 'quiz', 'tarefa', 'iframe']),
       conteudo: z.string().optional(),
       url: OptionalUrlSchema,
+      videoId: z.string().optional(),
       ordem: z.number(),
     })).min(1),
   })).min(1),

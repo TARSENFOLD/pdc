@@ -46,6 +46,7 @@ import { mentoriaRoutes } from './routes/mentorias.js';
 import { projetoRoutes } from './routes/projetos.js';
 import { vocacionalRoutes } from './routes/vocacional.js';
 import { mediaRoutes, mediaPublicRoutes } from './routes/media.js';
+import { videoRoutes } from './routes/videos.js';
 import { notificacaoRoutes } from './routes/notificacoes.js';
 import { perfilRoutes } from './routes/perfis.js';
 import { denunciaRoutes } from './routes/denuncias.js';
@@ -169,6 +170,7 @@ app.route('/vocacional', vocacionalRoutes);
 app.route('/media', mediaPublicRoutes);
 // Protected media endpoints require authenticated users.
 app.route('/media', mediaRoutes);
+app.route('/videos', videoRoutes);
 app.route('/notificacoes', notificacaoRoutes);
 app.route('/perfis', perfilRoutes);
 app.route('/data-rights', dataRightsRoutes);
@@ -222,12 +224,45 @@ tinaService.indexarKnowledge().catch((err: unknown) => {
 });
 
 // ─── GRACEFUL SHUTDOWN ───
-const shutdown = (signal: string) => {
+const SHUTDOWN_TIMEOUT_MS = 10_000;
+let shutdownInProgress = false;
+
+function closeServer(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.close((err?: Error) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+const shutdown = async (signal: string): Promise<void> => {
+  if (shutdownInProgress) return;
+  shutdownInProgress = true;
   log.info({ signal }, 'Sinal recebido — a encerrar servidor BFF');
-  process.exit(0);
+
+  const forcedExit = setTimeout(() => {
+    log.error({ signal, timeoutMs: SHUTDOWN_TIMEOUT_MS }, 'Timeout no graceful shutdown — saída forçada');
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS);
+
+  try {
+    await socketService.close();
+    await closeServer();
+    clearTimeout(forcedExit);
+    log.info({ signal }, 'Servidor BFF encerrado com drain completo');
+    process.exit(0);
+  } catch (err) {
+    clearTimeout(forcedExit);
+    log.error({ err, signal }, 'Falha no graceful shutdown');
+    process.exit(1);
+  }
 };
 
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => { void shutdown('SIGINT'); });
+process.on('SIGTERM', () => { void shutdown('SIGTERM'); });
 
 export type AppType = typeof app;

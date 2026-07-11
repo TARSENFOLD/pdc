@@ -146,8 +146,7 @@ describe('OAuthFinalizarRoleChoiceSchema', () => {
       dataNascimento: DATA_NASCIMENTO_ADULTO,
       aceiteLegal: ACEITE_LEGAL,
       nomeInstituicao: 'ISPTEC',
-      tipoInstituicao: 'Universidade',
-      documentos: [{ tipo: 'credencial_instituicao', url: 'blob:http://localhost/doc' }],
+      tipoInstituicao: 'universidade',
     });
     expect(result.role).toBe('instituicao');
   });

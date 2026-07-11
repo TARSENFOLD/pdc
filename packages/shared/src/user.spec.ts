@@ -3,6 +3,7 @@ import {
   LegacyRoleSchema,
   normalizeTipo,
   PerfilCompletoSchema,
+  RegistoInstituicaoPayloadSchema,
   UpdatePerfilPayloadSchema,
 } from './user.js';
 
@@ -130,5 +131,47 @@ describe('role normalization (legacy → canonical)', () => {
     for (const role of roles) {
       expect(LegacyRoleSchema.parse(role)).toBe(role);
     }
+  });
+});
+
+describe('registo institucional', () => {
+  const base = {
+    nome: 'Gestor Institucional',
+    nomeInstituicao: 'Instituto PDC',
+    email: 'gestor@pdc.ao',
+    password: 'SenhaTeste123',
+    tipo: 'instituto',
+    nif: '5001234567',
+    aceiteLegal: {
+      termosUso: true,
+      politicaPrivacidade: true,
+      tratamentoDados: true,
+      termosUsoVersao: '2026-06-01',
+      politicaPrivacidadeVersao: '2026-06-01',
+      tratamentoDadosVersao: '2026-06-01',
+      aceiteEm: '2026-06-22T10:00:00.000Z',
+    },
+  } as const;
+
+  it('exige identidade organizacional canónica', () => {
+    const result = RegistoInstituicaoPayloadSchema.parse(base);
+    expect(result.nomeInstituicao).toBe('Instituto PDC');
+    expect(result.tipo).toBe('instituto');
+    expect(result.nif).toBe('5001234567');
+  });
+
+  it('rejeita tipo institucional fora do enum canónico', () => {
+    expect(() => RegistoInstituicaoPayloadSchema.parse({
+      ...base,
+      tipo: 'escola_tecnica',
+    })).toThrow();
+  });
+
+  it('não aceita documentos falsos no payload de registo', () => {
+    const result = RegistoInstituicaoPayloadSchema.safeParse({
+      ...base,
+      documentos: ['nif.pdf'],
+    });
+    expect(result.success).toBe(false);
   });
 });

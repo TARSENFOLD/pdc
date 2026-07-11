@@ -3,7 +3,7 @@ import { test, expect } from '../../helpers/fixtures';
 test.describe('Moderação - Denúncias', () => {
   test('moderador can access denuncias page', async ({ moderadorPage }) => {
     await moderadorPage.goto('/app/moderacao/denuncias');
-    await expect(moderadorPage.locator('h1, h2, main')).toBeVisible({ timeout: 10_000 });
+    await expect(moderadorPage.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('denuncias page shows queue or empty state', async ({ moderadorPage }) => {

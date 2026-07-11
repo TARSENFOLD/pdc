@@ -10,6 +10,7 @@ import { Check, ChevronLeft, ChevronRight, Circle } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ItemPlayerHeader } from './ItemPlayerHeader';
+import { CourseVideoPlayer } from './CourseVideoPlayer';
 
 function ExternalLink({ url, label }: { url: string; label: string }) {
   return (
@@ -24,35 +25,13 @@ function ExternalLink({ url, label }: { url: string; label: string }) {
   );
 }
 
-function VideoPlayer({ src }: { src: string }) {
-  const isYoutube = src.includes('youtube.com') || src.includes('youtu.be');
-  if (isYoutube) {
-    const videoId = (() => {
-      try {
-        return new URL(src).searchParams.get('v') ?? src.split('/').at(-1) ?? '';
-      } catch {
-        return src.split('/').at(-1) ?? '';
-      }
-    })();
-    return (
-      <iframe
-        src={`https://www.youtube.com/embed/${videoId}`}
-        className="h-full w-full rounded-lg"
-        allowFullScreen
-        title="Vídeo"
-      />
-    );
-  }
-  return <video src={src} controls className="h-full w-full rounded-lg" />;
-}
-
-function renderItem(item: ItemModulo): ReactElement {
+function renderItem(item: ItemModulo, courseId: string): ReactElement {
   const url = item.url ?? item.conteudo ?? '';
   switch (item.tipo) {
     case 'video':
       return (
         <div className="aspect-video w-full overflow-hidden rounded-lg">
-          <VideoPlayer src={url} />
+          <CourseVideoPlayer src={url} {...(item.videoId ? { videoId: item.videoId } : {})} courseId={courseId} />
         </div>
       );
     case 'pdf':
@@ -218,7 +197,7 @@ export function ItemPlayer() {
             {item.tipo === 'quiz' ? (
               <QuizSection cursoId={cursoId} moduloId={moduloId ?? ''} />
             ) : (
-              renderItem(item)
+              renderItem(item, cursoId)
             )}
           </article>
         </div>

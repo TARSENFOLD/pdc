@@ -3,11 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { motion, useReducedMotion } from 'motion/react';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner } from '@/components/ui';
-import type { InstituicaoPublica } from '@pdc/shared';
+import type { InstituicaoPublicaDetalhada } from '@pdc/shared';
 
 // ─── Card 3D ──────────────────────────────────────────────────────────────────
 
-function InstCard({ inst }: { inst: InstituicaoPublica }) {
+function InstCard({ inst }: { inst: InstituicaoPublicaDetalhada }) {
+  const logoUrl = inst.multimedia?.logoUrl;
+  const provincia = inst.localizacao?.provincia;
   const cardRef = useRef<HTMLAnchorElement>(null);
   const shouldReduceMotion = useReducedMotion();
 
@@ -56,8 +58,8 @@ function InstCard({ inst }: { inst: InstituicaoPublica }) {
       {/* Logo */}
       <div className="flex h-16 w-16 items-center justify-center rounded-xl border bg-white/80 p-2 shadow-inner"
         style={{ borderColor: 'rgba(0,0,0,0.15)' }}>
-        {inst.logoUrl ? (
-          <img src={inst.logoUrl} alt={inst.nome} className="max-h-full max-w-full object-contain" />
+        {logoUrl ? (
+          <img src={logoUrl} alt={inst.nome} className="max-h-full max-w-full object-contain" />
         ) : (
           <span className="text-xl font-black" style={{ color: 'var(--accent-terracotta)' }}>
             {inst.nome.substring(0, 2).toUpperCase()}
@@ -70,9 +72,9 @@ function InstCard({ inst }: { inst: InstituicaoPublica }) {
         <span className="text-xs font-bold leading-tight tracking-tight" style={{ color: 'var(--ink-primary)' }}>
           {inst.nome}
         </span>
-        {inst.regiao && (
+        {provincia && (
           <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--accent-terracotta)', opacity: 0.7 }}>
-            {inst.regiao}
+            {provincia}
           </span>
         )}
         {inst.tipo && (

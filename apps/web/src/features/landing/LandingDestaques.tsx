@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { http } from '@/lib/api/http';
 import { Play, Building2, ChevronRight } from 'lucide-react';
-import type { SimulacaoPublica, InstituicaoPublica, CatalogoResponse } from '@pdc/shared';
+import type { SimulacaoPublica, InstituicaoPublicaDetalhada, CatalogoResponse } from '@pdc/shared';
 import { useTranslation } from '@/hooks/useTranslation';
 
 const PLACEHOLDER_COLORS: Record<string, { from: string; to: string }> = {
@@ -57,7 +57,7 @@ export function LandingDestaques() {
 
   const { data: instituicoes, isLoading: loadingInsts, isError: instError } = useQuery({
     queryKey: ['landing-destaques-insts'],
-    queryFn: () => http.get<CatalogoResponse<InstituicaoPublica>>('/catalogo/instituicoes?limit=3&sort=reputacao:desc'),
+    queryFn: () => http.get<CatalogoResponse<InstituicaoPublicaDetalhada>>('/catalogo/instituicoes?limit=3&sort=reputacao:desc'),
     retry: false,
   });
 
@@ -142,7 +142,7 @@ export function LandingDestaques() {
               <Building2 size={12} className="text-accent" /> {t('destaques.instituicoes_label')}
             </h3>
             <div className={sims.length > 0 ? 'flex flex-col gap-3' : 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3'}>
-              {insts.map((inst: InstituicaoPublica, i: number) => (
+              {insts.map((inst: InstituicaoPublicaDetalhada, i: number) => (
                 <motion.div
                   key={inst.id}
                   {...fadeUp}
@@ -150,15 +150,15 @@ export function LandingDestaques() {
                   className="flex items-center gap-4 rounded-xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10 hover:border-accent/20 group"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-surface-alt border border-white/5 overflow-hidden">
-                    {inst.logoUrl ? (
-                      <img src={inst.logoUrl} alt={inst.nome} className="h-full w-full object-contain p-2" />
+                    {inst.multimedia?.logoUrl ? (
+                      <img src={inst.multimedia.logoUrl} alt={inst.nome} className="h-full w-full object-contain p-2" />
                     ) : (
                       <Building2 className="h-6 w-6 text-text-muted" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-bold text-text-primary truncate group-hover:text-accent transition-colors">{inst.nome}</h4>
-                    <p className="text-[10px] text-text-muted uppercase font-medium tracking-wider">{inst.regiao || 'Angola'}</p>
+                    <p className="text-[10px] text-text-muted uppercase font-medium tracking-wider">{inst.localizacao?.provincia ?? 'Angola'}</p>
                   </div>
                   <Link to={`/instituicoes/${inst.slug || inst.id}`} className="text-text-muted group-hover:text-accent transition-colors">
                     <ChevronRight size={18} />

@@ -133,6 +133,25 @@ describe('auth middleware JWT payload validation', () => {
     expect(res.status).toBe(200);
   });
 
+  it('does not mask downstream handler errors as Unauthorized', async () => {
+    const app = new Hono<{ Variables: AuthVariables }>();
+    app.onError((err, c) => c.json({ error: err.message }, 500));
+    app.get('/private', verifyJwt, () => {
+      throw new Error('Strapi indisponível');
+    });
+    const token = await signedToken({
+      sub: 'user-1',
+      role: 'mentor',
+    });
+
+    const res = await app.request('/private', {
+      headers: { cookie: `access_token=${token}` },
+    });
+
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: 'Strapi indisponível' });
+  });
+
   it('keeps optional auth anonymous for malformed payloads', async () => {
     const app = new Hono<{ Variables: OptionalAuthVariables }>();
     app.get('/public', optionalJwt, (c) => c.json({ user: c.get('user') ?? null }));

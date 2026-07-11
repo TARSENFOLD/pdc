@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const strapiGetMock = vi.hoisted(() => vi.fn());
-const strapiPutMock = vi.hoisted(() => vi.fn());
+const strapiPutMock = vi.hoisted(() => vi.fn<(path: string, payload: Record<string, unknown>) => Promise<unknown>>());
 const provisionMock = vi.hoisted(() => vi.fn());
 const recordLegalAcceptanceMock = vi.hoisted(() => vi.fn());
 const otpServiceMock = vi.hoisted(() => ({
@@ -126,29 +126,26 @@ describe('oauthOnboardingService.escolherRole', () => {
     }));
   });
 
-  it('sets aprovado=false and saves uploaded documents for instituicao', async () => {
-    const documentos = [{ tipo: 'credencial_instituicao', url: 'blob:http://localhost/instituicao-doc' }];
-
+  it('sets aprovado=false and provisions canonical instituicao without profile organization fields', async () => {
     await oauthOnboardingService.escolherRole('user-42', {
       role: 'instituicao',
       dataNascimento: DATA_NASCIMENTO_ADULTO,
       aceiteLegal: ACEITE_LEGAL,
       nomeInstituicao: 'ISPTEC',
-      tipoInstituicao: 'Universidade',
-      documentos,
+      tipoInstituicao: 'universidade',
     });
 
     expect(strapiPutMock).toHaveBeenCalledWith('/perfis/perfil-1', expect.objectContaining({
       tipo: 'instituicao',
       aprovado: false,
-      nomeInstituicao: 'ISPTEC',
-      tipoInstituicao: 'Universidade',
-      documentos,
     }));
+    expect(strapiPutMock.mock.calls.some(([path, payload]) => (
+      path === '/perfis/perfil-1' && 'nomeInstituicao' in payload
+    ))).toBe(false);
     expect(provisionMock).toHaveBeenCalledWith('user-42', {
       nome: 'ISPTEC',
-      tipo: 'Universidade',
-      documentos,
+      nomeLegal: 'ISPTEC',
+      tipo: 'universidade',
     });
   });
 

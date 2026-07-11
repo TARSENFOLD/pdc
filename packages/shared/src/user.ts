@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EnderecoAngolaSchema } from './schemas/instituicoes-base.js';
+import { EnderecoAngolaSchema, TipoInstituicaoSchema } from './schemas/instituicoes-base.js';
 import {
   ContactosInstituicaoSchema,
   MultimediaInstituicaoSchema,
@@ -164,11 +164,12 @@ export const RegistoMentorPayloadSchema = RegistoBaseSchema.extend({
   especialidade: z.string().optional(),
 });
 
-export const RegistoInstituicaoPayloadSchema = RegistoBaseSchema.extend({
-  nomeInstituicao: z.string().optional(),
+export const RegistoInstituicaoPayloadSchema = RegistoBaseSchema.omit({ documentos: true }).extend({
+  nomeInstituicao: z.string().trim().min(3).max(160),
   regiao: z.string().optional(),
-  tipo: z.string(),
-});
+  tipo: TipoInstituicaoSchema,
+  nif: z.string().trim().regex(/^[A-Z0-9][A-Z0-9./-]{4,29}$/),
+}).strict();
 
 export type RegistoEstudantePayload = z.infer<typeof RegistoEstudantePayloadSchema>;
 export type RegistoMentorPayload = z.infer<typeof RegistoMentorPayloadSchema>;

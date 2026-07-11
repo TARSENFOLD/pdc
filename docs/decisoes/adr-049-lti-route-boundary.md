@@ -1,7 +1,7 @@
 # ADR-049 — Fronteira Canónica da Rota LTI
 
-**Data:** 2026-07-05  
-**Estado:** Aceite  
+**Data:** 2026-07-05
+**Estado:** Aceite
 **Caixa:** C — divergência crítica entre rota comentada e serviços reais
 
 ## Contexto

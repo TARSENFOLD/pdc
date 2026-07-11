@@ -183,6 +183,47 @@ describe('GET /perfis/:id — route characterization', () => {
     expect(vi.mocked(strapiGet)).not.toHaveBeenCalledWith('/users/user-99', expect.anything());
   });
 
+  it('estudantes-vinculados returns serialized public profiles without raw user PII', async () => {
+    vi.mocked(jwtVerify).mockResolvedValueOnce({
+      payload: { sub: 'inst-user', role: 'instituicao' },
+      protectedHeader: { alg: 'HS256' },
+    } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
+    vi.mocked(strapiGet).mockImplementation((path: string) => {
+      if (path === '/vinculos') {
+        return Promise.resolve(listResponse([{
+          id: 'v-1',
+          status: 'aprovado',
+          solicitante: { id: 'perfil-student', userId: 'student-user' },
+        }]));
+      }
+      if (path === '/perfis') {
+        return Promise.resolve(listResponse([{
+          id: 'perfil-student',
+          userId: 'student-user',
+          nome: 'Estudante Vinculado',
+          tipo: 'estudante',
+          email: 'student@pdc.test',
+          telefone: '+244900000001',
+          bio: 'Bio visível',
+          visibilitySettings: { bio: 'publico' },
+        }]));
+      }
+      return Promise.resolve(listResponse([]));
+    });
+
+    const res = await perfilRoutes.request('/estudantes-vinculados', {
+      headers: { cookie: 'access_token=test-token' },
+    });
+
+    expect(res.status).toBe(200);
+    const json = await res.json() as { data: Array<Record<string, unknown>> };
+    expect(json.data).toHaveLength(1);
+    expect(json.data[0]).toMatchObject({ id: 'perfil-student', nome: 'Estudante Vinculado', role: 'estudante' });
+    expect(json.data[0]).not.toHaveProperty('email');
+    expect(json.data[0]).not.toHaveProperty('telefone');
+    expect(vi.mocked(strapiGet)).not.toHaveBeenCalledWith('/users/student-user', expect.anything());
+  });
+
   // ADR-029: bio visible to connected viewer when visibilitySettings.bio='conexoes'
   it('connected viewer can see bio with visibilitySettings=conexoes', async () => {
     vi.mocked(strapiGet).mockImplementation((path: string) => {

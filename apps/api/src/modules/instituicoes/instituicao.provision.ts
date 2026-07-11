@@ -26,7 +26,7 @@ function instituicaoReference(instituicao: StrapiInstituicao): InstituicaoRefere
 
 export async function provisionInstituicaoForUser(
   userId: string,
-  input: { nome: string; tipo?: string; regiao?: string; documentos?: unknown[] },
+  input: { nome: string; nomeLegal?: string; tipo?: string; natureza?: string; regiao?: string; nif?: string },
 ): Promise<ProvisionInstituicaoResult> {
   const perfis = await strapiGet<StrapiPerfilGestor>('/perfis', {
     'filters[userId][$eq]': userId,
@@ -45,10 +45,12 @@ export async function provisionInstituicaoForUser(
   const slug = `${baseSlug}-${userId}-${crypto.randomUUID().slice(0, 8)}`;
   const created = await strapiPost<StrapiInstituicao>('/instituicoes', {
     nome: input.nome,
-    nomeLegal: input.nome,
+    nomeLegal: input.nomeLegal ?? input.nome,
     slug,
     tipo: input.tipo ?? 'outro',
+    natureza: input.natureza,
     regiao: input.regiao,
+    nif: input.nif,
     estado: 'draft',
     aprovada: false,
     documentosLegais: [],

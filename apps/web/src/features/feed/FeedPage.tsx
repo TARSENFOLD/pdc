@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui';
 import { FeedCardSkeleton } from '@/components/ui/Skeleton';
-import { Zap } from 'lucide-react';
+import { Search, Zap } from 'lucide-react';
 import { http } from '@/lib/api/http';
 import { motion } from 'motion/react';
 import { APPLE_SPRING } from '@/lib/animations';
@@ -16,22 +17,29 @@ import { FeedCard } from './components/FeedCard';
 
 export function FeedPage() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = searchParams.get('q') ?? '';
   const { data, isLoading } = useQuery<FeedResponse>({
     queryKey: ['feed', 'sovereign'],
     queryFn: () => http.get<FeedResponse>('/feed'),
   });
 
-  if (isLoading) {
-    return (
-      <div className="mx-auto max-w-4xl space-y-6 pb-20">
-        <FeedCardSkeleton />
-        <FeedCardSkeleton />
-        <FeedCardSkeleton />
-      </div>
-    );
-  }
-
   const items: FeedItem[] = data?.data ?? [];
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleItems = normalizedQuery.length === 0
+    ? items
+    : items.filter((item) => JSON.stringify(item).toLowerCase().includes(normalizedQuery));
+
+  function updateSearch(value: string): void {
+    const next = new URLSearchParams(searchParams);
+    const trimmed = value.trim();
+    if (trimmed) {
+      next.set('q', trimmed);
+    } else {
+      next.delete('q');
+    }
+    setSearchParams(next, { replace: true });
+  }
 
   return (
     <div className="animate-in fade-in duration-1000 h-full">
@@ -47,16 +55,38 @@ export function FeedPage() {
 
         {/* CENTER COLUMN — scrollable feed */}
         <div className="flex flex-col gap-4 overflow-y-auto min-h-0">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-tertiary)]" size={16} />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => { updateSearch(event.target.value); }}
+              placeholder="Pesquisar no feed"
+              className="min-h-[44px] w-full rounded-xl border border-[var(--chrome-border)] bg-[var(--surface-elevated)] pl-10 pr-4 text-sm text-[var(--ink-primary)] outline-none transition focus:border-[var(--chrome-active)] focus:ring-2 focus:ring-[var(--chrome-active-soft)]"
+            />
+          </label>
           <PostComposerForm variant="inline" />
 
-          <div className="flex flex-col gap-4">
-            {items.length === 0 ? (
-              <Card className="p-20 text-center bg-[var(--chrome-surface)] border-[var(--chrome-border)] rounded-sm">
+          <div data-testid="feed" role="feed" className="flex flex-col gap-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--ink-tertiary)]">
+              {normalizedQuery ? 'Resultados da pesquisa' : 'Publicações'}
+            </p>
+
+            {isLoading ? (
+              <>
+                <FeedCardSkeleton />
+                <FeedCardSkeleton />
+                <FeedCardSkeleton />
+              </>
+            ) : visibleItems.length === 0 ? (
+              <Card data-testid="feed-empty" className="p-20 text-center bg-[var(--chrome-surface)] border-[var(--chrome-border)] rounded-sm">
                 <Zap size={48} className="mx-auto text-[var(--ink-tertiary)] mb-4 opacity-20" />
-                <p className="text-sm text-[var(--ink-tertiary)] font-semibold">{t('feed.emptyState', 'Ainda não há publicações.')}</p>
+                <p className="text-sm text-[var(--ink-tertiary)] font-semibold">
+                  {normalizedQuery ? 'Sem resultados para a pesquisa.' : t('feed.emptyState', 'Ainda não há publicações.')}
+                </p>
               </Card>
             ) : (
-              items.map((item: FeedItem, idx: number) => (
+              visibleItems.map((item: FeedItem, idx: number) => (
                 <motion.div
                   key={item.id}
                   initial={{ opacity: 0, y: 30 }}

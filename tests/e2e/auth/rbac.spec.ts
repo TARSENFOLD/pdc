@@ -12,8 +12,8 @@ test.describe('RBAC - básico', () => {
   });
 
   test('aluno can access own dashboard', async ({ alunoPage }) => {
-    await alunoPage.goto('/app/dashboard/aluno');
-    await expect(alunoPage.locator('h1, h2')).toBeVisible({ timeout: 10_000 });
+    await alunoPage.goto('/app/dashboard/estudante');
+    await expect(alunoPage.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('aluno cannot access mentor curso creation', async ({ alunoPage }) => {

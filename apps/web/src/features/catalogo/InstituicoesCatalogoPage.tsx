@@ -8,11 +8,12 @@ import CatalogoFilterBar from '@/components/catalogo/CatalogoFilterBar';
 import ContentCard from '@/components/catalogo/ContentCard';
 import { resolveCatalogHref } from '@/components/catalogo/catalogoLinks';
 import { Building2, MapPin } from 'lucide-react';
-import type { InstituicaoPublica } from '@pdc/shared';
+import type { InstituicaoPublicaDetalhada } from '@pdc/shared';
 
 const TIPOS = [
   { value: 'universidade', label: 'Universidade' },
-  { value: 'escola_tecnica', label: 'Escola Técnica' },
+  { value: 'instituto', label: 'Instituto' },
+  { value: 'escola', label: 'Escola' },
   { value: 'centro_formacao', label: 'Centro de Formação' },
   { value: 'outro', label: 'Outro' },
 ];
@@ -84,15 +85,15 @@ export default function InstituicoesCatalogoPage(): React.JSX.Element {
             />
           }
         >
-          {insts.map((i: InstituicaoPublica) => {
-            const regionLabel = i.regiao || 'Angola';
+          {insts.map((i: InstituicaoPublicaDetalhada) => {
+            const regionLabel = i.localizacao?.provincia ?? 'Angola';
             return (
             <ContentCard
               key={i.id}
               title={i.nome}
               subtitle={i.tipo ? i.tipo.charAt(0).toUpperCase() + i.tipo.slice(1).replaceAll('_', ' ') : 'Instituição Parceira'}
-              image={i.logoUrl || undefined}
-              href={resolveCatalogHref('instituicao', i.slug || i.id, inApp)}
+              image={i.multimedia?.logoUrl}
+              href={resolveCatalogHref('instituicao', i.slug, inApp)}
               type="instituicao"
               ctaLabel="Ver instituição"
               icon={Building2}

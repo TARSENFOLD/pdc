@@ -6,6 +6,7 @@ import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { requireApproved } from '../middleware/requireApproved.js';
 import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { persistedEntityId } from '../modules/strapi/strapi-entity.js';
 import { CriarSimulacaoPayloadSchema, type Tentativa } from '@pdc/shared';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
@@ -25,6 +26,8 @@ const simQuerySchema = z.object({
 
 interface StrapiSimulacao {
   id: string | number;
+  documentId?: string;
+  slug?: string;
   titulo: string;
   autorId: string;
   estado: string;
@@ -37,10 +40,36 @@ export const simulacaoRoutes = new Hono<Vars>();
 simulacaoRoutes.use('*', verifyJwt);
 simulacaoRoutes.route('/tentativas', simulacaoTentativasRoutes);
 
+async function findSimulacao(identifier: string, params: Record<string, string> = {}): Promise<StrapiSimulacao | undefined> {
+  const bySlug = await strapiGet<StrapiSimulacao>('/simulacoes', {
+    ...params,
+    'filters[slug][$eq]': identifier,
+    'pagination[pageSize]': '1',
+  });
+  if (bySlug.data[0]) return bySlug.data[0];
+
+  const byDocumentId = await strapiGet<StrapiSimulacao>('/simulacoes', {
+    ...params,
+    'filters[documentId][$eq]': identifier,
+    'pagination[pageSize]': '1',
+  });
+  if (byDocumentId.data[0]) return byDocumentId.data[0];
+
+  if (/^\d+$/.test(identifier)) {
+    const byId = await strapiGet<StrapiSimulacao>('/simulacoes', {
+      ...params,
+      'filters[id][$eq]': identifier,
+      'pagination[pageSize]': '1',
+    });
+    return byId.data[0];
+  }
+  return undefined;
+}
+
 // GET /simulacoes
 simulacaoRoutes.get('/', zValidator('query', simQuerySchema), async (c) => {
   const q = c.req.valid('query');
-  const params: Record<string, string> = { populate: 'capa,iframeUrl' };
+  const params: Record<string, string> = {};
   if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
   if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
   if (q.search !== undefined) params['filters[titulo][$containsi]'] = q.search;
@@ -91,8 +120,7 @@ simulacaoRoutes.get('/me/tentativas', async (c) => {
 simulacaoRoutes.get('/:id', async (c) => {
   const simId = c.req.param('id');
   try {
-    const res = await strapiGet<StrapiSimulacao>(`/simulacoes/${simId}`, { populate: 'capa,iframeUrl' });
-    const data = res.data[0];
+    const data = await findSimulacao(simId);
     if (!data) return c.json({ error: 'Simulação não encontrada' }, 404);
     
     // Verificação de acesso
@@ -101,7 +129,10 @@ simulacaoRoutes.get('/:id', async (c) => {
       return c.json({ error: 'Acesso negado' }, 403);
     }
 
-    return c.json(res);
+    return c.json({
+      ...data,
+      id: persistedEntityId(data),
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -151,15 +182,14 @@ simulacaoRoutes.put('/:id', checkRole(['mentor', 'instituicao', 'super_admin']),
 
   try {
     // Verificar se é o autor
-    const resGet = await strapiGet<StrapiSimulacao>(`/simulacoes/${id}`);
-    const sim = resGet.data[0];
+    const sim = await findSimulacao(id);
     if (!sim) return c.json({ error: 'Simulação não encontrada' }, 404);
 
     if (sim.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
       return c.json({ error: 'Não tem permissão para editar esta simulação' }, 403);
     }
 
-    const resPut = await strapiPut<StrapiSimulacao>(`/simulacoes/${id}`, payload);
+    const resPut = await strapiPut<StrapiSimulacao>(`/simulacoes/${persistedEntityId(sim)}`, payload);
     return c.json(resPut);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
@@ -177,8 +207,7 @@ simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'modera
 
   try {
     // Buscar simulação actual
-    const resGet = await strapiGet<StrapiSimulacao>(`/simulacoes/${id}`);
-    const sim = resGet.data[0];
+    const sim = await findSimulacao(id);
     if (!sim) {
       return c.json({ error: 'Simulação não encontrada' }, 404);
     }
@@ -214,12 +243,12 @@ simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'modera
     }
 
     // Actualizar estado
-    await strapiPut<unknown>(`/simulacoes/${id}`, { estado });
+    await strapiPut<unknown>(`/simulacoes/${persistedEntityId(sim)}`, { estado });
 
     // G15: Impacto no Ecossistema se for publicação
     if (estado === 'published') {
       await eventBus.publishWithOutbox(DomainEventName.SIMULACAO_PUBLICADA, {
-        simulacaoId: id,
+        simulacaoId: persistedEntityId(sim),
         autorId: sim.autorId,
         titulo: sim.titulo,
         area: sim.area

@@ -1,4 +1,4 @@
-import { z, type ZodType } from 'zod';
+import { z, type ZodType, type ZodTypeDef } from 'zod';
 
 const configuredBaseUrl = import.meta.env.VITE_API_URL as string | undefined;
 const BASE_URL: string = configuredBaseUrl
@@ -132,7 +132,11 @@ async function request<T>(path: string, init?: RequestInit, retried = false): Pr
   return coerceLegacyResponse<T>(await requestUnknown(path, init, retried));
 }
 
-async function requestParsed<T>(path: string, schema: ZodType<T>, init?: RequestInit): Promise<T> {
+async function requestParsed<T>(
+  path: string,
+  schema: ZodType<T, ZodTypeDef, unknown>,
+  init?: RequestInit,
+): Promise<T> {
   const data = await requestUnknown(path, init);
   const result = schema.safeParse(data);
   if (!result.success) {
@@ -147,7 +151,7 @@ export const http = {
   get: <T>(path: string, init?: RequestInit) =>
     request<T>(path, { ...init, method: 'GET' }),
 
-  getParsed: <T>(path: string, schema: ZodType<T>, init?: RequestInit) =>
+  getParsed: <T>(path: string, schema: ZodType<T, ZodTypeDef, unknown>, init?: RequestInit) =>
     requestParsed(path, schema, { ...init, method: 'GET' }),
 
   /** @deprecated Use http.postParsed(path, body, schema) para validar o contrato da resposta. */
@@ -158,7 +162,7 @@ export const http = {
       body: JSON.stringify(body),
     }),
 
-  postParsed: <T>(path: string, body: unknown, schema: ZodType<T>, init?: RequestInit) =>
+  postParsed: <T>(path: string, body: unknown, schema: ZodType<T, ZodTypeDef, unknown>, init?: RequestInit) =>
     requestParsed(path, schema, {
       ...init,
       method: 'POST',
@@ -173,7 +177,7 @@ export const http = {
       body: JSON.stringify(body),
     }),
 
-  putParsed: <T>(path: string, body: unknown, schema: ZodType<T>, init?: RequestInit) =>
+  putParsed: <T>(path: string, body: unknown, schema: ZodType<T, ZodTypeDef, unknown>, init?: RequestInit) =>
     requestParsed(path, schema, {
       ...init,
       method: 'PUT',
@@ -188,7 +192,7 @@ export const http = {
       body: JSON.stringify(body),
     }),
 
-  patchParsed: <T>(path: string, body: unknown, schema: ZodType<T>, init?: RequestInit) =>
+  patchParsed: <T>(path: string, body: unknown, schema: ZodType<T, ZodTypeDef, unknown>, init?: RequestInit) =>
     requestParsed(path, schema, {
       ...init,
       method: 'PATCH',
@@ -203,7 +207,7 @@ export const http = {
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     }),
 
-  deleteParsed: <T>(path: string, body: unknown, schema: ZodType<T>, init?: RequestInit) =>
+  deleteParsed: <T>(path: string, body: unknown, schema: ZodType<T, ZodTypeDef, unknown>, init?: RequestInit) =>
     requestParsed(path, schema, {
       ...init,
       method: 'DELETE',
@@ -214,6 +218,6 @@ export const http = {
   postForm: <T>(path: string, body: FormData, init?: RequestInit) =>
     request<T>(path, { ...init, method: 'POST', body }),
 
-  postFormParsed: <T>(path: string, body: FormData, schema: ZodType<T>, init?: RequestInit) =>
+  postFormParsed: <T>(path: string, body: FormData, schema: ZodType<T, ZodTypeDef, unknown>, init?: RequestInit) =>
     requestParsed(path, schema, { ...init, method: 'POST', body }),
 };

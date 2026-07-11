@@ -148,7 +148,7 @@ app.post('/telemetria/batch', async (c) => {
   const processedEvents = newEvents.map((event: TelemetriaEvento) => {
     const identifiedEvent = {
       ...event,
-      perfilId: event.perfilId || perfilId,
+      perfilId,
     };
 
     const sanity = applySanityRules(identifiedEvent, EDGE_SANITY_RULES);

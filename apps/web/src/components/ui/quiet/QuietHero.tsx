@@ -31,7 +31,7 @@ export function QuietHero({
       {kicker && (
         <p 
           data-testid="quiet-hero-kicker"
-          className="text-xs font-semibold uppercase tracking-widest text-accent-terracotta"
+          className="text-xs font-semibold uppercase tracking-widest text-ink-secondary"
         >
           {kicker}
         </p>

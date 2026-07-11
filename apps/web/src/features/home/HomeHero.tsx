@@ -48,7 +48,7 @@ const JOURNEY_BY_ROLE: Partial<Record<Role, JourneyStep[]>> = {
     { label: 'Simulações', desc: 'Gerir tarefas',    to: '/app/mentor/simulacoes',     icon: FlaskConical },
   ],
   moderador: [
-    { label: 'Aprovações', desc: 'Perfis pendentes', to: '/app/admin/aprovacoes', icon: CheckCircle, accent: true },
+    { label: 'Aprovações', desc: 'Conteúdos pendentes', to: '/app/moderacao/aprovacoes', icon: CheckCircle, accent: true },
     { label: 'Moderação',  desc: 'Conteúdos',        to: '/app/moderacao',        icon: Shield },
     { label: 'Simulações', desc: 'Ver todas',         to: '/app/simulacoes',       icon: FlaskConical },
     { label: 'Feed',       desc: 'Comunidade',        to: '/app/feed',             icon: Zap },
@@ -82,7 +82,7 @@ export function HomeHero({ summary, role }: Props) {
         transition={tr(0)}
         className="text-center pt-2"
       >
-        <h1 className="text-xl sm:text-2xl font-bold text-ink-primary leading-tight">
+        <h1 data-testid="page-hero-title" className="text-xl sm:text-2xl font-bold text-ink-primary leading-tight">
           {summary.greeting}
         </h1>
         {xp > 0 || stats.reputacao > 0 ? (

@@ -13,6 +13,17 @@ import { buildAceiteLegal, emptyConsentimentoEncarregado } from './registrationC
 
 type OnboardingRole = Extract<Role, 'estudante' | 'mentor' | 'instituicao'>;
 
+const TIPOS_INSTITUICAO = [
+  { value: 'universidade', label: 'Universidade' },
+  { value: 'instituto', label: 'Instituto' },
+  { value: 'escola', label: 'Escola' },
+  { value: 'centro_formacao', label: 'Centro de Formação' },
+  { value: 'empresa', label: 'Empresa' },
+  { value: 'ong', label: 'ONG' },
+  { value: 'laboratorio', label: 'Laboratório' },
+  { value: 'outro', label: 'Outro' },
+] as const;
+
 function getErrorMessage(error: unknown): string {
   if (typeof error !== 'object' || error === null || !('body' in error)) return 'Não foi possível concluir a validação.';
   const body = error.body;
@@ -29,7 +40,7 @@ export function FinalizarOAuthPage() {
   const [role, setRole] = useState<OnboardingRole>('estudante');
   const [areaEspecialidade, setAreaEspecialidade] = useState('');
   const [nomeInstituicao, setNomeInstituicao] = useState('');
-  const [tipoInstituicao, setTipoInstituicao] = useState('');
+  const [tipoInstituicao, setTipoInstituicao] = useState('universidade');
   const [documentoUrl, setDocumentoUrl] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [aceitouLegal, setAceitouLegal] = useState(false);
@@ -85,7 +96,6 @@ export function FinalizarOAuthPage() {
         ...compliance,
         nomeInstituicao,
         tipoInstituicao,
-        documentos: [{ tipo: 'comprovativo', url: documentoUrl }],
       };
     }
 
@@ -147,10 +157,24 @@ export function FinalizarOAuthPage() {
             )}
 
             {role === 'instituicao' && (
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2">
                 <Field id="oauth-nome-instituicao" label="Nome da instituição" value={nomeInstituicao} onChange={setNomeInstituicao} required />
-                <Field id="oauth-tipo-instituicao" label="Tipo de instituição" value={tipoInstituicao} onChange={setTipoInstituicao} required />
-                <Field id="oauth-documento-instituicao" label="URL do comprovativo" type="url" value={documentoUrl} onChange={setDocumentoUrl} required />
+                <label htmlFor="oauth-tipo-instituicao" className="block">
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-ink-tertiary">
+                    Tipo de instituição
+                  </span>
+                  <select
+                    id="oauth-tipo-instituicao"
+                    value={tipoInstituicao}
+                    onChange={(event) => { setTipoInstituicao(event.target.value); }}
+                    className="h-12 w-full rounded-lg border border-ink-tertiary/10 bg-recessed px-4 text-sm text-ink-primary outline-none transition focus:border-accent focus:ring-1 focus:ring-accent"
+                    required
+                  >
+                    {TIPOS_INSTITUICAO.map((tipo) => (
+                      <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
             )}
 

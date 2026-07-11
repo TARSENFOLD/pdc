@@ -557,12 +557,16 @@ export default function EditPerfilPage(): React.JSX.Element | null {
                     }}
                   >
                     <Input
+                      id="perfil-nome"
+                      name="nome"
                       label="Nome Completo"
                       value={basicInfo.nome}
                       onChange={(e) => { setBasicInfo((prev) => ({ ...prev, nome: e.target.value })); }}
                       placeholder="O teu nome completo"
                     />
                     <Input
+                      id="perfil-headline"
+                      name="headline"
                       label="Headline Profissional"
                       value={basicInfo.headline}
                       onChange={(e) => { setBasicInfo((prev) => ({ ...prev, headline: e.target.value })); }}
@@ -571,6 +575,8 @@ export default function EditPerfilPage(): React.JSX.Element | null {
                     <div className="space-y-1.5">
                       <label className="block text-xs font-bold uppercase tracking-widest text-ink-tertiary">Biografia</label>
                       <textarea
+                        id="perfil-bio"
+                        name="bio"
                         value={basicInfo.bio}
                         onChange={(e) => { setBasicInfo((prev) => ({ ...prev, bio: e.target.value })); }}
                         rows={5}
@@ -584,12 +590,16 @@ export default function EditPerfilPage(): React.JSX.Element | null {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <Input
+                        id="perfil-regiao"
+                        name="regiao"
                         label="Localização"
                         value={basicInfo.regiao}
                         onChange={(e) => { setBasicInfo((prev) => ({ ...prev, regiao: e.target.value })); }}
                         placeholder="ex: Luanda, Angola"
                       />
                       <Input
+                        id="perfil-website"
+                        name="website"
                         label="Website"
                         type="url"
                         value={basicInfo.website}

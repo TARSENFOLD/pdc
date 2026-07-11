@@ -65,43 +65,44 @@ export async function verifyJwt(c: Context<{ Variables: AuthVariables }>, next: 
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
+  let parsedPayload: z.infer<typeof JwtUserPayloadSchema>;
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
     const payloadResult = JwtUserPayloadSchema.safeParse(payload);
     if (!payloadResult.success) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
-    const parsedPayload = payloadResult.data;
-
-    const user: AuthVariables['user'] = {
-      id: parsedPayload.sub,
-      role: parsedPayload.role,
-      perfilId: parsedPayload.perfilId,
-      instituicaoId: parsedPayload.instituicaoId,
-      onboardingCompleto: parsedPayload.onboardingCompleto ?? undefined,
-      isMinor: parsedPayload.isMinor,
-      estadoMenoridade: parsedPayload.estadoMenoridade,
-      consentimentoEstado: parsedPayload.consentimentoEstado,
-    };
-
-    c.set('user', user);
-
-    // Block incomplete OAuth sessions from all routes except auth, finalizar, and media upload
-    if (parsedPayload.onboardingCompleto === false) {
-      const path = c.req.path;
-      if (!isAuthBypassPath(path)) {
-        return c.json({ error: 'Onboarding incompleto' }, 403);
-      }
-    }
-
-    if (hasExplicitComplianceBlock(parsedPayload) && !isAuthBypassPath(c.req.path)) {
-      return c.json({ error: 'Regularização legal obrigatória' }, 403);
-    }
-
-    await next();
+    parsedPayload = payloadResult.data;
   } catch {
     return c.json({ error: 'Unauthorized' }, 401);
   }
+
+  const user: AuthVariables['user'] = {
+    id: parsedPayload.sub,
+    role: parsedPayload.role,
+    perfilId: parsedPayload.perfilId,
+    instituicaoId: parsedPayload.instituicaoId,
+    onboardingCompleto: parsedPayload.onboardingCompleto ?? undefined,
+    isMinor: parsedPayload.isMinor,
+    estadoMenoridade: parsedPayload.estadoMenoridade,
+    consentimentoEstado: parsedPayload.consentimentoEstado,
+  };
+
+  c.set('user', user);
+
+  // Block incomplete OAuth sessions from all routes except auth, finalizar, and media upload
+  if (parsedPayload.onboardingCompleto === false) {
+    const path = c.req.path;
+    if (!isAuthBypassPath(path)) {
+      return c.json({ error: 'Onboarding incompleto' }, 403);
+    }
+  }
+
+  if (hasExplicitComplianceBlock(parsedPayload) && !isAuthBypassPath(c.req.path)) {
+    return c.json({ error: 'Regularização legal obrigatória' }, 403);
+  }
+
+  await next();
 }
 
 export async function optionalJwt(c: Context<{ Variables: OptionalAuthVariables }>, next: Next) {

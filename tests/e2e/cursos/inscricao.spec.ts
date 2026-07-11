@@ -12,12 +12,12 @@ test.describe('Inscrição Curso', () => {
   });
 
   test('catálogo público loads without auth', async ({ page }) => {
-    await page.goto('/catalogo');
-    await expect(page.locator('h1, h2, [data-testid="catalogo"]')).toBeVisible({ timeout: 10_000 });
+    await page.goto('/explorar');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('catálogo cursos list loads', async ({ page }) => {
-    await page.goto('/catalogo/cursos');
-    await expect(page.locator('h1, h2')).toBeVisible({ timeout: 10_000 });
+    await page.goto('/cursos');
+    await expect(page.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 });

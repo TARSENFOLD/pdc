@@ -8,8 +8,9 @@ import { optionalJwt, type OptionalAuthVariables } from '../modules/auth/auth.mi
 import { serializePublicProfile, type StrapiPerfil } from '../modules/perfil/perfil.serializer.js';
 import {
   RoleSchema,
+  InstituicaoPublicaDetalhadaSchema,
   type MentorPublico,
-  type InstituicaoPublica,
+  type InstituicaoPublicaDetalhada,
   type PerfilPublicoBasico,
   type CatalogoMeta,
   type Role,
@@ -179,18 +180,8 @@ const instFilters = paginationQuery.extend({
   natureza: z.string().optional(),
 });
 
-function mapInst(d: StrapiInstituicao): InstituicaoPublica {
-  const canonical = instituicaoService.mapPublica(d);
-  return {
-    id: sid(d.id), slug: d.slug, nome: d.nome,
-    bio: d.descricao, descricao: d.descricao, logoUrl: d.logoUrl || undefined,
-    tipo: d.tipo ?? 'instituicao', regiao: d.regiao,
-    estado: canonical.estado, verificada: canonical.verificada,
-    natureza: canonical.natureza, localizacao: canonical.localizacao,
-    contactos: canonical.contactos, oferta: canonical.oferta,
-    recursos: canonical.recursos, qualidade: canonical.qualidade,
-    multimedia: canonical.multimedia, selos: canonical.selos,
-  };
+function mapInst(d: StrapiInstituicao): InstituicaoPublicaDetalhada {
+  return InstituicaoPublicaDetalhadaSchema.parse(instituicaoService.mapPublica(d));
 }
 
 instituicoesRoutes.get('/', zValidator('query', instFilters), async (c) => {

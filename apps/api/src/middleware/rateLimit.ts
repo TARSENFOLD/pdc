@@ -132,7 +132,16 @@ export function createRateLimit(options: RateLimitOptions) {
 
     let result: LimitResult | null = null;
     if (limiter) {
-      result = await limiter.limit(identity);
+      try {
+        result = await limiter.limit(identity);
+      } catch (error: unknown) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        log.error(
+          { err, keyPrefix: options.keyPrefix },
+          'Redis rate limiter unavailable, falling back to local memory bucket',
+        );
+        result = memoryLimit(storageKey, profiledTokens, options.window);
+      }
     } else if (env.NODE_ENV === 'test') {
       result = memoryLimit(storageKey, profiledTokens, options.window);
     } else {

@@ -54,6 +54,13 @@ interface StrapiConquistaRes {
   aprovada: boolean;
 }
 
+function conquistaTipoAutorFromRole(role: AuthVariables['user']['role']): 'mentor' | 'instituicao' | 'plataforma' | 'aluno' {
+  if (role === 'estudante') return 'aluno';
+  if (role === 'super_admin') return 'plataforma';
+  if (role === 'mentor' || role === 'instituicao') return role;
+  return 'plataforma';
+}
+
 // POST /conquistas/manual — criar conquista manual (RBAC)
 conquistaRoutes.post('/manual',
   checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
@@ -81,7 +88,7 @@ conquistaRoutes.post('/manual',
         ...body,
         origem: 'manual',
         tipo: 'manual',
-        tipoAutor: role,
+        tipoAutor: conquistaTipoAutorFromRole(role),
         autor: perfil.id,
         aprovada,
       });

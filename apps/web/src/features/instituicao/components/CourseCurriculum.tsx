@@ -1,9 +1,11 @@
 import { Control, UseFormRegister, UseFieldArrayReturn, useFieldArray, UseFormSetValue } from 'react-hook-form';
 import { Input, Button } from '@/components/ui';
-import { Plus, Trash2, BookOpen, Layers, Link as LinkIcon, FileUp } from 'lucide-react';
+import { Plus, Trash2, BookOpen, Layers, Link as LinkIcon, FileUp, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CriarCursoPayload } from '@pdc/shared';
 import { SovereignMediaUpload } from './SovereignMediaUpload';
+import { videosApi } from '@/lib/api/videos';
+import { useState } from 'react';
 
 interface Props {
   register: UseFormRegister<CriarCursoPayload>;
@@ -16,8 +18,48 @@ function moduloPath(index: number, field: 'titulo') {
   return ['modulos', index, field].join('.') as `modulos.${number}.${typeof field}`;
 }
 
-function itemPath(index: number, itemIndex: number, field: 'tipo' | 'titulo' | 'conteudo' | 'url') {
+function itemPath(index: number, itemIndex: number, field: 'tipo' | 'titulo' | 'conteudo' | 'url' | 'videoId') {
   return ['modulos', index, 'itens', itemIndex, field].join('.') as `modulos.${number}.itens.${number}.${typeof field}`;
+}
+
+function CourseVideoUpload({
+  title,
+  onVideoReady,
+}: {
+  title: string;
+  onVideoReady: (videoId: string) => void;
+}) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function upload(file: File | undefined) {
+    if (!file || isUploading) return;
+    setError(null);
+    setIsUploading(true);
+    try {
+      const video = await videosApi.uploadQuickR2(file, title.trim() || file.name);
+      onVideoReady(video.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha no upload do vídeo');
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  return (
+    <label className="block space-y-1">
+      <span className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><Video size={12} /> Vídeo PDC</span>
+      <input
+        type="file"
+        accept="video/mp4"
+        disabled={isUploading}
+        onChange={(event) => { void upload(event.target.files?.[0]); }}
+        className="block w-full text-xs text-ink-secondary file:mr-3 file:min-h-10 file:rounded-sm file:border file:border-border file:bg-canvas file:px-3 file:text-xs file:font-semibold file:text-ink-primary disabled:opacity-60"
+      />
+      {isUploading ? <p className="text-xs text-ink-tertiary">A enviar vídeo...</p> : null}
+      {error ? <p className="text-xs text-error">{error}</p> : null}
+    </label>
+  );
 }
 
 function ModuleItemsEditor({
@@ -83,10 +125,14 @@ function ModuleItemsEditor({
             </button>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-3">
             <label className="space-y-1">
               <span className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><LinkIcon size={12} /> URL ou embed</span>
               <Input className="h-10 bg-canvas text-xs" {...register(itemPath(moduleIndex, itemIndex, 'url'))} />
+            </label>
+            <label className="space-y-1">
+              <span className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><Video size={12} /> Video ID</span>
+              <Input className="h-10 bg-canvas text-xs" {...register(itemPath(moduleIndex, itemIndex, 'videoId'))} />
             </label>
             <div className="space-y-1">
               <span className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><FileUp size={12} /> Ficheiro</span>
@@ -100,6 +146,12 @@ function ModuleItemsEditor({
               />
             </div>
           </div>
+          <CourseVideoUpload
+            title={item.titulo}
+            onVideoReady={(videoId) => {
+              setValue(itemPath(moduleIndex, itemIndex, 'videoId'), videoId, { shouldDirty: true, shouldValidate: true });
+            }}
+          />
 
           <label className="space-y-1 block">
             <span className="text-xs font-semibold text-ink-secondary">Texto ou instruções</span>

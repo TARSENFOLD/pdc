@@ -1,9 +1,9 @@
 # Mapeamento de Dívidas Técnicas e Frentes de Execução — PDC v2
 
-> **Data:** 5 de Julho de 2026  
-> **Branch:** `feat/migrate-bff-cms-to-hetzner`  
-> **Autor:** Agente Investigador (Cline)  
-> **Base de Verdade:** `specs/IMPORTANTE/01–05`, `.planning/CONSTITUTION.md`, `.planning/REQUIREMENTS.md`, `.planning/DIVIDA_TECNICA_CONHECIDA.md`, `.planning/STATE.md`, `.planning/roadmap.md`  
+> **Data:** 5 de Julho de 2026
+> **Branch:** `feat/migrate-bff-cms-to-hetzner`
+> **Autor:** Agente Investigador (Cline)
+> **Base de Verdade:** `specs/IMPORTANTE/01–05`, `.planning/CONSTITUTION.md`, `.planning/REQUIREMENTS.md`, `.planning/DIVIDA_TECNICA_CONHECIDA.md`, `.planning/STATE.md`, `.planning/roadmap.md`
 > **Método:** Análise diferencial (Caixas A-D) + inspeção de código + validação de CI.
 
 ---

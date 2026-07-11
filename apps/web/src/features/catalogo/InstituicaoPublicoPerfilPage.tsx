@@ -4,12 +4,12 @@ import { Link, useParams } from 'react-router-dom';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { Spinner, Badge, Button } from '@/components/ui';
 import { SEOHead } from '@/components/layout/SEOHead';
-import type { InstituicaoPublica } from '@pdc/shared';
+import type { InstituicaoPublicaDetalhada } from '@pdc/shared';
 
 export function InstituicaoPublicoPerfilPage() {
   const { slug } = useParams<{ slug: string }>();
 
-  const { data: inst, isLoading, isError } = useQuery<InstituicaoPublica | null>({
+  const { data: inst, isLoading, isError } = useQuery<InstituicaoPublicaDetalhada | null>({
     queryKey: ['catalogo-instituicao', slug],
     queryFn: async () => {
       if (!slug) return null;
@@ -25,14 +25,14 @@ export function InstituicaoPublicoPerfilPage() {
     <div className="min-h-screen bg-canvas px-4 py-16 sm:px-6">
       <SEOHead
         title={inst.nome}
-        description={inst.bio || `Instituição de ensino${inst.regiao ? ` na região de ${inst.regiao}` : ''}`}
-        image={inst.logoUrl || undefined}
+        description={inst.descricao || `Instituição de ensino${inst.localizacao?.provincia ? ` na província de ${inst.localizacao.provincia}` : ''}`}
+        image={inst.multimedia?.logoUrl}
         url={`https://usepdc.com/instituicoes/${slug || ''}`}
-        type="profile"
+        type="website"
         jsonLd={{
           '@type': 'EducationalOrganization',
           name: inst.nome,
-          description: inst.bio || '',
+          description: inst.descricao || '',
           url: `https://usepdc.com/instituicoes/${slug || ''}`,
         }}
       />
@@ -44,8 +44,8 @@ export function InstituicaoPublicoPerfilPage() {
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div className="flex items-center gap-6">
-            {inst.logoUrl ? (
-              <img src={inst.logoUrl} alt={inst.nome} className="h-20 w-20 rounded-lg object-contain border border-ink-tertiary/10 p-2 bg-white" />
+            {inst.multimedia?.logoUrl ? (
+              <img src={inst.multimedia.logoUrl} alt={inst.nome} className="h-20 w-20 rounded-lg object-contain border border-ink-tertiary/10 p-2 bg-white" />
             ) : (
               <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-accent/5 text-accent border border-accent/10"><Building2 size={40} /></div>
             )}
@@ -56,14 +56,7 @@ export function InstituicaoPublicoPerfilPage() {
               <h1 className="text-3xl font-black text-ink-primary tracking-tighter font-display">{inst.nome}</h1>
               <div className="mt-1 flex gap-2">
                 {inst.tipo ? <Badge variant="secondary" className="bg-recessed text-[9px] uppercase font-black">{inst.tipo}</Badge> : null}
-                {inst.regiao ? <Badge variant="secondary" className="bg-recessed text-[9px] uppercase font-black">{inst.regiao}</Badge> : null}
-              </div>
-              <div className="mt-3">
-                {slug ? (
-                  <Link to={`/perfil/${slug}`} className="inline-flex items-center text-[11px] font-black uppercase tracking-wider text-ink-tertiary hover:text-accent hover:underline transition-all">
-                    Ver Perfil Completo →
-                  </Link>
-                ) : null}
+                {inst.localizacao?.provincia ? <Badge variant="secondary" className="bg-recessed text-[9px] uppercase font-black">{inst.localizacao.provincia}</Badge> : null}
               </div>
             </div>
           </div>
@@ -85,7 +78,7 @@ export function InstituicaoPublicoPerfilPage() {
         <div className="mt-8 pt-8 border-t border-ink-tertiary/10">
           <h2 className="text-lg font-semibold text-ink-primary">Programas e Cursos</h2>
           <p className="mt-2 text-sm text-ink-secondary">
-            Esta instituição{inst.regiao ? ` na região de ${inst.regiao}` : ''} oferece cursos e experiências práticas.
+            Esta instituição{inst.localizacao?.provincia ? ` na província de ${inst.localizacao.provincia}` : ''} oferece cursos e experiências práticas.
           </p>
           <p className="mt-1 text-xs text-ink-tertiary">Cria conta para ver o catálogo completo de programas.</p>
         </div>

@@ -6,6 +6,7 @@ import { type Tentativa, analyzeFluidity, analyzeFocus } from '@pdc/shared';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import type { AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import { persistedEntityId } from '../modules/strapi/strapi-entity.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 
@@ -14,6 +15,8 @@ type Vars = { Variables: AuthVariables };
 
 interface StrapiSimulacao {
   id: string | number;
+  documentId?: string;
+  slug?: string;
   titulo: string;
   autorId: string;
   estado: string;
@@ -58,48 +61,74 @@ function parsePercentMetric(value: unknown, fallback: number): number {
 
 export const simulacaoTentativasRoutes = new Hono<Vars>();
 
+async function findSimulacao(identifier: string): Promise<StrapiSimulacao | undefined> {
+  const bySlug = await strapiGet<StrapiSimulacao>('/simulacoes', {
+    'filters[slug][$eq]': identifier,
+    'pagination[pageSize]': '1',
+  });
+  if (bySlug.data[0]) return bySlug.data[0];
+
+  const byDocumentId = await strapiGet<StrapiSimulacao>('/simulacoes', {
+    'filters[documentId][$eq]': identifier,
+    'pagination[pageSize]': '1',
+  });
+  if (byDocumentId.data[0]) return byDocumentId.data[0];
+
+  if (/^\d+$/.test(identifier)) {
+    const byId = await strapiGet<StrapiSimulacao>('/simulacoes', {
+      'filters[id][$eq]': identifier,
+      'pagination[pageSize]': '1',
+    });
+    return byId.data[0];
+  }
+  return undefined;
+}
+
 // POST /simulacoes/tentativas — iniciar tentativa (estudante apenas)
 simulacaoTentativasRoutes.post('/', checkRole(['estudante']), zValidator('json', iniciarSchema), async (c) => {
   const { id: userId } = c.get('user');
   const { simulacaoId } = c.req.valid('json');
   try {
-    const resPerfil = await strapiGet<{ id: string }>('/perfis', {
+    const resPerfil = await strapiGet<{ id: string | number }>('/perfis', {
       'filters[userId][$eq]': userId,
       'fields[0]': 'id',
     });
     const perfilId = resPerfil.data[0]?.id;
     if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
+    const perfilPublicId = String(perfilId);
 
-    const resSim = await strapiGet<StrapiSimulacao>(`/simulacoes/${simulacaoId}`);
-    const sim = resSim.data[0];
+    const sim = await findSimulacao(simulacaoId);
     if (!sim) return c.json({ error: 'Simulação não encontrada' }, 404);
     if (!SIMULACAO_ALLOWED_STATES.has(sim.estado)) {
       return c.json({ error: 'Simulação não está disponível' }, 403);
     }
 
+    const persistedSimulacaoId = persistedEntityId(sim);
     const prevTentativas = await strapiGet<Tentativa>('/tentativas', {
-      'filters[perfil][id][$eq]': perfilId,
-      'filters[simulacao][id][$eq]': simulacaoId,
+      'filters[perfil][id][$eq]': perfilPublicId,
+      'filters[$or][0][simulacao][documentId][$eq]': persistedSimulacaoId,
+      'filters[$or][1][simulacao][id][$eq]': String(sim.id),
     });
     const tentativaNum = prevTentativas.meta.pagination.total + 1;
 
     const resPost = await strapiPost<Tentativa>('/tentativas', {
-      simulacao: simulacaoId,
+      simulacao: persistedSimulacaoId,
       perfil: perfilId,
       dataInicio: new Date().toISOString(),
       tentativaNum,
       executorTipo: `tipo${sim.tipo.toString()}`,
       status: 'em_progresso',
-      metadata: { perfilId, userId },
+      metadata: { perfilId: perfilPublicId, userId, simulacaoId: persistedSimulacaoId },
     });
+
+    const tentativaPublicId = persistedEntityId(resPost.data);
 
     await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_INICIADA, {
-      tentativaId: resPost.data.id,
-      perfilId,
-      simulacaoId,
+      tentativaId: tentativaPublicId,
+      perfilId: perfilPublicId,
     });
 
-    return c.json(resPost, 201);
+    return c.json({ ...resPost.data, id: tentativaPublicId }, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);
@@ -137,24 +166,26 @@ simulacaoTentativasRoutes.put('/:id', checkRole(['estudante']), zValidator('json
       duracaoSegundos,
     });
 
-    const resSimInfo = await strapiGet<Tentativa & { simulacao?: StrapiSimulacao; perfil?: { id: string } }>(`/tentativas/${tentativaId}?populate=simulacao,perfil`);
-    const tentativaComSim = resSimInfo.data[0];
-    const area = tentativaComSim?.simulacao?.area || (metadata?.domainId as string) || 'geral';
+    const area = typeof metadata?.domainId === 'string' ? metadata.domainId : 'geral';
     const metadataPerfilId = typeof metadata?.perfilId === 'string' ? metadata.perfilId : undefined;
-    const perfilIdReal = tentativaComSim?.perfil?.id ?? metadataPerfilId;
+    const resPerfil = await strapiGet<{ id: string | number }>('/perfis', {
+      'filters[userId][$eq]': user.id,
+      'fields[0]': 'id',
+    });
+    const perfilIdReal = metadataPerfilId ?? resPerfil.data[0]?.id;
 
     if (perfilIdReal) {
       await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_CONCLUIDA, {
         tentativaId,
         score: finalScore || 0,
-        perfilId: perfilIdReal,
+        perfilId: String(perfilIdReal),
         area,
       });
     } else {
       log.warn({ tentativaId, userId: user.id }, 'Perfil ausente — TENTATIVA_CONCLUIDA não publicada');
     }
 
-    return c.json(resPut.data);
+    return c.json({ ...resPut.data, id: persistedEntityId(resPut.data) });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno';
     return c.json({ error: message }, 502);

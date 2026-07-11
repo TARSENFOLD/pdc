@@ -1,14 +1,25 @@
 import { test, expect } from '../../helpers/fixtures';
 import type { Page } from '@playwright/test';
 
+test.use({ storageState: { cookies: [], origins: [] } });
+
 async function clearSession(page: Page): Promise<void> {
   await page.context().clearCookies();
+  await page.addInitScript(() => {
+    window.localStorage.setItem('pdc.cookie-consent.v1', JSON.stringify({
+      choice: 'essential',
+      acceptedAt: '2026-01-01T00:00:00.000Z',
+    }));
+  });
   await page.goto('/login');
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();
+    localStorage.setItem('pdc.cookie-consent.v1', JSON.stringify({
+      choice: 'essential',
+      acceptedAt: '2026-01-01T00:00:00.000Z',
+    }));
   });
-  await page.reload();
 }
 
 test.describe('Autenticação - Login', () => {
@@ -36,12 +47,12 @@ test.describe('Autenticação - Login', () => {
 
   test('aluno can log in and reaches app', async ({ page }) => {
     await clearSession(page);
-    await page.getByRole('textbox', { name: /email/i }).fill('aluno@traycer.test');
+    await page.getByRole('textbox', { name: /email/i }).fill('estudante@traycer.test');
     await page.locator('input[type="password"]').fill('password123');
     await page.getByRole('button', { name: /entrar|login|iniciar/i }).click();
 
     // With DEV_SKIP_OTP=true, should land on app without OTP step
-    await expect(page).toHaveURL(/.*\/app(\/home|\/dashboard\/aluno)?(?:\?.*)?$/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/.*\/app(\/home|\/dashboard\/estudante)?(?:\?.*)?$/, { timeout: 15_000 });
   });
 
   test('authenticated user is redirected away from login', async ({ alunoPage }) => {

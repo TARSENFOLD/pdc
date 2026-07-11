@@ -10,6 +10,7 @@ type RelationField = 'cursosIds' | 'experienciasIds' | 'simulacoesIds' | 'projet
 
 interface SelectableContent {
   id: string;
+  matchIds: string[];
   titulo: string;
   detail: string | undefined;
 }
@@ -33,13 +34,22 @@ function contentId(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
+function selectableContentIds(item: { id: unknown; documentId?: unknown }): { id: string; matchIds: string[] } | null {
+  const id = contentId(item.id);
+  if (!id) return null;
+  const documentId = contentId(item.documentId);
+  return {
+    id,
+    matchIds: documentId && documentId !== id ? [id, documentId] : [id],
+  };
+}
+
 function selectableContent(
-  value: unknown,
+  ids: { id: string; matchIds: string[] } | null,
   titulo: string,
   detail: string | undefined,
 ): SelectableContent[] {
-  const id = contentId(value);
-  return id ? [{ id, titulo, detail }] : [];
+  return ids ? [{ ...ids, titulo, detail }] : [];
 }
 
 export default function ProgramaContentSelector({
@@ -71,7 +81,7 @@ export default function ProgramaContentSelector({
       icon: BookOpen,
       isError: cursos.isError,
       items: (cursos.data?.data ?? []).flatMap((item) =>
-        selectableContent(item.id, item.titulo, item.nivel)),
+        selectableContent(selectableContentIds(item), item.titulo, item.nivel)),
     },
     {
       field: 'experienciasIds',
@@ -79,7 +89,7 @@ export default function ProgramaContentSelector({
       icon: MapPin,
       isError: experiencias.isError,
       items: (experiencias.data?.data ?? []).flatMap((item) =>
-        selectableContent(item.id, item.titulo, item.area ?? undefined)),
+        selectableContent(selectableContentIds(item), item.titulo, item.area ?? undefined)),
     },
     {
       field: 'simulacoesIds',
@@ -87,7 +97,7 @@ export default function ProgramaContentSelector({
       icon: FlaskConical,
       isError: simulacoes.isError,
       items: (simulacoes.data?.data ?? []).flatMap((item) =>
-        selectableContent(item.id, item.titulo, item.area)),
+        selectableContent(selectableContentIds(item), item.titulo, item.area)),
     },
     {
       field: 'projetosIds',
@@ -95,7 +105,7 @@ export default function ProgramaContentSelector({
       icon: FolderKanban,
       isError: projetos.isError,
         items: (projetos.data?.data ?? []).flatMap((item) =>
-          selectableContent(item.id, item.titulo, item.area)),
+          selectableContent(selectableContentIds(item), item.titulo, item.area)),
     },
   ];
 
@@ -145,7 +155,7 @@ function ContentGroupList({
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
           {group.items.map((item) => {
-            const checked = selected.includes(item.id);
+            const checked = selected.some((id) => item.matchIds.includes(id));
             return (
               <label
                 key={item.id}
@@ -157,7 +167,7 @@ function ContentGroupList({
                   checked={checked}
                   onChange={() => {
                     onChange(checked
-                      ? selected.filter((id) => id !== item.id)
+                      ? selected.filter((id) => !item.matchIds.includes(id))
                       : [...selected, item.id]);
                   }}
                   className="mt-1 h-4 w-4 accent-[var(--accent-terracotta)]"

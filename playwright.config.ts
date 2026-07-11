@@ -9,6 +9,10 @@ const apiWebServerEnv = {
   STRAPI_API_TOKEN: process.env.STRAPI_API_TOKEN ?? 'test-strapi-token',
   JWT_SECRET: process.env.JWT_SECRET ?? 'test-jwt-secret-for-ci-minimum-32-chars',
   REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6379',
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? 'e2e-google-client-id',
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ?? 'e2e-google-client-secret',
+  GOOGLE_REDIRECT_URI: process.env.GOOGLE_REDIRECT_URI ?? 'http://localhost:3001/auth/google/callback',
+  PDC_E2E_LONG_AUTH: 'true',
 };
 
 export default defineConfig({
@@ -17,7 +21,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: [
     ['html', { open: 'never' }],
     ...(process.env.CI ? [['github' as const]] : []),

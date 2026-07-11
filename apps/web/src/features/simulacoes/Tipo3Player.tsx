@@ -68,7 +68,7 @@ export const Tipo3Player = ({ simulacao }: Props) => {
     if (!tentativaId || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const duracao = Math.floor((Date.now() - startTimestamp.current) / 1000);
+      const duracao = Math.max(1, Math.floor((Date.now() - startTimestamp.current) / 1000));
       
       // Concluir tentativa (Derivação no BFF - R2.T4)
       await simulacoesApi.concluirTentativa({
@@ -142,6 +142,7 @@ export const Tipo3Player = ({ simulacao }: Props) => {
 
          <div className="flex items-center justify-end gap-4">
             <Button 
+              data-testid="concluir-simulacao-btn"
               onClick={() => { void handleConcluir(); }} 
               disabled={isSubmitting}
               className="h-14 px-8 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs hover:scale-[1.02] shadow-xl shadow-accent/20"
@@ -183,10 +184,20 @@ export const Tipo3Player = ({ simulacao }: Props) => {
             <p className="text-ink-tertiary text-sm mb-8">{simulacao.descricao}</p>
             
             <div className="grid grid-cols-2 gap-4">
-              <Button variant="ghost" onClick={() => { registrarAcao('analise'); }} className="border-white/10 text-white hover:bg-white/5 uppercase text-[10px] font-bold">
+              <Button
+                data-testid="acao-analise-btn"
+                variant="ghost"
+                onClick={() => { registrarAcao('analise'); }}
+                className="border-white/10 text-white hover:bg-white/5 uppercase text-[10px] font-bold"
+              >
                 Executar Análise
               </Button>
-              <Button variant="ghost" onClick={() => { registrarAcao('decisao'); }} className="border-white/10 text-white hover:bg-white/5 uppercase text-[10px] font-bold">
+              <Button
+                data-testid="acao-decisao-btn"
+                variant="ghost"
+                onClick={() => { registrarAcao('decisao'); }}
+                className="border-white/10 text-white hover:bg-white/5 uppercase text-[10px] font-bold"
+              >
                 Tomar Decisão
               </Button>
             </div>
