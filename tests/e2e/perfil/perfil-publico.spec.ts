@@ -3,7 +3,7 @@ import { test, expect } from '../../helpers/fixtures';
 test.describe('Perfil - Perfil Público', () => {
   test('aluno can view own profile', async ({ alunoPage }) => {
     await alunoPage.goto('/app/perfil');
-    await expect(alunoPage.locator('h1, h2, main')).toBeVisible({ timeout: 10_000 });
+    await expect(alunoPage.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('profile shows user information', async ({ alunoPage }) => {

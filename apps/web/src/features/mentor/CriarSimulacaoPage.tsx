@@ -111,7 +111,11 @@ export function CriarSimulacaoPage() {
   const pesoTotal = pesoFluidez + pesoResiliencia + pesoFoco;
 
   return (
-    <>
+    <form
+      aria-label={isEditing ? 'Editar simulação' : 'Criar simulação'}
+      noValidate
+      onSubmit={(event) => { event.preventDefault(); }}
+    >
       <BuilderShell
         title={isEditing ? 'Editar simulação' : 'Criar simulação'}
         description="Configura o cenário, os materiais e os critérios usados durante a simulação."
@@ -260,6 +264,6 @@ export function CriarSimulacaoPage() {
       </BuilderSection>
     </BuilderShell>
 
-    </>
+    </form>
   );
 }

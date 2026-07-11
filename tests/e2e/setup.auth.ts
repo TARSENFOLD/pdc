@@ -7,6 +7,13 @@ import { E2E_ACEITE_LEGAL, E2E_DATA_NASCIMENTO_ADULTO } from '../helpers/complia
 const roles = ['aluno', 'estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin'] as const;
 const AUTH_DIR = path.join(__dirname, '../.auth');
 const TEST_PASSWORD = process.env.TEST_USER_PASSWORD ?? 'password123';
+const COOKIE_CONSENT_STORAGE_KEY = 'pdc.cookie-consent.v1';
+const ESSENTIAL_COOKIE_CONSENT = JSON.stringify({
+  choice: 'essential',
+  acceptedAt: '2026-01-01T00:00:00.000Z',
+});
+const STRAPI_URL = process.env.STRAPI_URL ?? 'http://localhost:1337';
+const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN ?? 'test-strapi-token';
 
 setup.describe.configure({ mode: 'serial', timeout: 90_000 });
 
@@ -15,9 +22,51 @@ if (!fs.existsSync(AUTH_DIR)) {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 }
 
+setup('seed canonical E2E catalog content', async ({ request }) => {
+  const headers = {
+    Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+    'Content-Type': 'application/json',
+  };
+  const query = new URLSearchParams({
+    'filters[slug][$eq]': 'sim-tipo3-e2e',
+    'pagination[pageSize]': '1',
+  });
+  const existing = await request.get(`${STRAPI_URL}/api/simulacoes?${query.toString()}`, { headers });
+  expect(existing).toBeOK();
+  const existingBody = await existing.json() as { data?: unknown[] };
+  if (Array.isArray(existingBody.data) && existingBody.data.length > 0) return;
+
+  const created = await request.post(`${STRAPI_URL}/api/simulacoes`, {
+    headers,
+    data: {
+      data: {
+        titulo: 'Simulação Alta Fidelidade E2E',
+        slug: 'sim-tipo3-e2e',
+        descricao: 'Cenário E2E publicado para validar o player Tipo 3 e o ciclo de telemetria.',
+        area: 'TECNOLOGIA',
+        tipo: 3,
+        tipoSimulacao: 'tipo3',
+        tipoLab: 'sandbox',
+        estado: 'published',
+        autorId: 'e2e-seed',
+        validadoAcademicamente: true,
+        tentativasMaximas: 0,
+        criteriosAvaliacao: { pesos: { fluidez: 40, resiliencia: 30, foco: 30 } },
+      },
+    },
+  });
+  expect(created).toBeOK();
+});
+
 for (const role of roles) {
   setup(`authenticate as ${role}`, async ({ browser }) => {
     const context = await browser.newContext();
+    await context.addInitScript(
+      ({ key, value }) => {
+        window.localStorage.setItem(key, value);
+      },
+      { key: COOKIE_CONSENT_STORAGE_KEY, value: ESSENTIAL_COOKIE_CONSENT },
+    );
     const page = await context.newPage();
 
     // Navigate to login page and wait for the login form, not network idleness.
@@ -57,6 +106,13 @@ for (const role of roles) {
       });
       expect(provisionResponse).toBeOK();
     }
+
+    await page.evaluate(
+      ({ key, value }) => {
+        window.localStorage.setItem(key, value);
+      },
+      { key: COOKIE_CONSENT_STORAGE_KEY, value: ESSENTIAL_COOKIE_CONSENT },
+    );
 
     // Save storage state (cookies + clean localStorage)
     const storagePath = path.join(AUTH_DIR, `${role}.json`);

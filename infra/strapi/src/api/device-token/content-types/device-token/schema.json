@@ -14,12 +14,12 @@
     {
       "name": "unique_device_token_per_profile",
       "columns": [
-        "perfilId",
+        "perfil_id",
         "token",
         "platform"
       ],
       "unique": true,
-      "description": "TODO: migrar para coluna perfil_id da relacao apos backfill auditado; atualmente usa perfilId para compatibilidade."
+      "description": "Garante um token unico por perfil e plataforma usando a coluna fisica de compatibilidade perfil_id."
     }
   ],
   "attributes": {

@@ -1056,6 +1056,44 @@ export interface ApiDenunciaDenuncia extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiDeviceTokenDeviceToken extends Struct.CollectionTypeSchema {
+  collectionName: 'device_tokens';
+  info: {
+    description: 'Tokens e subscriptions de push por perfil (web/APNs/FCM)';
+    displayName: 'Device Token';
+    pluralName: 'device-tokens';
+    singularName: 'device-token';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    auth: Schema.Attribute.Text;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    endpoint: Schema.Attribute.Text;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::device-token.device-token'
+    > &
+      Schema.Attribute.Private;
+    p256dh: Schema.Attribute.Text;
+    perfil: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'> &
+      Schema.Attribute.Required;
+    perfilId: Schema.Attribute.String & Schema.Attribute.Required;
+    platform: Schema.Attribute.Enumeration<['web', 'ios', 'android']> &
+      Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    token: Schema.Attribute.Text & Schema.Attribute.Required;
+    ultimoUso: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiDocumentoLegalDocumentoLegal
   extends Struct.CollectionTypeSchema {
   collectionName: 'documentos_legais';
@@ -1812,6 +1850,8 @@ export interface ApiModuloItemModuloItem extends Struct.CollectionTypeSchema {
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     url: Schema.Attribute.String;
+    video: Schema.Attribute.Relation<'manyToOne', 'api::video.video'>;
+    videoId: Schema.Attribute.String;
   };
 }
 
@@ -2160,6 +2200,10 @@ export interface ApiPerfilPerfil extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     dataNascimento: Schema.Attribute.Date;
+    deviceTokens: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::device-token.device-token'
+    >;
     documentos: Schema.Attribute.JSON;
     email: Schema.Attribute.Email;
     estadoMenoridade: Schema.Attribute.Enumeration<
@@ -2356,6 +2400,7 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
     criadorTipo: Schema.Attribute.Enumeration<
       ['mentor', 'instituicao', 'super_admin']
     >;
+    cronograma: Schema.Attribute.JSON;
     cursos: Schema.Attribute.Relation<'manyToMany', 'api::curso.curso'>;
     dataFim: Schema.Attribute.DateTime;
     dataInicio: Schema.Attribute.DateTime;
@@ -2386,6 +2431,8 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
     modalidade: Schema.Attribute.Enumeration<
       ['presencial', 'online', 'hibrido']
     >;
+    modoAcesso: Schema.Attribute.Enumeration<['livre', 'convite', 'misto']> &
+      Schema.Attribute.DefaultTo<'livre'>;
     motivoRejeicao: Schema.Attribute.Text;
     precoPolicy: Schema.Attribute.JSON;
     projetos: Schema.Attribute.Relation<'manyToMany', 'api::projeto.projeto'>;
@@ -2410,93 +2457,6 @@ export interface ApiProgramaPrograma extends Struct.CollectionTypeSchema {
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     vagas: Schema.Attribute.Integer;
-  };
-}
-
-export interface ApiProjetoProjeto extends Struct.CollectionTypeSchema {
-  collectionName: 'projetos';
-  info: {
-    displayName: 'Projeto';
-    pluralName: 'projetos';
-    singularName: 'projeto';
-  };
-  options: {
-    draftAndPublish: true;
-  };
-  attributes: {
-    abstract: Schema.Attribute.Text;
-    acessoCoreACL: Schema.Attribute.JSON;
-    area: Schema.Attribute.Enumeration<
-      [
-        'SAUDE',
-        'ENGENHARIA',
-        'TECNOLOGIA',
-        'DIREITO',
-        'GESTAO',
-        'EDUCACAO',
-        'ARTES',
-        'CIENCIAS_AGRARIAS',
-        'CIENCIAS_SOCIAIS',
-        'COMUNICACAO',
-        'CIENCIAS_NATURAIS',
-        'ARQUITETURA',
-        'TURISMO_HOTELARIA',
-        'DESPORTO',
-        'OUTRA',
-        'AGRONOMIA',
-        'OUTRO',
-      ]
-    >;
-    autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
-    buscandoParceiros: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<false>;
-    colaboradores: Schema.Attribute.JSON;
-    core: Schema.Attribute.Text;
-    createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    criadoEm: Schema.Attribute.DateTime;
-    demoUrl: Schema.Attribute.String;
-    descricao: Schema.Attribute.Text;
-    estado: Schema.Attribute.Enumeration<
-      ['draft', 'review', 'approved', 'published', 'archived', 'hidden']
-    > &
-      Schema.Attribute.DefaultTo<'draft'>;
-    historicoEstados: Schema.Attribute.JSON;
-    isDemo: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
-    locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::projeto.projeto'
-    > &
-      Schema.Attribute.Private;
-    media: Schema.Attribute.Media<'images' | 'files' | 'videos', true>;
-    mediaUrls: Schema.Attribute.JSON;
-    modos: Schema.Attribute.JSON;
-    motivoRejeicao: Schema.Attribute.String &
-      Schema.Attribute.SetMinMaxLength<{
-        maxLength: 500;
-      }>;
-    publishedAt: Schema.Attribute.DateTime;
-    rejeitadoEm: Schema.Attribute.DateTime;
-    rejeitadoPor: Schema.Attribute.String &
-      Schema.Attribute.SetMinMaxLength<{
-        maxLength: 500;
-      }>;
-    repositorioUrl: Schema.Attribute.String;
-    repoUrl: Schema.Attribute.String;
-    selo: Schema.Attribute.Enumeration<
-      ['publicado', 'validado_mentor', 'validado_instituicao', 'excelencia']
-    >;
-    slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
-    tags: Schema.Attribute.JSON;
-    titulo: Schema.Attribute.String & Schema.Attribute.Required;
-    updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    visibilidade: Schema.Attribute.Enumeration<['publico', 'privado']> &
-      Schema.Attribute.DefaultTo<'publico'>;
-    votos: Schema.Attribute.JSON;
   };
 }
 
@@ -2531,12 +2491,103 @@ export interface ApiProjetoAcessoPedidoProjetoAcessoPedido
     projeto: Schema.Attribute.Relation<'manyToOne', 'api::projeto.projeto'> &
       Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
-    status: Schema.Attribute.Enumeration<['pendente', 'aprovado', 'rejeitado']> &
+    status: Schema.Attribute.Enumeration<
+      ['pendente', 'aprovado', 'rejeitado']
+    > &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'pendente'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+  };
+}
+
+export interface ApiProjetoProjeto extends Struct.CollectionTypeSchema {
+  collectionName: 'projetos';
+  info: {
+    displayName: 'Projeto';
+    pluralName: 'projetos';
+    singularName: 'projeto';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    abstract: Schema.Attribute.Text;
+    acessoCoreACL: Schema.Attribute.JSON;
+    area: Schema.Attribute.Enumeration<
+      [
+        'SAUDE',
+        'ENGENHARIA',
+        'TECNOLOGIA',
+        'DIREITO',
+        'GESTAO',
+        'EDUCACAO',
+        'ARTES',
+        'CIENCIAS_AGRARIAS',
+        'CIENCIAS_SOCIAIS',
+        'COMUNICACAO',
+        'CIENCIAS_NATURAIS',
+        'ARQUITETURA',
+        'TURISMO_HOTELARIA',
+        'DESPORTO',
+        'OUTRA',
+      ]
+    >;
+    autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
+    buscandoParceiros: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
+    colaboradores: Schema.Attribute.JSON;
+    core: Schema.Attribute.Text;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    criadoEm: Schema.Attribute.DateTime;
+    demoUrl: Schema.Attribute.String;
+    descricao: Schema.Attribute.Text;
+    estado: Schema.Attribute.Enumeration<
+      ['draft', 'review', 'approved', 'published', 'archived', 'hidden']
+    > &
+      Schema.Attribute.DefaultTo<'draft'>;
+    historicoEstados: Schema.Attribute.JSON;
+    isDemo: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::projeto.projeto'
+    > &
+      Schema.Attribute.Private;
+    media: Schema.Attribute.Media<'images' | 'files' | 'videos', true>;
+    mediaUrls: Schema.Attribute.JSON;
+    modos: Schema.Attribute.JSON;
+    motivoRejeicao: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 500;
+      }>;
+    pedidosAcesso: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::projeto-acesso-pedido.projeto-acesso-pedido'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    rejeitadoEm: Schema.Attribute.DateTime;
+    rejeitadoPor: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 500;
+      }>;
+    repositorioUrl: Schema.Attribute.String;
+    repoUrl: Schema.Attribute.String;
+    selo: Schema.Attribute.Enumeration<
+      ['publicado', 'validado_mentor', 'validado_instituicao', 'excelencia']
+    >;
+    slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
+    tags: Schema.Attribute.JSON;
+    titulo: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    visibilidade: Schema.Attribute.Enumeration<['publico', 'privado']> &
+      Schema.Attribute.DefaultTo<'publico'>;
+    votos: Schema.Attribute.JSON;
   };
 }
 
@@ -2984,6 +3035,72 @@ export interface ApiUiStringUiString extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiVideoVideo extends Struct.CollectionTypeSchema {
+  collectionName: 'videos';
+  info: {
+    description: 'Metadata can\u00F3nica de v\u00EDdeo; bytes vivem em R2 ou provider externo';
+    displayName: 'Video';
+    pluralName: 'videos';
+    singularName: 'video';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    chapters: Schema.Attribute.JSON;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    durationSeconds: Schema.Attribute.Integer;
+    externalUrl: Schema.Attribute.String;
+    failureReason: Schema.Attribute.String &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 500;
+      }>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'api::video.video'> &
+      Schema.Attribute.Private;
+    mimeType: Schema.Attribute.String;
+    mode: Schema.Attribute.Enumeration<
+      ['external', 'quick_upload', 'professional_upload']
+    > &
+      Schema.Attribute.Required;
+    originalKey: Schema.Attribute.String;
+    ownerId: Schema.Attribute.String & Schema.Attribute.Required;
+    provider: Schema.Attribute.Enumeration<
+      ['youtube', 'vimeo', 'loom', 'r2', 'bunny', 'mux', 'cloudflare']
+    > &
+      Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    sizeBytes: Schema.Attribute.BigInteger;
+    status: Schema.Attribute.Enumeration<
+      [
+        'draft',
+        'pending_upload',
+        'uploaded',
+        'processing',
+        'ready',
+        'failed',
+        'archived',
+      ]
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'draft'>;
+    streamUrl: Schema.Attribute.String;
+    subtitles: Schema.Attribute.JSON;
+    thumbnailUrl: Schema.Attribute.String;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    visibility: Schema.Attribute.Enumeration<
+      ['public', 'protected', 'private']
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'protected'>;
+  };
+}
+
 export interface ApiVinculoVinculo extends Struct.CollectionTypeSchema {
   collectionName: 'vinculos';
   info: {
@@ -3030,7 +3147,12 @@ export interface ApiVinculoVinculo extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.DefaultTo<'pendente'>;
     tipo: Schema.Attribute.Enumeration<
-      ['aluno-mentor', 'mentor-instituicao', 'aluno-instituicao']
+      [
+        'student-student',
+        'student-mentor',
+        'student-institution',
+        'mentor-institution',
+      ]
     >;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -3603,6 +3725,7 @@ declare module '@strapi/strapi' {
       'api::conversa.conversa': ApiConversaConversa;
       'api::curso.curso': ApiCursoCurso;
       'api::denuncia.denuncia': ApiDenunciaDenuncia;
+      'api::device-token.device-token': ApiDeviceTokenDeviceToken;
       'api::documento-legal.documento-legal': ApiDocumentoLegalDocumentoLegal;
       'api::domain-event.domain-event': ApiDomainEventDomainEvent;
       'api::experiencia-participante.experiencia-participante': ApiExperienciaParticipanteExperienciaParticipante;
@@ -3637,6 +3760,7 @@ declare module '@strapi/strapi' {
       'api::telemetria.telemetria': ApiTelemetriaTelemetria;
       'api::tentativa.tentativa': ApiTentativaTentativa;
       'api::ui-string.ui-string': ApiUiStringUiString;
+      'api::video.video': ApiVideoVideo;
       'api::vinculo.vinculo': ApiVinculoVinculo;
       'api::voto-projeto.voto-projeto': ApiVotoProjetoVotoProjeto;
       'plugin::content-releases.release': PluginContentReleasesRelease;

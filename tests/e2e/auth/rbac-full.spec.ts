@@ -13,18 +13,18 @@ test.describe('RBAC', () => {
   });
 
   test('aluno can access own dashboard', async ({ alunoPage }) => {
-    await alunoPage.goto('/app/dashboard/aluno');
-    await expect(alunoPage.locator('h1, h2')).toBeVisible({ timeout: 10_000 });
+    await alunoPage.goto('/app/dashboard/estudante');
+    await expect(alunoPage.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('mentor can access mentor dashboard', async ({ mentorPage }) => {
     await mentorPage.goto('/app/dashboard/mentor');
-    await expect(mentorPage.locator('h1, h2')).toBeVisible({ timeout: 10_000 });
+    await expect(mentorPage.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('mentor can access curso creation', async ({ mentorPage }) => {
     await mentorPage.goto('/app/mentor/cursos/criar');
-    await expect(mentorPage.locator('form, h1, h2')).toBeVisible({ timeout: 10_000 });
+    await expect(mentorPage.locator('form').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('admin can access admin dashboard', async ({ adminPage }) => {
@@ -39,7 +39,7 @@ test.describe('RBAC', () => {
 
   test('instituicao can access own dashboard', async ({ instituicaoPage }) => {
     await instituicaoPage.goto('/app/dashboard/instituicao');
-    await expect(instituicaoPage.locator('h1, h2')).toBeVisible({ timeout: 10_000 });
+    await expect(instituicaoPage.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('aluno cannot access mentor curso creation', async ({ alunoPage }) => {

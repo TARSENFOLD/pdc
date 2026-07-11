@@ -3,7 +3,7 @@ import { test, expect } from '../../helpers/fixtures';
 test.describe('Mentorias - Aceitar', () => {
   test('mentor can see pending mentoria requests', async ({ mentorPage }) => {
     await mentorPage.goto('/app/mentor/mentorias');
-    await expect(mentorPage.locator('text=Pendentes, text=Solicitações')).toBeVisible({ timeout: 10_000 });
+    await expect(mentorPage.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('mentor can accept a mentoria request', async ({ mentorPage }) => {

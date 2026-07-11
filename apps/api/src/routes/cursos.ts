@@ -24,10 +24,6 @@ const cursoQuerySchema = z.object({
 
 export const cursoRoutes = new Hono<Vars>();
 
-function first<T>(data: T | T[] | undefined): T | undefined {
-  return Array.isArray(data) ? data[0] : data;
-}
-
 function stripLockedItems(curso: Curso): Curso {
   return {
     ...curso,
@@ -152,11 +148,7 @@ cursoRoutes.post('/', verifyJwt, checkRole(['mentor', 'instituicao', 'super_admi
 cursoRoutes.put('/:id', verifyJwt, checkRole(['mentor', 'instituicao', 'super_admin']), zValidator('json', CriarCursoPayloadSchema.partial()), async (c) => {
   const user = c.get('user');
   try {
-    const resGet = await strapiGet<Curso>('/cursos', {
-      'filters[id][$eq]': c.req.param('id'),
-      'pagination[pageSize]': '1',
-    });
-    const curso = first(resGet.data);
+    const curso = await cursosService.obterCursoBase(c.req.param('id'));
     if (!curso) return c.json({ error: 'Curso não encontrado' }, 404);
     if (curso.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
       return c.json({ error: 'Não tem permissão' }, 403);
@@ -172,11 +164,7 @@ cursoRoutes.put('/:id', verifyJwt, checkRole(['mentor', 'instituicao', 'super_ad
 cursoRoutes.patch('/:id/estado', verifyJwt, checkRole(['mentor', 'instituicao', 'moderador', 'super_admin']), zValidator('json', z.object({ estado: z.enum(['draft', 'review', 'published', 'archived']) })), async (c) => {
   const user = c.get('user');
   try {
-    const resGet = await strapiGet<Curso>('/cursos', {
-      'filters[id][$eq]': c.req.param('id'),
-      'pagination[pageSize]': '1',
-    });
-    const curso = first(resGet.data);
+    const curso = await cursosService.obterCursoBase(c.req.param('id'));
     if (!curso) return c.json({ error: 'Curso não encontrado' }, 404);
     const podeEditar = user.id === curso.autorId || ['moderador', 'super_admin'].includes(user.role);
     if (!podeEditar) return c.json({ error: 'Sem permissão' }, 403);

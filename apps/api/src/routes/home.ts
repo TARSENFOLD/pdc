@@ -79,6 +79,7 @@ interface OnboardingVideoRaw {
 
 const COMMUNITY_TIPOS = new Set<FeedItemTipo>(['post', 'projeto']);
 const LEARNING_TIPOS = new Set<FeedItemTipo>(['curso', 'simulacao', 'experiencia', 'programa']);
+const HOME_TRENDING_CANDIDATE_LIMIT = 10;
 
 // ── Quick Actions por role (BFF SSOT — INV-B2: 5 botões) ─────────────────────
 
@@ -202,14 +203,26 @@ async function computeHomeSummary(userId: string, role: string): Promise<HomeSum
 
   const weights = await getWeights('trending');
 
+  function recentFirst(a: StrapiEntity, b: StrapiEntity): number {
+    const dateA = Date.parse(a.publishedAt ?? a.createdAt);
+    const dateB = Date.parse(b.publishedAt ?? b.createdAt);
+    const safeA = Number.isFinite(dateA) ? dateA : 0;
+    const safeB = Number.isFinite(dateB) ? dateB : 0;
+    return safeB - safeA;
+  }
+
   async function scoreAndMap(items: Array<StrapiEntity & { tipo: FeedItemTipo }>): Promise<TrendingItem[]> {
+    const candidatesForHome = [...items]
+      .sort(recentFirst)
+      .slice(0, HOME_TRENDING_CANDIDATE_LIMIT);
     const scored = await mapConcurrent(
-      items,
+      candidatesForHome,
       async (cand) => {
         const stats = await getItemStats(cand.tipo, String(cand.id));
         const recencyScore = calcRecencyScore(cand.publishedAt ?? cand.createdAt, cand.tipo);
         const features = buildFeatures(stats, recencyScore, 0, 0);
-        const score = calcScore(features, weights);
+        const rawScore = calcScore(features, weights);
+        const score = Number.isFinite(rawScore) ? rawScore : 0;
         return {
           id: String(cand.id),
           tipo: cand.tipo,

@@ -81,7 +81,8 @@ function toPublicModulo(modulo: ExistingModulo): Modulo {
 
 async function resolveCursoDocumentId(id: string): Promise<string> {
   const res = await strapiGet<CursoComModulos>('/cursos', {
-    'filters[id][$eq]': id,
+    'filters[$or][0][documentId][$eq]': id,
+    'filters[$or][1][id][$eq]': id,
     'fields[0]': 'id',
     'fields[1]': 'documentId',
     'pagination[pageSize]': '1',
@@ -91,16 +92,31 @@ async function resolveCursoDocumentId(id: string): Promise<string> {
   return curso.documentId ?? entityId(curso.id);
 }
 
-async function listarModulosCurso(cursoId: string): Promise<ExistingModulo[]> {
+async function resolveCursoReference(id: string): Promise<CursoComModulos | undefined> {
+  const res = await strapiGet<CursoComModulos>('/cursos', {
+    'filters[$or][0][documentId][$eq]': id,
+    'filters[$or][1][id][$eq]': id,
+    populate: 'autor',
+    'pagination[pageSize]': '1',
+  });
+  return first(res.data);
+}
+
+async function listarModulosCurso(cursoId: string, cursoDocumentId?: string): Promise<ExistingModulo[]> {
+  const relationDocumentId = cursoDocumentId ?? cursoId;
   const modulosRes = await strapiGet<Omit<ExistingModulo, 'itens'>>('/modulos', {
-    'filters[curso][id][$eq]': cursoId,
+    'filters[$or][0][curso][documentId][$eq]': relationDocumentId,
+    'filters[$or][1][curso][id][$eq]': cursoId,
     'sort': 'ordem:asc',
     'pagination[pageSize]': '100',
   });
 
   const modulos = await Promise.all(modulosRes.data.map(async (modulo) => {
+    const moduloId = entityId(modulo.id);
+    const moduloDocumentId = modulo.documentId ?? moduloId;
     const itensRes = await strapiGet<ExistingModuloItem>('/modulo-items', {
-      'filters[modulo][id][$eq]': entityId(modulo.id),
+      'filters[$or][0][modulo][documentId][$eq]': moduloDocumentId,
+      'filters[$or][1][modulo][id][$eq]': moduloId,
       'sort': 'ordem:asc',
       'pagination[pageSize]': '200',
     });
@@ -154,6 +170,10 @@ function toCursoStrapiData(cursoData: Partial<CursoBasePayload>): Record<string,
 }
 
 export const cursosService = {
+  async obterCursoBase(id: string): Promise<CursoComModulos | undefined> {
+    return resolveCursoReference(id);
+  },
+
   async resolvePerfilId(userId: string, jwtPerfilId?: string): Promise<string> {
     if (jwtPerfilId) return jwtPerfilId;
     const resPerfil = await strapiGet<StrapiPerfilRef>('/perfis', {
@@ -167,14 +187,9 @@ export const cursosService = {
   },
 
   async obterCursoComModulos(id: string): Promise<Curso | undefined> {
-    const res = await strapiGet<CursoWithThumbnail>('/cursos', {
-      'filters[id][$eq]': id,
-      populate: 'autor',
-      'pagination[pageSize]': '1',
-    });
-    const curso = first(res.data);
+    const curso = await resolveCursoReference(id) as CursoWithThumbnail | undefined;
     if (!curso) return undefined;
-    const modulos = await listarModulosCurso(id);
+    const modulos = await listarModulosCurso(entityId(curso.id), curso.documentId);
     return {
       ...curso,
       capaUrl: curso.capaUrl ?? curso.thumbnailUrl,
@@ -244,7 +259,7 @@ export const cursosService = {
     });
 
     if (modulos) {
-      const existingModules = await listarModulosCurso(id);
+      const existingModules = await listarModulosCurso(id, cursoDocumentId);
 
       await Promise.all(existingModules
         .filter((modulo) => !modulos.some((nextModulo) =>

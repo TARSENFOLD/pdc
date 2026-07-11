@@ -3,7 +3,7 @@ import { test, expect } from '../../helpers/fixtures';
 test.describe('Mentorias - Solicitar', () => {
   test('aluno can access mentorias page', async ({ alunoPage }) => {
     await alunoPage.goto('/app/mentorias');
-    await expect(alunoPage.locator('h1, h2, main')).toBeVisible({ timeout: 10_000 });
+    await expect(alunoPage.getByRole('heading', { name: /mentorias/i })).toBeVisible({ timeout: 10_000 });
   });
 
   test('mentorias shows available mentors or empty state', async ({ alunoPage }) => {
@@ -12,7 +12,7 @@ test.describe('Mentorias - Solicitar', () => {
     const mentors = alunoPage.locator('[data-testid*="mentor"], article, .card, [role="list"]');
     const empty = alunoPage.locator('text=Nenhum, text=disponível, text=empty, text=mentor');
     const hasContent = (await mentors.count()) > 0 || (await empty.count()) > 0;
-    await expect(alunoPage.locator('main')).toBeVisible();
+    await expect(alunoPage.getByRole('main').first()).toBeVisible();
   });
 
   test('mentor can view mentorias page', async ({ mentorPage }) => {

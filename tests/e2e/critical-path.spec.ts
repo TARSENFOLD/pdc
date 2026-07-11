@@ -61,7 +61,7 @@ test('catalogo de cursos loads', async ({ alunoPage }) => {
 test('feed page loads with content or empty state', async ({ alunoPage }) => {
   await alunoPage.goto('/app/feed');
   await expectRealRoute(alunoPage);
-  await expect(alunoPage.locator('main').first()).toContainText(/Comunidade|Social Pulse|pulso social/i, {
+  await expect(alunoPage.locator('main').first()).toContainText(/Publicar|Ainda não há publicações|Atividade da Rede|Mensagens Diretas/i, {
     timeout: 12_000,
   });
 });

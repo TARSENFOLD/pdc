@@ -3,7 +3,7 @@ import { test, expect } from '../../helpers/fixtures';
 test.describe('Conquistas - Auto Trigger', () => {
   test('aluno can view conquistas page', async ({ alunoPage }) => {
     await alunoPage.goto('/app/conquistas');
-    await expect(alunoPage.locator('h1, h2, main')).toBeVisible({ timeout: 10_000 });
+    await expect(alunoPage.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('conquistas page shows badges or empty state', async ({ alunoPage }) => {
@@ -13,7 +13,7 @@ test.describe('Conquistas - Auto Trigger', () => {
     const empty = alunoPage.locator('text=Nenhum, text=vazio, text=empty, text=começar');
     const hasContent = (await badges.count()) > 0 || (await empty.count()) > 0;
     // Page loaded successfully
-    await expect(alunoPage.locator('main')).toBeVisible();
+    await expect(alunoPage.getByRole('main').first()).toBeVisible();
   });
 
   test('conquistas shows progress indicators', async ({ alunoPage }) => {

@@ -82,7 +82,7 @@ export function HomeHero({ summary, role }: Props) {
         transition={tr(0)}
         className="text-center pt-2"
       >
-        <h1 className="text-xl sm:text-2xl font-bold text-ink-primary leading-tight">
+        <h1 data-testid="page-hero-title" className="text-xl sm:text-2xl font-bold text-ink-primary leading-tight">
           {summary.greeting}
         </h1>
         {xp > 0 || stats.reputacao > 0 ? (

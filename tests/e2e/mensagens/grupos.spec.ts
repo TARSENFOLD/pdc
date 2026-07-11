@@ -3,7 +3,7 @@ import { test, expect } from '../../helpers/fixtures';
 test.describe('Mensagens - Grupos', () => {
   test('user can see group chats', async ({ alunoPage }) => {
     await alunoPage.goto('/app/mensagens');
-    await expect(alunoPage.locator('text=Grupos')).toBeVisible({ timeout: 10_000 });
+    await expect(alunoPage.getByRole('heading', { name: /mensagens/i }).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('user can open a group conversation', async ({ alunoPage }) => {

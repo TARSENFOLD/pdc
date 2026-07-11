@@ -16,6 +16,7 @@ import {
   toStrapiPrograma,
   type StrapiProgramaRecord,
 } from './programas.mapper.js';
+import { findStrapiEntity, persistedEntityId } from '../modules/strapi/strapi-entity.js';
 import {
   canManagePrograma,
   canTransitionPrograma,
@@ -80,12 +81,9 @@ programaRoutes.get('/:id', optionalJwt, async (c) => {
   const id = c.req.param('id');
   if (!id) return c.json({ error: 'Id é obrigatório' }, 400);
   try {
-    const res = await strapiGet<StrapiProgramaRecord>('/programas', {
-      'filters[id][$eq]': id,
-      'pagination[pageSize]': '1',
+    const prog = await findStrapiEntity<StrapiProgramaRecord>('programas', id, {
       populate: PROGRAMA_POPULATE,
     });
-    const prog = res.data[0];
     if (!prog) return c.json({ error: 'Programa não encontrado' }, 404);
 
     if (!isPublicCatalogEstado(prog.estado)) {
@@ -180,12 +178,9 @@ programaRoutes.put('/:id',
       const actor = await resolveProgramaActor(user);
       if (!actor) return c.json({ error: 'Perfil não encontrado' }, 404);
 
-      const resGet = await strapiGet<StrapiProgramaRecord>('/programas', {
-        'filters[id][$eq]': id,
-        'pagination[pageSize]': '1',
+      const existing = await findStrapiEntity<StrapiProgramaRecord>('programas', id, {
         populate: 'responsavel,instituicao',
       });
-      const existing = resGet.data[0];
       if (!existing) return c.json({ error: 'Programa não encontrado' }, 404);
 
       if (!canManagePrograma(actor, existing)) {
@@ -193,15 +188,13 @@ programaRoutes.put('/:id',
       }
 
       const resPut = await strapiPut<StrapiProgramaRecord>(
-        `/programas/${id}`,
+        `/programas/${persistedEntityId(existing)}`,
         toStrapiPrograma(body),
       );
-      const updated = await strapiGet<StrapiProgramaRecord>('/programas', {
-        'filters[id][$eq]': id,
-        'pagination[pageSize]': '1',
+      const updated = await findStrapiEntity<StrapiProgramaRecord>('programas', id, {
         populate: PROGRAMA_POPULATE,
       });
-      return c.json(fromStrapiPrograma(updated.data[0] ?? resPut.data));
+      return c.json(fromStrapiPrograma(updated ?? resPut.data));
     } catch {
       return c.json({ error: 'Falha ao atualizar programa' }, 502);
     }
@@ -223,12 +216,9 @@ programaRoutes.patch('/:id/estado',
       const actor = await resolveProgramaActor(user);
       if (!actor) return c.json({ error: 'Perfil não encontrado' }, 404);
 
-      const resGet = await strapiGet<StrapiProgramaRecord>('/programas', {
-        'filters[id][$eq]': id,
-        'pagination[pageSize]': '1',
+      const programa = await findStrapiEntity<StrapiProgramaRecord>('programas', id, {
         populate: 'responsavel,instituicao',
       });
-      const programa = resGet.data[0];
       if (!programa) return c.json({ error: 'Programa não encontrado' }, 404);
 
       const estadoAtual = programa.estado;
@@ -245,7 +235,7 @@ programaRoutes.patch('/:id/estado',
         autorId: userId,
       }];
 
-      await strapiPut<unknown>(`/programas/${id}`, {
+      await strapiPut<unknown>(`/programas/${persistedEntityId(programa)}`, {
         estado,
         motivoRejeicao: estado === 'archived' && motivoRejeicao ? motivoRejeicao : undefined,
         historicoEstados: novoHistorico,

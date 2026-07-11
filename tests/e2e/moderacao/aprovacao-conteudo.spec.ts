@@ -3,7 +3,7 @@ import { test, expect } from '../../helpers/fixtures';
 test.describe('Moderação - Aprovação de Conteúdo', () => {
   test('moderador can access aprovacoes page', async ({ moderadorPage }) => {
     await moderadorPage.goto('/app/moderacao/aprovacoes');
-    await expect(moderadorPage.locator('h1, h2, main')).toBeVisible({ timeout: 10_000 });
+    await expect(moderadorPage.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('aprovacoes shows pending content or empty state', async ({ moderadorPage }) => {
