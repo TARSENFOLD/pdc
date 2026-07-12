@@ -282,6 +282,31 @@ Sessão de governança com foco em eliminar casts cegos, fallbacks silenciosos e
 
 ---
 
+## Recuperacao de Producao Upstash/Traefik - 2026-07-12
+
+**Estado:** implementado e validado localmente; deploy e smoke live obrigatorios antes de fechar.
+
+- Causa comprovada no VPS: quota Upstash `500001/500000` fez o rate limiter
+  global devolver 500 em `/health`; Docker marcou `pdc-api` unhealthy e o
+  Traefik removeu o unico router, devolvendo 404 sem CORS em todas as rotas.
+- ADR-052 separa liveness, readiness e politicas fail-open/fail-closed/durable
+  por capacidade Redis.
+- `/health` deixa de depender do rate limiter; `/health/ready` relata Strapi e
+  circuito Redis sem expor secrets.
+- Rate limiter usa timeout de 1s, circuit breaker e bucket local para quota ou
+  outage, inclusive nos limites conservadores de auth e registo.
+- Deploy VPS valida secrets e SHA aprovado pelo CI, identifica imagens com OCI
+  labels, testa containers internamente e dominios externamente, e comprova o
+  rollback antes de o considerar recuperado.
+- O PWA remove o service worker legado uma vez antes do bootstrap e preserva o
+  registo do worker atual, evitando assets stale sem desativar suporte offline.
+
+**Evidencia local:** typecheck e lint globais verdes; API 553/553, Web 172/172,
+Shared 141/141; Chromium 170/171 no run completo, com a unica falha transiente
+em criar simulacao reexecutada isoladamente com sucesso (9/9 incluindo setup).
+
+---
+
 ## Lições Aprendidas
 
 ### AP-06 — Scripts ad-hoc na raiz são proibidos (2026-04-26)
@@ -323,5 +348,5 @@ Claim falsa de "5× `as any`" no MASTER report e IMPORTANTE/02 NF1 — zero `any
 - **Auditoria completa:** `docs/audit/MASTER--audit-report.md`
 
 ---
-*Última actualização: 4 de Julho de 2026 · H1/H2: Integrity Hardening (casts cegos, fallbacks silenciosos, lint cache); builds Strapi .gitignore. Total ADRs: 32.*
+*Última actualização: 12 de Julho de 2026 · Recuperacao de producao Upstash/Traefik e ADR-052. Total ADRs: 52.*
 *Regra de Ouro: Se não está documentado aqui, não aconteceu.*

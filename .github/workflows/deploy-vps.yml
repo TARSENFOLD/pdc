@@ -11,7 +11,9 @@ env:
   VPS_HOST: ${{ secrets.VPS_HOST }}
   VPS_USER: ${{ secrets.VPS_USER }}
   VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+  VPS_HOST_KEY: ${{ secrets.VPS_HOST_KEY }}
   VPS_DEPLOY_DIR: /opt/pdc
+  RELEASE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
 concurrency:
   group: deploy-vps-${{ github.ref }}
@@ -19,31 +21,63 @@ concurrency:
 
 jobs:
   deploy:
-    # Só corre se o CI tiver terminado com sucesso. Manual dispatch ignora este guard.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # Deploy automatico aceita apenas CI de push no main deste repositorio.
+    # Manual dispatch continua disponivel para recuperacao operacional.
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup SSH
+      - name: Validate deployment inputs
+        shell: bash
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_key
-          chmod 600 ~/.ssh/vps_key
-          if [ -z "${{ secrets.VPS_HOST_KEY }}" ]; then
-            echo "VPS_HOST_KEY secret is required for pinned host-key verification." >&2
+          missing=()
+          for variable in VPS_HOST VPS_USER VPS_SSH_KEY VPS_HOST_KEY; do
+            if [[ -z "${!variable:-}" ]]; then
+              missing+=("${variable}")
+            fi
+          done
+
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required GitHub secret: %s\n' "${missing[@]}" >&2
             exit 1
           fi
-          echo "${{ secrets.VPS_HOST_KEY }}" >> ~/.ssh/known_hosts
+
+          if [[ ! "${RELEASE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "RELEASE_SHA must be the full 40-character Git commit SHA." >&2
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          persist-credentials: false
+
+      - name: Verify approved revision
+        shell: bash
+        run: |
+          checked_out_sha="$(git rev-parse HEAD)"
+          if [[ "${checked_out_sha}" != "${RELEASE_SHA}" ]]; then
+            echo "Checked-out revision does not match the CI-approved RELEASE_SHA." >&2
+            exit 1
+          fi
+
+      - name: Setup SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${VPS_SSH_KEY}" > ~/.ssh/vps_key
+          chmod 600 ~/.ssh/vps_key
+          printf '%s\n' "${VPS_HOST_KEY}" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
           cat >> ~/.ssh/config <<EOL
           Host vps
-            HostName ${{ secrets.VPS_HOST }}
-            User ${{ secrets.VPS_USER }}
+            HostName ${VPS_HOST}
+            User ${VPS_USER}
             IdentityFile ~/.ssh/vps_key
             StrictHostKeyChecking yes
           EOL
+          chmod 600 ~/.ssh/config
 
       - name: Sync repo to VPS
         run: |
@@ -56,11 +90,12 @@ jobs:
             --exclude='packages/shared/node_modules' \
             --exclude='.env' \
             --exclude='.env.*' \
+            --exclude='.rollback' \
             ./ vps:${{ env.VPS_DEPLOY_DIR }}
 
       - name: Deploy services on VPS
         run: |
-          ssh vps "cd ${{ env.VPS_DEPLOY_DIR }} && bash scripts/deploy-vps.sh"
+          ssh vps "cd ${{ env.VPS_DEPLOY_DIR }} && RELEASE_SHA='${RELEASE_SHA}' bash scripts/deploy-vps.sh"
 
       - name: Health check API
         run: |
@@ -87,3 +122,9 @@ jobs:
             return 1
           }
           wait_for "https://cms.usepdc.com/_health"
+
+      - name: Collect redacted VPS diagnostics
+        if: ${{ failure() }}
+        continue-on-error: true
+        run: |
+          ssh vps "cd ${{ env.VPS_DEPLOY_DIR }} && RELEASE_SHA='${RELEASE_SHA}' bash scripts/deploy-vps.sh diagnostics"

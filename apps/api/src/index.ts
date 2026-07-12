@@ -73,6 +73,14 @@ import { ALLOWED_ORIGINS, applyCorsHeaders } from './lib/cors.js';
 
 const app = new Hono();
 
+const rateLimitGlobalWithHealthBypass: typeof rateLimitGlobalIp = async (c, next) => {
+  if (c.req.path === '/health' || c.req.path.startsWith('/health/')) {
+    await next();
+    return undefined;
+  }
+  return rateLimitGlobalIp(c, next);
+};
+
 // ─── MIDDLEWARES ───
 // Capacitor iOS (server.hostname = 'usepdc.com') and Android TWA share the same
 // production origin as the web PWA — no extra entry needed in prod. The
@@ -81,7 +89,7 @@ app.use('*', cors({
   origin: ALLOWED_ORIGINS,
   credentials: true,
 }));
-app.use('*', rateLimitGlobalIp);
+app.use('*', rateLimitGlobalWithHealthBypass);
 app.use('*', logger());
 app.use('*', secureHeaders());
 app.use('*', noStoreCache);

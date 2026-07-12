@@ -57,6 +57,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      labels:
+        org.opencontainers.image.revision: "${RELEASE_SHA:?RELEASE_SHA e obrigatorio}"
+        org.opencontainers.image.created: "${RELEASE_DATE:?RELEASE_DATE e obrigatorio}"
     container_name: pdc-api
     restart: unless-stopped
     env_file:
@@ -75,6 +78,8 @@ services:
     networks:
       - pdc-network
     labels:
+      - "org.opencontainers.image.revision=${RELEASE_SHA:?RELEASE_SHA e obrigatorio}"
+      - "org.opencontainers.image.created=${RELEASE_DATE:?RELEASE_DATE e obrigatorio}"
       - "traefik.enable=true"
       - "traefik.http.routers.pdc-api.rule=Host(`api.usepdc.com`)"
       - "traefik.http.routers.pdc-api.entrypoints=websecure"
@@ -104,6 +109,9 @@ services:
     build:
       context: ./infra/strapi
       dockerfile: Dockerfile
+      labels:
+        org.opencontainers.image.revision: "${RELEASE_SHA:?RELEASE_SHA e obrigatorio}"
+        org.opencontainers.image.created: "${RELEASE_DATE:?RELEASE_DATE e obrigatorio}"
     container_name: pdc-strapi
     restart: unless-stopped
     env_file:
@@ -119,6 +127,8 @@ services:
     volumes:
       - pdc-strapi-uploads:/opt/app/public/uploads
     labels:
+      - "org.opencontainers.image.revision=${RELEASE_SHA:?RELEASE_SHA e obrigatorio}"
+      - "org.opencontainers.image.created=${RELEASE_DATE:?RELEASE_DATE e obrigatorio}"
       - "traefik.enable=true"
       - "traefik.http.routers.pdc-strapi.rule=Host(`cms.usepdc.com`)"
       - "traefik.http.routers.pdc-strapi.entrypoints=websecure"
