@@ -1,11 +1,44 @@
 import { Hono } from 'hono';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { Features } from '@pdc/shared';
+import { env } from '../lib/env.js';
+import { hasRedis } from '../lib/redis.js';
+import { getRateLimitCircuitState } from '../middleware/rateLimit.js';
 
 export const healthRoutes = new Hono();
 
 healthRoutes.get('/', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+const READINESS_TIMEOUT_MS = 2_000;
+
+async function isStrapiReady(): Promise<boolean> {
+  try {
+    const response = await fetch(`${env.STRAPI_URL}/_health`, {
+      signal: AbortSignal.timeout(READINESS_TIMEOUT_MS),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+healthRoutes.get('/ready', async (c) => {
+  const strapiReady = await isStrapiReady();
+  const rateLimitCircuit = getRateLimitCircuitState();
+  const redisReady = hasRedis && rateLimitCircuit.state === 'closed';
+  const ready = strapiReady && redisReady;
+
+  return c.json({
+    status: ready ? 'ready' : 'degraded',
+    dependencies: {
+      strapi: strapiReady ? 'up' : 'down',
+      rateLimitRedis: !hasRedis ? 'unconfigured' : redisReady ? 'up' : 'degraded',
+    },
+    rateLimitCircuit,
+    timestamp: new Date().toISOString(),
+  }, ready ? 200 : 503);
 });
 
 interface StrapiFeatureFlag {

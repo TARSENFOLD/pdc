@@ -25,10 +25,65 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   });
 }
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+const SERVICE_WORKER_CLEANUP_VERSION_KEY = 'pdc:service-worker-cleanup:v1';
+
+interface CleanupRegistration {
+  unregister(): Promise<boolean>;
+}
+
+interface CleanupMarkerStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+}
+
+export type ServiceWorkerCleanupDecision = 'continue' | 'reload';
+
+function hasCompletedServiceWorkerCleanup(storage: CleanupMarkerStorage): boolean {
+  try {
+    return storage.getItem(SERVICE_WORKER_CLEANUP_VERSION_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export async function cleanupServiceWorkersBeforeBootstrap(
+  hadController: boolean,
+  getRegistrations: () => Promise<readonly CleanupRegistration[]>,
+  storage: CleanupMarkerStorage,
+): Promise<ServiceWorkerCleanupDecision> {
+  if (hasCompletedServiceWorkerCleanup(storage)) return 'continue';
+
+  let registrations: readonly CleanupRegistration[];
+  try {
+    registrations = await getRegistrations();
+  } catch {
+    return 'continue';
+  }
+
+  const results = await Promise.allSettled(
+    registrations.map(async (registration) => registration.unregister()),
+  );
+  const removedRegistration = results.some(
+    (result) => result.status === 'fulfilled' && result.value,
+  );
+  const cleanupSucceeded = results.every(
+    (result) => result.status === 'fulfilled' && result.value,
+  );
+
+  if (!cleanupSucceeded) return 'continue';
+
+  try {
+    storage.setItem(SERVICE_WORKER_CLEANUP_VERSION_KEY, '1');
+  } catch {
+    return 'continue';
+  }
+
+  return hadController && removedRegistration ? 'reload' : 'continue';
+}
+
+function registerCurrentServiceWorker(): void {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
-      // Detect when a new SW version installs and is waiting
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
         if (!newWorker) return;
@@ -40,7 +95,6 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       });
     }).catch(() => {});
 
-    // Reload page when new SW takes control (after SKIP_WAITING)
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       window.location.reload();
     });
@@ -74,25 +128,54 @@ const queryClient = new QueryClient({
   },
 });
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error('Root element not found');
+function renderApplication(): void {
+  const rootElement = document.getElementById('root');
+  if (!rootElement) {
+    throw new Error('Root element not found');
+  }
+
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <BootstrapProvider>
+            <AuthProvider>
+              <RouterProvider router={router} future={{ v7_startTransition: true }} />
+              <Toaster />
+              <CookieBanner />
+              <InstallPrompt />
+              <ReactQueryDevtools initialIsOpen={false} />
+            </AuthProvider>
+          </BootstrapProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </React.StrictMode>,
+  );
 }
 
-ReactDOM.createRoot(rootElement).render(
-  <React.StrictMode>
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <BootstrapProvider>
-          <AuthProvider>
-            <RouterProvider router={router} future={{ v7_startTransition: true }} />
-            <Toaster />
-            <CookieBanner />
-            <InstallPrompt />
-            <ReactQueryDevtools initialIsOpen={false} />
-          </AuthProvider>
-        </BootstrapProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
-  </React.StrictMode>
-);
+async function bootstrapApplication(): Promise<void> {
+  if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    let decision: ServiceWorkerCleanupDecision = 'continue';
+    try {
+      decision = await cleanupServiceWorkersBeforeBootstrap(
+        navigator.serviceWorker.controller !== null,
+        () => navigator.serviceWorker.getRegistrations(),
+        window.localStorage,
+      );
+    } catch {
+      // Browser APIs may be restricted; that must not leave the application blank.
+    }
+
+    if (decision === 'reload') {
+      window.location.reload();
+      return;
+    }
+  }
+
+  renderApplication();
+  if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    registerCurrentServiceWorker();
+  }
+}
+
+void bootstrapApplication();

@@ -3,13 +3,11 @@ import { redis, hasRedis } from '../lib/redis.js';
 import type { Context, Next } from 'hono';
 import pino from 'pino';
 import { env } from '../lib/env.js';
-import type { AuthVariables, OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
 
 const log = pino({ name: 'rate-limit' });
 
 type RateLimitWindow = `${number} ${'s' | 'm' | 'h' | 'd'}`;
 type RateLimitKey = 'ip' | 'user';
-type RateLimitContext = Context<{ Variables: AuthVariables | OptionalAuthVariables }>;
 
 export interface RateLimitOptions {
   tokens: number;
@@ -23,6 +21,113 @@ interface LimitResult {
   limit: number;
   remaining: number;
   reset: number;
+}
+
+export type RateLimitCircuitStatus = 'closed' | 'open' | 'half-open';
+export type RateLimitCircuitReason = 'quota' | 'transient';
+
+export interface RateLimitCircuitSnapshot {
+  state: RateLimitCircuitStatus;
+  reason?: RateLimitCircuitReason;
+  retryAt?: number;
+}
+
+interface InternalCircuitState {
+  state: RateLimitCircuitStatus;
+  reason: RateLimitCircuitReason | null;
+  retryAt: number | null;
+}
+
+const TRANSIENT_COOLDOWN_MS = 5_000;
+const QUOTA_COOLDOWN_MS = 30 * 60_000;
+const REDIS_LIMIT_TIMEOUT_MS = 1_000;
+let circuitState: InternalCircuitState = { state: 'closed', reason: null, retryAt: null };
+
+export function getRateLimitCircuitState(): RateLimitCircuitSnapshot {
+  return {
+    state: circuitState.state,
+    ...(circuitState.reason !== null ? { reason: circuitState.reason } : {}),
+    ...(circuitState.retryAt !== null ? { retryAt: circuitState.retryAt } : {}),
+  };
+}
+
+export function resetRateLimitCircuitState(): void {
+  circuitState = { state: 'closed', reason: null, retryAt: null };
+}
+
+function transitionCircuit(next: InternalCircuitState, error?: unknown): void {
+  const from = circuitState.state;
+  circuitState = next;
+  const context = {
+    from,
+    to: next.state,
+    ...(next.reason !== null ? { reason: next.reason } : {}),
+    ...(next.retryAt !== null ? { retryAt: next.retryAt } : {}),
+    ...(error !== undefined ? { err: error } : {}),
+  };
+  if (next.state === 'open') {
+    log.warn(context, 'Redis rate limiter circuit opened; using local memory buckets');
+  } else {
+    log.info(context, 'Redis rate limiter circuit transitioned');
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function numericProperty(value: unknown, key: string): number | null {
+  if (!isRecord(value)) return null;
+  const candidate = value[key];
+  return typeof candidate === 'number' && Number.isFinite(candidate) ? candidate : null;
+}
+
+function absoluteTimestamp(value: number, now: number): number | null {
+  const timestamp = value < 1_000_000_000_000 ? value * 1000 : value;
+  return timestamp > now ? timestamp : null;
+}
+
+function quotaRetryAt(error: unknown, message: string, now: number): number {
+  const explicitReset = numericProperty(error, 'reset') ?? numericProperty(error, 'retryAt');
+  if (explicitReset !== null) {
+    const timestamp = absoluteTimestamp(explicitReset, now);
+    if (timestamp !== null) return timestamp;
+  }
+
+  const retryAfter = numericProperty(error, 'retryAfter');
+  if (retryAfter !== null && retryAfter > 0) return now + retryAfter * 1000;
+
+  const timestampMatch = message.match(/(?:reset|retry[- ]?at)[^\d]*(\d{10,13})/i);
+  const timestampRaw = timestampMatch?.[1];
+  if (timestampRaw !== undefined) {
+    const timestamp = absoluteTimestamp(Number(timestampRaw), now);
+    if (timestamp !== null) return timestamp;
+  }
+  return now + QUOTA_COOLDOWN_MS;
+}
+
+function openCircuit(error: unknown): void {
+  const now = Date.now();
+  const message = error instanceof Error ? error.message : String(error);
+  const status = numericProperty(error, 'status') ?? numericProperty(error, 'statusCode');
+  const quota = status === 429
+    || /quota|daily request limit|request limit exceeded|usage limit|too many requests|\b429\b/i.test(message);
+  const reason: RateLimitCircuitReason = quota ? 'quota' : 'transient';
+  const retryAt = quota ? quotaRetryAt(error, message, now) : now + TRANSIENT_COOLDOWN_MS;
+  transitionCircuit({ state: 'open', reason, retryAt }, error);
+}
+
+function claimRedisProbe(): boolean {
+  if (circuitState.state === 'closed') return true;
+  if (circuitState.state === 'half-open' || circuitState.retryAt === null) return false;
+  if (Date.now() < circuitState.retryAt) return false;
+  transitionCircuit({ ...circuitState, state: 'half-open' });
+  return true;
+}
+
+function closeCircuit(): void {
+  if (circuitState.state === 'closed') return;
+  transitionCircuit({ state: 'closed', reason: null, retryAt: null });
 }
 
 const memoryBuckets = new Map<string, { count: number; reset: number }>();
@@ -54,21 +159,16 @@ function getClientIp(c: Context): string {
   const firstForwardedIp = xForwardedFor.split(',')[0]?.trim() ?? '';
   return firstForwardedIp || c.req.header('x-real-ip') || '127.0.0.1';
 }
-
-function getUserId(c: RateLimitContext): string | null {
-  try {
-    return c.get('user')?.id ?? null;
-  } catch {
-    return null;
-  }
+function getUserId(c: Context): string | null {
+  const variables: unknown = c.var;
+  const user = isRecord(variables) ? variables['user'] : null;
+  return isRecord(user) && typeof user['id'] === 'string' ? user['id'] : null;
 }
-
 function applyProfile(tokens: number): number {
   if (env.RATE_LIMIT_PROFILE === 'off') return Number.POSITIVE_INFINITY;
   if (env.RATE_LIMIT_PROFILE === 'permissive') return tokens * 10;
   return tokens;
 }
-
 function parseWindowMs(window: RateLimitWindow): number {
   const [amountRaw, unit] = window.split(' ');
   const amount = Number(amountRaw);
@@ -81,7 +181,6 @@ function parseWindowMs(window: RateLimitWindow): number {
   if (unit !== 's' && unit !== 'm' && unit !== 'h' && unit !== 'd') return amount * 60 * 1000;
   return amount * multipliers[unit];
 }
-
 function memoryLimit(storageKey: string, limit: number, window: RateLimitWindow): LimitResult {
   const now = Date.now();
   const windowMs = parseWindowMs(window);
@@ -100,7 +199,6 @@ function memoryLimit(storageKey: string, limit: number, window: RateLimitWindow)
     reset: bucket.reset,
   };
 }
-
 function createLimiter(options: RateLimitOptions) {
   const profiledTokens = applyProfile(options.tokens);
   if (!Number.isFinite(profiledTokens)) return null;
@@ -110,6 +208,7 @@ function createLimiter(options: RateLimitOptions) {
         redis,
         limiter: Ratelimit.slidingWindow(profiledTokens, options.window),
         analytics: true,
+        timeout: REDIS_LIMIT_TIMEOUT_MS,
         prefix: `ratelimit:${options.keyPrefix}`,
       })
     : null;
@@ -119,7 +218,7 @@ export function createRateLimit(options: RateLimitOptions) {
   const profiledTokens = applyProfile(options.tokens);
   const limiter = createLimiter(options);
 
-  return async function rateLimitMiddleware(c: RateLimitContext, next: Next) {
+  return async function rateLimitMiddleware(c: Context, next: Next) {
     if (!Number.isFinite(profiledTokens)) {
       await next();
       return;
@@ -130,24 +229,29 @@ export function createRateLimit(options: RateLimitOptions) {
       : getClientIp(c);
     const storageKey = `${options.keyPrefix}:${identity}`;
 
-    let result: LimitResult | null = null;
-    if (limiter) {
+    let result: LimitResult;
+    if (limiter && claimRedisProbe()) {
       try {
-        result = await limiter.limit(identity);
+        const remoteResult = await limiter.limit(identity);
+        if (remoteResult.reason === 'timeout') {
+          openCircuit(new Error('Upstash rate limiter timed out'));
+          result = memoryLimit(storageKey, profiledTokens, options.window);
+        } else {
+          closeCircuit();
+          result = remoteResult;
+        }
       } catch (error: unknown) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        log.error(
-          { err, keyPrefix: options.keyPrefix },
-          'Redis rate limiter unavailable, falling back to local memory bucket',
-        );
+        openCircuit(error);
         result = memoryLimit(storageKey, profiledTokens, options.window);
       }
-    } else if (env.NODE_ENV === 'test') {
-      result = memoryLimit(storageKey, profiledTokens, options.window);
     } else {
-      log.warn({ keyPrefix: options.keyPrefix }, 'Redis not configured, rate limiting skipped');
-      await next();
-      return;
+      if (!limiter && circuitState.state === 'closed') {
+        transitionCircuit(
+          { state: 'open', reason: 'transient', retryAt: null },
+          new Error('Redis rate limiter is not configured'),
+        );
+      }
+      result = memoryLimit(storageKey, profiledTokens, options.window);
     }
 
     c.header('X-RateLimit-Limit', result.limit.toString());
@@ -179,7 +283,7 @@ export async function rateLimit(c: Context, next: Next) {
     await next();
     return;
   }
-  return ratelimit(c as RateLimitContext, next);
+  return ratelimit(c, next);
 }
 
 const ratelimitRegisto = createRateLimit({ tokens: 3, window: '1 h', keyPrefix: 'registo', key: 'ip' });
@@ -189,5 +293,5 @@ export async function rateLimitRegisto(c: Context, next: Next) {
     await next();
     return;
   }
-  return ratelimitRegisto(c as RateLimitContext, next);
+  return ratelimitRegisto(c, next);
 }

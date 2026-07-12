@@ -75,8 +75,14 @@ Subir serviços:
 ```bash
 ssh cj@167.235.29.64
 cd /opt/pdc
-sudo docker compose -f docker-compose.prod.yml up -d
+export RELEASE_SHA="COLE_AQUI_O_SHA_GIT_COMPLETO_DE_40_CARACTERES"
+export RELEASE_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+sudo --preserve-env=RELEASE_SHA,RELEASE_DATE docker compose -f docker-compose.prod.yml up -d
 ```
+
+`RELEASE_SHA` e `RELEASE_DATE` são metadados não secretos e obrigatórios. Ficam
+gravados nas labels OCI das imagens e dos containers `pdc-api` e `pdc-strapi`,
+permitindo provar qual revisão está em execução sem inferir pelo conteúdo do VPS.
 
 ### Deploy automático (gated por CI)
 
@@ -85,11 +91,17 @@ O pipeline de deploy está **gated pelo CI**: nenhum deploy corre sem que o work
 **Fluxo canónico:**
 
 1. Push/merge para `main` → dispara o workflow `CI` (lint + typecheck + **testes unitários** + build).
-2. Quando `CI` termina com `success`, o GitHub dispara automaticamente:
+2. Quando `CI` termina com `success`, o deploy faz checkout de
+   `workflow_run.head_sha`, confirma que o checkout corresponde ao SHA aprovado e
+   sincroniza exactamente essa revisão. O workflow falha antes do checkout se
+   qualquer secret VPS obrigatório estiver ausente. O gatilho automático aceita
+   apenas CI originado por `push` no `main` do próprio repositório; CI de pull
+   request nunca recebe o caminho de deploy com secrets.
+3. O GitHub dispara automaticamente:
    - `deploy-vps.yml` (Hetzner VPS — API + Strapi)
    - `deploy-web.yml` (Cloudflare Pages — frontend)
    - `deploy-edge.yml` (Cloudflare Workers — edge)
-3. Se `CI` falhar (lint, typecheck, testes ou build), **nenhum deploy corre**.
+4. Se `CI` falhar (lint, typecheck, testes ou build), **nenhum deploy corre**.
 
 > **Branch protection obrigatória**: configura `main` com required status checks `web — lint + typecheck + build`, `api — lint + typecheck + build`, `shared — lint + typecheck + build` e exige review approval antes do merge.
 
@@ -98,13 +110,26 @@ Secrets necessários no GitHub:
 - `VPS_HOST`: `167.235.29.64`
 - `VPS_USER`: `cj`
 - `VPS_SSH_KEY`: chave privada SSH completa
-- `VPS_HOST_KEY`: impressão digital da chave do host (via `ssh-keyscan`) para verificação pinned
+- `VPS_HOST_KEY`: linha completa de `known_hosts` para o VPS; obter via
+  `ssh-keyscan` e verificar a fingerprint por canal independente antes de gravar
+  o secret
 
 Deploy manual equivalente (bypass do gate, usar só em emergências):
 
 ```bash
-bash scripts/deploy-vps.sh
+cd /opt/pdc
+RELEASE_SHA="COLE_AQUI_O_SHA_GIT_COMPLETO_DE_40_CARACTERES" bash scripts/deploy-vps.sh
 ```
+
+O script valida o Docker Compose antes de construir, preserva as imagens atuais,
+espera os health checks nativos via `docker inspect`, testa os endpoints dentro
+dos containers com `docker compose exec -T` e só depois testa os domínios
+públicos, incluindo CORS de `/bootstrap` e do polling Socket.IO para
+`https://usepdc.com`. As portas `3001` e `1337` não são publicadas no host.
+Consequentemente, `curl localhost:3001` e `curl localhost:1337` no VPS não são
+checks válidos.
+Se o deploy falhar, o rollback recria API/Strapi com as imagens anteriores e
+repete a mesma validação de saúde. Um rollback não validado continua a ser falha.
 
 ---
 
@@ -205,5 +230,65 @@ Após cada deploy, o responsável de Operações (Ops) deve validar:
 6.  **Performance Gate**: Lighthouse Score em Mobile ≥ 90.
 7.  **Accessibility Gate**: Axe-core com zero violações críticas em `https://usepdc.com/login`.
 
+### Diagnóstico seguro no VPS
+
+O modo de diagnóstico mostra `docker compose ps`, estado/health nativo e as
+últimas linhas de logs de Traefik, API e Strapi. Tokens, credenciais em URLs e
+campos comuns de segredo são redigidos antes de chegar ao terminal ou ao GitHub
+Actions:
+
+```bash
+cd /opt/pdc
+RELEASE_SHA="$(docker inspect pdc-api --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" \
+  bash scripts/deploy-vps.sh diagnostics
+```
+
+Para confirmar a revisão e a data da release sem abrir o `.env`:
+
+```bash
+docker inspect pdc-api --format \
+  'revision={{ index .Config.Labels "org.opencontainers.image.revision" }} created={{ index .Config.Labels "org.opencontainers.image.created" }}'
+```
+
+#### Traefik responde `404` com router `-`
+
+No access log do Traefik, router `-` acompanhado de `404` significa que a
+requisição não foi associada a um router. O `404` gerado pelo proxy também não
+traz os headers CORS da API, pelo que o browser reporta
+`Access-Control-Allow-Origin` ausente como efeito secundário. Verificar, nesta
+ordem:
+
+1. se o `Host` pedido é exactamente `api.usepdc.com` ou `cms.usepdc.com`;
+2. se `pdc-api`/`pdc-strapi` estão `healthy`, na rede `pdc-network` e mantêm as labels `traefik.http.routers.*`;
+3. se os logs do provider Docker no `pdc-traefik` indicam router descartado ou configuração inválida.
+
+Quando o access log contém o nome do router mas responde `503`/`504`, o router
+foi encontrado e o diagnóstico deve concentrar-se no backend/health, não no
+DNS ou na regra `Host`.
+
+#### Quota diária do Upstash
+
+Quota esgotada, throttling ou indisponibilidade do Upstash aparece na API como
+`429`, timeout ou erro de Redis. Confirmar apenas presença de configuração, sem
+imprimir valores:
+
+```bash
+docker exec pdc-api sh -lc '
+  for name in UPSTASH_REDIS_REST_URL UPSTASH_REDIS_REST_TOKEN; do
+    if [ -n "$(printenv "$name")" ]; then
+      echo "$name=present"
+    else
+      echo "$name=missing"
+    fi
+  done
+'
+```
+
+Depois de repor/aumentar a quota, validar `/health`, `/health/ready` e uma rota
+real como `/bootstrap`. `/health` é liveness e não deve depender do Redis;
+`/health/ready` é o endpoint apropriado para expor dependências degradadas sem
+segredos. Rate limit e cache podem degradar para a política local definida;
+OTP, reset, locks e aprovação devem continuar fail-closed.
+
 ---
-*Doc is Law — Última auditoria: 4 de Julho de 2026.*
+*Doc is Law — Última auditoria: 12 de Julho de 2026.*
