@@ -122,7 +122,9 @@ describe('rate limit Redis circuit breaker', () => {
   });
 
   it('usa cooldown longo quando a quota nao informa reset', async () => {
-    mocks.limit.mockRejectedValueOnce(new Error('ERR max daily request limit exceeded'));
+    mocks.limit.mockRejectedValueOnce(new Error(
+      'Command failed: ERR max requests limit exceeded. Limit: 500000, Usage: 500001.',
+    ));
     const app = buildApp('quota-default');
 
     await app.request('/');
@@ -130,6 +132,9 @@ describe('rate limit Redis circuit breaker', () => {
     expect(snapshot.state).toBe('open');
     expect(snapshot.reason).toBe('quota');
     expect(snapshot.retryAt).toBe(Date.now() + 30 * 60_000);
+    await vi.advanceTimersByTimeAsync(5_000);
+    await app.request('/');
+    expect(mocks.limit).toHaveBeenCalledOnce();
   });
 
   it('abre cooldown curto para network e fecha apos probe bem sucedido', async () => {

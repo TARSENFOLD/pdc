@@ -111,7 +111,7 @@ function openCircuit(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
   const status = numericProperty(error, 'status') ?? numericProperty(error, 'statusCode');
   const quota = status === 429
-    || /quota|daily request limit|request limit exceeded|usage limit|too many requests|\b429\b/i.test(message);
+    || /quota|daily requests? limit|requests? limit exceeded|usage limit|too many requests|\b429\b/i.test(message);
   const reason: RateLimitCircuitReason = quota ? 'quota' : 'transient';
   const retryAt = quota ? quotaRetryAt(error, message, now) : now + TRANSIENT_COOLDOWN_MS;
   transitionCircuit({ state: 'open', reason, retryAt }, error);
