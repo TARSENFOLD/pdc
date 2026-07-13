@@ -12,7 +12,7 @@ const log = pino();
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { secureHeaders } from 'hono/secure-headers';
+import { pdcSecureHeaders } from './middleware/secure-headers.config.js';
 import { securityMiddleware as security } from './middleware/security.js';
 import { noStoreCache } from './middleware/cache.js';
 import { rateLimitGlobalIp } from './middleware/rateLimit.js';
@@ -91,7 +91,7 @@ app.use('*', cors({
 }));
 app.use('*', rateLimitGlobalWithHealthBypass);
 app.use('*', logger());
-app.use('*', secureHeaders());
+app.use('*', pdcSecureHeaders);
 app.use('*', noStoreCache);
 app.use('*', sentryUserContext);
 app.use('/auth/*', security);
