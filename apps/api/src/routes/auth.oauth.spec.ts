@@ -563,3 +563,53 @@ describe('OAuth initiation - resiliencia Redis e credenciais', () => {
     }
   });
 });
+
+describe('OAuth callback - resiliencia Redis em consumeOAuthState (nao 500)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authServiceMock.findOrCreateUser.mockResolvedValue(MOCK_USER_ONBOARDED);
+    authServiceMock.generateTokens.mockResolvedValue(MOCK_TOKENS);
+    authServiceMock.saveRefreshToken.mockResolvedValue(undefined);
+    authServiceMock.setOauthProvider.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('LinkedIn: callback prossegue (302 para /app) quando redis.get falha - nao 500', async () => {
+    redisMock.get.mockReset();
+    redisMock.get.mockRejectedValueOnce(new Error('Upstash quota exceeded'));
+    redisMock.del.mockResolvedValue(1);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'linkedin-at' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ email: 'user@pdc.ao', name: 'LinkedIn User' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const state = makeOAuthState();
+    const res = await oauthRoutes.request(`/linkedin/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('http://localhost:5173/app');
+    expect(authServiceMock.findOrCreateUser).toHaveBeenCalledWith('user@pdc.ao', 'LinkedIn User');
+  });
+
+  it('LinkedIn: callback prossegue (302 para /app) quando redis.del falha - nao 500', async () => {
+    redisMock.get.mockReset();
+    redisMock.get.mockResolvedValue('true');
+    redisMock.del.mockReset();
+    redisMock.del.mockRejectedValueOnce(new Error('Upstash quota exceeded'));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'linkedin-at' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ email: 'user@pdc.ao', name: 'LinkedIn User' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const state = makeOAuthState();
+    const res = await oauthRoutes.request(`/linkedin/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('http://localhost:5173/app');
+  });
+});

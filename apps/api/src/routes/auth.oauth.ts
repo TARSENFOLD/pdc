@@ -87,10 +87,19 @@ async function consumeOAuthState(state: string | undefined): Promise<boolean> {
   if (!hasRedis) return true;
 
   const key = `oauth_state:${state}`;
-  const exists = await redis.get(key);
-  if (!exists) return false;
-  await redis.del(key);
-  return true;
+  try {
+    const exists = await redis.get(key);
+    if (!exists) return false;
+    await redis.del(key);
+    return true;
+  } catch (err) {
+    // Degradação graceful: o state já foi validado por assinatura HMAC + TTL.
+    // O Redis apenas reforça a proteção one-time-use. Se falhar (ex.: quota
+    // Upstash esgotada), degradamos para validação por assinatura (consistente
+    // com o caminho !hasRedis) em vez de derrubar o callback do OAuth com 500.
+    log.warn({ err }, 'Redis indisponível ao consumir OAuth state; a validar só por assinatura.');
+    return true;
+  }
 }
 
 function extractErrorDetails(err: unknown): { status: number; message: string } {
