@@ -505,3 +505,61 @@ describe('POST /finalizar/verificar-otp — legacy role upgrade after OTP', () =
     expect(setAuthCookiesMock).not.toHaveBeenCalled();
   });
 });
+
+describe('OAuth initiation - resiliencia Redis e credenciais', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    redisMock.set.mockResolvedValue('OK');
+    redisMock.get.mockResolvedValue(null);
+    redisMock.del.mockResolvedValue(undefined);
+  });
+
+  it('LinkedIn: redireciona para o consentimento da LinkedIn (happy path)', async () => {
+    const res = await oauthRoutes.request('/linkedin');
+
+    expect(res.status).toBe(302);
+    const location = res.headers.get('location') ?? '';
+    expect(location).toContain('https://www.linkedin.com/oauth/v2/authorization');
+    expect(location).toContain('client_id=linkedin-client-id');
+    expect(redisMock.set).toHaveBeenCalledTimes(1);
+  });
+
+  it('LinkedIn: degrada graceful quando redis.set falha - nao devolve 500', async () => {
+    redisMock.set.mockReset();
+    redisMock.set.mockRejectedValueOnce(new Error('Upstash quota exceeded'));
+
+    const res = await oauthRoutes.request('/linkedin');
+
+    expect(res.status).toBe(302);
+    expect((res.headers.get('location') ?? '')).toContain('https://www.linkedin.com/oauth/v2/authorization');
+  });
+
+  it('Google: degrada graceful quando redis.set falha - nao devolve 500', async () => {
+    redisMock.set.mockReset();
+    redisMock.set.mockRejectedValueOnce(new Error('Upstash quota exceeded'));
+
+    const res = await oauthRoutes.request('/google');
+
+    expect(res.status).toBe(302);
+    expect((res.headers.get('location') ?? '')).toContain('https://accounts.google.com/o/oauth2/v2/auth');
+  });
+
+  it('LinkedIn: redireciona para /login?error=oauth_unavailable quando credenciais em falta - nao devolve 500', async () => {
+    const { env } = await import('../lib/env.js');
+    const savedId: string | undefined = env.LINKEDIN_CLIENT_ID;
+    const savedSecret: string | undefined = env.LINKEDIN_CLIENT_SECRET;
+    delete env.LINKEDIN_CLIENT_ID;
+    delete env.LINKEDIN_CLIENT_SECRET;
+    try {
+      const res = await oauthRoutes.request('/linkedin');
+
+      expect(res.status).toBe(302);
+      const location = res.headers.get('location') ?? '';
+      expect(location).toContain('/login');
+      expect(location).toContain('error=oauth_unavailable');
+    } finally {
+      if (typeof savedId === 'string') env.LINKEDIN_CLIENT_ID = savedId;
+      if (typeof savedSecret === 'string') env.LINKEDIN_CLIENT_SECRET = savedSecret;
+    }
+  });
+});
