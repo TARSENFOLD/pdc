@@ -1,16 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   clearPrivateClientData,
+  type DeleteDatabaseRequestLike,
   type PrivateDataCleanupEnvironment,
 } from './localData';
 
 describe('clearPrivateClientData', () => {
   it('removes only legacy private API caches', async () => {
-    const deleteCache = vi.fn(async () => true);
+    const deleteCache = vi.fn(() => Promise.resolve(true));
 
     await clearPrivateClientData({
       cacheStorage: {
-        keys: async () => ['pdc-api-pdc-v2.3', 'pdc-static-pdc-v2.3', 'other-cache'],
+        keys: () =>
+          Promise.resolve(['pdc-api-pdc-v2.3', 'pdc-static-pdc-v2.3', 'other-cache']),
         delete: deleteCache,
       },
     });
@@ -22,29 +24,36 @@ describe('clearPrivateClientData', () => {
   it('deletes the offline database and purges every worker generation', async () => {
     const postedMessages: unknown[] = [];
     const worker = { postMessage: (message: unknown) => postedMessages.push(message) };
-    const unsubscribe = vi.fn(async () => true);
+    const unsubscribe = vi.fn(() => Promise.resolve(true));
     const deletedDatabases: string[] = [];
 
     const environment: PrivateDataCleanupEnvironment = {
       indexedDb: {
         deleteDatabase: (databaseName) => {
           deletedDatabases.push(databaseName);
-          const request = { onsuccess: null, onerror: null, onblocked: null };
-          queueMicrotask(() => request.onsuccess?.());
+          const request: DeleteDatabaseRequestLike = {
+            onsuccess: null,
+            onerror: null,
+            onblocked: null,
+          };
+          queueMicrotask(() => {
+            request.onsuccess?.();
+          });
           return request;
         },
       },
       serviceWorker: {
         controller: worker,
-        getRegistrations: async () => [
-          {
-            active: worker,
-            waiting: { postMessage: (message) => postedMessages.push(message) },
-            pushManager: {
-              getSubscription: async () => ({ unsubscribe }),
+        getRegistrations: () =>
+          Promise.resolve([
+            {
+              active: worker,
+              waiting: { postMessage: (message) => postedMessages.push(message) },
+              pushManager: {
+                getSubscription: () => Promise.resolve({ unsubscribe }),
+              },
             },
-          },
-        ],
+          ]),
       },
     };
 
@@ -62,10 +71,8 @@ describe('clearPrivateClientData', () => {
     await expect(
       clearPrivateClientData({
         cacheStorage: {
-          keys: async () => {
-            throw new Error('storage unavailable');
-          },
-          delete: async () => false,
+          keys: () => Promise.reject(new Error('storage unavailable')),
+          delete: () => Promise.resolve(false),
         },
       }),
     ).resolves.toBeUndefined();
