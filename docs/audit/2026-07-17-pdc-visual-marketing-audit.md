@@ -332,3 +332,173 @@ O backlog executável será criado no GitHub e replicado na base PDC Tasks. A ta
 - #17 — P1: alinhar posicionamento, PT-AO, design e geografia — [https://github.com/devpdc2-png/pdc/issues/17](https://github.com/devpdc2-png/pdc/issues/17)
 - #18 — P1: instrumentar marketing e governança de claims — [https://github.com/devpdc2-png/pdc/issues/18](https://github.com/devpdc2-png/pdc/issues/18)
 - #19 — P2: QA formal de performance, acessibilidade e responsividade — [https://github.com/devpdc2-png/pdc/issues/19](https://github.com/devpdc2-png/pdc/issues/19)
+
+## Adenda — PWA, Android/iOS e conformidade das lojas
+
+### Veredito de publicação
+
+O PDC **não está pronto para submissão à Apple App Store ou Google Play**. A base PWA existe e contém trabalho relevante, mas não existe ainda uma aplicação móvel empacotada. O `package.json` declara `apps/mobile` como workspace, porém a pasta, os projetos Android/iOS e as configurações de empacotamento estão ausentes.
+
+A recomendação arquitetural é manter o PWA como distribuição web e criar um shell móvel com **Capacitor** para Android e iOS. Os assets da aplicação devem ser empacotados localmente; a app não deve ser apenas uma WebView remota de `usepdc.com`. Para satisfazer a proposta do PDC e reduzir o risco Apple 4.2, o valor app-like deve vir de simulações offline, progresso sincronizado, push nativo, deep links, partilha/upload e experiência móvel robusta.
+
+Scorecard qualitativo adicional:
+
+- Manifest e installability web: **3,0/5**
+- Offline e sincronização: **1,4/5**
+- Segurança de dados offline: **0,8/5**
+- Empacotamento Android/iOS: **0,0/5**
+- Conformidade Apple/Google: **0,8/5**
+- UGC, IA e proteção de menores para lojas: **1,3/5**
+- Pipeline de submissão: **0,0/5**
+
+### O que já existe e deve ser preservado
+
+- Manifest com `id`, `lang: pt-AO`, start URL, scope, standalone, screenshots, shortcuts e ícones.
+- Metatags iOS, viewport com `viewport-fit=cover`, Apple touch icon e splash screens.
+- Service worker com estratégias distintas, fila IndexedDB de telemetria, background sync e Web Push.
+- Prompt de instalação Chromium.
+- Web Push opt-in iniciado pelo utilizador.
+- Exportação, remoção do perfil vocacional, revogação de vínculos e eliminação/anonimização de conta dentro da área autenticada.
+- Denúncia de conteúdo, suporte público e disclosure de IA.
+
+Estes elementos reduzem trabalho, mas não bastam para uma app de loja.
+
+### P0 móvel — cache autenticado pode expor dados entre contas
+
+`apps/web/public/sw.js` envia qualquer GET `/api/*` para `networkFirst` e grava a resposta no cache `pdc-api-*`. O cache não é isolado por utilizador. O logout em `AuthContext.tsx` limpa React Query, mas não limpa Cache Storage, IndexedDB ou subscrições.
+
+Em dispositivos partilhados, isto cria risco de dados pessoais ou vocacionais de uma conta permanecerem acessíveis offline após logout. A correção deve ser NetworkOnly para APIs privadas e cache apenas de recursos públicos em allowlist. Qualquer offline autenticado precisa de armazenamento por utilizador, expiração, purge e threat model próprios.
+
+A ausência de `apps/web/public/offline.html` agrava o problema: o service worker referencia o ficheiro, mas ele não existe. A mensagem “o teu progresso está guardado” também deve ser removida até o progresso real estar persistido e sincronizado.
+
+Issue: [#20](https://github.com/devpdc2-png/pdc/issues/20)
+
+### Empacotamento e minimum functionality
+
+A Apple declara que apps devem oferecer funcionalidades, conteúdo e UI além de um website reempacotado. Também rejeita bundles incompletos, placeholders e backends inacessíveis. [Apple App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
+
+O PDC deve incluir no mínimo:
+
+- assets web empacotados localmente;
+- projeto Android e iOS reproduzível;
+- safe areas, teclado, status bar, botão back e links externos;
+- Universal Links/App Links;
+- APNs/FCM e deep links de notificações;
+- uma simulação utilizável offline com sincronização segura;
+- partilha/export e uploads compatíveis com permissões nativas;
+- modo tablet/iPad validado;
+- deteção da plataforma para esconder prompts PWA no wrapper.
+
+Issue: [#21](https://github.com/devpdc2-png/pdc/issues/21)
+
+### Gaps atuais do PWA
+
+1. Os shortcuts do manifest apontam para rotas incorretas. `/feed`, `/mensagens` e `/perfil` deveriam usar `/app/*`; `/simulacoes/nova` é tratado como slug público.
+2. `offline.html` não existe.
+3. As notificações referem `/icons/icon-192.png`, enquanto o asset usado pelo manifest é `/icon-192.png`.
+4. `InstallPrompt.tsx` não cobre instalação iOS, não deteta modo standalone, não guarda dismiss com TTL e não mede prompt/aceitação.
+5. O update flow ativa o novo service worker e recarrega sem diálogo, podendo interromper uma tarefa.
+6. `start_url: /` abre a landing, não a experiência autenticada.
+7. `orientation: portrait` não foi justificada para tablet/iPad.
+8. O set raster não inclui asset 1024px de loja e as screenshots precisam de validação contra features reais.
+9. Splash screens listadas cobrem modelos antigos; o wrapper nativo deve usar o asset catalog atual, não depender destas tags.
+
+Issue: [#23](https://github.com/devpdc2-png/pdc/issues/23)
+
+### Apple App Store — requisitos relevantes em julho de 2026
+
+- Desde 28 de abril de 2026, uploads devem usar Xcode 26+ e SDK iOS/iPadOS 26+. [Apple Upcoming Requirements](https://developer.apple.com/news/upcoming-requirements/)
+- Guideline 4.2: evitar app que seja apenas website reempacotado.
+- Guideline 2.1: remover placeholders/estados vazios, testar on-device, manter backend ativo e fornecer demo account ou demo mode.
+- Guideline 5.1.1: política de privacidade acessível dentro da app e no metadata, com dados, usos, terceiros, retenção, eliminação e revogação de consentimento.
+- Se a app cria contas, a eliminação deve estar disponível dentro da app. O PDC já tem uma base para isto, mas a operação e retenções precisam de validação.
+- Como o login oferece Google e LinkedIn, será necessário oferecer opção equivalente de privacidade no iOS — normalmente Sign in with Apple — salvo exceção realmente aplicável e documentada.
+- App Privacy/Nutrition Label deve refletir Sentry Replay, push, OAuth, telemetria, chat, uploads, perfil vocacional e IA.
+- O archive deve conter privacy manifests e approved reasons para APIs aplicáveis. [Apple Privacy Manifest](https://developer.apple.com/documentation/bundleresources/privacy-manifest-files)
+- A idade é obrigatória no App Store Connect e depende do questionário, UGC, chat, IA e controlos. [Apple Age Rating](https://developer.apple.com/help/app-store-connect/manage-app-information/set-an-app-age-rating/)
+- UGC exige filtragem, denúncia, resposta atempada, bloqueio de utilizadores abusivos e contacto público.
+- Conteúdo/features digitais B2C desbloqueados dentro da app estão sujeitos a In-App Purchase. A exceção enterprise pode cobrir acessos comprados por instituições, não vendas consumer individuais.
+- A app deve funcionar em IPv6-only e a submissão deve incluir review notes específicas.
+
+### Google Play — requisitos relevantes
+
+- A partir de 31 de agosto de 2026, novas apps e updates devem target Android 16/API 36. A implementação deve nascer em API 36. [Google Target API](https://support.google.com/googleplay/android-developer/answer/11926878)
+- Novas apps são publicadas como Android App Bundle e usam Play App Signing. [Android App Bundle](https://support.google.com/googleplay/android-developer/answer/9844279)
+- Data Safety deve descrever recolha, partilha e proteção reais. [Google Data Safety](https://support.google.com/googleplay/android-developer/answer/10787469)
+- Apps com criação de conta precisam de eliminação in-app e URL web pública para o pedido. [Google Account Deletion](https://support.google.com/googleplay/android-developer/answer/13327111)
+- Target audience e content rating são obrigatórios; se crianças estiverem incluídas, aplicam-se Families Policies. [Google Target Audience](https://support.google.com/googleplay/android-developer/answer/9867159)
+- Apps com conteúdo gerado por IA precisam de mecanismo in-app para reportar conteúdo ofensivo. [Google AI-generated Content](https://support.google.com/googleplay/android-developer/answer/13985936)
+- Features/subscrições/conteúdo digital pagos dentro da app usam Google Play Billing, salvo exceção aplicável. [Google Payments](https://support.google.com/googleplay/android-developer/answer/9858738)
+- A store listing, screenshots, instruções de acesso e demo devem refletir a experiência real.
+
+### Autenticação, privacidade e menores
+
+Pontos positivos: eliminação dentro da conta e fluxo de encarregado já aparecem no código. Pontos pendentes:
+
+- Sign in with Apple e account-linking;
+- URL web pública de eliminação;
+- política/termos completos;
+- data inventory por SDK e endpoint;
+- App Privacy, Data Safety e privacy manifest;
+- validação do mascaramento e base de tratamento do Sentry Replay;
+- separação entre telemetria essencial e opcional;
+- idade mínima, target audience, Families/Kids e consentimento do encarregado;
+- retenção de documentos de mentor, mensagens e outputs de IA;
+- purpose strings e permissões mínimas.
+
+Issue: [#22](https://github.com/devpdc2-png/pdc/issues/22)
+
+### UGC e IA
+
+O PDC tem feed, posts, mensagens, perfis, mentoria e dois chats de IA. `DenunciarButton.tsx` e a fila de denúncias são uma base, mas não foi encontrada capacidade de um utilizador bloquear outro. `TinaChat.tsx` e `TutorChat.tsx` mostram disclosure de IA, porém não permitem reportar uma resposta específica.
+
+Antes da submissão:
+
+- bloquear/desbloquear utilizador em todas as superfícies;
+- denúncia por post, mensagem, perfil e resposta de IA;
+- filtro preventivo e controlos adequados à idade;
+- SLA de moderação, escalonamento e auditoria;
+- community guidelines e contacto;
+- testes de abuso, assédio, conteúdo sexual, autolesão e prompt injection.
+
+Issue: [#24](https://github.com/devpdc2-png/pdc/issues/24)
+
+### Pagamentos e modelo B2B2C
+
+A equipa precisa decidir antes de implementar billing:
+
+- companion institucional sem compras dentro da app;
+- B2C premium com StoreKit/Google Play Billing;
+- modelo híbrido com entitlements separados.
+
+A via mais simples para a primeira submissão é uma app gratuita para utilizadores já provisionados por instituições, sem CTA/preço/compra B2C dentro do wrapper. Isso precisa corresponder ao produto real; não deve ser usado para contornar as regras. Se houver premium individual consumido na app, deve existir billing e entitlement backend compatíveis.
+
+Issue: [#25](https://github.com/devpdc2-png/pdc/issues/25)
+
+### Gate de submissão
+
+Não submeter até:
+
+- #20 cache autenticado corrigido e testado com duas contas;
+- #21 shell móvel e valor app-like implementados;
+- #22 autenticação/privacidade/menores/eliminação fechados;
+- #24 UGC e IA com report/block/moderação;
+- #25 modelo de billing decidido;
+- issues P0 anteriores #11–#13 concluídas;
+- catálogo real e sem links mortos;
+- build Android API 36/AAB e build iOS Xcode 26 validadas;
+- demo account para estudante, mentor e instituição;
+- metadata/screenshots/políticas sem claims fictícios;
+- TestFlight e Play pre-launch report sem bloqueadores.
+
+Pipeline e checklist: [#26](https://github.com/devpdc2-png/pdc/issues/26)
+
+### Issues adicionais
+
+- [#20 — P0: segurança do cache autenticado](https://github.com/devpdc2-png/pdc/issues/20)
+- [#21 — P0: shell móvel Android/iOS](https://github.com/devpdc2-png/pdc/issues/21)
+- [#22 — P0: autenticação, privacidade, menores e eliminação](https://github.com/devpdc2-png/pdc/issues/22)
+- [#23 — P1: correções do PWA](https://github.com/devpdc2-png/pdc/issues/23)
+- [#24 — P0: UGC e IA](https://github.com/devpdc2-png/pdc/issues/24)
+- [#25 — P0: billing e modelo móvel](https://github.com/devpdc2-png/pdc/issues/25)
+- [#26 — P1: pipeline de release](https://github.com/devpdc2-png/pdc/issues/26)
