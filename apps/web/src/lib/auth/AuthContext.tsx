@@ -4,6 +4,7 @@ import { authApi, type LoginPayload, type LoginResponse, type RegisterPayload } 
 import { ApiError } from '@/lib/api/http';
 import { telemetriaService } from '../telemetria/telemetria.service';
 import { AuthContext } from './auth-context';
+import { clearPrivateClientData } from '../pwa/localData';
 
 function getErrorStatus(error: unknown): number | undefined {
   if (typeof error !== 'object' || error === null) return undefined;
@@ -95,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw err;
       }
     } finally {
+      await clearPrivateClientData();
       queryClient.setQueryData(['auth', 'me'], null);
       await queryClient.resetQueries({ queryKey: ['auth'] });
       queryClient.clear();
@@ -117,3 +119,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
+
