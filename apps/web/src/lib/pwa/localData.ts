@@ -28,14 +28,14 @@ export interface PrivateDataCleanupEnvironment {
   cacheStorage?: {
     keys(): Promise<string[]>;
     delete(cacheName: string): Promise<boolean>;
-  };
+  } | undefined;
   indexedDb?: {
     deleteDatabase(databaseName: string): DeleteDatabaseRequestLike;
-  };
+  } | undefined;
   serviceWorker?: {
     controller?: MessageTargetLike | null;
     getRegistrations(): Promise<readonly ServiceWorkerRegistrationLike[]>;
-  };
+  } | undefined;
 }
 
 function browserCleanupEnvironment(): PrivateDataCleanupEnvironment {
