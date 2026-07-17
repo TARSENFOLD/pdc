@@ -11,9 +11,10 @@ O PDC v2 hospedava o BFF (Hono API) e o CMS (Strapi v5) no **Railway**, um PaaS 
 - Reduzir custos operacionais previsíveis.
 - Diminuir lock-in num único PaaS.
 - Manter controlo total sobre o runtime de aplicações (Docker, resource limits, reverse proxy).
-- Simplificar a arquitectura: o VPS executa apenas aplicações, sem bases de dados, caches ou object storage.
+- Simplificar a arquitectura: o VPS não executa PostgreSQL nem object storage;
+  desde o ADR-053, mantém apenas a exceção explícita do Redis persistente do BFF.
 
-A experiência deixou claro que cada componente deve ficar onde o serviço é mais forte: Cloudflare para edge, CDN, DNS e WAF; Neon para PostgreSQL serverless; Upstash para Redis; Hetzner para execução de containers.
+A experiência deixou claro que cada componente deve ficar onde o serviço é mais forte: Cloudflare para edge, CDN, DNS e WAF; Neon para PostgreSQL serverless; Upstash para o plano Redis partilhado com o Edge; Hetzner para execução de containers e, desde o ADR-053, Redis persistente do BFF.
 
 ## Decisão
 
@@ -25,7 +26,7 @@ A experiência deixou claro que cada componente deve ficar onde o serviço é ma
    - Cloudflare Workers (edge/BFF)
    - Cloudflare R2 (media storage)
    - Neon (PostgreSQL)
-   - Upstash (Redis)
+   - Upstash (Redis de telemetria Edge e rate limiting)
    - Resend (email)
    - Sentry (observabilidade)
    - DeepSeek (AI/Tina)
@@ -35,6 +36,10 @@ A experiência deixou claro que cada componente deve ficar onde o serviço é ma
    - Strapi: 2 GB
 6. **Documentar** a nova arquitectura em `docs/guia-tecnico/deploy.md` e criar `docker-compose.prod.yml`, `scripts/deploy-vps.sh`, `scripts/setup-vps.sh` e `.github/workflows/deploy-vps.yml`.
 7. **Corrigir o drift** em `apps/edge/wrangler.toml`, alinhando `BFF_URL` para `https://api.usepdc.com`.
+
+> **Evolução:** o ADR-053 substitui a decisão original de não executar Redis no
+> VPS. O incidente de quota de 17 de Julho demonstrou que OTP e tokens não podem
+> partilhar o mesmo limite diário da telemetria Edge.
 
 ## Consequências
 

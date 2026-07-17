@@ -76,7 +76,7 @@ Cada funcionalidade tem **ID estável**, **estado canónico** (lei) e **estado r
 | **P3** | 2FA obrigatório no login (sem bypass) | ✅ | Hardening completo |
 | **P4** | FeatureRegistry SSOT (5 statuses + 7 features + 6 HUBs) | ✅ | `REQ-1-012` |
 | **P5** | `GET /bootstrap` em 4 camadas (session/capabilities/security/UX) | ✅ | `REQ-1-013` |
-| **P6** | Rate limiting via Upstash | ✅ | Middleware integrado |
+| **P6** | Rate limiting via Upstash | ✅ | Middleware integrado; OTP/tokens usam Redis persistente do BFF (ADR-053) |
 | **P7** | LTI 1.3 Grade Passback | ✅ | Outbox pattern com retry exponencial |
 | **P8** | Realtime Socket.IO (notificações + mensagens) | 🟡 | Notificações ✅; mensagens UI pendente |
 | **P9** | Tina — Assistente IA (chat + interpretação lateral) | 🟡 | Streaming instável — `REQ-7-001` |

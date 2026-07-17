@@ -3,6 +3,20 @@ import pino from 'pino';
 
 const log = pino({ name: 'env-validator' });
 
+function isRedisUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'redis:' || url.protocol === 'rediss:') && url.hostname.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function usesBffRedisIdentity(value: string): boolean {
+  const url = new URL(value);
+  return url.username === 'pdc' && url.password.length > 0;
+}
+
 const envSchema = z.object({
   // Core
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -18,6 +32,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32),
   
   // Redis
+  PDC_REDIS_URL: z.string().refine(isRedisUrl, 'PDC_REDIS_URL must be a valid Redis URL').optional(),
   UPSTASH_REDIS_REST_URL: z.string().url().optional().or(z.literal('')),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional().or(z.literal('')),
 
@@ -109,6 +124,7 @@ function collectProductionMissingVars(parsedEnv: Env): string[] {
     ['STRAPI_URL', 'STRAPI_URL required in production'],
     ['STRAPI_API_TOKEN', 'STRAPI_API_TOKEN required in production'],
     ['JWT_SECRET', 'JWT_SECRET required in production'],
+    ['PDC_REDIS_URL', 'PDC_REDIS_URL required in production'],
     ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_URL required in production'],
     ['UPSTASH_REDIS_REST_TOKEN', 'UPSTASH_REDIS_REST_TOKEN required in production'],
     ['R2_PUBLIC_URL', 'R2_PUBLIC_URL required in production'],
@@ -121,6 +137,9 @@ function collectProductionMissingVars(parsedEnv: Env): string[] {
   ];
   for (const [key, message] of requiredInProduction) {
     if (!hasValue(parsedEnv[key])) missing.push(message);
+  }
+  if (hasValue(parsedEnv.PDC_REDIS_URL) && !usesBffRedisIdentity(parsedEnv.PDC_REDIS_URL)) {
+    missing.push('PDC_REDIS_URL must authenticate as pdc with a password in production');
   }
   if (parsedEnv.AI_PROVIDER === 'deepseek' && !hasValue(parsedEnv.DEEPSEEK_API_KEY)) {
     missing.push('DEEPSEEK_API_KEY required in production when AI_PROVIDER=deepseek');
@@ -175,10 +194,16 @@ function logRuntimeEnvStatus(parsedEnv: Env): void {
     log.warn('Nenhum provider de email configurado. Emails não serão enviados.');
   }
 
-  if (!parsedEnv.UPSTASH_REDIS_REST_URL || !parsedEnv.UPSTASH_REDIS_REST_TOKEN) {
-    log.warn('Redis não configurado. Performance limitada.');
+  if (parsedEnv.PDC_REDIS_URL) {
+    log.info('Redis TCP primário integrado.');
   } else {
+    log.warn('Redis TCP primário não configurado. Capacidades de segurança permanecerão fail-closed.');
+  }
+
+  if (parsedEnv.UPSTASH_REDIS_REST_URL && parsedEnv.UPSTASH_REDIS_REST_TOKEN) {
     log.info('Redis (Upstash) integrado.');
+  } else {
+    log.warn('Redis Upstash não configurado. Telemetria e rate limiting distribuído ficarão indisponíveis ou degradados.');
   }
 }
 

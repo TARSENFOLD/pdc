@@ -21,6 +21,7 @@ vi.mock('../modules/strapi/strapi.client.js', () => ({
 
 vi.mock('../lib/redis.js', () => ({
   hasRedis: false,
+  upstashRedis: null,
   redis: {
     get: vi.fn(),
     set: vi.fn(),

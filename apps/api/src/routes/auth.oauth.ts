@@ -70,7 +70,16 @@ async function persistOAuthState(state: string): Promise<void> {
     log.warn('Redis ausente; OAuth state assinado será validado sem proteção one-time.');
     return;
   }
-  await redis.set(`oauth_state:${state}`, 'true', { ex: OAUTH_STATE_TTL_SECONDS });
+  try {
+    await redis.set(`oauth_state:${state}`, 'true', { ex: OAUTH_STATE_TTL_SECONDS });
+  } catch (err) {
+    // Degradação graceful: o state é assinado (HMAC) e tem TTL próprio; o Redis
+    // apenas reforça a proteção one-time-use. Se o Redis falhar (ex.: quota
+    // Upstash esgotada, erro transitório), validamos só por assinatura —
+    // consumeOAuthState já retorna true quando !hasRedis. Não derrubar o fluxo
+    // de OAuth por uma falha transitória de Redis.
+    log.warn({ err }, 'Redis indisponível ao persistir OAuth state; a degradar para validação por assinatura.');
+  }
 }
 
 async function consumeOAuthState(state: string | undefined): Promise<boolean> {
@@ -78,10 +87,19 @@ async function consumeOAuthState(state: string | undefined): Promise<boolean> {
   if (!hasRedis) return true;
 
   const key = `oauth_state:${state}`;
-  const exists = await redis.get(key);
-  if (!exists) return false;
-  await redis.del(key);
-  return true;
+  try {
+    const exists = await redis.get(key);
+    if (!exists) return false;
+    await redis.del(key);
+    return true;
+  } catch (err) {
+    // Degradação graceful: o state já foi validado por assinatura HMAC + TTL.
+    // O Redis apenas reforça a proteção one-time-use. Se falhar (ex.: quota
+    // Upstash esgotada), degradamos para validação por assinatura (consistente
+    // com o caminho !hasRedis) em vez de derrubar o callback do OAuth com 500.
+    log.warn({ err }, 'Redis indisponível ao consumir OAuth state; a validar só por assinatura.');
+    return true;
+  }
 }
 
 function extractErrorDetails(err: unknown): { status: number; message: string } {
@@ -118,18 +136,23 @@ function redirectOAuthUnavailable(c: Context<{ Variables: AuthVariables }>, prov
 }
 
 oauthRoutes.get('/google', async (c) => {
-  const state = createOAuthState();
-  await persistOAuthState(state);
-  const redirectUri = getOAuthRedirectUri(c, 'google');
-  const { clientId } = requireOAuthEnv('google');
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: 'openid email profile',
-    state,
-  });
-  return c.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  try {
+    const state = createOAuthState();
+    await persistOAuthState(state);
+    const redirectUri = getOAuthRedirectUri(c, 'google');
+    const { clientId } = requireOAuthEnv('google');
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'openid email profile',
+      state,
+    });
+    return c.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  } catch (err) {
+    log.error({ err, provider: 'google' }, 'Google OAuth initiation error');
+    return redirectOAuthUnavailable(c, 'google');
+  }
 });
 
 oauthRoutes.get('/google/callback', async (c) => {
@@ -180,18 +203,23 @@ oauthRoutes.get('/google/callback', async (c) => {
 });
 
 oauthRoutes.get('/linkedin', async (c) => {
-  const state = createOAuthState();
-  await persistOAuthState(state);
-  const redirectUri = getOAuthRedirectUri(c, 'linkedin');
-  const { clientId } = requireOAuthEnv('linkedin');
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: 'openid email profile',
-    state,
-  });
-  return c.redirect(`https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`);
+  try {
+    const state = createOAuthState();
+    await persistOAuthState(state);
+    const redirectUri = getOAuthRedirectUri(c, 'linkedin');
+    const { clientId } = requireOAuthEnv('linkedin');
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'openid email profile',
+      state,
+    });
+    return c.redirect(`https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`);
+  } catch (err) {
+    log.error({ err, provider: 'linkedin' }, 'LinkedIn OAuth initiation error');
+    return redirectOAuthUnavailable(c, 'linkedin');
+  }
 });
 
 oauthRoutes.get('/linkedin/callback', async (c) => {

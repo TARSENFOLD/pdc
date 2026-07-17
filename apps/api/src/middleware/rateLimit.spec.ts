@@ -31,7 +31,7 @@ vi.mock('@upstash/ratelimit', () => {
   return { Ratelimit: MockRatelimit };
 });
 
-vi.mock('../lib/redis.js', () => ({ hasRedis: true, redis: {} }));
+vi.mock('../lib/redis.js', () => ({ upstashRedis: {} }));
 vi.mock('../lib/env.js', () => ({
   env: { NODE_ENV: 'test', RATE_LIMIT_PROFILE: 'strict' },
 }));

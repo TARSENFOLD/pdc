@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/node';
-import { redis } from '../../lib/redis.js';
+import { telemetryRedis as redis } from '../../lib/redis.js';
 
 export const RETRY_LIMIT = 5;
 
@@ -9,7 +9,7 @@ const RETRY_TTL_SECONDS = 60 * 60 * 24 * 7; // 7d — paralelo a tel:evt:<eventI
 
 export async function incrementRetry(eventId: string): Promise<number> {
   const retryKey = `tel:retry:${eventId}`;
-  const count = await redis.eval<[number], number>(
+  const count = await redis.eval<number>(
     `
 local count = redis.call("INCR", KEYS[1])
 redis.call("EXPIRE", KEYS[1], ARGV[1])

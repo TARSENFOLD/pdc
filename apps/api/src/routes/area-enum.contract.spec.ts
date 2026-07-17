@@ -28,6 +28,7 @@ import { Hono } from 'hono';
 import { LandingVereditoSchema, RoleSchema } from '@pdc/shared';
 import { catalogoRoutes } from './catalogo.js';
 import { landingRoutes } from './landing.js';
+import { resetMemoryBuckets } from '../middleware/rateLimit.js';
 
 // Mocks de serviços
 vi.mock('../modules/strapi/strapi.client.js', () => ({
@@ -89,6 +90,7 @@ describe('AreaVocacional Enum Contract', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetMemoryBuckets();
     app = new Hono();
     app.route('/catalogo', catalogoRoutes);
     app.route('/landing', landingRoutes);

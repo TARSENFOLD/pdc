@@ -50,7 +50,8 @@ O sistema usa o **Motor de Heurísticas** (`packages/shared/src/heuristics.ts`) 
 | BFF | Hono v4 · Node.js 24 LTS · Jose v5 | Orquestração + RPC type-safe |
 | Edge | Cloudflare Workers (`apps/edge`) | Telemetria L1 + sanity check |
 | CMS | Strapi v5 · PostgreSQL 16 | Persistência e gestão de conteúdo |
-| Cache/Rate-limit | Upstash Redis | Filas + idempotência + locks |
+| Redis BFF | Redis persistente no VPS | OTP + tokens + cache + idempotência + locks |
+| Redis Edge | Upstash Redis | Fila de telemetria + rate limit distribuído |
 | Storage | Cloudflare R2 | Ativos, projetos, audit cold storage |
 | IA (opcional) | DeepSeek + RAG (LangChain.js) | Tina — Oráculo Interpretativo |
 
@@ -68,6 +69,7 @@ graph TD
     A -->|Auth + API| D[BFF Hono - Railway]
     B -->|Fila| C[Upstash Redis]
     C -->|Consumer| D
+    D -->|OTP tokens cache locks| I[Redis persistente VPS]
     D -->|Heurísticas| E[Motor φ R]
     D -->|Outbox| F[LTI 1.3 Grade Passback]
     D -->|Persistência| G[Strapi v5 + PostgreSQL]

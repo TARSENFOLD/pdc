@@ -46,6 +46,9 @@ unico para todas elas cria bypass de autorizacao ou perda silenciosa de eventos.
   ser acompanhado por metrica e alerta ate o Redis recuperar.
 - Filas e outbox exigem reclaimer, retry e monitorizacao de idade/backlog.
 
+O ADR-053 separou o Redis primário do BFF do Upstash usado pelo Edge. As
+políticas de falha desta decisão permanecem válidas por capacidade.
+
 ## Validacao
 
 - Fault injection para quota, timeout, network e recuperacao half-open.

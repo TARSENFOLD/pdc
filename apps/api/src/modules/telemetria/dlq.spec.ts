@@ -3,19 +3,22 @@ import * as Sentry from '@sentry/node';
 
 vi.mock('@sentry/node', () => ({ captureMessage: vi.fn() }));
 
-vi.mock('../../lib/redis.js', () => ({
-  redis: {
-    incr: vi.fn(),
-    expire: vi.fn(),
-    eval: vi.fn(),
-    lpush: vi.fn(),
-    lrem: vi.fn(),
-    del: vi.fn(),
-  },
+const redisMock = vi.hoisted(() => ({
+  incr: vi.fn<(key: string) => Promise<number>>(),
+  expire: vi.fn<(key: string, seconds: number) => Promise<0 | 1>>(),
+  eval: vi.fn<(script: string, keys: string[], args: unknown[]) => Promise<number>>(),
+  lpush: vi.fn<(key: string, ...elements: unknown[]) => Promise<number>>(),
+  lrem: vi.fn<(key: string, count: number, element: unknown) => Promise<number>>(),
+  del: vi.fn<(key: string) => Promise<number>>(),
 }));
 
-import { redis } from '../../lib/redis.js';
+vi.mock('../../lib/redis.js', () => ({
+  telemetryRedis: redisMock,
+}));
+
 import { incrementRetry, moveToDlq, clearRetries } from './dlq.js';
+
+const redis = redisMock;
 
 beforeEach(() => { vi.clearAllMocks(); });
 

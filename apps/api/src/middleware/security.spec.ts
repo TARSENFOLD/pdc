@@ -8,6 +8,7 @@ const productionEnv = {
   STRAPI_URL: 'https://strapi.example.com',
   STRAPI_API_TOKEN: 'strapi-token',
   JWT_SECRET: 'jwt-secret-123456789012345678901234567890',
+  PDC_REDIS_URL: 'redis://pdc:test-password@redis:6379',
   UPSTASH_REDIS_REST_URL: 'https://redis.upstash.io',
   UPSTASH_REDIS_REST_TOKEN: 'redis-token',
   R2_PUBLIC_URL: 'https://media.example.com',

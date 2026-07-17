@@ -24,6 +24,7 @@ function setBaseEnv(nodeEnv: 'development' | 'production' | 'test' = 'production
     'RESEND_API_KEY',
     'UPSTASH_REDIS_REST_URL',
     'UPSTASH_REDIS_REST_TOKEN',
+    'PDC_REDIS_URL',
     'DEEPSEEK_API_KEY',
     'WEB_PUSH_PUBLIC_KEY',
     'WEB_PUSH_PRIVATE_KEY',
@@ -48,6 +49,7 @@ function setRequiredProductionIntegrations(): void {
   process.env.R2_PUBLIC_URL = 'https://media.example.com';
   process.env.UPSTASH_REDIS_REST_URL = 'https://redis.example.com';
   process.env.UPSTASH_REDIS_REST_TOKEN = 'redis-token';
+  process.env.PDC_REDIS_URL = 'redis://pdc:test-password@redis:6379';
   process.env.DEEPSEEK_API_KEY = 'deepseek-key';
   process.env.RESEND_API_KEY = 'resend-key';
   process.env.WEB_PUSH_PUBLIC_KEY = 'web-push-public-key';
@@ -107,6 +109,30 @@ describe('env boot validation', () => {
     process.env.DEV_SKIP_OTP = 'true';
 
     await expect(import('./env.js')).rejects.toThrow(/DEV_SKIP_OTP must not be enabled in production/);
+  });
+
+  it('falha em produção quando o Redis persistente do BFF está ausente', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    Reflect.deleteProperty(process.env, 'PDC_REDIS_URL');
+
+    await expect(import('./env.js')).rejects.toThrow(/PDC_REDIS_URL required in production/);
+  });
+
+  it('falha quando PDC_REDIS_URL não contém hostname', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    process.env.PDC_REDIS_URL = 'redis://';
+
+    await expect(import('./env.js')).rejects.toThrow(/PDC_REDIS_URL must be a valid Redis URL/);
+  });
+
+  it('falha em produção quando PDC_REDIS_URL não usa a identidade BFF restrita', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    process.env.PDC_REDIS_URL = 'redis://default:test-password@redis:6379';
+
+    await expect(import('./env.js')).rejects.toThrow(/PDC_REDIS_URL must authenticate as pdc/);
   });
 
   it('falha em produção quando WEB_PUSH_SUBJECT não usa mailto: nem https:', async () => {

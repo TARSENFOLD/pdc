@@ -1,6 +1,6 @@
 # Estratégia de Deploy e Infraestrutura — Guia Soberano (B3)
 
-O PDC v2 utiliza uma arquitectura distribuída multi-provider para garantir latência zero na Edge, escalabilidade no Core e presença nativa em dispositivos móveis. Cada componente fica onde o serviço é mais forte: Cloudflare para edge, CDN, DNS e WAF; Hetzner para execução de containers; Neon, Upstash, R2, Resend, Sentry e DeepSeek para serviços especializados.
+O PDC v2 utiliza uma arquitectura distribuída multi-provider para garantir latência baixa na Edge, escalabilidade no Core e presença nativa em dispositivos móveis. Cada componente fica onde o serviço é mais forte: Cloudflare para edge, CDN, DNS e WAF; Hetzner para aplicações e Redis primário; Neon, Upstash, R2, Resend, Sentry e DeepSeek para serviços especializados.
 
 ---
 
@@ -13,7 +13,8 @@ O PDC v2 utiliza uma arquitectura distribuída multi-provider para garantir lat�
 | **BFF (Cérebro)** | **Hetzner VPS** | Docker + Traefik (Root Context) | `api.usepdc.com` |
 | **CMS (Strapi v5)** | **Hetzner VPS** | Docker + Traefik (Infra Context) | `cms.usepdc.com` |
 | **Base de Dados** | **Neon** | Serverless PostgreSQL 16 | `neon.tech` (Proxy) |
-| **Cache & Queue** | **Upstash** | Serverless Redis (HTTP/TCP) | `upstash.io` |
+| **Redis BFF** | **Hetzner VPS** | TCP privado + AOF | rede Docker interna |
+| **Queue Edge / Rate limit** | **Upstash** | Serverless Redis HTTP | `upstash.io` |
 | **Storage (Media)** | **Cloudflare R2** | S3-Compatible Storage | `r2.dev` / CDN |
 | **E-mail** | **Resend** | Transactional API | `resend.com` |
 | **AI (Tina)** | **DeepSeek** | Inference API (RAG) | `deepseek.com` |
@@ -23,7 +24,8 @@ O PDC v2 utiliza uma arquitectura distribuída multi-provider para garantir lat�
 
 ## 🖥️ VPS Hetzner (BFF + Strapi)
 
-O VPS executa apenas aplicações. Não corre base de dados, Redis ou object storage.
+O VPS executa aplicações e o Redis primário do BFF. PostgreSQL e object storage
+continuam externos.
 
 ```text
 Internet
@@ -40,6 +42,9 @@ Traefik (80 / 443)
     ▼           ▼
 Hono API    Strapi
 api.usepdc.com  cms.usepdc.com
+    │
+    ▼
+Redis privado (sem porta publicada)
 ```
 
 ### Serviços e resources (CX23: 2 vCPU / 4 GB RAM / 40 GB NVMe)
@@ -49,6 +54,7 @@ api.usepdc.com  cms.usepdc.com
 | Reverse Proxy | `pdc-traefik` | 128 MB | SSL automático via Let's Encrypt. |
 | BFF | `pdc-api` | 1 GB | Build via `Dockerfile` (root context). |
 | CMS | `pdc-strapi` | 2 GB | Build via `infra/strapi/Dockerfile`. |
+| Redis BFF | `pdc-redis` | 384 MB | AOF persistente em `pdc-redis-data`. |
 
 > A RAM é apertada. Monitorizar com `docker stats`. Se a utilização média passar consistentemente os 85%, fazer upgrade para CPX31/41.
 
@@ -274,7 +280,7 @@ imprimir valores:
 
 ```bash
 docker exec pdc-api sh -lc '
-  for name in UPSTASH_REDIS_REST_URL UPSTASH_REDIS_REST_TOKEN; do
+  for name in PDC_REDIS_URL UPSTASH_REDIS_REST_URL UPSTASH_REDIS_REST_TOKEN; do
     if [ -n "$(printenv "$name")" ]; then
       echo "$name=present"
     else
@@ -282,13 +288,17 @@ docker exec pdc-api sh -lc '
     fi
   done
 '
+
+docker exec pdc-redis sh -ec '
+  REDISCLI_AUTH="$REDIS_HEALTH_PASSWORD" redis-cli --user health ping | grep -q PONG
+'
 ```
 
-Depois de repor/aumentar a quota, validar `/health`, `/health/ready` e uma rota
-real como `/bootstrap`. `/health` é liveness e não deve depender do Redis;
-`/health/ready` é o endpoint apropriado para expor dependências degradadas sem
-segredos. Rate limit e cache podem degradar para a política local definida;
-OTP, reset, locks e aprovação devem continuar fail-closed.
+Validar `/health`, `/health/ready` e uma rota real como `/bootstrap`. `/health`
+é liveness; `/health/ready` distingue `sessionRedis` (VPS) de `rateLimitRedis`
+(Upstash). Quota Upstash não pode bloquear OTP, reset, locks ou refresh tokens.
+O consumer de telemetria continua dependente do Upstash e deve preservar fila e
+DLQ até a quota recuperar.
 
 ---
-*Doc is Law — Última auditoria: 12 de Julho de 2026.*
+*Doc is Law — Última auditoria: 17 de Julho de 2026.*

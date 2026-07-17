@@ -4,11 +4,50 @@
 # /opt/pdc/.env no VPS.
 #
 # Arquitectura: Internet → Cloudflare DNS → Hetzner VPS → Traefik → API/Strapi
-# BD/Cache/Storage/Email/AI continuam em serviços cloud (Neon, Upstash, R2, etc.)
+# PostgreSQL/Storage/Email/AI continuam cloud. Redis de segurança e domínio é
+# persistente no VPS; Upstash fica reservado ao Edge e ao rate limiting.
 
 name: pdc-prod
 
 services:
+  redis:
+    image: redis:7.4.9-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    container_name: pdc-redis
+    restart: unless-stopped
+    user: "999:1000"
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        umask 077
+        printf '%s\n' \
+          'user default off' \
+          "user pdc on >$${REDIS_BFF_PASSWORD} resetkeys ~pdc:* resetchannels -@all +get +set +del +sadd +sismember +incr +expire +rpop +lpush +rpush +llen +lrem +rpoplpush +eval +ping" \
+          "user health on >$${REDIS_HEALTH_PASSWORD} resetkeys resetchannels -@all +ping" \
+          > /run/redis/users.acl
+        exec redis-server --appendonly yes --appendfsync everysec --aclfile /run/redis/users.acl
+    environment:
+      REDIS_BFF_PASSWORD: "${REDIS_BFF_PASSWORD:?REDIS_BFF_PASSWORD e obrigatorio}"
+      REDIS_HEALTH_PASSWORD: "${REDIS_HEALTH_PASSWORD:?REDIS_HEALTH_PASSWORD e obrigatorio}"
+    volumes:
+      - pdc-redis-data:/data
+    tmpfs:
+      - /run/redis:size=1m,mode=0700,uid=999,gid=1000
+    networks:
+      - pdc-network
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$${REDIS_HEALTH_PASSWORD}\" redis-cli --user health ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
   # ─── Traefik: reverse proxy + SSL automático ────────────────────────────────
   traefik:
     image: traefik:v3.7.0@sha256:eb328e2c806c53aafbbace6c451fa54d268961261a85452fcf0fb752a30c17be
@@ -70,10 +109,13 @@ services:
       API_URL: https://api.usepdc.com
       FRONTEND_URL: https://usepdc.com
       STRAPI_URL: http://strapi:1337
+      PDC_REDIS_URL: "${PDC_REDIS_URL:?PDC_REDIS_URL e obrigatorio}"
     depends_on:
       traefik:
         condition: service_started
       strapi:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - pdc-network
@@ -155,4 +197,6 @@ volumes:
   pdc-letsencrypt:
     driver: local
   pdc-strapi-uploads:
+    driver: local
+  pdc-redis-data:
     driver: local
