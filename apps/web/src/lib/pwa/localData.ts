@@ -18,7 +18,7 @@ interface ServiceWorkerRegistrationLike {
   };
 }
 
-interface DeleteDatabaseRequestLike {
+export interface DeleteDatabaseRequestLike {
   onsuccess: (() => void) | null;
   onerror: (() => void) | null;
   onblocked: (() => void) | null;
