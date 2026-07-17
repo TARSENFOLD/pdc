@@ -1,4 +1,5 @@
 import { z, type ZodType, type ZodTypeDef } from 'zod';
+import { clearPrivateClientData } from '../pwa/localData';
 
 const configuredBaseUrl = import.meta.env.VITE_API_URL as string | undefined;
 const BASE_URL: string = configuredBaseUrl
@@ -125,6 +126,13 @@ async function requestUnknown(path: string, init?: RequestInit, retried = false)
     throw new ApiError(response.status, `HTTP ${String(response.status)}: ${path}`, body);
   }
 
+  if (
+    path === '/data-rights/delete-account'
+    && (init?.method ?? 'GET').toUpperCase() === 'DELETE'
+  ) {
+    await clearPrivateClientData();
+  }
+
   return parseResponseBody(path, response);
 }
 
@@ -221,3 +229,4 @@ export const http = {
   postFormParsed: <T>(path: string, body: FormData, schema: ZodType<T, ZodTypeDef, unknown>, init?: RequestInit) =>
     requestParsed(path, schema, { ...init, method: 'POST', body }),
 };
+
