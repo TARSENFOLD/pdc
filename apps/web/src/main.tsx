@@ -11,6 +11,7 @@ import { BootstrapProvider } from './lib/bootstrap/BootstrapContext';
 import { ThemeProvider } from './lib/theme/ThemeContext';
 import { Toaster, InstallPrompt } from './components/ui';
 import { CookieBanner } from './components/privacy/CookieBanner';
+import { clearPrivateClientData } from './lib/pwa/localData';
 import './index.css';
 
 if (import.meta.env.VITE_SENTRY_DSN) {
@@ -114,9 +115,11 @@ if (!import.meta.env.PROD && 'serviceWorker' in navigator) {
 }
 
 window.addEventListener('pdc:session-expired', () => {
-  if (window.location.pathname !== '/login') {
-    window.location.replace('/login');
-  }
+  void clearPrivateClientData().finally(() => {
+    if (window.location.pathname !== '/login') {
+      window.location.replace('/login');
+    }
+  });
 });
 
 const queryClient = new QueryClient({
@@ -179,3 +182,4 @@ async function bootstrapApplication(): Promise<void> {
 }
 
 void bootstrapApplication();
+
