@@ -1,5 +1,5 @@
 import pino from 'pino';
-import { redis } from '../../lib/redis.js';
+import { telemetryRedis as redis } from '../../lib/redis.js';
 import { strapiPost } from '../strapi/strapi.client.js';
 import {
   applySanityRules,

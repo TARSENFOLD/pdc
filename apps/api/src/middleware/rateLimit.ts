@@ -1,5 +1,5 @@
 import { Ratelimit } from '@upstash/ratelimit';
-import { redis, hasRedis } from '../lib/redis.js';
+import { upstashRedis } from '../lib/redis.js';
 import type { Context, Next } from 'hono';
 import pino from 'pino';
 import { env } from '../lib/env.js';
@@ -14,6 +14,7 @@ export interface RateLimitOptions {
   window: RateLimitWindow;
   keyPrefix: string;
   key: RateLimitKey;
+  errorMessage?: string;
 }
 
 interface LimitResult {
@@ -203,9 +204,9 @@ function createLimiter(options: RateLimitOptions) {
   const profiledTokens = applyProfile(options.tokens);
   if (!Number.isFinite(profiledTokens)) return null;
 
-  return hasRedis
+  return upstashRedis
     ? new Ratelimit({
-        redis,
+        redis: upstashRedis,
         limiter: Ratelimit.slidingWindow(profiledTokens, options.window),
         analytics: true,
         timeout: REDIS_LIMIT_TIMEOUT_MS,
@@ -261,7 +262,7 @@ export function createRateLimit(options: RateLimitOptions) {
     if (!result.success) {
       const retryAfter = Math.max(1, Math.ceil((result.reset - Date.now()) / 1000));
       c.header('Retry-After', retryAfter.toString());
-      return c.json({ error: 'Too many requests', code: 'RATE_LIMITED' }, 429);
+      return c.json({ error: options.errorMessage ?? 'Too many requests', code: 'RATE_LIMITED' }, 429);
     }
 
     await next();

@@ -43,6 +43,28 @@ compose() {
   docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"
 }
 
+redis_requires_recreate() {
+  local container_id current_hash desired_hash
+  container_id="$(compose ps -q redis 2>/dev/null | head -1 || true)"
+  if [[ -z "${container_id}" ]]; then
+    return 0
+  fi
+
+  current_hash="$(docker inspect --format='{{ index .Config.Labels "com.docker.compose.config-hash" }}' "${container_id}" 2>/dev/null || true)"
+  desired_hash="$(compose config --hash redis 2>/dev/null | awk '$1 == "redis" { print $2; exit }')"
+  [[ -z "${current_hash}" || -z "${desired_hash}" || "${current_hash}" != "${desired_hash}" ]]
+}
+
+ensure_redis_service() {
+  if redis_requires_recreate; then
+    echo "[deploy-vps] Redis ausente ou com configuração alterada; a aplicar mudança."
+    compose up -d redis
+  else
+    echo "[deploy-vps] Redis sem alterações; container existente preservado."
+    compose up -d --no-recreate redis
+  fi
+}
+
 # shellcheck source=scripts/lib/deploy-vps-health.sh
 source "${DEPLOY_DIR}/scripts/lib/deploy-vps-health.sh"
 
@@ -141,6 +163,7 @@ restore_images() {
     fi
   done
 
+  ensure_redis_service || return 1
   compose up -d --remove-orphans --force-recreate strapi api || return 1
 }
 
@@ -187,7 +210,9 @@ compose build
 docker image prune -f
 
 echo "[deploy-vps] A reiniciar servicos..."
-compose up -d --remove-orphans
+compose up -d --remove-orphans traefik
+ensure_redis_service
+compose up -d --remove-orphans --force-recreate strapi api
 
 echo "[deploy-vps] A validar saude nativa, interna e externa..."
 validate_stack_health 30 18

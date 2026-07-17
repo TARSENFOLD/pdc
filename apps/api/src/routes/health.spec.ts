@@ -6,6 +6,12 @@ const getRateLimitCircuitStateMock = vi.fn<() => {
   reason?: 'quota' | 'transient';
   retryAt?: number;
 }>();
+const redisHealthMock = vi.hoisted(() => ({
+  hasPrimaryRedis: true,
+  hasUpstashRedis: true,
+  primaryReady: true,
+}));
+const isPrimaryRedisReadyMock = vi.hoisted(() => vi.fn(() => Promise.resolve(redisHealthMock.primaryReady)));
 
 vi.mock('../lib/env.js', () => ({
   env: {
@@ -14,7 +20,13 @@ vi.mock('../lib/env.js', () => ({
 }));
 
 vi.mock('../lib/redis.js', () => ({
-  hasRedis: true,
+  get hasPrimaryRedis() {
+    return redisHealthMock.hasPrimaryRedis;
+  },
+  get hasUpstashRedis() {
+    return redisHealthMock.hasUpstashRedis;
+  },
+  isPrimaryRedisReady: isPrimaryRedisReadyMock,
 }));
 
 vi.mock('../middleware/rateLimit.js', () => ({
@@ -28,6 +40,9 @@ describe('health routes', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    redisHealthMock.hasPrimaryRedis = true;
+    redisHealthMock.hasUpstashRedis = true;
+    redisHealthMock.primaryReady = true;
     getRateLimitCircuitStateMock.mockReturnValue({ state: 'closed' });
   });
 
@@ -50,7 +65,7 @@ describe('health routes', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       status: 'ready',
-      dependencies: { strapi: 'up', rateLimitRedis: 'up' },
+      dependencies: { strapi: 'up', sessionRedis: 'up', rateLimitRedis: 'up' },
     });
   });
 
@@ -67,7 +82,7 @@ describe('health routes', () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({
       status: 'degraded',
-      dependencies: { strapi: 'up', rateLimitRedis: 'degraded' },
+      dependencies: { strapi: 'up', sessionRedis: 'up', rateLimitRedis: 'degraded' },
       rateLimitCircuit: { state: 'open', reason: 'quota' },
     });
   });
@@ -80,7 +95,47 @@ describe('health routes', () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({
       status: 'degraded',
-      dependencies: { strapi: 'down', rateLimitRedis: 'up' },
+      dependencies: { strapi: 'down', sessionRedis: 'up', rateLimitRedis: 'up' },
+    });
+  });
+
+  it('reports the primary Redis as unconfigured without masking Upstash health', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('ok', { status: 200 })));
+    redisHealthMock.hasPrimaryRedis = false;
+    redisHealthMock.primaryReady = false;
+
+    const response = await app.request('/health/ready');
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'degraded',
+      dependencies: { strapi: 'up', sessionRedis: 'unconfigured', rateLimitRedis: 'up' },
+    });
+  });
+
+  it('reports a configured but unreachable primary Redis as down', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('ok', { status: 200 })));
+    redisHealthMock.primaryReady = false;
+
+    const response = await app.request('/health/ready');
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'degraded',
+      dependencies: { strapi: 'up', sessionRedis: 'down', rateLimitRedis: 'up' },
+    });
+  });
+
+  it('reports Upstash as unconfigured without masking a healthy primary Redis', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('ok', { status: 200 })));
+    redisHealthMock.hasUpstashRedis = false;
+
+    const response = await app.request('/health/ready');
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'degraded',
+      dependencies: { strapi: 'up', sessionRedis: 'up', rateLimitRedis: 'unconfigured' },
     });
   });
 });

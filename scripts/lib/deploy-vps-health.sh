@@ -5,7 +5,8 @@ redact() {
   sed -E \
     -e 's#(https?://)[^/@[:space:]]+:[^/@[:space:]]+@#\1[REDACTED]@#g' \
     -e 's#(Bearer|Basic)[[:space:]]+[A-Za-z0-9._~+/=-]+#\1 [REDACTED]#Ig' \
-    -e 's#((token|secret|password|api[_-]?key|private[_-]?key|cookie)[=:][[:space:]]*)[^,[:space:]]+#\1[REDACTED]#Ig' \
+    -e 's#(Authorization[[:space:]]*:[[:space:]]*).+#\1[REDACTED]#Ig' \
+    -e 's#((token|secret|password|api[_-]?key|private[_-]?key|cookie)[=:][[:space:]]*).+#\1[REDACTED]#Ig' \
     -e 's#("(token|secret|password|api[_-]?key|private[_-]?key|cookie)"[[:space:]]*:[[:space:]]*")[^"]*"#\1[REDACTED]"#Ig' \
     -e 's#eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+#[REDACTED_JWT]#g'
 }
@@ -16,7 +17,7 @@ collect_diagnostics() {
     compose ps || true
 
     local service container_id
-    for service in traefik api strapi; do
+    for service in redis traefik api strapi; do
       container_id="$(compose ps -a -q "${service}" 2>/dev/null | head -1 || true)"
       if [[ -n "${container_id}" ]]; then
         docker inspect \
@@ -28,7 +29,7 @@ collect_diagnostics() {
     done
 
     echo "[deploy-vps] Diagnostico: ultimas 120 linhas de logs"
-    compose logs --no-color --tail=120 traefik api strapi || true
+    compose logs --no-color --tail=120 redis traefik api strapi || true
   } 2>&1 | redact >&2 || true
 
   return 0
@@ -62,7 +63,9 @@ wait_for_internal() {
 
   local attempt
   for ((attempt = 1; attempt <= tries; attempt += 1)); do
-    if compose exec -T "${service}" "$@" >/dev/null 2>&1; then
+    if timeout --foreground 15s \
+      docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" \
+      exec -T "${service}" "$@" >/dev/null 2>&1; then
       echo "[deploy-vps] ${description}: check interno OK."
       return 0
     fi
@@ -112,11 +115,14 @@ validate_stack_health() {
   local native_tries="${1:-30}" external_tries="${2:-18}"
 
   wait_for_container_health traefik "${native_tries}" || return 1
+  wait_for_container_health redis "${native_tries}" || return 1
   wait_for_container_health strapi "${native_tries}" || return 1
   wait_for_container_health api "${native_tries}" || return 1
 
   wait_for_internal api "API /health" 6 node -e \
     "fetch('http://localhost:3001/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))" || return 1
+  wait_for_internal redis "Redis PING" 6 /bin/sh -ec \
+    'REDISCLI_AUTH="$REDIS_HEALTH_PASSWORD" redis-cli --user health ping | grep -q PONG' || return 1
   wait_for_internal strapi "Strapi /_health" 6 curl -fsS \
     http://localhost:1337/_health || return 1
 

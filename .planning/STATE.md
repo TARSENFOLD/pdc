@@ -4,6 +4,12 @@
 
 ## Current Status
 
+**Incidente 2026-07-17:** Upstash atingiu novamente `500001/500000` pedidos por
+uso agregado de telemetria Edge, cache, rate limit, locks e idempotência, e
+bloqueou login/registo porque OTP, challenges e refresh tokens partilhavam essa
+quota. ADR-053 separa Redis persistente do BFF no VPS de Upstash (telemetria
+Edge + rate limit), sem bypass de segurança.
+
 Estamos na **Fase F — Pre-Production Hardening** (PROD-A/B/C/D/E concluído). **PROD-E concluído** (PE-T01..T04 done — DLQ telemetria, scoring Tipo 2/3 STABLE, moderação unificada, doc sync); próxima fase: **pós-launch**.
 
 **Saúde global pós-auditoria Phase G (2026-05-09): ~55% Done · ~30% Partial/Pendente · ~15% Não Iniciado — 6 lacunas detectadas nas waves PROD-A/B/C/D; Wave A (Compliance Pass) em curso para fechar os gaps. A auto-declaração anterior de "72% Done" era falsa (ver AP-08 + Phase G).**

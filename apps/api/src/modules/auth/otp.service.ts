@@ -43,15 +43,13 @@ export const otpService = {
       throw new Error('OTP requer Redis (não configurado)');
     }
     const key = `otp:${userId}:${canal}`;
-    const storedHash = await redis.get<string>(key);
-    if (!storedHash) return false;
-
     const hash = createHash('sha256').update(otp).digest('hex');
-    if (hash === storedHash) {
-      await redis.del(key);
-      return true;
-    }
-    return false;
+    const consumed = await redis.eval<number>(
+      'local value = redis.call("GET", KEYS[1]); if value == ARGV[1] then redis.call("DEL", KEYS[1]); return 1 end; return 0',
+      [key],
+      [hash],
+    );
+    return consumed === 1;
   },
 
   async deleteOtp(userId: string, canal: 'email' | 'sms'): Promise<void> {
@@ -132,13 +130,15 @@ export const otpService = {
       throw new Error('Serviço de SMS temporariamente indisponível (Redis OFF)');
     }
     const key = `otp:sms:ratelimit:${phone}`;
-    // Atomic INCR + EXPIRE (600s = 10min per doc intent)
-    const results = await redis.multi().incr(key).expire(key, 600).exec();
-    
-    // @upstash/redis devolve [result1, result2]
-    // ioredis devolve [[err, result1], [err, result2]]
-    const firstResult = results[0];
-    const count = Array.isArray(firstResult) ? (firstResult[1] as number) : (firstResult);
+    const count = await redis.eval<number>(
+      'local value = redis.call("INCR", KEYS[1]); if value == 1 then redis.call("EXPIRE", KEYS[1], ARGV[1]) end; return value',
+      [key],
+      [600],
+    );
+
+    if (typeof count !== 'number') {
+      throw new Error('Resposta Redis inválida no rate limit de SMS');
+    }
 
     if (count > 3) {
       throw Object.assign(new Error('Limite de SMS excedido. Tenta novamente em 10 minutos.'), { status: 429 });

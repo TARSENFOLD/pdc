@@ -2,9 +2,23 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import pino from 'pino';
 import * as Sentry from '@sentry/node';
 import { processOneTelemetryEvent } from './consumer.js';
-import { redis } from '../../lib/redis.js';
 import { strapiPost } from '../strapi/strapi.client.js';
 import { applySanityRules } from '@pdc/shared';
+
+const redisMock = vi.hoisted(() => ({
+  rpoplpush: vi.fn(),
+  lrem: vi.fn(),
+  set: vi.fn(),
+  llen: vi.fn(),
+  lpush: vi.fn(),
+  rpush: vi.fn(),
+  eval: vi.fn(),
+  incr: vi.fn(),
+  expire: vi.fn(),
+  del: vi.fn(),
+}));
+
+const redis = redisMock;
 
 vi.mock('pino', () => ({
   default: vi.fn(() => ({
@@ -20,18 +34,7 @@ vi.mock('@sentry/node', () => ({
 }));
 
 vi.mock('../../lib/redis.js', () => ({
-  redis: {
-    rpoplpush: vi.fn(),
-    lrem: vi.fn(),
-    set: vi.fn(),
-    llen: vi.fn(),
-    lpush: vi.fn(),
-    rpush: vi.fn(),
-    eval: vi.fn(),
-    incr: vi.fn(),
-    expire: vi.fn(),
-    del: vi.fn(),
-  },
+  telemetryRedis: redisMock,
 }));
 
 // dlq.ts shares the same redis mock via the module graph

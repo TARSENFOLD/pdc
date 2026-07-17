@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { Features } from '@pdc/shared';
 import { env } from '../lib/env.js';
-import { hasRedis } from '../lib/redis.js';
+import { hasPrimaryRedis, hasUpstashRedis, isPrimaryRedisReady } from '../lib/redis.js';
 import { getRateLimitCircuitState } from '../middleware/rateLimit.js';
 
 export const healthRoutes = new Hono();
@@ -26,15 +26,17 @@ async function isStrapiReady(): Promise<boolean> {
 
 healthRoutes.get('/ready', async (c) => {
   const strapiReady = await isStrapiReady();
+  const sessionRedisReady = await isPrimaryRedisReady();
   const rateLimitCircuit = getRateLimitCircuitState();
-  const redisReady = hasRedis && rateLimitCircuit.state === 'closed';
-  const ready = strapiReady && redisReady;
+  const rateLimitRedisReady = hasUpstashRedis && rateLimitCircuit.state === 'closed';
+  const ready = strapiReady && sessionRedisReady && rateLimitRedisReady;
 
   return c.json({
     status: ready ? 'ready' : 'degraded',
     dependencies: {
       strapi: strapiReady ? 'up' : 'down',
-      rateLimitRedis: !hasRedis ? 'unconfigured' : redisReady ? 'up' : 'degraded',
+      sessionRedis: !hasPrimaryRedis ? 'unconfigured' : sessionRedisReady ? 'up' : 'down',
+      rateLimitRedis: !hasUpstashRedis ? 'unconfigured' : rateLimitRedisReady ? 'up' : 'degraded',
     },
     rateLimitCircuit,
     timestamp: new Date().toISOString(),
