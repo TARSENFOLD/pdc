@@ -1,11 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   clearPrivateClientData,
-  type DeleteDatabaseRequestLike,
+  type DeleteDatabaseCallbacks,
   type PrivateDataCleanupEnvironment,
 } from './localData';
 
 describe('clearPrivateClientData', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('removes only legacy private API caches', async () => {
     const deleteCache = vi.fn(() => Promise.resolve(true));
 
@@ -29,31 +33,23 @@ describe('clearPrivateClientData', () => {
 
     const environment: PrivateDataCleanupEnvironment = {
       indexedDb: {
-        deleteDatabase: (databaseName) => {
+        deleteDatabase: (databaseName, callbacks) => {
           deletedDatabases.push(databaseName);
-          const request: DeleteDatabaseRequestLike = {
-            onsuccess: null,
-            onerror: null,
-            onblocked: null,
-          };
           queueMicrotask(() => {
-            request.onsuccess?.();
+            callbacks.onSuccess();
           });
-          return request;
         },
       },
       serviceWorker: {
         controller: worker,
-        getRegistrations: () =>
-          Promise.resolve([
-            {
-              active: worker,
-              waiting: { postMessage: (message) => postedMessages.push(message) },
-              pushManager: {
-                getSubscription: () => Promise.resolve({ unsubscribe }),
-              },
+        getRegistration: () =>
+          Promise.resolve({
+            active: worker,
+            waiting: { postMessage: (message) => postedMessages.push(message) },
+            pushManager: {
+              getSubscription: () => Promise.resolve({ unsubscribe }),
             },
-          ]),
+          }),
       },
     };
 
@@ -67,14 +63,59 @@ describe('clearPrivateClientData', () => {
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
+  it('does not report a blocked IndexedDB deletion as completed', async () => {
+    vi.useFakeTimers();
+    let callbacks: DeleteDatabaseCallbacks | undefined;
+    const cleanup = clearPrivateClientData({
+      indexedDb: {
+        deleteDatabase: (_databaseName, deletionCallbacks) => {
+          callbacks = deletionCallbacks;
+          deletionCallbacks.onBlocked();
+        },
+      },
+    });
+    let completed = false;
+    void cleanup.then(() => {
+      completed = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(1_499);
+    expect(completed).toBe(false);
+    callbacks?.onSuccess();
+    await cleanup;
+    expect(completed).toBe(true);
+  });
+
+  it('bounds a permanently blocked IndexedDB deletion', async () => {
+    vi.useFakeTimers();
+    const cleanup = clearPrivateClientData({
+      indexedDb: {
+        deleteDatabase: (_databaseName, callbacks) => {
+          callbacks.onBlocked();
+        },
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(1_500);
+    await expect(cleanup).resolves.toBeUndefined();
+  });
+
   it('does not reject logout when a browser cleanup API fails', async () => {
+    const deleteDatabase = vi.fn(
+      (_databaseName: string, callbacks: DeleteDatabaseCallbacks) => {
+        callbacks.onSuccess();
+      },
+    );
+
     await expect(
       clearPrivateClientData({
         cacheStorage: {
           keys: () => Promise.reject(new Error('storage unavailable')),
           delete: () => Promise.resolve(false),
         },
+        indexedDb: { deleteDatabase },
       }),
     ).resolves.toBeUndefined();
+    expect(deleteDatabase).toHaveBeenCalledWith('pdc-offline', expect.any(Object));
   });
 });

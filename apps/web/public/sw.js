@@ -62,13 +62,18 @@ async function clearQueue() {
 }
 
 async function purgePrivateData() {
-  const cacheNames = await caches.keys();
-  await Promise.all(
-    cacheNames
-      .filter((cacheName) => PRIVATE_CACHE_PREFIXES.some((prefix) => cacheName.startsWith(prefix)))
-      .map((cacheName) => caches.delete(cacheName))
-  );
-  await clearQueue();
+  const purgeCaches = async () => {
+    const cacheNames = await caches.keys();
+    await Promise.all(
+      cacheNames
+        .filter((cacheName) => PRIVATE_CACHE_PREFIXES.some((prefix) => cacheName.startsWith(prefix)))
+        .map((cacheName) => caches.delete(cacheName))
+    );
+  };
+  const results = await Promise.allSettled([purgeCaches(), clearQueue()]);
+  if (results.some((result) => result.status === 'rejected')) {
+    throw new Error('One or more private-data stores could not be purged');
+  }
 }
 
 async function flushTelemetryQueue() {
@@ -137,8 +142,8 @@ function parsePushPayload(data) {
       title,
       options: {
         body,
-        icon: typeof payload.icon === 'string' ? payload.icon : '/icons/icon-192.png',
-        badge: typeof payload.badge === 'string' ? payload.badge : '/icons/icon-192.png',
+        icon: typeof payload.icon === 'string' ? payload.icon : '/icon-192.png',
+        badge: typeof payload.badge === 'string' ? payload.badge : '/icon-192.png',
         tag: typeof payload.tag === 'string' ? payload.tag : undefined,
         data: { ...(isRecord(payload.data) ? payload.data : {}), url },
       },
@@ -251,7 +256,7 @@ async function staleWhileRevalidate(request, cacheName) {
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHES.static).then((cache) => cache.addAll(PRECACHE_URLS)).catch(() => {
-      // Gracefully handle missing precache URLs (e.g. offline.html not yet created)
+      // Keep installation viable when a public precache resource is unavailable.
       return caches.open(CACHES.static).then((cache) =>
         cache.addAll(['/', '/index.html', '/manifest.webmanifest'])
       );
@@ -391,4 +396,3 @@ self.addEventListener('fetch', (event) => {
   // Default — StaleWhileRevalidate
   event.respondWith(staleWhileRevalidate(request, CACHES.static));
 });
-

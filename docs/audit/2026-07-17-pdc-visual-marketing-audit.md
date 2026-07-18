@@ -363,13 +363,13 @@ Scorecard qualitativo adicional:
 
 Estes elementos reduzem trabalho, mas não bastam para uma app de loja.
 
-### P0 móvel — cache autenticado pode expor dados entre contas
+### P0 móvel — cache autenticado entre contas (corrigido; E2E pendente)
 
-`apps/web/public/sw.js` envia qualquer GET `/api/*` para `networkFirst` e grava a resposta no cache `pdc-api-*`. O cache não é isolado por utilizador. O logout em `AuthContext.tsx` limpa React Query, mas não limpa Cache Storage, IndexedDB ou subscrições.
+Na versão auditada, `apps/web/public/sw.js` enviava qualquer GET `/api/*` para `networkFirst` e gravava a resposta no cache global `pdc-api-*`. O logout limpava React Query, mas não limpava Cache Storage, IndexedDB ou a subscrição push.
 
-Em dispositivos partilhados, isto cria risco de dados pessoais ou vocacionais de uma conta permanecerem acessíveis offline após logout. A correção deve ser NetworkOnly para APIs privadas e cache apenas de recursos públicos em allowlist. Qualquer offline autenticado precisa de armazenamento por utilizador, expiração, purge e threat model próprios.
+O PR #27 corrige o caminho de código: APIs privadas passam a `NetworkOnly`, caches privados legados e a fila IndexedDB são removidos no logout, e apenas a subscrição do service worker atual é revogada. A limpeza de Cache Storage e IndexedDB é concorrente e limitada no tempo, para que uma falha num armazenamento não impeça a tentativa no outro.
 
-A ausência de `apps/web/public/offline.html` agrava o problema: o service worker referencia o ficheiro, mas ele não existe. A mensagem “o teu progresso está guardado” também deve ser removida até o progresso real estar persistido e sincronizado.
+O `offline.html` referenciado pelo worker também foi adicionado sem prometer persistência de progresso. O bloqueador só pode ser encerrado após o cenário E2E conta A → logout → conta B → offline comprovar que nenhum dado de A reaparece.
 
 Issue: [#20](https://github.com/devpdc2-png/pdc/issues/20)
 
@@ -393,15 +393,11 @@ Issue: [#21](https://github.com/devpdc2-png/pdc/issues/21)
 
 ### Gaps atuais do PWA
 
-1. Os shortcuts do manifest apontam para rotas incorretas. `/feed`, `/mensagens` e `/perfil` deveriam usar `/app/*`; `/simulacoes/nova` é tratado como slug público.
-2. `offline.html` não existe.
-3. As notificações referem `/icons/icon-192.png`, enquanto o asset usado pelo manifest é `/icon-192.png`.
-4. `InstallPrompt.tsx` não cobre instalação iOS, não deteta modo standalone, não guarda dismiss com TTL e não mede prompt/aceitação.
-5. O update flow ativa o novo service worker e recarrega sem diálogo, podendo interromper uma tarefa.
-6. `start_url: /` abre a landing, não a experiência autenticada.
-7. `orientation: portrait` não foi justificada para tablet/iPad.
-8. O set raster não inclui asset 1024px de loja e as screenshots precisam de validação contra features reais.
-9. Splash screens listadas cobrem modelos antigos; o wrapper nativo deve usar o asset catalog atual, não depender destas tags.
+1. `InstallPrompt.tsx` não cobre instalação iOS, não deteta modo standalone, não guarda dismiss com TTL e não mede prompt/aceitação.
+2. O update flow ativa o novo service worker e recarrega sem diálogo, podendo interromper uma tarefa.
+3. `orientation: portrait` não foi justificada para tablet/iPad.
+4. O set raster não inclui asset 1024px de loja e as screenshots precisam de validação contra features reais.
+5. Splash screens listadas cobrem modelos antigos; o wrapper nativo deve usar o asset catalog atual, não depender destas tags.
 
 Issue: [#23](https://github.com/devpdc2-png/pdc/issues/23)
 
@@ -479,7 +475,7 @@ Issue: [#25](https://github.com/devpdc2-png/pdc/issues/25)
 
 Não submeter até:
 
-- #20 cache autenticado corrigido e testado com duas contas;
+- #20 cache autenticado corrigido no código e testado com duas contas no E2E;
 - #21 shell móvel e valor app-like implementados;
 - #22 autenticação/privacidade/menores/eliminação fechados;
 - #24 UGC e IA com report/block/moderação;

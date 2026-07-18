@@ -23,11 +23,11 @@ Authenticated and personal API responses are network-only. The service worker mu
 3. User B signs in or the device goes offline.
 4. A global API cache returns User A's response to User B.
 
-The controls are: no API Cache Storage writes, deletion of legacy API caches, purge of offline telemetry, push unsubscribe, and React Query memory clearing during logout.
+The controls are: no API Cache Storage writes, deletion of legacy API caches, purge of offline telemetry, unsubscribe from the current PWA registration, and React Query memory clearing during logout. Cache and IndexedDB cleanup attempts run independently; a blocked database deletion is bounded but is not reported as successful before completion.
 
 ## Verification
 
-- Unit tests assert that only private legacy cache namespaces are deleted and that IndexedDB, workers, and push subscriptions are purged.
+- Unit tests assert that only private legacy cache namespaces are deleted, that a blocked IndexedDB deletion is not treated as immediate success, and that the current worker registration and push subscription are purged.
 - Browser/E2E test: sign in as A, exercise personal endpoints, sign out, sign in as B, force offline mode, and assert that no response or rendered content from A is available.
 - DevTools check: after authenticated journeys, Cache Storage contains no `pdc-api-*` cache and no request under `/api/`.
 

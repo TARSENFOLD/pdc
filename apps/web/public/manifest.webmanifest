@@ -5,7 +5,7 @@
   "description": "Experimenta profissões e cursos através de simulações práticas antes de te matriculares. Toma a decisão certa com base no teu próprio comportamento.",
   "lang": "pt-AO",
   "dir": "ltr",
-  "start_url": "/",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
@@ -32,25 +32,25 @@
     {
       "name": "Iniciar Simulação",
       "short_name": "Simulação",
-      "url": "/simulacoes/nova",
-      "description": "Inicia uma nova simulação de carreira"
+      "url": "/app/simulacoes",
+      "description": "Escolhe uma simulação de carreira"
     },
     {
       "name": "Feed",
       "short_name": "Feed",
-      "url": "/feed",
+      "url": "/app/feed",
       "description": "Ver o feed de conquistas e actividade"
     },
     {
       "name": "Mensagens",
       "short_name": "Mensagens",
-      "url": "/mensagens",
+      "url": "/app/mensagens",
       "description": "Ver e enviar mensagens"
     },
     {
       "name": "Perfil",
       "short_name": "Perfil",
-      "url": "/perfil",
+      "url": "/app/perfil",
       "description": "Ver e editar o teu perfil"
     }
   ]

@@ -1,5 +1,6 @@
 const PRIVATE_CACHE_PREFIXES = ['pdc-api-'] as const;
 const PRIVATE_INDEXED_DB_NAMES = ['pdc-offline'] as const;
+const INDEXED_DB_DELETE_TIMEOUT_MS = 1_500;
 
 interface MessageTargetLike {
   postMessage(message: unknown): void;
@@ -18,10 +19,10 @@ interface ServiceWorkerRegistrationLike {
   };
 }
 
-export interface DeleteDatabaseRequestLike {
-  onsuccess: (() => void) | null;
-  onerror: (() => void) | null;
-  onblocked: (() => void) | null;
+export interface DeleteDatabaseCallbacks {
+  onSuccess(): void;
+  onError(): void;
+  onBlocked(): void;
 }
 
 export interface PrivateDataCleanupEnvironment {
@@ -30,11 +31,14 @@ export interface PrivateDataCleanupEnvironment {
     delete(cacheName: string): Promise<boolean>;
   } | undefined;
   indexedDb?: {
-    deleteDatabase(databaseName: string): DeleteDatabaseRequestLike;
+    deleteDatabase(
+      databaseName: string,
+      callbacks: DeleteDatabaseCallbacks,
+    ): void;
   } | undefined;
   serviceWorker?: {
     controller?: MessageTargetLike | null;
-    getRegistrations(): Promise<readonly ServiceWorkerRegistrationLike[]>;
+    getRegistration(): Promise<ServiceWorkerRegistrationLike | undefined>;
   } | undefined;
 }
 
@@ -44,13 +48,21 @@ function browserCleanupEnvironment(): PrivateDataCleanupEnvironment {
     indexedDb:
       typeof indexedDB === 'undefined'
         ? undefined
-        : (indexedDB as unknown as NonNullable<
-            PrivateDataCleanupEnvironment['indexedDb']
-          >),
+        : {
+            deleteDatabase: (databaseName, callbacks) => {
+              const request = indexedDB.deleteDatabase(databaseName);
+              request.onsuccess = () => callbacks.onSuccess();
+              request.onerror = () => callbacks.onError();
+              request.onblocked = () => callbacks.onBlocked();
+            },
+          },
     serviceWorker:
       typeof navigator === 'undefined' || !('serviceWorker' in navigator)
         ? undefined
-        : navigator.serviceWorker,
+        : {
+            controller: navigator.serviceWorker.controller,
+            getRegistration: () => navigator.serviceWorker.getRegistration(),
+          },
   };
 }
 
@@ -59,12 +71,25 @@ function deleteIndexedDbDatabase(
   databaseName: string,
 ): Promise<void> {
   return new Promise((resolve) => {
-    const request = indexedDb.deleteDatabase(databaseName);
-    request.onsuccess = resolve;
-    request.onerror = resolve;
-    // A controlled service worker may still have the database open. It also
-    // receives PURGE_PRIVATE_DATA below and clears the sensitive store itself.
-    request.onblocked = resolve;
+    let settled = false;
+    const timeoutId = globalThis.setTimeout(() => {
+      settled = true;
+      resolve();
+    }, INDEXED_DB_DELETE_TIMEOUT_MS);
+    const settle = (): void => {
+      if (settled) return;
+      settled = true;
+      globalThis.clearTimeout(timeoutId);
+      resolve();
+    };
+
+    indexedDb.deleteDatabase(databaseName, {
+      onSuccess: settle,
+      onError: settle,
+      // A blocked event only means another context still has the database
+      // open. It is not evidence that deletion completed.
+      onBlocked: () => undefined,
+    });
   });
 }
 
@@ -84,23 +109,19 @@ async function purgePrivateCaches(
 async function purgeServiceWorkerState(
   serviceWorker: NonNullable<PrivateDataCleanupEnvironment['serviceWorker']>,
 ): Promise<void> {
-  const registrations = await serviceWorker.getRegistrations();
+  const registration = await serviceWorker.getRegistration();
   const workers = new Set<MessageTargetLike>();
 
   if (serviceWorker.controller) workers.add(serviceWorker.controller);
-  for (const registration of registrations) {
+  if (registration) {
     if (registration.active) workers.add(registration.active);
     if (registration.waiting) workers.add(registration.waiting);
     if (registration.installing) workers.add(registration.installing);
   }
   workers.forEach((worker) => worker.postMessage({ type: 'PURGE_PRIVATE_DATA' }));
 
-  await Promise.allSettled(
-    registrations.map(async (registration) => {
-      const subscription = await registration.pushManager?.getSubscription();
-      if (subscription) await subscription.unsubscribe();
-    }),
-  );
+  const subscription = await registration?.pushManager?.getSubscription();
+  if (subscription) await subscription.unsubscribe();
 }
 
 /**
@@ -117,9 +138,10 @@ export async function clearPrivateClientData(
     tasks.push(purgePrivateCaches(environment.cacheStorage));
   }
   if (environment.indexedDb) {
+    const indexedDb = environment.indexedDb;
     tasks.push(
       ...PRIVATE_INDEXED_DB_NAMES.map((databaseName) =>
-        deleteIndexedDbDatabase(environment.indexedDb!, databaseName),
+        deleteIndexedDbDatabase(indexedDb, databaseName),
       ),
     );
   }
