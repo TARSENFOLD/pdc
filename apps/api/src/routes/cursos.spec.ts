@@ -253,7 +253,7 @@ describe('cursoRoutes E2E contracts', () => {
       .mockResolvedValueOnce(singleResponse({ id: 'mod-1' }))
       .mockResolvedValueOnce(singleResponse({ id: 'item-1' }));
     vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({ id: 'item-2' }));
-    vi.mocked(strapiDelete).mockResolvedValueOnce({});
+    vi.mocked(strapiDelete).mockResolvedValueOnce(undefined);
 
     const res = await app.request('/cursos/curso-1', {
       method: 'PUT',

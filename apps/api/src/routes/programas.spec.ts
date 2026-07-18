@@ -297,7 +297,7 @@ describe('programaRoutes contracts', () => {
       id: 91,
       documentId: 'inscricao-doc-91',
     }));
-    vi.mocked(strapiDelete).mockResolvedValueOnce({});
+    vi.mocked(strapiDelete).mockResolvedValueOnce(undefined);
     publishWithOutboxMock.mockRejectedValueOnce(new Error('outbox indisponível'));
 
     const response = await app.request('/programas/programa-1/inscricao', {
