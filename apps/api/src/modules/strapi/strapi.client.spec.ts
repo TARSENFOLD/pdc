@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest';
-import { normalizeStrapiResponse } from './strapi.client.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { normalizeStrapiResponse, strapiDelete, strapiDeleteRaw } from './strapi.client.js';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('normalizeStrapiResponse', () => {
   it('preserva documentId ao normalizar entidades com attributes', () => {
@@ -56,5 +60,21 @@ describe('normalizeStrapiResponse', () => {
     expect(normalized).toEqual({ id: 3, nome: 'Sem documentId' });
     if (!normalized) throw new Error('Entidade normalizada ausente');
     expect(Object.hasOwn(normalized, 'documentId')).toBe(false);
+  });
+
+  it('aceita DELETE 204 sem corpo no wrapper normalizado', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(strapiDelete('/itens/1')).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('aceita DELETE 204 sem corpo no wrapper raw', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(strapiDeleteRaw('/itens/1')).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -167,7 +167,7 @@ export async function strapiPut<T>(path: string, body: unknown): Promise<StrapiS
   return normalizeStrapiResponse(json);
 }
 
-export async function strapiDelete<T>(path: string): Promise<T> {
+export async function strapiDelete(path: string): Promise<void> {
   const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
     method: 'DELETE',
     headers: buildHeaders(),
@@ -175,8 +175,6 @@ export async function strapiDelete<T>(path: string): Promise<T> {
   if (!res.ok) {
     throw new StrapiHttpError(`Strapi DELETE ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
-  const json = (await res.json()) as T;
-  return normalizeStrapiResponse(json);
 }
 
 // Para endpoints que não usam o wrapper { data: ... } (ex: Strapi Users plugin)
@@ -218,7 +216,7 @@ export async function strapiGetRaw<T>(path: string, params?: Record<string, stri
   return res.json() as Promise<T>;
 }
 
-export async function strapiDeleteRaw<T>(path: string): Promise<T> {
+export async function strapiDeleteRaw(path: string): Promise<void> {
   const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
     method: 'DELETE',
     headers: buildHeaders(),
@@ -226,5 +224,4 @@ export async function strapiDeleteRaw<T>(path: string): Promise<T> {
   if (!res.ok) {
     throw new StrapiHttpError(`Strapi DELETE ${path} falhou: ${res.status.toString()}`, res.status, path);
   }
-  return res.json() as Promise<T>;
 }

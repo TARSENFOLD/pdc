@@ -198,7 +198,7 @@ export async function deleteFlag(domain: string): Promise<void> {
   const flag = all.find((f) => f.domain === domain);
   if (!flag) return;
 
-  await strapiDelete<unknown>(`/feature-flags/${flag.documentId ?? String(flag.id)}`);
+  await strapiDelete(`/feature-flags/${flag.documentId ?? String(flag.id)}`);
   await invalidateCache();
   log.info({ domain }, 'Flag deleted');
 }

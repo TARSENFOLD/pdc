@@ -4,21 +4,13 @@ import { http } from '@/lib/api/http';
 import type { BootstrapResponse } from '@pdc/shared';
 import BootstrapErrorScreen from '@/components/layout/BootstrapErrorScreen';
 import { BootstrapContext } from './bootstrap-context';
+import { isPublicAuthPath } from './public-auth-path';
 
 async function fetchBootstrap(): Promise<BootstrapResponse> {
   const bootstrap = await http.get<BootstrapResponse>('/bootstrap');
   if (bootstrap.session.isAuthenticated) return bootstrap;
 
-  const publicAuthPaths = new Set([
-    '/login',
-    '/criar-conta',
-    '/criar-conta/finalizar',
-    '/verificar',
-    '/forgot-password',
-    '/auth/recuperar',
-    '/reset-password',
-  ]);
-  if (publicAuthPaths.has(window.location.pathname)) return bootstrap;
+  if (isPublicAuthPath(window.location.pathname)) return bootstrap;
 
   try {
     await http.post<{ success: boolean }>('/auth/refresh', {});

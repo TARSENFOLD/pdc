@@ -35,7 +35,7 @@ describe('provisionInstituicaoForUser', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(strapiPut).mockResolvedValue(singleResponse({ id: 'perfil-1' }));
-    vi.mocked(strapiDelete).mockResolvedValue(singleResponse({ id: 'inst-1' }));
+    vi.mocked(strapiDelete).mockResolvedValue(undefined);
   });
 
   it('retorna instituição existente sem sobrescrever dados', async () => {

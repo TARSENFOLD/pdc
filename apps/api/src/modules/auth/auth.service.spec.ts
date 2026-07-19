@@ -269,7 +269,7 @@ describe('authService.registerWithRole', () => {
       data: [{ ...BASE_PERFIL }],
       meta: { pagination: { page: 1, pageSize: 25, pageCount: 1, total: 1 } },
     });
-    vi.mocked(strapiDelete).mockResolvedValueOnce({ data: { id: 'perfil-1' }, meta: {} });
+    vi.mocked(strapiDelete).mockResolvedValueOnce(undefined);
     vi.mocked(strapiDeleteRaw).mockResolvedValueOnce(undefined);
 
     await expect(

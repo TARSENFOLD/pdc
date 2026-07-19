@@ -583,7 +583,7 @@ describe('projetoRoutes E2E contracts', () => {
         ...baseProjeto,
         autor: { id: 'perfil-autor', userId: 'user-autor', nome: 'Ana' },
       }]));
-      vi.mocked(strapiDelete).mockResolvedValueOnce({});
+      vi.mocked(strapiDelete).mockResolvedValueOnce(undefined);
 
       const res = await app.request('/projetos/proj-1', {
         method: 'DELETE',
@@ -599,7 +599,7 @@ describe('projetoRoutes E2E contracts', () => {
         ...baseProjeto,
         autor: { id: 'perfil-autor', userId: 'user-autor', nome: 'Ana' },
       }]));
-      vi.mocked(strapiDelete).mockResolvedValueOnce({});
+      vi.mocked(strapiDelete).mockResolvedValueOnce(undefined);
 
       const res = await app.request('/projetos/proj-1', {
         method: 'DELETE',
