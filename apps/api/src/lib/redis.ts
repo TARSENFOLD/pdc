@@ -99,7 +99,10 @@ const redisUnavailableError = () => new Error('Redis não configurado: operaçã
 
 const redisMock = {
   get: <T>(_key: string): Promise<T | null> => Promise.resolve(null),
-  set: (_key: string, _value: unknown, _opts?: RedisSetOptions): Promise<'OK' | null> => Promise.resolve('OK'),
+  set: (_key: string, _value: unknown, options: RedisSetOptions = {}): Promise<'OK' | null> => {
+    assertValidRedisSetOptions(options);
+    return Promise.resolve('OK');
+  },
   del: (_key: string): Promise<number> => Promise.resolve(1),
   sadd: (_key: string, _member: unknown, ..._members: unknown[]): Promise<number> => Promise.resolve(1),
   sismember: (_key: string, _member: unknown): Promise<0 | 1> => Promise.resolve(0),
@@ -120,11 +123,55 @@ const redisMock = {
 export const redis: PdcRedis = localRedis ?? upstashAdapter ?? redisMock;
 export const telemetryRedis: PdcRedis = upstashAdapter ?? localRedis ?? redisMock;
 
-export async function isPrimaryRedisReady(): Promise<boolean> {
-  if (!localRedis) return false;
+type RedisProbeClient = Pick<PdcRedis, 'ping' | 'set'>;
+
+async function isRedisReady(client: RedisProbeClient | null, timeoutMs = 1_000): Promise<boolean> {
+  if (!client) return false;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await localRedis.ping() === 'PONG';
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error('Redis PING timeout'));
+      }, timeoutMs);
+    });
+    return await Promise.race([client.ping(), timeout]) === 'PONG';
   } catch {
     return false;
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
   }
+}
+
+async function isRedisWritable(client: RedisProbeClient | null, timeoutMs = 1_000): Promise<boolean> {
+  if (!client) return false;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error('Redis write probe timeout'));
+      }, timeoutMs);
+    });
+    const write = client.set('health:readiness', Date.now(), { ex: 5 });
+    return await Promise.race([write, timeout]) === 'OK';
+  } catch {
+    return false;
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
+}
+
+export async function probeRedisReadiness(
+  client: RedisProbeClient | null,
+  timeoutMs = 1_000,
+): Promise<boolean> {
+  if (!await isRedisReady(client, timeoutMs)) return false;
+  return isRedisWritable(client, timeoutMs);
+}
+
+export async function isPrimaryRedisReady(): Promise<boolean> {
+  return probeRedisReadiness(localRedis);
+}
+
+export async function isUpstashRedisReady(): Promise<boolean> {
+  return probeRedisReadiness(upstashAdapter);
 }

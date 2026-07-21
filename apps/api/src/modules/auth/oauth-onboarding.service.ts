@@ -5,6 +5,7 @@ import { resolveEstadoMenoridade, type OAuthFinalizarRoleChoice } from '@pdc/sha
 import { provisionInstituicaoForUser } from '../instituicoes/instituicao.provision.js';
 import { buildPerfilComplianceFields } from './auth.compliance.js';
 import { consentService } from '../consent/consent.service.js';
+import { AuthDomainError } from './auth.errors.js';
 
 const log = pino({ name: 'oauth-onboarding-service' });
 
@@ -20,14 +21,10 @@ function perfilPersistedId(perfil: StrapiPerfilItem): string {
   return perfil.documentId ?? String(perfil.id);
 }
 
-function semanticError(message: string, status: 400 | 404): Error & { status: 400 | 404 } {
-  return Object.assign(new Error(message), { status });
-}
-
 function assertAdultRoleEligibility(payload: OAuthFinalizarRoleChoice): void {
   if (payload.role === 'estudante') return;
   if (resolveEstadoMenoridade(payload.dataNascimento) === 'menor') {
-    throw semanticError('Mentores e instituições devem ser representados por utilizadores adultos.', 400);
+    throw new AuthDomainError('Mentores e instituições devem ser representados por utilizadores adultos.', 400);
   }
 }
 
@@ -43,7 +40,7 @@ export const oauthOnboardingService = {
     });
     const perfil = res.data[0];
     if (!perfil) {
-      throw semanticError('Perfil não encontrado', 404);
+      throw new AuthDomainError('Perfil não encontrado', 404);
     }
 
     assertAdultRoleEligibility(payload);
@@ -94,7 +91,7 @@ export const oauthOnboardingService = {
   async verificarOtp(userId: string, otp: string): Promise<void> {
     const isValid = await otpService.verifyOtp(userId, otp, 'email');
     if (!isValid) {
-      throw Object.assign(new Error('Código inválido ou expirado'), { status: 400 });
+      throw new AuthDomainError('Código inválido ou expirado', 400);
     }
 
     const res = await strapiGet<StrapiPerfilItem>('/perfis', {
@@ -104,7 +101,7 @@ export const oauthOnboardingService = {
     });
     const perfil = res.data[0];
     if (!perfil) {
-      throw semanticError('Perfil não encontrado', 404);
+      throw new AuthDomainError('Perfil não encontrado', 404);
     }
 
     await strapiPut<StrapiPerfilItem>(`/perfis/${perfilPersistedId(perfil)}`, {

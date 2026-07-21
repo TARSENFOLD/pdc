@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { Spinner, Button } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import { Palette, Bell, ShieldCheck, Globe, Key, Users, Lock, Eye } from 'lucide-react';
 import { http } from '@/lib/api/http';
 import { toast } from '@/hooks/useToast';
 import type { VisibilitySettings, PerfilCompleto, UpdatePerfilPayload, FieldVisibility } from '@pdc/shared';
 import { MeusDadosSection } from './MeusDadosSection';
+import { SecuritySettingsSection } from './SecuritySettingsSection';
 
 /**
  * NotificationPreferences - Interface local para manter a inteligência do sistema.
@@ -215,16 +216,7 @@ export function ConfiguracoesPage() {
             )}
 
             {activeTab === 'seguranca' && (
-              <div className="space-y-6">
-                <h3 className="text-lg font-bold text-ink-primary tracking-tight">Segurança da Conta</h3>
-                <div className="rounded-2xl border border-accent/20 bg-accent/5 p-6 backdrop-blur-sm">
-                  <h4 className="font-bold text-accent">Autenticação de Dois Factores (2FA)</h4>
-                  <p className="mt-2 text-sm text-ink-secondary">Adiciona uma camada extra de segurança à tua conta usando um código de verificação no teu email.</p>
-                  <Button className="mt-6" variant="secondary" size="sm" disabled>
-                    Configurar 2FA (Em breve)
-                  </Button>
-                </div>
-              </div>
+              <SecuritySettingsSection />
             )}
 
             {activeTab === 'dados' && <MeusDadosSection />}

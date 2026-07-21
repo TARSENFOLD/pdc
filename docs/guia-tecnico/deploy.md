@@ -86,9 +86,11 @@ export RELEASE_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 sudo --preserve-env=RELEASE_SHA,RELEASE_DATE docker compose -f docker-compose.prod.yml up -d
 ```
 
-`RELEASE_SHA` e `RELEASE_DATE` são metadados não secretos e obrigatórios. Ficam
-gravados nas labels OCI das imagens e dos containers `pdc-api` e `pdc-strapi`,
-permitindo provar qual revisão está em execução sem inferir pelo conteúdo do VPS.
+`RELEASE_SHA` e `RELEASE_DATE` são metadados não secretos e obrigatórios para
+deploy. O script rejeita SHA inválido e grava ambos nas labels OCI das imagens e
+dos containers `pdc-api` e `pdc-strapi`. Comandos incidentais como `compose ps`
+ou `compose logs` podem correr sem exportá-los; nesse caso, o Compose usa apenas
+os marcadores `unlabelled`/`unknown` e não constitui um deploy canónico.
 
 ### Deploy automático (gated por CI)
 
@@ -124,7 +126,9 @@ Deploy manual equivalente (bypass do gate, usar só em emergências):
 
 ```bash
 cd /opt/pdc
-RELEASE_SHA="COLE_AQUI_O_SHA_GIT_COMPLETO_DE_40_CARACTERES" bash scripts/deploy-vps.sh
+RELEASE_SHA="COLE_AQUI_O_SHA_GIT_COMPLETO_DE_40_CARACTERES" \
+RELEASE_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+bash scripts/deploy-vps.sh
 ```
 
 O script valida o Docker Compose antes de construir, preserva as imagens atuais,
@@ -136,6 +140,54 @@ Consequentemente, `curl localhost:3001` e `curl localhost:1337` no VPS não são
 checks válidos.
 Se o deploy falhar, o rollback recria API/Strapi com as imagens anteriores e
 repete a mesma validação de saúde. Um rollback não validado continua a ser falha.
+O deploy também recusa preparar rollback se faltar uma das imagens ou se API e
+Strapi não tiverem a mesma revisão/data OCI, evitando atribuir uma identidade
+falsa a um estado parcial. Esta é uma limitação esperada do modelo de identidade
+única de release: ao adicionar API ou Strapi a uma stack existente, o primeiro
+deploy deve partir de uma instalação sem imagens anteriores para ambos; se só um
+serviço tiver imagem anterior, o deploy é recusado e exige reconciliação manual.
+Em staging, parametrizar os checks externos com
+`PDC_DEPLOY_API_URL`, `PDC_DEPLOY_CMS_URL` e `PDC_DEPLOY_WEB_ORIGIN`.
+
+### Backup e restore do Redis primário
+
+O Redis mantém AOF `everysec` no volume durante o runtime. Para disaster
+recovery, o utilitário canónico cria um RDB consistente via `BGSAVE`, comprime-o,
+gera checksum SHA-256 e valida-o com `redis-check-rdb` da mesma imagem do
+container:
+
+```bash
+cd /opt/pdc
+bash scripts/redis-snapshot.sh backup
+bash scripts/redis-snapshot.sh verify /opt/pdc/backups/redis/redis-UTC.rdb.gz
+```
+
+Configurar `REDIS_BACKUP_PASSWORD` com valor independente em `/opt/pdc/.env`.
+O utilizador ACL `backup` não lê chaves e só executa `BGSAVE`, `LASTSAVE`,
+`DBSIZE`, `INFO` e `PING`; o script usa `INFO persistence` para aguardar a
+conclusão do snapshot. Por defeito ficam 14 snapshots em `/opt/pdc/backups/redis`; alterar com
+`PDC_REDIS_BACKUP_RETENTION`. Uma cópia cifrada deve ser enviada para storage
+fora do VPS depois da verificação.
+
+Exemplo de cron diário, sem expor segredos:
+
+```cron
+17 2 * * * cd /opt/pdc && /usr/bin/bash scripts/redis-snapshot.sh backup >> /var/log/pdc-redis-backup.log 2>&1
+```
+
+Restore é destrutivo e exige confirmação explícita. O script valida primeiro o
+snapshot, para o Redis, preserva todo o volume atual num `pre-restore-*.tar.gz`,
+carrega o RDB e exige container saudável + `PING`. Se essa validação falhar,
+repõe automaticamente o volume anterior:
+
+```bash
+cd /opt/pdc
+bash scripts/redis-snapshot.sh restore \
+  /opt/pdc/backups/redis/redis-UTC.rdb.gz --confirm
+```
+
+Ensaiar restore trimestralmente num VPS isolado e registar data, snapshot e
+resultado. Um backup sem teste de restore não comprova recuperabilidade.
 
 ---
 
@@ -296,7 +348,9 @@ docker exec pdc-redis sh -ec '
 
 Validar `/health`, `/health/ready` e uma rota real como `/bootstrap`. `/health`
 é liveness; `/health/ready` distingue `sessionRedis` (VPS) de `rateLimitRedis`
-(Upstash). Quota Upstash não pode bloquear OTP, reset, locks ou refresh tokens.
+(Upstash). O probe de `sessionRedis` valida `PING` e escrita curta com TTL, por
+isso também degrada se `maxmemory noeviction` já estiver a rejeitar sessões.
+Quota Upstash não pode bloquear OTP, reset, locks ou refresh tokens.
 O consumer de telemetria continua dependente do Upstash e deve preservar fila e
 DLQ até a quota recuperar.
 

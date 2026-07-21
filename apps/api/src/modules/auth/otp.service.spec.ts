@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const redisMock = vi.hoisted(() => ({
@@ -7,8 +7,11 @@ const redisMock = vi.hoisted(() => ({
   del: vi.fn<(key: string) => Promise<number>>(),
 }));
 
-vi.mock('../../lib/redis.js', () => ({ hasRedis: true, redis: redisMock }));
-vi.mock('../../lib/env.js', () => ({ env: {} }));
+vi.mock('../../lib/redis.js', () => ({ hasPrimaryRedis: true, redis: redisMock }));
+const { OTP_HASH_SECRET } = vi.hoisted(() => ({
+  OTP_HASH_SECRET: 'test-otp-hmac-secret-for-tests-minimum-32-chars',
+}));
+vi.mock('../../lib/env.js', () => ({ env: { OTP_HASH_SECRET } }));
 
 import { otpService } from './otp.service.js';
 
@@ -22,7 +25,7 @@ describe('otpService Redis invariants', () => {
   it('guarda apenas o hash do OTP com TTL de dez minutos', async () => {
     await otpService.storeOtp('user-1', '123456', 'email');
 
-    const expectedHash = createHash('sha256').update('123456').digest('hex');
+    const expectedHash = createHmac('sha256', OTP_HASH_SECRET).update('123456').digest('hex');
     expect(redisMock.set).toHaveBeenCalledWith('otp:user-1:email', expectedHash, { ex: 600 });
     expect(redisMock.set).not.toHaveBeenCalledWith(expect.anything(), '123456', expect.anything());
   });
@@ -32,7 +35,7 @@ describe('otpService Redis invariants', () => {
 
     await expect(otpService.verifyOtp('user-1', '123456', 'email')).resolves.toBe(true);
 
-    const expectedHash = createHash('sha256').update('123456').digest('hex');
+    const expectedHash = createHmac('sha256', OTP_HASH_SECRET).update('123456').digest('hex');
     expect(redisMock.eval).toHaveBeenCalledWith(
       expect.stringContaining('DEL'),
       ['otp:user-1:email'],

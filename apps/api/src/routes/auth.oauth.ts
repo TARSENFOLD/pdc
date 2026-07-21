@@ -1,24 +1,31 @@
 import { Hono, type Context } from 'hono';
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import pino from 'pino';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { OAuthFinalizarRoleChoiceSchema } from '@pdc/shared';
-import { hasRedis, redis } from '../lib/redis.js';
 import { env } from '../lib/env.js';
 import { authService } from '../modules/auth/auth.service.js';
-import { setAuthCookies } from '../modules/auth/auth.helper.js';
+import {
+  getOAuthCookieOptions,
+  setAuthCookies,
+} from '../modules/auth/auth.helper.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { oauthOnboardingService } from '../modules/auth/oauth-onboarding.service.js';
+import { authSessionService } from '../modules/auth/auth-session.service.js';
+import { oauthStateService } from '../modules/auth/oauth-state.service.js';
+import { REFRESH_TOKEN_COOKIE } from '../modules/auth/auth.constants.js';
+import { RefreshTokenReuseError } from '../modules/auth/auth-session.errors.js';
+import { AuthDomainError } from '../modules/auth/auth.errors.js';
 
 const log = pino({ name: 'oauth-routes' });
 export const oauthRoutes = new Hono<{ Variables: AuthVariables }>();
-const OAUTH_STATE_TTL_SECONDS = 600;
-
-function signOAuthStatePayload(payload: string): string {
-  return createHmac('sha256', env.JWT_SECRET).update(payload).digest('base64url');
-}
-
+const OAUTH_STATE_COOKIE = 'oauth_state';
+const OAuthTokenResponseSchema = z.object({ access_token: z.string().min(1) });
+const OAuthUserInfoSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).optional(),
+});
 
 function requireOAuthEnv(provider: 'google' | 'linkedin'): { clientId: string; clientSecret: string } {
   if (provider === 'google') {
@@ -36,78 +43,50 @@ function requireOAuthEnv(provider: 'google' | 'linkedin'): { clientId: string; c
   }
   return { clientId, clientSecret };
 }
-function createOAuthState(): string {
-  const nonce = randomUUID();
-  const issuedAt = Math.floor(Date.now() / 1000).toString();
-  const payload = `${nonce}.${issuedAt}`;
-  const signature = signOAuthStatePayload(payload);
-  return `v1.${payload}.${signature}`;
+
+async function consumeOAuthState(
+  c: Context<{ Variables: AuthVariables }>,
+  state: string | undefined,
+): Promise<boolean> {
+  const browserState = getCookie(c, OAUTH_STATE_COOKIE);
+  deleteCookie(c, OAUTH_STATE_COOKIE, { path: '/auth' });
+  return oauthStateService.consume(state, browserState);
 }
 
-function isValidOAuthState(state: string | undefined): state is string {
-  if (!state) return false;
-  const parts = state.split('.');
-  if (parts.length !== 4 || parts[0] !== 'v1') return false;
-
-  const [, nonce, issuedAtRaw, signature] = parts;
-  if (!nonce || !issuedAtRaw || !signature) return false;
-
-  const issuedAt = Number.parseInt(issuedAtRaw, 10);
-  if (!Number.isFinite(issuedAt)) return false;
-
-  const now = Math.floor(Date.now() / 1000);
-  if (issuedAt > now + 30 || now - issuedAt > OAUTH_STATE_TTL_SECONDS) return false;
-
-  const expected = signOAuthStatePayload(`${nonce}.${issuedAtRaw}`);
-  const expectedBuffer = Buffer.from(expected);
-  const actualBuffer = Buffer.from(signature);
-  if (expectedBuffer.length !== actualBuffer.length) return false;
-  return timingSafeEqual(expectedBuffer, actualBuffer);
-}
-
-async function persistOAuthState(state: string): Promise<void> {
-  if (!hasRedis) {
-    log.warn('Redis ausente; OAuth state assinado será validado sem proteção one-time.');
-    return;
+function extractErrorDetails(err: unknown): { status: 400 | 404 | 500; message: string } {
+  if (err instanceof AuthDomainError && (err.status === 400 || err.status === 404)) {
+    return { status: err.status, message: err.message };
   }
+  return { status: 500, message: 'Erro interno' };
+}
+
+async function setNewSession(
+  c: Context<{ Variables: AuthVariables }>,
+  user: Awaited<ReturnType<typeof authService.getUserById>>,
+): Promise<void> {
+  const session = await authSessionService.issue(user);
+  setAuthCookies(c, session);
+}
+
+async function rotateCurrentSession(
+  c: Context<{ Variables: AuthVariables }>,
+  user: Awaited<ReturnType<typeof authService.getUserById>>,
+): Promise<void> {
+  const currentRefreshToken = getCookie(c, REFRESH_TOKEN_COOKIE);
+  if (!currentRefreshToken) {
+    throw new AuthDomainError('Sessão expirada', 400);
+  }
+  let session;
   try {
-    await redis.set(`oauth_state:${state}`, 'true', { ex: OAUTH_STATE_TTL_SECONDS });
-  } catch (err) {
-    // Degradação graceful: o state é assinado (HMAC) e tem TTL próprio; o Redis
-    // apenas reforça a proteção one-time-use. Se o Redis falhar (ex.: quota
-    // Upstash esgotada, erro transitório), validamos só por assinatura —
-    // consumeOAuthState já retorna true quando !hasRedis. Não derrubar o fluxo
-    // de OAuth por uma falha transitória de Redis.
-    log.warn({ err }, 'Redis indisponível ao persistir OAuth state; a degradar para validação por assinatura.');
+    session = await authSessionService.rotate(currentRefreshToken, user);
+  } catch (error) {
+    if (error instanceof RefreshTokenReuseError) {
+      throw new AuthDomainError('Sessão expirada', 400);
+    }
+    throw error;
   }
-}
-
-async function consumeOAuthState(state: string | undefined): Promise<boolean> {
-  if (!isValidOAuthState(state)) return false;
-  if (!hasRedis) return true;
-
-  const key = `oauth_state:${state}`;
-  try {
-    const exists = await redis.get(key);
-    if (!exists) return false;
-    await redis.del(key);
-    return true;
-  } catch (err) {
-    // Degradação graceful: o state já foi validado por assinatura HMAC + TTL.
-    // O Redis apenas reforça a proteção one-time-use. Se falhar (ex.: quota
-    // Upstash esgotada), degradamos para validação por assinatura (consistente
-    // com o caminho !hasRedis) em vez de derrubar o callback do OAuth com 500.
-    log.warn({ err }, 'Redis indisponível ao consumir OAuth state; a validar só por assinatura.');
-    return true;
-  }
-}
-
-function extractErrorDetails(err: unknown): { status: number; message: string } {
-  const status = (err !== null && typeof err === 'object' && 'status' in err)
-    ? (err as { status: number }).status
-    : 500;
-  const message = err instanceof Error ? err.message : 'Erro interno';
-  return { status, message };
+  if (!session) throw new AuthDomainError('Sessão expirada', 400);
+  setAuthCookies(c, session);
 }
 
 function getRequestOrigin(c: Context<{ Variables: AuthVariables }>): string {
@@ -121,10 +100,14 @@ function getRequestOrigin(c: Context<{ Variables: AuthVariables }>): string {
 
 function getOAuthRedirectUri(c: Context<{ Variables: AuthVariables }>, provider: 'google' | 'linkedin'): string {
   const configured = provider === 'google' ? env.GOOGLE_REDIRECT_URI : env.LINKEDIN_REDIRECT_URI;
+  if (env.NODE_ENV === 'production') {
+    if (!configured) throw new Error(`OAuth ${provider} não configurado: redirect URI em falta`);
+    return configured;
+  }
+  if (configured) return configured;
   const origin = getRequestOrigin(c);
   if (c.req.header('x-pdc-public-origin')) return `${origin}/auth/${provider}/callback`;
   if (c.req.header('x-forwarded-host')) return `${origin}/auth/${provider}/callback`;
-  if (origin === env.API_URL) return configured ?? `${origin}/auth/${provider}/callback`;
   return `${origin}/auth/${provider}/callback`;
 }
 
@@ -137,10 +120,10 @@ function redirectOAuthUnavailable(c: Context<{ Variables: AuthVariables }>, prov
 
 oauthRoutes.get('/google', async (c) => {
   try {
-    const state = createOAuthState();
-    await persistOAuthState(state);
-    const redirectUri = getOAuthRedirectUri(c, 'google');
     const { clientId } = requireOAuthEnv('google');
+    const state = await oauthStateService.issue();
+    setCookie(c, OAUTH_STATE_COOKIE, state, getOAuthCookieOptions(oauthStateService.ttlSeconds));
+    const redirectUri = getOAuthRedirectUri(c, 'google');
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -157,7 +140,13 @@ oauthRoutes.get('/google', async (c) => {
 
 oauthRoutes.get('/google/callback', async (c) => {
   const { code, state } = c.req.query();
-  const isValidState = await consumeOAuthState(state);
+  let isValidState: boolean;
+  try {
+    isValidState = await consumeOAuthState(c, state);
+  } catch (err) {
+    log.error({ err, provider: 'google' }, 'Google OAuth state unavailable');
+    return redirectOAuthUnavailable(c, 'google');
+  }
   if (!isValidState) return c.json({ error: 'Invalid state' }, 400);
   if (!code) return c.json({ error: 'Código de autorização ausente' }, 400);
 
@@ -176,16 +165,20 @@ oauthRoutes.get('/google/callback', async (c) => {
       }),
     });
     if (!tokenRes.ok) return c.json({ error: 'Token error' }, 400);
-    const tokens = await tokenRes.json() as { access_token: string };
+    const tokenResult = OAuthTokenResponseSchema.safeParse(await tokenRes.json());
+    if (!tokenResult.success) return c.json({ error: 'Token error' }, 400);
+    const tokens = tokenResult.data;
     const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
-    const googleUser = await userRes.json() as { email?: string; name?: string };
-    if (!googleUser.email) return c.json({ error: 'Email não disponível da conta Google' }, 400);
+    if (!userRes.ok) return c.json({ error: 'Perfil Google indisponível' }, 400);
+    const googleUserResult = OAuthUserInfoSchema.safeParse(await userRes.json());
+    if (!googleUserResult.success) {
+      return c.json({ error: 'Email não disponível da conta Google' }, 400);
+    }
+    const googleUser = googleUserResult.data;
     const user = await authService.findOrCreateUser(googleUser.email, googleUser.name ?? googleUser.email);
-    const { accessToken, refreshToken } = await authService.generateTokens(user);
-    await authService.saveRefreshToken(user.id, refreshToken);
-    setAuthCookies(c, accessToken, refreshToken);
+    await setNewSession(c, user);
 
     void authService.setOauthProvider(user.id, 'google').catch((err: unknown) => {
       log.error({ err, userId: user.id }, 'Failed to set oauthProvider');
@@ -204,10 +197,10 @@ oauthRoutes.get('/google/callback', async (c) => {
 
 oauthRoutes.get('/linkedin', async (c) => {
   try {
-    const state = createOAuthState();
-    await persistOAuthState(state);
-    const redirectUri = getOAuthRedirectUri(c, 'linkedin');
     const { clientId } = requireOAuthEnv('linkedin');
+    const state = await oauthStateService.issue();
+    setCookie(c, OAUTH_STATE_COOKIE, state, getOAuthCookieOptions(oauthStateService.ttlSeconds));
+    const redirectUri = getOAuthRedirectUri(c, 'linkedin');
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -224,7 +217,13 @@ oauthRoutes.get('/linkedin', async (c) => {
 
 oauthRoutes.get('/linkedin/callback', async (c) => {
   const { code, state } = c.req.query();
-  const isValidState = await consumeOAuthState(state);
+  let isValidState: boolean;
+  try {
+    isValidState = await consumeOAuthState(c, state);
+  } catch (err) {
+    log.error({ err, provider: 'linkedin' }, 'LinkedIn OAuth state unavailable');
+    return redirectOAuthUnavailable(c, 'linkedin');
+  }
   if (!isValidState) return c.json({ error: 'Invalid state' }, 400);
   if (!code) return c.json({ error: 'Código de autorização ausente' }, 400);
 
@@ -242,16 +241,20 @@ oauthRoutes.get('/linkedin/callback', async (c) => {
       }),
     });
     if (!tokenRes.ok) return c.json({ error: 'Token error' }, 400);
-    const tokens = await tokenRes.json() as { access_token: string };
+    const tokenResult = OAuthTokenResponseSchema.safeParse(await tokenRes.json());
+    if (!tokenResult.success) return c.json({ error: 'Token error' }, 400);
+    const tokens = tokenResult.data;
     const userRes = await fetch('https://api.linkedin.com/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
-    const liUser = await userRes.json() as { email?: string; name?: string };
-    if (!liUser.email) return c.json({ error: 'Email não disponível da conta LinkedIn' }, 400);
+    if (!userRes.ok) return c.json({ error: 'Perfil LinkedIn indisponível' }, 400);
+    const liUserResult = OAuthUserInfoSchema.safeParse(await userRes.json());
+    if (!liUserResult.success) {
+      return c.json({ error: 'Email não disponível da conta LinkedIn' }, 400);
+    }
+    const liUser = liUserResult.data;
     const user = await authService.findOrCreateUser(liUser.email, liUser.name ?? liUser.email);
-    const { accessToken, refreshToken } = await authService.generateTokens(user);
-    await authService.saveRefreshToken(user.id, refreshToken);
-    setAuthCookies(c, accessToken, refreshToken);
+    await setNewSession(c, user);
 
     void authService.setOauthProvider(user.id, 'linkedin').catch((err: unknown) => {
       log.error({ err, userId: user.id }, 'Failed to set oauthProvider');
@@ -278,14 +281,12 @@ oauthRoutes.post('/finalizar/escolher-role', verifyJwt, zValidator('json', OAuth
   try {
     await oauthOnboardingService.escolherRole(user.id, payload);
     const updatedUser = await authService.getUserById(user.id);
-    const { accessToken, refreshToken } = await authService.generateTokens(updatedUser);
-    await authService.saveRefreshToken(updatedUser.id, refreshToken);
-    setAuthCookies(c, accessToken, refreshToken);
+    await rotateCurrentSession(c, updatedUser);
     return c.json(updatedUser);
   } catch (err: unknown) {
     const { status, message } = extractErrorDetails(err);
     log.error({ err, userId: user.id }, 'escolherRole error');
-    return c.json({ error: message }, status as 400 | 404 | 500);
+    return c.json({ error: message }, status);
   }
 });
 
@@ -296,13 +297,11 @@ oauthRoutes.post('/finalizar/verificar-otp', verifyJwt, zValidator('json', verif
     await oauthOnboardingService.verificarOtp(user.id, otp);
     const updatedUser = await authService.getUserById(user.id);
     // Mint fresh tokens so the JWT reflects the updated role and onboardingCompleto: true
-    const { accessToken, refreshToken } = await authService.generateTokens(updatedUser);
-    await authService.saveRefreshToken(updatedUser.id, refreshToken);
-    setAuthCookies(c, accessToken, refreshToken);
+    await rotateCurrentSession(c, updatedUser);
     return c.json(updatedUser);
   } catch (err: unknown) {
     const { status, message } = extractErrorDetails(err);
     log.error({ err, userId: user.id }, 'verificarOtp error');
-    return c.json({ error: message }, status as 400 | 404 | 500);
+    return c.json({ error: message }, status);
   }
 });

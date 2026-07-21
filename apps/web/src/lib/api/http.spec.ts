@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { ApiError, http } from './http';
+import { ApiError, http, refreshSession } from './http';
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  localStorage.clear();
 });
 
 describe('http client', () => {
@@ -36,6 +37,92 @@ describe('http client', () => {
     expect(data).toEqual({ ok: true });
     expect(fetchMock).toHaveBeenNthCalledWith(2, expect.stringContaining('/auth/refresh'), expect.objectContaining({ method: 'POST' }));
     expect(fetchMock).toHaveBeenNthCalledWith(3, expect.stringContaining('/dashboard/estudante'), expect.objectContaining({ method: 'GET' }));
+  });
+
+  it('não converte indisponibilidade do refresh em sessão expirada', async () => {
+    const sessionExpired = vi.fn();
+    window.addEventListener('pdc:session-expired', sessionExpired, { once: true });
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'expired' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'unavailable' }), {
+        status: 503,
+        headers: { 'content-type': 'application/json' },
+      })));
+
+    await expect(http.getParsed('/dashboard/estudante', z.object({ ok: z.boolean() })))
+      .rejects.toMatchObject({ status: 503 });
+    expect(sessionExpired).not.toHaveBeenCalled();
+  });
+
+  it('deduplica refreshes concorrentes na mesma aba', async () => {
+    let dashboardRequests = 0;
+    let refreshRequests = 0;
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+      if (url.includes('/auth/refresh')) {
+        refreshRequests += 1;
+        await Promise.resolve();
+        return createJsonResponse({ success: true });
+      }
+      dashboardRequests += 1;
+      return dashboardRequests <= 2
+        ? new Response(JSON.stringify({ error: 'expired' }), {
+            status: 401,
+            headers: { 'content-type': 'application/json' },
+          })
+        : createJsonResponse({ ok: true });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const schema = z.object({ ok: z.boolean() });
+    const [first, second] = await Promise.all([
+      http.getParsed('/dashboard/estudante', schema),
+      http.getParsed('/dashboard/estudante', schema),
+    ]);
+
+    expect(first).toEqual({ ok: true });
+    expect(second).toEqual({ ok: true });
+    expect(refreshRequests).toBe(1);
+  });
+
+  it('reutiliza o refresh concluído noutra aba enquanto aguardava o Web Lock', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('navigator', {
+      locks: {
+        request: vi.fn(async (_name: string, callback: () => Promise<unknown>) => {
+          localStorage.setItem('pdc:auth-refresh-completed-at', String(Date.now() + 1_000));
+          return callback();
+        }),
+      },
+    });
+
+    await expect(refreshSession()).resolves.toBe('refreshed');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('faz refresh direto quando a Web Locks API falha', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ success: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('navigator', {
+      locks: {
+        request: vi.fn().mockRejectedValue(new Error('Lock manager unavailable')),
+      },
+    });
+
+    await expect(refreshSession()).resolves.toBe('refreshed');
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/refresh'),
+      expect.objectContaining({ method: 'POST' }),
+    );
   });
 
   it('getParsed rejeita resposta fora do contrato', async () => {
@@ -124,13 +211,13 @@ describe('http client', () => {
   it('postFormParsed valida resposta com schema', async () => {
     const form = new FormData();
     form.append('file', 'x');
-    const fetchMock = vi.fn().mockResolvedValue(createJsonResponse({ uploaded: true }));
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(createJsonResponse({ uploaded: true }));
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await http.postFormParsed('/test', form, z.object({ uploaded: z.boolean() }));
 
     expect(result).toEqual({ uploaded: true });
-    const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const init = fetchMock.mock.calls[0]?.[1];
     expect(new Headers(init?.headers).has('Content-Type')).toBe(false);
   });
 });

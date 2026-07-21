@@ -71,9 +71,9 @@ Cada funcionalidade tem **ID estável**, **estado canónico** (lei) e **estado r
 
 | ID | Funcionalidade | Estado | Notas |
 | --- | --- | --- | --- |
-| **P1** | Auth JWT em httpOnly cookie + RBAC 6 roles | 🟡 | Rotação de tokens pendente — `REQ-1-002` |
+| **P1** | Auth JWT em httpOnly cookie + RBAC 6 roles | ✅ | Sessão absoluta 90 dias + rotação atómica no Redis — ADR-054 · `REQ-1-002` |
 | **P2** | OAuth social login + OTP por SMS (Twilio) | 🟡 | OAuth ✅; Twilio mockado — `REQ-1-010`, `REQ-1-014` |
-| **P3** | 2FA obrigatório no login (sem bypass) | ✅ | Hardening completo |
+| **P3** | 2FA obrigatório em dispositivo novo/não confiável | ✅ | Dispositivo confiável 90 dias após OTP explícito; senha continua obrigatória — ADR-054 |
 | **P4** | FeatureRegistry SSOT (5 statuses + 7 features + 6 HUBs) | ✅ | `REQ-1-012` |
 | **P5** | `GET /bootstrap` em 4 camadas (session/capabilities/security/UX) | ✅ | `REQ-1-013` |
 | **P6** | Rate limiting via Upstash | ✅ | Middleware integrado; OTP/tokens usam Redis persistente do BFF (ADR-053) |

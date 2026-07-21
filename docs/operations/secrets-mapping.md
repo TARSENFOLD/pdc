@@ -32,6 +32,11 @@ Valores reais ficam apenas em secret stores dos providers ou no gestor local aut
 | `STRAPI_TIMEOUT`                    | api                  | cross-environment | never            | VPS Hetzner .env                                |
 | `STRAPI_WRITE_TIMEOUT`              | api                  | cross-environment | never            | VPS Hetzner .env                                |
 | `JWT_SECRET`                        | api                  | per-environment   | 90d              | VPS Hetzner .env                                |
+| `OTP_HASH_SECRET`                   | api                  | per-environment   | 90d              | VPS Hetzner .env                                |
+| `PDC_REDIS_URL`                     | api                  | per-environment   | 90d              | VPS Hetzner .env                                |
+| `REDIS_BFF_PASSWORD`                | redis, api           | per-environment   | 90d              | VPS Hetzner .env                                |
+| `REDIS_HEALTH_PASSWORD`             | redis, operations    | per-environment   | 90d              | VPS Hetzner .env                                |
+| `REDIS_BACKUP_PASSWORD`             | redis, operations    | per-environment   | 90d              | VPS Hetzner .env                                |
 | `UPSTASH_REDIS_REST_URL`            | api, edge            | per-environment   | on-incident      | Upstash console and Cloudflare/VPS Hetzner .env |
 | `UPSTASH_REDIS_REST_TOKEN`          | api, edge            | per-environment   | 90d              | Upstash console and Cloudflare/VPS Hetzner .env |
 | `UPSTASH_REDIS_REST_TOKEN_READONLY` | api                  | per-environment   | 90d              | Upstash console and VPS Hetzner .env            |
@@ -74,6 +79,21 @@ Valores reais ficam apenas em secret stores dos providers ou no gestor local aut
 | `ADMIN_JWT_SECRET`                  | strapi               | per-environment   | 90d              | VPS Hetzner .env                                |
 | `TRANSFER_TOKEN_SALT`               | strapi               | per-environment   | 90d              | VPS Hetzner .env                                |
 | `ENCRYPTION_KEY`                    | strapi               | per-environment   | 90d              | VPS Hetzner .env                                |
+
+## Unidade de rotação do Redis primário
+
+`REDIS_BFF_PASSWORD` e `PDC_REDIS_URL` formam uma única unidade de rotação: a
+password ACL em texto e a mesma password codificada para URI nunca devem ser
+alteradas isoladamente.
+
+1. Gerar a nova password e calcular a versão com percent-encoding para
+   `PDC_REDIS_URL`.
+2. Atualizar ambas as variáveis na mesma edição atómica de `/opt/pdc/.env`.
+3. Recriar `redis` e `api` na mesma janela de manutenção.
+4. Validar o health nativo do Redis, `GET /health`, `GET /health/ready` e um
+   login + refresh reais antes de encerrar a janela.
+5. Se qualquer validação falhar, repor os dois valores anteriores em conjunto,
+   recriar `redis` e `api` e repetir os mesmos checks.
 
 ## Governação de Rotação
 

@@ -259,7 +259,7 @@ jobs:
           API_URL: http://localhost:3001
           STRAPI_URL: http://localhost:1337
           STRAPI_API_TOKEN: test-strapi-token
-          REDIS_URL: redis://localhost:6379
+          PDC_REDIS_URL: redis://localhost:6380
 
       - name: Run Playwright smoke tests
         run: npx playwright test --project=smoke
@@ -271,7 +271,8 @@ jobs:
           STRAPI_URL: http://localhost:1337
           STRAPI_API_TOKEN: test-strapi-token
           JWT_SECRET: test-jwt-secret-for-ci-minimum-32-chars
-          REDIS_URL: redis://localhost:6379
+          OTP_HASH_SECRET: test-otp-hmac-secret-for-ci-minimum-32-chars
+          PDC_REDIS_URL: redis://localhost:6380
 
       - name: Run A11y Audit (Axe-Core)
         continue-on-error: true # Warning level for W0; will be hardened in W3
@@ -280,7 +281,7 @@ jobs:
           DEV_SKIP_OTP: "true"
           NODE_ENV: test
           STRAPI_URL: http://localhost:1337
-          REDIS_URL: redis://localhost:6379
+          PDC_REDIS_URL: redis://localhost:6380
           FRONTEND_URL: http://localhost:5173
 
       - name: Dump test infrastructure logs
@@ -346,7 +347,7 @@ jobs:
           API_URL: http://localhost:3001
           STRAPI_URL: http://localhost:1337
           STRAPI_API_TOKEN: test-strapi-token
-          REDIS_URL: redis://localhost:6379
+          PDC_REDIS_URL: redis://localhost:6380
 
       - name: Run Playwright full suite
         run: npx playwright test --project=chromium --project=firefox
@@ -355,7 +356,7 @@ jobs:
           NODE_ENV: test
           STRAPI_URL: http://localhost:1337
           STRAPI_API_TOKEN: test-strapi-token
-          REDIS_URL: redis://localhost:6379
+          PDC_REDIS_URL: redis://localhost:6380
           FRONTEND_URL: http://localhost:5173
 
       - name: Stop test infrastructure

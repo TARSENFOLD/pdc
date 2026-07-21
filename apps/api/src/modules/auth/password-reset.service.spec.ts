@@ -3,10 +3,11 @@ import { passwordResetService } from './password-reset.service.js';
 import { strapiGetRaw, strapiPutRaw } from '../strapi/strapi.client.js';
 
 const dependencyMocks = vi.hoisted(() => ({
-  redisGet: vi.fn(),
   redisSet: vi.fn(),
-  redisDel: vi.fn(),
+  redisEval: vi.fn(),
   sendEmail: vi.fn(),
+  revokeSessions: vi.fn(),
+  revokeDevices: vi.fn(),
 }));
 
 vi.mock('../../lib/env.js', () => ({
@@ -18,10 +19,17 @@ vi.mock('../../lib/env.js', () => ({
 
 vi.mock('../../lib/redis.js', () => ({
   redis: {
-    get: dependencyMocks.redisGet,
     set: dependencyMocks.redisSet,
-    del: dependencyMocks.redisDel,
+    eval: dependencyMocks.redisEval,
   },
+}));
+
+vi.mock('./auth-session.service.js', () => ({
+  authSessionService: { revokeAll: dependencyMocks.revokeSessions },
+}));
+
+vi.mock('./trusted-device.service.js', () => ({
+  trustedDeviceService: { revokeAll: dependencyMocks.revokeDevices },
 }));
 
 vi.mock('../mail/mail.service.js', () => ({
@@ -39,7 +47,8 @@ describe('passwordResetService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     dependencyMocks.redisSet.mockResolvedValue('OK');
-    dependencyMocks.redisDel.mockResolvedValue(1);
+    dependencyMocks.revokeSessions.mockResolvedValue(0);
+    dependencyMocks.revokeDevices.mockResolvedValue(0);
   });
 
   it('não envia email quando a conta não existe', async () => {
@@ -70,14 +79,16 @@ describe('passwordResetService', () => {
   });
 
   it('rejeita token inválido sem alterar o utilizador', async () => {
-    dependencyMocks.redisGet.mockResolvedValue(null);
+    dependencyMocks.redisEval.mockResolvedValue(null);
 
     await expect(passwordResetService.reset('token-invalido', 'NovaPassword123!')).resolves.toBe(false);
     expect(strapiPutRaw).not.toHaveBeenCalled();
   });
 
   it('altera a palavra-passe e consome o token', async () => {
-    dependencyMocks.redisGet.mockResolvedValue('user-1');
+    dependencyMocks.redisEval
+      .mockResolvedValueOnce('user-1')
+      .mockResolvedValueOnce(1);
     vi.mocked(strapiPutRaw).mockResolvedValue({});
 
     await expect(passwordResetService.reset('token-valido', 'NovaPassword123!')).resolves.toBe(true);
@@ -86,6 +97,70 @@ describe('passwordResetService', () => {
       confirmed: true,
       blocked: false,
     });
-    expect(dependencyMocks.redisDel).toHaveBeenCalledOnce();
+    expect(dependencyMocks.redisEval).toHaveBeenCalledWith(
+      expect.stringContaining('redis.call("DEL"'),
+      [expect.stringMatching(/^password_reset:/)],
+      [expect.stringMatching(/^claimed:/)],
+    );
+    expect(dependencyMocks.revokeSessions).toHaveBeenCalledWith('user-1');
+    expect(dependencyMocks.revokeDevices).toHaveBeenCalledWith('user-1');
+    expect(dependencyMocks.revokeSessions).toHaveBeenCalledTimes(2);
+    expect(dependencyMocks.revokeDevices).toHaveBeenCalledTimes(2);
+    const updateOrder = vi.mocked(strapiPutRaw).mock.invocationCallOrder[0] ?? 0;
+    expect(dependencyMocks.revokeSessions.mock.invocationCallOrder[0]).toBeLessThan(updateOrder);
+    expect(dependencyMocks.revokeSessions.mock.invocationCallOrder[1]).toBeGreaterThan(updateOrder);
+  });
+
+  it('não altera a palavra-passe se a revogação global falhar', async () => {
+    dependencyMocks.redisEval
+      .mockResolvedValueOnce('user-1')
+      .mockResolvedValueOnce(1);
+    dependencyMocks.revokeSessions.mockRejectedValue(new Error('Redis unavailable'));
+
+    await expect(passwordResetService.reset('token-valido', 'NovaPassword123!'))
+      .rejects.toThrow('Redis unavailable');
+    expect(strapiPutRaw).not.toHaveBeenCalled();
+    expect(dependencyMocks.redisEval).toHaveBeenLastCalledWith(
+      expect.stringContaining('redis.call("PTTL"'),
+      [expect.stringMatching(/^password_reset:/)],
+      [expect.stringMatching(/^claimed:/), 'user-1'],
+    );
+  });
+
+  it('não confirma o reset quando a revogação posterior falha', async () => {
+    dependencyMocks.redisEval
+      .mockResolvedValueOnce('user-1')
+      .mockResolvedValueOnce(1);
+    dependencyMocks.revokeSessions
+      .mockResolvedValueOnce(0)
+      .mockRejectedValueOnce(new Error('Redis unavailable after password update'));
+    vi.mocked(strapiPutRaw).mockResolvedValue({});
+
+    await expect(passwordResetService.reset('token-valido', 'NovaPassword123!'))
+      .rejects.toThrow('Redis unavailable after password update');
+    expect(strapiPutRaw).toHaveBeenCalledOnce();
+    expect(dependencyMocks.redisEval).toHaveBeenCalledTimes(2);
+  });
+
+  it('confirma o reset e mantém o token reivindicado quando a limpeza final não progride', async () => {
+    dependencyMocks.redisEval
+      .mockResolvedValueOnce('user-1')
+      .mockResolvedValueOnce(0);
+    vi.mocked(strapiPutRaw).mockResolvedValue({});
+
+    await expect(passwordResetService.reset('token-valido', 'NovaPassword123!')).resolves.toBe(true);
+    expect(dependencyMocks.redisEval).toHaveBeenCalledTimes(2);
+    expect(dependencyMocks.revokeSessions).toHaveBeenCalledTimes(2);
+  });
+
+  it('confirma o reset quando a limpeza final fica temporariamente indisponível', async () => {
+    dependencyMocks.redisEval
+      .mockResolvedValueOnce('user-1')
+      .mockRejectedValueOnce(new Error('Redis unavailable during cleanup'));
+    vi.mocked(strapiPutRaw).mockResolvedValue({});
+
+    await expect(passwordResetService.reset('token-valido', 'NovaPassword123!')).resolves.toBe(true);
+    expect(dependencyMocks.revokeSessions).toHaveBeenCalledTimes(2);
+    expect(dependencyMocks.redisEval).toHaveBeenCalledTimes(2);
   });
 });

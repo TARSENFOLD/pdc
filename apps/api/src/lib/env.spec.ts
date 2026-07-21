@@ -29,6 +29,14 @@ function setBaseEnv(nodeEnv: 'development' | 'production' | 'test' = 'production
     'WEB_PUSH_PUBLIC_KEY',
     'WEB_PUSH_PRIVATE_KEY',
     'WEB_PUSH_SUBJECT',
+    'OTP_HASH_SECRET',
+    'PDC_E2E_LONG_AUTH',
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'GOOGLE_REDIRECT_URI',
+    'LINKEDIN_CLIENT_ID',
+    'LINKEDIN_CLIENT_SECRET',
+    'LINKEDIN_REDIRECT_URI',
   ]) {
     Reflect.deleteProperty(process.env, key);
   }
@@ -40,6 +48,7 @@ function setBaseEnv(nodeEnv: 'development' | 'production' | 'test' = 'production
   process.env.STRAPI_URL = 'http://localhost:1337';
   process.env.STRAPI_API_TOKEN = 'test-strapi-token';
   process.env.JWT_SECRET = 'test-jwt-secret-for-ci-minimum-32-chars';
+  process.env.OTP_HASH_SECRET = 'test-otp-hmac-secret-for-ci-minimum-32-chars';
 }
 
 function setRequiredProductionIntegrations(): void {
@@ -109,6 +118,48 @@ describe('env boot validation', () => {
     process.env.DEV_SKIP_OTP = 'true';
 
     await expect(import('./env.js')).rejects.toThrow(/DEV_SKIP_OTP must not be enabled in production/);
+  });
+
+  it('falha em produção quando PDC_E2E_LONG_AUTH está activo', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    process.env.PDC_E2E_LONG_AUTH = 'true';
+
+    await expect(import('./env.js')).rejects.toThrow(/PDC_E2E_LONG_AUTH must not be enabled in production/);
+  });
+
+  it('falha em produção quando OTP_HASH_SECRET está ausente', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    Reflect.deleteProperty(process.env, 'OTP_HASH_SECRET');
+
+    await expect(import('./env.js')).rejects.toThrow(/OTP_HASH_SECRET required in production/);
+  });
+
+  it('falha em produção quando OAuth está parcialmente configurado', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    process.env.GOOGLE_CLIENT_ID = 'google-client';
+
+    await expect(import('./env.js')).rejects.toThrow(/GOOGLE_CLIENT_SECRET required/);
+  });
+
+  it('falha em produção quando apenas o callback OAuth está configurado', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    process.env.GOOGLE_REDIRECT_URI = 'http://localhost:3001/auth/google/callback';
+
+    await expect(import('./env.js')).rejects.toThrow(/GOOGLE_CLIENT_ID required/);
+  });
+
+  it('falha em produção quando o callback OAuth não pertence ao BFF', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    process.env.LINKEDIN_CLIENT_ID = 'linkedin-client';
+    process.env.LINKEDIN_CLIENT_SECRET = 'linkedin-secret';
+    process.env.LINKEDIN_REDIRECT_URI = 'https://usepdc.com/auth/linkedin/callback';
+
+    await expect(import('./env.js')).rejects.toThrow(/LINKEDIN_REDIRECT_URI must use API_URL origin/);
   });
 
   it('falha em produção quando o Redis persistente do BFF está ausente', async () => {

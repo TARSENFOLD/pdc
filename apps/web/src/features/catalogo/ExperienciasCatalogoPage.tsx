@@ -366,7 +366,7 @@ export default function ExperienciasCatalogoPage(): React.JSX.Element {
 
             {/* Estado: Sem resultados */}
             {!isLoading && !error && experiencias.length === 0 && (
-              <div className="py-12 text-center space-y-3">
+              <div data-testid="experiencias-empty" className="py-12 text-center space-y-3">
                 <p className="text-sm font-medium text-ink-primary">
                   {hasFilters ? 'Nenhuma experiência encontrada com estes filtros.' : 'Nenhuma experiência disponível de momento.'}
                 </p>

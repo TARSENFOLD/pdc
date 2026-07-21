@@ -13,10 +13,13 @@ import { verifyJwt, optionalJwt, type AuthVariables, type OptionalAuthVariables 
 
 const secret = new TextEncoder().encode('super-secret-at-least-32-chars-long');
 
-async function signedToken(payload: Record<string, unknown>): Promise<string> {
+async function signedToken(
+  payload: Record<string, unknown>,
+  tokenType: 'access' | 'refresh' = 'access',
+): Promise<string> {
   const subject = typeof payload['sub'] === 'string' ? payload['sub'] : 'user-1';
   return new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
+    .setProtectedHeader({ alg: 'HS256', typ: tokenType })
     .setSubject(subject)
     .sign(secret);
 }
@@ -37,6 +40,18 @@ const OptionalUserResponseSchema = z.object({
 });
 
 describe('auth middleware JWT payload validation', () => {
+  it('rejects a refresh token presented as an access token', async () => {
+    const app = new Hono<{ Variables: AuthVariables }>();
+    app.get('/private', verifyJwt, (c) => c.json({ user: c.get('user') }));
+    const token = await signedToken({ sub: 'user-1', role: 'estudante' }, 'refresh');
+
+    const res = await app.request('/private', {
+      headers: { cookie: `access_token=${token}` },
+    });
+
+    expect(res.status).toBe(401);
+  });
+
   it('rejects authenticated requests when payload fields are malformed', async () => {
     const app = new Hono<{ Variables: AuthVariables }>();
     app.get('/private', verifyJwt, (c) => c.json({ user: c.get('user') }));

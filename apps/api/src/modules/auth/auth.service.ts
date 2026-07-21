@@ -1,12 +1,4 @@
-import { SignJWT, jwtVerify } from 'jose';
-import { redis } from '../../lib/redis.js';
-import { env } from '../../lib/env.js';
-import {
-  ACCESS_TOKEN_TTL,
-  REFRESH_TOKEN_MAX_AGE_SECONDS,
-  REFRESH_TOKEN_TTL,
-} from './auth.constants.js';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { ConsentStateSchema, DomainEventName, resolveEstadoMenoridade, type User, type Role } from '@pdc/shared';
 import { strapiDelete, strapiDeleteRaw, strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
@@ -20,19 +12,10 @@ import {
   type StrapiUser,
   type StrapiUsersPermissionsRolesResponse,
 } from './auth.strapi-types.js';
-import { z } from 'zod';
 import pino from 'pino';
+import { DuplicateEmailError } from './auth.errors.js';
 
-const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 const log = pino({ name: 'auth-service' });
-
-const RefreshPayloadSchema = z.object({
-  sub: z.string().min(1),
-});
-
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
 
 async function getAuthenticatedRoleId(): Promise<number | string> {
   const roles = await strapiGetRaw<StrapiUsersPermissionsRolesResponse>('/users-permissions/roles');
@@ -44,53 +27,6 @@ async function getAuthenticatedRoleId(): Promise<number | string> {
 }
 
 export const authService = {
-  async generateTokens(user: User) {
-    const claims: Record<string, unknown> = { sub: user.id, role: user.role };
-    if (user.perfilId) claims.perfilId = user.perfilId;
-    if (user.onboardingCompleto != null) claims.onboardingCompleto = user.onboardingCompleto;
-    if (user.estadoMenoridade != null) claims.estadoMenoridade = user.estadoMenoridade;
-    if (user.consentimentoEstado != null) claims.consentimentoEstado = user.consentimentoEstado;
-    if (user.isMinor != null) claims.isMinor = user.isMinor;
-    const accessToken = await new SignJWT(claims)
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime(ACCESS_TOKEN_TTL)
-      .sign(JWT_SECRET);
-    const refreshToken = await new SignJWT({ sub: user.id })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime(REFRESH_TOKEN_TTL)
-      .setJti(randomUUID())
-      .sign(JWT_SECRET);
-    return { accessToken, refreshToken };
-  },
-
-  async saveRefreshToken(userId: string, token: string) {
-    const hash = hashToken(token);
-    await redis.set(`refresh_token:${userId}:${hash}`, 'true', {
-      ex: REFRESH_TOKEN_MAX_AGE_SECONDS,
-    });
-  },
-
-  async revokeRefreshToken(userId: string, token: string) {
-    const hash = hashToken(token);
-    await redis.del(`refresh_token:${userId}:${hash}`);
-  },
-
-  async verifyRefreshToken(token: string): Promise<{ userId: string } | null> {
-    try {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
-      const payloadResult = RefreshPayloadSchema.safeParse(payload);
-      if (!payloadResult.success) return null;
-      const userId = payloadResult.data.sub;
-      const hash = hashToken(token);
-      const exists = await redis.get(`refresh_token:${userId}:${hash}`);
-      return exists ? { userId } : null;
-    } catch {
-      return null;
-    }
-  },
-
   async login(email: string, password: string): Promise<User> {
     const normalizedEmail = email.toLowerCase().trim();
     const data = await strapiPostRaw<{ user: StrapiUser }>('/auth/local', {
@@ -123,7 +59,7 @@ export const authService = {
       'pagination[pageSize]': '1',
     });
     if (existingUsers[0]) {
-      throw Object.assign(new Error('Já existe uma conta com este email. Inicia sessão ou usa recuperação de palavra-passe.'), { status: 409 });
+      throw new DuplicateEmailError();
     }
 
     let userId: string | undefined;
@@ -297,17 +233,17 @@ export const authService = {
       role: resolveRole(u.role?.name, perfil?.tipo),
       perfilId: perfil?.id === undefined ? undefined : String(perfil.id),
       avatarUrl: resolvePerfilAvatar(perfil?.avatarUrl, perfil?.foto, u.avatar?.url),
-      bannerUrl: perfil?.bannerUrl,
+      bannerUrl: perfil?.bannerUrl ?? undefined,
       reputacaoTier: getTier(reputationScore),
       xp: 0,
       reputacao: reputationScore,
       createdAt: u.createdAt ?? new Date().toISOString(),
       updatedAt: u.updatedAt ?? new Date().toISOString(),
-      bio: perfil?.bio,
+      bio: perfil?.bio ?? undefined,
       areasInteresse: perfil?.areasInteresse ?? [],
       conquistas: perfil?.conquistas ?? [],
-      aprovado: perfil?.aprovado,
-      oauthVerified: perfil?.oauthVerified,
+      aprovado: perfil?.aprovado ?? undefined,
+      oauthVerified: perfil?.oauthVerified ?? undefined,
       oauthProvider: oauthProvider === 'google' || oauthProvider === 'linkedin' ? oauthProvider : undefined,
       onboardingCompleto: perfil?.onboardingCompleto ?? undefined,
       isMinor: estadoMenoridade === 'menor',

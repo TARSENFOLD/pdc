@@ -20,18 +20,9 @@ function getErrorStatus(error: unknown): number | undefined {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
-  const { data: user = null, isLoading, isFetched } = useQuery({
+  const { data: user = null, isLoading, isFetched, error } = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => authApi.me().catch((err: unknown) => {
-      // Extract status safely from ApiError or axios-like structures
-      const status = getErrorStatus(err);
-      
-      // 401 is expected when not logged in, no need to warn.
-      if (status !== 401) {
-        console.warn('[AUTH] Falha ao recuperar sessão:', err);
-      }
-      return null;
-    }),
+    queryFn: () => authApi.restoreSession(),
     retry: (failureCount, error: unknown) => {
       // Não repetir se for 401 ou 403 (Sessão inválida/expirada)
       const status = getErrorStatus(error);
@@ -40,6 +31,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  useEffect(() => {
+    if (error) {
+      console.warn('[AUTH] Falha ao recuperar sessão', {
+        status: getErrorStatus(error) ?? 'unknown',
+      });
+    }
+  }, [error]);
 
   useEffect(() => {
     if (isFetched && user) {
@@ -57,8 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const completeOtpMutation = useMutation({
-    mutationFn: ({ otp, canal }: { otp: string; canal: 'email' | 'sms' }) =>
-      authApi.verifyOtp(otp, canal),
+    mutationFn: ({ otp, canal, trustDevice }: {
+      otp: string;
+      canal: 'email' | 'sms';
+      trustDevice: boolean;
+    }) => authApi.verifyOtp(otp, canal, trustDevice),
     onSuccess: (verifiedUser) => {
       // Invalida e força refetch para garantir integridade total
       void queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
@@ -79,8 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return loginMutation.mutateAsync(payload);
   }
 
-  async function completeOtp(otp: string, canal: 'email' | 'sms'): Promise<void> {
-    await completeOtpMutation.mutateAsync({ otp, canal });
+  async function completeOtp(
+    otp: string,
+    canal: 'email' | 'sms',
+    trustDevice: boolean,
+  ): Promise<void> {
+    await completeOtpMutation.mutateAsync({ otp, canal, trustDevice });
   }
 
   async function register(payload: RegisterPayload): Promise<LoginResponse> {

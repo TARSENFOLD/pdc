@@ -79,7 +79,7 @@ beforeEach(() => {
 
   vi.mocked(jwtVerify).mockResolvedValue({
     payload: { sub: 'user-1', role: 'estudante' },
-    protectedHeader: { alg: 'HS256' },
+    protectedHeader: { alg: 'HS256', typ: 'access' },
   } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
 
   vi.mocked(redis.get).mockResolvedValue(null);
@@ -235,7 +235,7 @@ describe('GET /app/home', () => {
   it('role-awareness: filtro de onboarding-videos usa role do JWT', async () => {
     vi.mocked(jwtVerify).mockResolvedValue({
       payload: { sub: 'user-2', role: 'mentor' },
-      protectedHeader: { alg: 'HS256' },
+      protectedHeader: { alg: 'HS256', typ: 'access' },
     } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
 
     await homeRoutes.request(authRequest());

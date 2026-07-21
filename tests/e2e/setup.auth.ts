@@ -34,28 +34,58 @@ setup('seed canonical E2E catalog content', async ({ request }) => {
   const existing = await request.get(`${STRAPI_URL}/api/simulacoes?${query.toString()}`, { headers });
   expect(existing).toBeOK();
   const existingBody = await existing.json() as { data?: unknown[] };
-  if (Array.isArray(existingBody.data) && existingBody.data.length > 0) return;
-
-  const created = await request.post(`${STRAPI_URL}/api/simulacoes`, {
-    headers,
-    data: {
+  if (!Array.isArray(existingBody.data) || existingBody.data.length === 0) {
+    const created = await request.post(`${STRAPI_URL}/api/simulacoes`, {
+      headers,
       data: {
-        titulo: 'Simulação Alta Fidelidade E2E',
-        slug: 'sim-tipo3-e2e',
-        descricao: 'Cenário E2E publicado para validar o player Tipo 3 e o ciclo de telemetria.',
-        area: 'TECNOLOGIA',
-        tipo: 3,
-        tipoSimulacao: 'tipo3',
-        tipoLab: 'sandbox',
-        estado: 'published',
-        autorId: 'e2e-seed',
-        validadoAcademicamente: true,
-        tentativasMaximas: 0,
-        criteriosAvaliacao: { pesos: { fluidez: 40, resiliencia: 30, foco: 30 } },
+        data: {
+          titulo: 'Simulação Alta Fidelidade E2E',
+          slug: 'sim-tipo3-e2e',
+          descricao: 'Cenário E2E publicado para validar o player Tipo 3 e o ciclo de telemetria.',
+          area: 'TECNOLOGIA',
+          tipo: 3,
+          tipoSimulacao: 'tipo3',
+          tipoLab: 'sandbox',
+          estado: 'published',
+          autorId: 'e2e-seed',
+          validadoAcademicamente: true,
+          tentativasMaximas: 0,
+          criteriosAvaliacao: { pesos: { fluidez: 40, resiliencia: 30, foco: 30 } },
+        },
       },
-    },
+    });
+    expect(created).toBeOK();
+  }
+
+  const courseQuery = new URLSearchParams({
+    'filters[slug][$eq]': 'curso-programa-e2e',
+    'pagination[pageSize]': '1',
   });
-  expect(created).toBeOK();
+  const existingCourse = await request.get(
+    `${STRAPI_URL}/api/cursos?${courseQuery.toString()}`,
+    { headers },
+  );
+  expect(existingCourse).toBeOK();
+  const existingCourseBody = await existingCourse.json() as { data?: unknown[] };
+  if (!Array.isArray(existingCourseBody.data) || existingCourseBody.data.length === 0) {
+    const createdCourse = await request.post(`${STRAPI_URL}/api/cursos`, {
+      headers,
+      data: {
+        data: {
+          titulo: 'Curso Publicado E2E',
+          slug: 'curso-programa-e2e',
+          descricao: 'Curso publicado para validar relações de programas.',
+          area: 'TECNOLOGIA',
+          nivel: 'basico',
+          estado: 'published',
+          autorId: 'e2e-seed',
+          gratuito: true,
+          visibilidade: 'publico',
+        },
+      },
+    });
+    expect(createdCourse).toBeOK();
+  }
 });
 
 for (const role of roles) {

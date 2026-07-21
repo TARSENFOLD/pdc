@@ -1,10 +1,17 @@
-import { randomInt, createHash } from 'node:crypto';
-import { redis, hasRedis } from '../../lib/redis.js';
+import { randomInt, createHmac } from 'node:crypto';
+import { redis, hasPrimaryRedis } from '../../lib/redis.js';
 import pino from 'pino';
 import { env } from '../../lib/env.js';
 
 const log = pino({ name: 'otp-service' });
 const DEFAULT_RESEND_FROM_EMAIL = 'PDC <no-reply@usepdc.com>';
+
+function hashOtp(otp: string): string {
+  if (!env.OTP_HASH_SECRET) {
+    throw new Error('OTP_HASH_SECRET não configurado');
+  }
+  return createHmac('sha256', env.OTP_HASH_SECRET).update(otp).digest('hex');
+}
 
 function maskPhone(phone: string): string {
   if (!phone) return 'unknown';
@@ -31,19 +38,20 @@ export const otpService = {
   },
 
   async storeOtp(userId: string, otp: string, canal: 'email' | 'sms'): Promise<void> {
-    if (!hasRedis) {
+    if (!hasPrimaryRedis) {
       throw new Error('OTP requer Redis (não configurado)');
     }
-    const hash = createHash('sha256').update(otp).digest('hex');
-    await redis.set(`otp:${userId}:${canal}`, hash, { ex: 600 });
+    const hash = hashOtp(otp);
+    const stored = await redis.set(`otp:${userId}:${canal}`, hash, { ex: 600 });
+    if (stored !== 'OK') throw new Error('Falha ao persistir OTP');
   },
 
   async verifyOtp(userId: string, otp: string, canal: 'email' | 'sms'): Promise<boolean> {
-    if (!hasRedis) {
+    if (!hasPrimaryRedis) {
       throw new Error('OTP requer Redis (não configurado)');
     }
     const key = `otp:${userId}:${canal}`;
-    const hash = createHash('sha256').update(otp).digest('hex');
+    const hash = hashOtp(otp);
     const consumed = await redis.eval<number>(
       'local value = redis.call("GET", KEYS[1]); if value == ARGV[1] then redis.call("DEL", KEYS[1]); return 1 end; return 0',
       [key],
@@ -53,7 +61,7 @@ export const otpService = {
   },
 
   async deleteOtp(userId: string, canal: 'email' | 'sms'): Promise<void> {
-    if (!hasRedis) {
+    if (!hasPrimaryRedis) {
       throw new Error('OTP requer Redis (não configurado)');
     }
     await redis.del(`otp:${userId}:${canal}`);
@@ -126,7 +134,7 @@ export const otpService = {
   },
 
   async checkSmsRateLimit(phone: string): Promise<void> {
-    if (!hasRedis) {
+    if (!hasPrimaryRedis) {
       throw new Error('Serviço de SMS temporariamente indisponível (Redis OFF)');
     }
     const key = `otp:sms:ratelimit:${phone}`;

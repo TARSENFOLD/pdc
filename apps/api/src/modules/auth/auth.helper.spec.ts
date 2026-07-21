@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ACCESS_TOKEN_MAX_AGE_SECONDS, REFRESH_TOKEN_MAX_AGE_SECONDS } from './auth.constants.js';
+import { Hono } from 'hono';
+import type { AuthVariables } from './auth.middleware.js';
+import { ACCESS_TOKEN_MAX_AGE_SECONDS, SESSION_TTL_SECONDS } from './auth.constants.js';
 
 async function loadHelperWithNodeEnv(nodeEnv: string) {
   vi.resetModules();
@@ -18,20 +20,48 @@ afterEach(() => {
 });
 
 describe('auth cookie options', () => {
-  it('uses a browser-persistent sliding refresh window', () => {
+  it('uses a browser-persistent absolute session window', () => {
     expect(ACCESS_TOKEN_MAX_AGE_SECONDS).toBe(15 * 60);
-    expect(REFRESH_TOKEN_MAX_AGE_SECONDS).toBe(400 * 24 * 60 * 60);
+    expect(SESSION_TTL_SECONDS).toBe(90 * 24 * 60 * 60);
   });
 
-  it('allows credentialed cross-site auth requests in production', async () => {
-    const { getAuthCookieOptions } = await loadHelperWithNodeEnv('production');
+  it('wires the refresh session lifetime into the emitted persistent cookie', async () => {
+    const { setAuthCookies } = await loadHelperWithNodeEnv('production');
+    const app = new Hono<{ Variables: AuthVariables }>();
+    app.get('/', (c) => {
+      setAuthCookies(c, {
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        refreshMaxAgeSeconds: SESSION_TTL_SECONDS,
+      });
+      return c.text('ok');
+    });
+
+    const response = await app.request('/');
+    const setCookie = response.headers.get('set-cookie') ?? '';
+
+    expect(setCookie).toContain('access_token=access-token');
+    expect(setCookie).toContain(`Max-Age=${String(ACCESS_TOKEN_MAX_AGE_SECONDS)}`);
+    expect(setCookie).toContain('refresh_token=refresh-token');
+    expect(setCookie).toContain(`Max-Age=${String(SESSION_TTL_SECONDS)}`);
+  });
+
+  it('keeps production auth cookies first-party and strict', async () => {
+    const { getAuthCookieOptions, getOAuthCookieOptions } = await loadHelperWithNodeEnv('production');
 
     expect(getAuthCookieOptions(600)).toMatchObject({
       httpOnly: true,
       secure: true,
-      sameSite: 'None',
+      sameSite: 'Strict',
       maxAge: 600,
       path: '/',
+    });
+    expect(getOAuthCookieOptions(600)).toMatchObject({
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Lax',
+      maxAge: 600,
+      path: '/auth',
     });
   });
 

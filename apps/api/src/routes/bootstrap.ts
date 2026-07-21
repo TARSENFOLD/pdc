@@ -1,35 +1,28 @@
 import { Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
-import { jwtVerify } from 'jose';
 import pino from 'pino';
-import { env } from '../lib/env.js';
 import { authService } from '../modules/auth/auth.service.js';
-import { JwtUserPayloadSchema } from '../modules/auth/auth.middleware.js';
+import { verifyAccessJwt } from '../modules/auth/auth.middleware.js';
+import { ACCESS_TOKEN_COOKIE } from '../modules/auth/auth.constants.js';
 import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 import { signTelemetryToken } from '../modules/auth/telemetry-token.js';
 import { Features, type BootstrapResponse } from '@pdc/shared';
-// Role import removed as it is unused
 
-const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 const log = pino({ name: 'routes:bootstrap' });
 
 export const bootstrapRoutes = new Hono();
 
 bootstrapRoutes.get('/', async (c) => {
   // 1. Soft Session Extraction (Tolerante a utilizadores não autenticados)
-  const token = getCookie(c, 'access_token');
+  const token = getCookie(c, ACCESS_TOKEN_COOKIE);
   let userPayload: BootstrapResponse['session']['user'] = null;
   let telemetryToken: string | undefined = undefined;
   let instituicaoId: number | undefined = undefined;
 
   if (token) {
     try {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
-      const payloadResult = JwtUserPayloadSchema.safeParse(payload);
-      if (!payloadResult.success) {
-        throw new Error('Invalid bootstrap JWT payload');
-      }
-      const parsedPayload = payloadResult.data;
+      const parsedPayload = await verifyAccessJwt(token);
+      if (!parsedPayload) throw new Error('Invalid bootstrap JWT payload');
       const dbUser = await authService.getUserById(parsedPayload.sub);
 
       // Injectamos a Role real e Perfil (que está guardado no Strapi)

@@ -98,3 +98,11 @@ export const OAuthFinalizarOtpSchema = z.object({
 });
 
 export type OAuthFinalizarOtp = z.infer<typeof OAuthFinalizarOtpSchema>;
+
+export const LoginOtpVerifySchema = z.object({
+  otp: z.string().regex(/^\d{6}$/, 'OTP must be exactly 6 digits'),
+  canal: z.enum(['email', 'sms']),
+  trustDevice: z.boolean().default(false),
+});
+
+export type LoginOtpVerify = z.infer<typeof LoginOtpVerifySchema>;

@@ -56,6 +56,12 @@ FRONTEND_URL=https://usepdc.com
 STRAPI_URL=https://cms.usepdc.com
 STRAPI_API_TOKEN=<token>
 JWT_SECRET=<secret>
+OTP_HASH_SECRET=<independent-secret>
+# O valor abaixo é REDIS_BFF_PASSWORD codificado para URI (percent-encoding).
+PDC_REDIS_URL=redis://pdc:<percent-encoded-password>@redis:6379
+REDIS_BFF_PASSWORD=<password>
+REDIS_HEALTH_PASSWORD=<independent-password>
+REDIS_BACKUP_PASSWORD=<independent-password>
 DATABASE_URL=<neon-url>
 DATABASE_SSL=true
 APP_KEYS=<k1>,<k2>,<k3>,<k4>

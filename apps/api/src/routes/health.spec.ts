@@ -10,8 +10,10 @@ const redisHealthMock = vi.hoisted(() => ({
   hasPrimaryRedis: true,
   hasUpstashRedis: true,
   primaryReady: true,
+  upstashReady: true,
 }));
 const isPrimaryRedisReadyMock = vi.hoisted(() => vi.fn(() => Promise.resolve(redisHealthMock.primaryReady)));
+const isUpstashRedisReadyMock = vi.hoisted(() => vi.fn(() => Promise.resolve(redisHealthMock.upstashReady)));
 
 vi.mock('../lib/env.js', () => ({
   env: {
@@ -27,6 +29,7 @@ vi.mock('../lib/redis.js', () => ({
     return redisHealthMock.hasUpstashRedis;
   },
   isPrimaryRedisReady: isPrimaryRedisReadyMock,
+  isUpstashRedisReady: isUpstashRedisReadyMock,
 }));
 
 vi.mock('../middleware/rateLimit.js', () => ({
@@ -43,6 +46,7 @@ describe('health routes', () => {
     redisHealthMock.hasPrimaryRedis = true;
     redisHealthMock.hasUpstashRedis = true;
     redisHealthMock.primaryReady = true;
+    redisHealthMock.upstashReady = true;
     getRateLimitCircuitStateMock.mockReturnValue({ state: 'closed' });
   });
 
@@ -136,6 +140,19 @@ describe('health routes', () => {
     await expect(response.json()).resolves.toMatchObject({
       status: 'degraded',
       dependencies: { strapi: 'up', sessionRedis: 'up', rateLimitRedis: 'unconfigured' },
+    });
+  });
+
+  it('reports Upstash as down when the configured endpoint fails its probe', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('ok', { status: 200 })));
+    redisHealthMock.upstashReady = false;
+
+    const response = await app.request('/health/ready');
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'degraded',
+      dependencies: { strapi: 'up', sessionRedis: 'up', rateLimitRedis: 'down' },
     });
   });
 });

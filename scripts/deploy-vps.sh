@@ -73,7 +73,7 @@ current_image_tag() {
   container_id="$(compose ps -q "${service}" 2>/dev/null | head -1 || true)"
   if [[ -n "${container_id}" ]]; then
     tag="$(docker inspect --format='{{.Config.Image}}' "${container_id}" 2>/dev/null || true)"
-    if [[ -n "${tag}" ]]; then
+    if [[ -n "${tag}" && "${tag}" != "<none>:<none>" ]]; then
       printf '%s\n' "${tag}"
       return 0
     fi
@@ -90,25 +90,47 @@ current_image_tag() {
     return 0
   fi
 
-  printf '%s\n' "${image_id}"
+  echo "[deploy-vps] ERRO: ${service} usa imagem sem tag; rollback seguro indisponivel." >&2
+  return 2
 }
 
 backup_images() {
   mkdir -p "${ROLLBACK_DIR}"
   : > "${ROLLBACK_DIR}/images.env"
 
-  local backed_up="false" service current backup previous_sha previous_date
+  local service current current_status backup previous_sha previous_date
   local rollback_release_sha="" rollback_release_date=""
-  for service in api strapi; do
-    current="$(current_image_tag "${service}" || true)"
-    if [[ -z "${current}" ]]; then
-      echo "[deploy-vps] AVISO: sem imagem anterior para ${service}; rollback desse servico indisponivel." >&2
-      continue
-    fi
+  declare -A current_images=()
+  declare -A previous_shas=()
+  declare -A previous_dates=()
 
-    backup="pdc-${service}:rollback-${DEPLOY_ID}"
-    docker image tag "${current}" "${backup}"
-    printf '%s_CURRENT=%q\n%s_BACKUP=%q\n' "${service^^}" "${current}" "${service^^}" "${backup}" >> "${ROLLBACK_DIR}/images.env"
+  # O rollback recebe uma única identidade de release. Validar a proveniência
+  # antes de criar tags evita misturar API e Strapi de releases diferentes.
+  for service in api strapi; do
+    if current="$(current_image_tag "${service}")"; then
+      current_status=0
+    else
+      current_status="$?"
+      if [[ "${current_status}" -eq 2 ]]; then
+        return 1
+      fi
+      current=""
+    fi
+    current_images["${service}"]="${current}"
+  done
+
+  if [[ -z "${current_images[api]}" && -z "${current_images[strapi]}" ]]; then
+    echo "[deploy-vps] Instalação inicial: nenhuma imagem anterior para rollback."
+    ROLLBACK_ACTIVE="false"
+    return 0
+  fi
+  if [[ -z "${current_images[api]}" || -z "${current_images[strapi]}" ]]; then
+    echo "[deploy-vps] ERRO: apenas um serviço tem imagem anterior; deploy parcial recusado." >&2
+    return 1
+  fi
+
+  for service in api strapi; do
+    current="${current_images[${service}]}"
 
     previous_sha="$(docker image inspect "${current}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)"
     previous_date="$(docker image inspect "${current}" --format '{{ index .Config.Labels "org.opencontainers.image.created" }}' 2>/dev/null || true)"
@@ -118,24 +140,41 @@ backup_images() {
     if [[ "${previous_date}" == "<no value>" ]]; then
       previous_date=""
     fi
-    if [[ -z "${rollback_release_sha}" && -n "${previous_sha}" ]]; then
-      rollback_release_sha="${previous_sha}"
+    if [[ ! "${previous_sha}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+      echo "[deploy-vps] ERRO: ${service} não possui uma revisão OCI verificável; rollback seguro indisponível." >&2
+      return 1
     fi
-    if [[ -z "${rollback_release_date}" && -n "${previous_date}" ]]; then
-      rollback_release_date="${previous_date}"
+    if [[ ! "${previous_date}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+      echo "[deploy-vps] ERRO: ${service} não possui uma data OCI verificável; rollback seguro indisponível." >&2
+      return 1
     fi
-
-    backed_up="true"
+    previous_shas["${service}"]="${previous_sha}"
+    previous_dates["${service}"]="${previous_date}"
   done
 
-  # Releases anteriores a este contrato nao possuem labels OCI recuperaveis.
-  rollback_release_sha="${rollback_release_sha:-legacy-unlabelled}"
-  rollback_release_date="${rollback_release_date:-unknown}"
+  if [[ "${previous_shas[api]}" != "${previous_shas[strapi]}" ]]; then
+    echo "[deploy-vps] ERRO: API e Strapi pertencem a revisoes diferentes; rollback misto recusado." >&2
+    return 1
+  fi
+  if [[ "${previous_dates[api]}" != "${previous_dates[strapi]}" ]]; then
+    echo "[deploy-vps] ERRO: API e Strapi têm datas de release diferentes; rollback misto recusado." >&2
+    return 1
+  fi
+  rollback_release_sha="${previous_shas[api]}"
+  rollback_release_date="${previous_dates[api]}"
+
+  for service in api strapi; do
+    current="${current_images[${service}]}"
+    backup="pdc-${service}:rollback-${DEPLOY_ID}"
+    docker image tag "${current}" "${backup}"
+    printf '%s_CURRENT=%q\n%s_BACKUP=%q\n' "${service^^}" "${current}" "${service^^}" "${backup}" >> "${ROLLBACK_DIR}/images.env"
+  done
+
   printf 'ROLLBACK_RELEASE_SHA=%q\nROLLBACK_RELEASE_DATE=%q\n' \
     "${rollback_release_sha}" \
     "${rollback_release_date}" >> "${ROLLBACK_DIR}/images.env"
 
-  ROLLBACK_ACTIVE="${backed_up}"
+  ROLLBACK_ACTIVE="true"
 }
 
 restore_images() {

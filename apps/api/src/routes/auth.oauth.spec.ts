@@ -6,14 +6,18 @@ const redisMock = vi.hoisted(() => ({
   get: vi.fn(),
   set: vi.fn(),
   del: vi.fn(),
+  eval: vi.fn(),
 }));
 
 const authServiceMock = vi.hoisted(() => ({
   findOrCreateUser: vi.fn(),
-  generateTokens: vi.fn(),
-  saveRefreshToken: vi.fn(),
   setOauthProvider: vi.fn(),
   getUserById: vi.fn(),
+}));
+
+const authSessionServiceMock = vi.hoisted(() => ({
+  issue: vi.fn(),
+  rotate: vi.fn(),
 }));
 
 const setAuthCookiesMock = vi.hoisted(() => vi.fn());
@@ -34,7 +38,7 @@ vi.mock('../lib/env.js', () => ({
   },
 }));
 
-vi.mock('../lib/redis.js', () => ({ hasRedis: true, redis: redisMock }));
+vi.mock('../lib/redis.js', () => ({ hasPrimaryRedis: true, redis: redisMock }));
 
 vi.mock('../modules/auth/auth.service.js', () => ({
   authService: authServiceMock,
@@ -42,6 +46,11 @@ vi.mock('../modules/auth/auth.service.js', () => ({
 
 vi.mock('../modules/auth/auth.helper.js', () => ({
   setAuthCookies: setAuthCookiesMock,
+  getOAuthCookieOptions: vi.fn(() => ({ path: '/auth', httpOnly: true, sameSite: 'Lax' })),
+}));
+
+vi.mock('../modules/auth/auth-session.service.js', () => ({
+  authSessionService: authSessionServiceMock,
 }));
 
 vi.mock('../modules/auth/oauth-onboarding.service.js', () => ({
@@ -57,6 +66,7 @@ vi.mock('pino', () => ({
 
 import { oauthRoutes } from './auth.oauth.js';
 import { oauthOnboardingService } from '../modules/auth/oauth-onboarding.service.js';
+import { AuthDomainError } from '../modules/auth/auth.errors.js';
 
 const escolherRoleMock = vi.mocked(oauthOnboardingService)['escolherRole'];
 const verificarOtpMock = vi.mocked(oauthOnboardingService)['verificarOtp'];
@@ -66,7 +76,7 @@ const TEST_SECRET_RAW = 'test-secret-at-least-32-chars-long!!';
 
 async function makeTestToken(payload: Record<string, unknown>) {
   return new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
+    .setProtectedHeader({ alg: 'HS256', typ: 'access' })
     .setIssuedAt()
     .setExpirationTime('15m')
     .sign(TEST_SECRET);
@@ -96,12 +106,19 @@ const MOCK_USER_NEW = {
   onboardingCompleto: false,
 };
 
-const MOCK_TOKENS = { accessToken: 'at-abc', refreshToken: 'rt-xyz' };
-const MOCK_TOKENS_FRESH = { accessToken: 'at-fresh', refreshToken: 'rt-fresh' };
+const MOCK_TOKENS = { accessToken: 'at-abc', refreshToken: 'rt-xyz', refreshMaxAgeSeconds: 7_776_000 };
+const MOCK_TOKENS_FRESH = { accessToken: 'at-fresh', refreshToken: 'rt-fresh', refreshMaxAgeSeconds: 7_775_000 };
+
+async function callbackRequest(path: string, state: string): Promise<Response> {
+  return await oauthRoutes.request(`${path}?code=auth-code&state=${encodeURIComponent(state)}`, {
+    headers: { Cookie: `oauth_state=${state}` },
+  });
+}
 
 describe('OAuth callbacks — invalid state', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    redisMock.eval.mockResolvedValue(1);
   });
 
   it('Google: rejects callback with unknown state and returns 400', async () => {
@@ -128,11 +145,9 @@ describe('OAuth callbacks — invalid state', () => {
 describe('Google OAuth happy path — onboarded user', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    redisMock.get.mockResolvedValue('true');
-    redisMock.del.mockResolvedValue(1);
+    redisMock.eval.mockResolvedValue(1);
     authServiceMock.findOrCreateUser.mockResolvedValue(MOCK_USER_ONBOARDED);
-    authServiceMock.generateTokens.mockResolvedValue(MOCK_TOKENS);
-    authServiceMock.saveRefreshToken.mockResolvedValue(undefined);
+    authSessionServiceMock.issue.mockResolvedValue(MOCK_TOKENS);
     authServiceMock.setOauthProvider.mockResolvedValue(undefined);
   });
 
@@ -152,11 +167,11 @@ describe('Google OAuth happy path — onboarded user', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const state = makeOAuthState();
-    const res = await oauthRoutes.request(`/google/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+    const res = await callbackRequest('/google/callback', state);
 
     expect(authServiceMock.findOrCreateUser).toHaveBeenCalledWith('user@pdc.ao', 'Test User');
-    expect(authServiceMock.saveRefreshToken).toHaveBeenCalledWith(MOCK_USER_ONBOARDED.id, MOCK_TOKENS.refreshToken);
-    expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS.accessToken, MOCK_TOKENS.refreshToken);
+    expect(authSessionServiceMock.issue).toHaveBeenCalledWith(MOCK_USER_ONBOARDED);
+    expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS);
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/app');
   });
@@ -173,10 +188,10 @@ describe('Google OAuth happy path — onboarded user', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const state = makeOAuthState();
-    const res = await oauthRoutes.request(`/google/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+    const res = await callbackRequest('/google/callback', state);
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toMatchObject({ error: expect.stringContaining('Email') as string });
+    expect(await res.text()).toContain('Email');
     expect(authServiceMock.findOrCreateUser).not.toHaveBeenCalled();
   });
 
@@ -192,20 +207,22 @@ describe('Google OAuth happy path — onboarded user', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const state = makeOAuthState();
-    await oauthRoutes.request(`/google/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+    await callbackRequest('/google/callback', state);
 
-    expect(redisMock.del).toHaveBeenCalledWith(`oauth_state:${state}`);
+    expect(redisMock.eval).toHaveBeenCalledWith(
+      expect.stringContaining('redis.call("DEL"'),
+      [`oauth_state:${state}`],
+      [],
+    );
   });
 });
 
 describe('Google OAuth — new user redirects to onboarding', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    redisMock.get.mockResolvedValue('true');
-    redisMock.del.mockResolvedValue(1);
+    redisMock.eval.mockResolvedValue(1);
     authServiceMock.findOrCreateUser.mockResolvedValue(MOCK_USER_NEW);
-    authServiceMock.generateTokens.mockResolvedValue(MOCK_TOKENS);
-    authServiceMock.saveRefreshToken.mockResolvedValue(undefined);
+    authSessionServiceMock.issue.mockResolvedValue(MOCK_TOKENS);
     authServiceMock.setOauthProvider.mockResolvedValue(undefined);
   });
 
@@ -225,7 +242,7 @@ describe('Google OAuth — new user redirects to onboarding', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const state = makeOAuthState();
-    const res = await oauthRoutes.request(`/google/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+    const res = await callbackRequest('/google/callback', state);
 
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/criar-conta/finalizar?upgrade=true');
@@ -248,7 +265,7 @@ describe('Google OAuth — new user redirects to onboarding', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const state = makeOAuthState();
-    const res = await oauthRoutes.request(`/google/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+    const res = await callbackRequest('/google/callback', state);
 
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/criar-conta/finalizar?upgrade=true');
@@ -258,11 +275,9 @@ describe('Google OAuth — new user redirects to onboarding', () => {
 describe('LinkedIn OAuth happy path — onboarded user', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    redisMock.get.mockResolvedValue('true');
-    redisMock.del.mockResolvedValue(1);
+    redisMock.eval.mockResolvedValue(1);
     authServiceMock.findOrCreateUser.mockResolvedValue(MOCK_USER_ONBOARDED);
-    authServiceMock.generateTokens.mockResolvedValue(MOCK_TOKENS);
-    authServiceMock.saveRefreshToken.mockResolvedValue(undefined);
+    authSessionServiceMock.issue.mockResolvedValue(MOCK_TOKENS);
     authServiceMock.setOauthProvider.mockResolvedValue(undefined);
   });
 
@@ -282,11 +297,11 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const state = makeOAuthState();
-    const res = await oauthRoutes.request(`/linkedin/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+    const res = await callbackRequest('/linkedin/callback', state);
 
     expect(authServiceMock.findOrCreateUser).toHaveBeenCalledWith('user@pdc.ao', 'LinkedIn User');
-    expect(authServiceMock.saveRefreshToken).toHaveBeenCalledWith(MOCK_USER_ONBOARDED.id, MOCK_TOKENS.refreshToken);
-    expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS.accessToken, MOCK_TOKENS.refreshToken);
+    expect(authSessionServiceMock.issue).toHaveBeenCalledWith(MOCK_USER_ONBOARDED);
+    expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS);
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/app');
   });
@@ -303,10 +318,10 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const state = makeOAuthState();
-    const res = await oauthRoutes.request(`/linkedin/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+    const res = await callbackRequest('/linkedin/callback', state);
 
     expect(res.status).toBe(400);
-    expect(await res.json()).toMatchObject({ error: expect.stringContaining('Email') as string });
+    expect(await res.text()).toContain('Email');
   });
 
   it('redirects to login with a controlled error when persistence is unavailable', async () => {
@@ -322,7 +337,7 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const state = makeOAuthState();
-    const res = await oauthRoutes.request(`/linkedin/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+    const res = await callbackRequest('/linkedin/callback', state);
 
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/login?error=oauth_unavailable');
@@ -333,7 +348,7 @@ describe('POST /finalizar/escolher-role — OAuth role finalization without OTP'
   beforeEach(() => {
     vi.clearAllMocks();
     escolherRoleMock.mockResolvedValue(undefined);
-    authServiceMock.saveRefreshToken.mockResolvedValue(undefined);
+    authSessionServiceMock.rotate.mockResolvedValue(MOCK_TOKENS_FRESH);
   });
 
   it('mints fresh tokens immediately after choosing mentor role', async () => {
@@ -359,13 +374,12 @@ describe('POST /finalizar/escolher-role — OAuth role finalization without OTP'
       onboardingCompleto: true,
     };
     authServiceMock.getUserById.mockResolvedValue(mentorUser);
-    authServiceMock.generateTokens.mockResolvedValue(MOCK_TOKENS_FRESH);
 
     const res = await oauthRoutes.request('/finalizar/escolher-role', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Cookie: `access_token=${provisionalToken}`,
+        Cookie: `access_token=${provisionalToken}; refresh_token=current-refresh`,
       },
       body: JSON.stringify({
         role: 'mentor',
@@ -386,15 +400,9 @@ describe('POST /finalizar/escolher-role — OAuth role finalization without OTP'
     });
     expect(verificarOtpMock).not.toHaveBeenCalled();
     expect(authServiceMock.getUserById).toHaveBeenCalledWith('user-42');
-    expect(authServiceMock.generateTokens).toHaveBeenCalledWith(mentorUser);
-    expect(authServiceMock.saveRefreshToken).toHaveBeenCalledWith('user-42', MOCK_TOKENS_FRESH.refreshToken);
-    expect(setAuthCookiesMock).toHaveBeenCalledWith(
-      expect.anything(),
-      MOCK_TOKENS_FRESH.accessToken,
-      MOCK_TOKENS_FRESH.refreshToken,
-    );
-    const body = await res.json() as typeof mentorUser;
-    expect(body.onboardingCompleto).toBe(true);
+    expect(authSessionServiceMock.rotate).toHaveBeenCalledWith('current-refresh', mentorUser);
+    expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS_FRESH);
+    expect(await res.json()).toMatchObject({ onboardingCompleto: true });
   });
 });
 
@@ -402,7 +410,7 @@ describe('POST /finalizar/verificar-otp — legacy role upgrade after OTP', () =
   beforeEach(() => {
     vi.clearAllMocks();
     verificarOtpMock.mockResolvedValue(undefined);
-    authServiceMock.saveRefreshToken.mockResolvedValue(undefined);
+    authSessionServiceMock.rotate.mockResolvedValue(MOCK_TOKENS_FRESH);
   });
 
   it('mints fresh tokens with mentor role after OTP verification', async () => {
@@ -419,13 +427,12 @@ describe('POST /finalizar/verificar-otp — legacy role upgrade after OTP', () =
       onboardingCompleto: true,
     };
     authServiceMock.getUserById.mockResolvedValue(mentorUser);
-    authServiceMock.generateTokens.mockResolvedValue(MOCK_TOKENS_FRESH);
 
     const res = await oauthRoutes.request('/finalizar/verificar-otp', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Cookie: `access_token=${provisionalToken}`,
+        Cookie: `access_token=${provisionalToken}; refresh_token=current-refresh`,
       },
       body: JSON.stringify({ otp: '123456' }),
     });
@@ -433,16 +440,9 @@ describe('POST /finalizar/verificar-otp — legacy role upgrade after OTP', () =
     expect(res.status).toBe(200);
     expect(verificarOtpMock).toHaveBeenCalledWith('user-42', '123456');
     expect(authServiceMock.getUserById).toHaveBeenCalledWith('user-42');
-    expect(authServiceMock.generateTokens).toHaveBeenCalledWith(mentorUser);
-    expect(authServiceMock.saveRefreshToken).toHaveBeenCalledWith('user-42', MOCK_TOKENS_FRESH.refreshToken);
-    expect(setAuthCookiesMock).toHaveBeenCalledWith(
-      expect.anything(),
-      MOCK_TOKENS_FRESH.accessToken,
-      MOCK_TOKENS_FRESH.refreshToken,
-    );
-    const body = await res.json() as typeof mentorUser;
-    expect(body.role).toBe('mentor');
-    expect(body.onboardingCompleto).toBe(true);
+    expect(authSessionServiceMock.rotate).toHaveBeenCalledWith('current-refresh', mentorUser);
+    expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS_FRESH);
+    expect(await res.json()).toMatchObject({ role: 'mentor', onboardingCompleto: true });
   });
 
   it('mints fresh tokens with instituicao role after OTP verification', async () => {
@@ -459,26 +459,20 @@ describe('POST /finalizar/verificar-otp — legacy role upgrade after OTP', () =
       onboardingCompleto: true,
     };
     authServiceMock.getUserById.mockResolvedValue(instituicaoUser);
-    authServiceMock.generateTokens.mockResolvedValue(MOCK_TOKENS_FRESH);
 
     const res = await oauthRoutes.request('/finalizar/verificar-otp', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Cookie: `access_token=${provisionalToken}`,
+        Cookie: `access_token=${provisionalToken}; refresh_token=current-refresh`,
       },
       body: JSON.stringify({ otp: '654321' }),
     });
 
     expect(res.status).toBe(200);
-    expect(authServiceMock.generateTokens).toHaveBeenCalledWith(instituicaoUser);
-    expect(setAuthCookiesMock).toHaveBeenCalledWith(
-      expect.anything(),
-      MOCK_TOKENS_FRESH.accessToken,
-      MOCK_TOKENS_FRESH.refreshToken,
-    );
-    const body = await res.json() as typeof instituicaoUser;
-    expect(body.role).toBe('instituicao');
+    expect(authSessionServiceMock.rotate).toHaveBeenCalledWith('current-refresh', instituicaoUser);
+    expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS_FRESH);
+    expect(await res.json()).toMatchObject({ role: 'instituicao' });
   });
 
   it('returns 400 when OTP is invalid', async () => {
@@ -487,9 +481,7 @@ describe('POST /finalizar/verificar-otp — legacy role upgrade after OTP', () =
       role: 'estudante',
       onboardingCompleto: false,
     });
-    verificarOtpMock.mockRejectedValue(
-      Object.assign(new Error('Código inválido ou expirado'), { status: 400 })
-    );
+    verificarOtpMock.mockRejectedValue(new AuthDomainError('Código inválido ou expirado', 400));
 
     const res = await oauthRoutes.request('/finalizar/verificar-otp', {
       method: 'POST',
@@ -503,6 +495,80 @@ describe('POST /finalizar/verificar-otp — legacy role upgrade after OTP', () =
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: 'Código inválido ou expirado' });
     expect(setAuthCookiesMock).not.toHaveBeenCalled();
+  });
+
+  it('não cria nova sessão quando o refresh cookie está ausente', async () => {
+    const provisionalToken = await makeTestToken({
+      sub: 'user-42',
+      role: 'estudante',
+      onboardingCompleto: false,
+    });
+    authServiceMock.getUserById.mockResolvedValue({
+      id: 'user-42',
+      email: 'mentor@pdc.ao',
+      role: 'mentor',
+      oauthVerified: true,
+      onboardingCompleto: true,
+    });
+
+    const res = await oauthRoutes.request('/finalizar/verificar-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `access_token=${provisionalToken}`,
+      },
+      body: JSON.stringify({ otp: '123456' }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'Sessão expirada' });
+    expect(authSessionServiceMock.rotate).not.toHaveBeenCalled();
+    expect(authSessionServiceMock.issue).not.toHaveBeenCalled();
+    expect(setAuthCookiesMock).not.toHaveBeenCalled();
+  });
+
+  it('não expõe detalhes de falhas internas ao cliente', async () => {
+    const provisionalToken = await makeTestToken({
+      sub: 'user-42',
+      role: 'estudante',
+      onboardingCompleto: false,
+    });
+    verificarOtpMock.mockRejectedValue(new Error('redis://user:secret@internal-host:6379'));
+
+    const res = await oauthRoutes.request('/finalizar/verificar-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `access_token=${provisionalToken}`,
+      },
+      body: JSON.stringify({ otp: '123456' }),
+    });
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'Erro interno' });
+  });
+
+  it('não confia num status arbitrário anexado por uma dependência', async () => {
+    const provisionalToken = await makeTestToken({
+      sub: 'user-42',
+      role: 'estudante',
+      onboardingCompleto: false,
+    });
+    verificarOtpMock.mockRejectedValue(
+      Object.assign(new Error('redis://user:secret@internal-host:6379'), { status: 400 }),
+    );
+
+    const res = await oauthRoutes.request('/finalizar/verificar-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `access_token=${provisionalToken}`,
+      },
+      body: JSON.stringify({ otp: '123456' }),
+    });
+
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: 'Erro interno' });
   });
 });
 
@@ -524,24 +590,43 @@ describe('OAuth initiation - resiliencia Redis e credenciais', () => {
     expect(redisMock.set).toHaveBeenCalledTimes(1);
   });
 
-  it('LinkedIn: degrada graceful quando redis.set falha - nao devolve 500', async () => {
+  it('produção ignora origin público não confiável e usa o callback configurado', async () => {
+    const { env } = await import('../lib/env.js');
+    const previousNodeEnv = env.NODE_ENV;
+    env.NODE_ENV = 'production';
+    try {
+      const res = await oauthRoutes.request('/linkedin', {
+        headers: { 'x-pdc-public-origin': 'https://attacker.example' },
+      });
+
+      expect(res.status).toBe(302);
+      const location = new URL(res.headers.get('location') ?? 'http://invalid');
+      expect(location.searchParams.get('redirect_uri')).toBe(
+        'http://localhost:3001/auth/linkedin/callback',
+      );
+    } finally {
+      env.NODE_ENV = previousNodeEnv;
+    }
+  });
+
+  it('LinkedIn: falha de forma controlada quando não consegue persistir state', async () => {
     redisMock.set.mockReset();
     redisMock.set.mockRejectedValueOnce(new Error('Upstash quota exceeded'));
 
     const res = await oauthRoutes.request('/linkedin');
 
     expect(res.status).toBe(302);
-    expect((res.headers.get('location') ?? '')).toContain('https://www.linkedin.com/oauth/v2/authorization');
+    expect(res.headers.get('location')).toBe('http://localhost:5173/login?error=oauth_unavailable');
   });
 
-  it('Google: degrada graceful quando redis.set falha - nao devolve 500', async () => {
+  it('Google: falha de forma controlada quando não consegue persistir state', async () => {
     redisMock.set.mockReset();
     redisMock.set.mockRejectedValueOnce(new Error('Upstash quota exceeded'));
 
     const res = await oauthRoutes.request('/google');
 
     expect(res.status).toBe(302);
-    expect((res.headers.get('location') ?? '')).toContain('https://accounts.google.com/o/oauth2/v2/auth');
+    expect(res.headers.get('location')).toBe('http://localhost:5173/login?error=oauth_unavailable');
   });
 
   it('LinkedIn: redireciona para /login?error=oauth_unavailable quando credenciais em falta - nao devolve 500', async () => {
@@ -564,12 +649,11 @@ describe('OAuth initiation - resiliencia Redis e credenciais', () => {
   });
 });
 
-describe('OAuth callback - resiliencia Redis em consumeOAuthState (nao 500)', () => {
+describe('OAuth callback - state browser-bound e fail-closed', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authServiceMock.findOrCreateUser.mockResolvedValue(MOCK_USER_ONBOARDED);
-    authServiceMock.generateTokens.mockResolvedValue(MOCK_TOKENS);
-    authServiceMock.saveRefreshToken.mockResolvedValue(undefined);
+    authSessionServiceMock.issue.mockResolvedValue(MOCK_TOKENS);
     authServiceMock.setOauthProvider.mockResolvedValue(undefined);
   });
 
@@ -577,39 +661,29 @@ describe('OAuth callback - resiliencia Redis em consumeOAuthState (nao 500)', ()
     vi.unstubAllGlobals();
   });
 
-  it('LinkedIn: callback prossegue (302 para /app) quando redis.get falha - nao 500', async () => {
-    redisMock.get.mockReset();
-    redisMock.get.mockRejectedValueOnce(new Error('Upstash quota exceeded'));
-    redisMock.del.mockResolvedValue(1);
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'linkedin-at' }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ email: 'user@pdc.ao', name: 'LinkedIn User' }), { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
+  it('rejeita callback válido apresentado por outro browser', async () => {
+    redisMock.eval.mockResolvedValueOnce(1);
 
     const state = makeOAuthState();
-    const res = await oauthRoutes.request(`/linkedin/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+    const res = await oauthRoutes.request(
+      `/linkedin/callback?code=auth-code&state=${encodeURIComponent(state)}`,
+      { headers: { Cookie: `oauth_state=${makeOAuthState({ nonce: 'other-browser' })}` } },
+    );
 
-    expect(res.status).toBe(302);
-    expect(res.headers.get('location')).toBe('http://localhost:5173/app');
-    expect(authServiceMock.findOrCreateUser).toHaveBeenCalledWith('user@pdc.ao', 'LinkedIn User');
+    expect(res.status).toBe(400);
+    expect(redisMock.eval).not.toHaveBeenCalled();
+    expect(authServiceMock.findOrCreateUser).not.toHaveBeenCalled();
   });
 
-  it('LinkedIn: callback prossegue (302 para /app) quando redis.del falha - nao 500', async () => {
-    redisMock.get.mockReset();
-    redisMock.get.mockResolvedValue('true');
-    redisMock.del.mockReset();
-    redisMock.del.mockRejectedValueOnce(new Error('Upstash quota exceeded'));
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'linkedin-at' }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ email: 'user@pdc.ao', name: 'LinkedIn User' }), { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
+  it('redireciona de forma controlada quando o consumo atómico falha', async () => {
+    redisMock.eval.mockReset();
+    redisMock.eval.mockRejectedValueOnce(new Error('Redis unavailable'));
 
     const state = makeOAuthState();
-    const res = await oauthRoutes.request(`/linkedin/callback?code=auth-code&state=${encodeURIComponent(state)}`);
+    const res = await callbackRequest('/linkedin/callback', state);
 
     expect(res.status).toBe(302);
-    expect(res.headers.get('location')).toBe('http://localhost:5173/app');
+    expect(res.headers.get('location')).toBe('http://localhost:5173/login?error=oauth_unavailable');
+    expect(authServiceMock.findOrCreateUser).not.toHaveBeenCalled();
   });
 });

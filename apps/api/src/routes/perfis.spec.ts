@@ -103,7 +103,7 @@ describe('GET /perfis/:id — route characterization', () => {
     vi.clearAllMocks();
     vi.mocked(jwtVerify).mockResolvedValue({
       payload: { sub: 'user-1', role: 'mentor' },
-      protectedHeader: { alg: 'HS256' },
+      protectedHeader: { alg: 'HS256', typ: 'access' },
     } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
   });
 
@@ -186,7 +186,7 @@ describe('GET /perfis/:id — route characterization', () => {
   it('estudantes-vinculados returns serialized public profiles without raw user PII', async () => {
     vi.mocked(jwtVerify).mockResolvedValueOnce({
       payload: { sub: 'inst-user', role: 'instituicao' },
-      protectedHeader: { alg: 'HS256' },
+      protectedHeader: { alg: 'HS256', typ: 'access' },
     } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
     vi.mocked(strapiGet).mockImplementation((path: string) => {
       if (path === '/vinculos') {

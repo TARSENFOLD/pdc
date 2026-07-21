@@ -87,7 +87,7 @@ services:
       - DEV_SKIP_OTP=true
       - NODE_ENV=test
       - STRAPI_URL=http://strapi:1337
-      - REDIS_URL=redis://redis:6379
+      - PDC_REDIS_URL=redis://redis:6379
       - API_URL=http://host.docker.internal:3001
       - FRONTEND_URL=http://host.docker.internal:5173
     extra_hosts:

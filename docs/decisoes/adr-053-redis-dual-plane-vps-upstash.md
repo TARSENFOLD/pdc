@@ -36,13 +36,22 @@ bypass de segurança ou sessões inconsistentes entre restarts.
    desativado.
 7. As políticas do ADR-052 mantêm-se: capacidades de segurança continuam
    fail-closed e rate limit/cache só degradam segundo a política documentada.
+8. O utilizador `backup` tem credencial independente e apenas pode executar
+   `BGSAVE`, `LASTSAVE`, `DBSIZE`, `INFO` e `PING`. `INFO` é limitado pelo
+   runbook à secção `persistence`. `scripts/redis-snapshot.sh` produz
+   snapshots RDB comprimidos, checksum SHA-256 e validação por
+   `redis-check-rdb`, incluindo a contagem de chaves do próprio RDB.
+9. O runtime continua a usar AOF `everysec`; o RDB é o artefacto portátil de
+   disaster recovery. Restore exige confirmação explícita, preserva o volume
+   anterior e só termina com o health do container e `PING` válidos.
 
 ## Consequências
 
 - Esgotar a quota Upstash deixa rate limit distribuído e telemetria Edge
   degradados, mas não bloqueia login, OTP ou refresh tokens.
-- O VPS passa a alojar estado durável adicional. O volume `pdc-redis-data` deve
-  entrar no backup e na monitorização de disco/memória.
+- O VPS passa a alojar estado durável adicional. O volume `pdc-redis-data` entra
+  na monitorização de disco/memória e gera snapshots diários com retenção
+  configurável. Uma cópia deve sair do mesmo VPS para cumprir disaster recovery.
 - A indisponibilidade total do VPS afeta API e Redis primário em conjunto; não
   piora o domínio de falha atual do BFF, mas exige restore do AOF no disaster
   recovery.
@@ -67,5 +76,9 @@ bypass de segurança ou sessões inconsistentes entre restarts.
 - Verificação OTP emite cookies e a rotação de refresh token persiste no Redis
   primário.
 - `/health` permanece liveness; `/health/ready` distingue `sessionRedis` de
-  `rateLimitRedis`.
+  `rateLimitRedis`; `sessionRedis` exige `PING` e uma escrita curta com TTL para
+  detectar também `maxmemory noeviction`.
 - O consumer continua a ler `telemetry_queue` no Upstash.
+- `bash scripts/redis-snapshot.sh backup` cria e volta a verificar o snapshot;
+  `verify` rejeita checksum ou RDB inválidos; um ensaio periódico de `restore`
+  comprova o runbook e a reposição automática do volume anterior em falha.

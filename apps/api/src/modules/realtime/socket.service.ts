@@ -1,16 +1,35 @@
 import { Server } from 'socket.io';
-import { jwtVerify } from 'jose';
 import type { Server as HttpServer } from 'node:http';
 import type { NotificacaoRealtime } from '@pdc/shared';
 import { env } from '../../lib/env.js';
+import { verifyAccessJwt } from '../auth/auth.middleware.js';
+import { ACCESS_TOKEN_COOKIE } from '../auth/auth.constants.js';
 
-const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
+type NoInboundEvents = Record<string, (...args: never[]) => void>;
 
-let io: Server | undefined;
+interface ServerToClientEvents {
+  'landing:pulse': (payload: { count: number; area?: string }) => void;
+  notificacao: (notificacao: NotificacaoRealtime) => void;
+  nova_mensagem: (mensagem: unknown) => void;
+  conquista_desbloqueada: (conquista: { slug: string; titulo: string; descricao: string }) => void;
+}
+
+interface SocketData {
+  userId?: string;
+}
+
+type PdcSocketServer = Server<
+  NoInboundEvents,
+  ServerToClientEvents,
+  NoInboundEvents,
+  SocketData
+>;
+
+let io: PdcSocketServer | undefined;
 
 export const socketService = {
   init(httpServer: HttpServer): void {
-    io = new Server(httpServer, {
+    io = new Server<NoInboundEvents, ServerToClientEvents, NoInboundEvents, SocketData>(httpServer, {
       cors: {
         origin: [env.FRONTEND_URL, 'http://localhost:5173'],
         credentials: true,
@@ -25,14 +44,15 @@ export const socketService = {
 
       const token = cookieHeader
         .split(';')
-        .find((c) => c.trim().startsWith('access_token='))
+        .find((c) => c.trim().startsWith(`${ACCESS_TOKEN_COOKIE}=`))
         ?.split('=')[1];
 
       if (!token) { next(); return; }
 
       try {
-        const { payload } = await jwtVerify(token, JWT_SECRET);
-        (socket.data as Record<string, unknown>).userId = payload.sub as string;
+        const payload = await verifyAccessJwt(token);
+        if (!payload) throw new Error('Unauthorized');
+        socket.data.userId = payload.sub;
         next();
       } catch {
         next(new Error('Unauthorized'));
@@ -40,7 +60,7 @@ export const socketService = {
     });
 
     io.on('connection', (socket) => {
-      const userId = (socket.data as Record<string, unknown>).userId as string | undefined;
+      const userId = typeof socket.data.userId === 'string' ? socket.data.userId : undefined;
       if (userId) void socket.join(`user:${userId}`);
 
       // Mutações de estado devem fluir via API HTTP (Outbox G15).
