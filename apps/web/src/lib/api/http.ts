@@ -1,5 +1,6 @@
 import { z, type ZodType, type ZodTypeDef } from 'zod';
 import { resolveApiBaseUrl } from './base-url';
+import { SESSION_SERVICE_UNAVAILABLE_MESSAGE } from './auth-errors';
 
 const BASE_URL = resolveApiBaseUrl(
   import.meta.env.VITE_API_URL,
@@ -35,7 +36,12 @@ const SKIP_REFRESH_PATHS = new Set([
 ]);
 
 type RefreshResult = 'refreshed' | 'invalid' | 'unavailable';
-let coordinatedRefreshPromise: Promise<RefreshResult> | null = null;
+interface CoordinatedRefreshCycle {
+  promise: Promise<RefreshResult>;
+  invalidNotified: boolean;
+}
+
+let coordinatedRefreshCycle: CoordinatedRefreshCycle | null = null;
 const REFRESH_LOCK_NAME = 'pdc-auth-refresh';
 const REFRESH_COMPLETED_AT_KEY = 'pdc:auth-refresh-completed-at';
 
@@ -71,7 +77,6 @@ async function performRefresh(): Promise<RefreshResult> {
       return 'refreshed';
     }
     if (response.status === 401) {
-      notifySessionExpired();
       return 'invalid';
     }
     return 'unavailable';
@@ -92,15 +97,27 @@ async function coordinateRefreshAcrossTabs(requestedAt: number): Promise<Refresh
   }
 }
 
-export function refreshSession(): Promise<RefreshResult> {
-  if (!coordinatedRefreshPromise) {
+export async function refreshSession(
+  options: { notifyOnInvalid?: boolean } = {},
+): Promise<RefreshResult> {
+  if (!coordinatedRefreshCycle) {
     const requestedAt = Date.now();
-    coordinatedRefreshPromise = coordinateRefreshAcrossTabs(requestedAt)
-      .finally(() => {
-        coordinatedRefreshPromise = null;
-      });
+    const cycle: CoordinatedRefreshCycle = {
+      promise: coordinateRefreshAcrossTabs(requestedAt),
+      invalidNotified: false,
+    };
+    coordinatedRefreshCycle = cycle;
+    void cycle.promise.finally(() => {
+      if (coordinatedRefreshCycle === cycle) coordinatedRefreshCycle = null;
+    }).catch(() => undefined);
   }
-  return coordinatedRefreshPromise;
+  const cycle = coordinatedRefreshCycle;
+  const result = await cycle.promise;
+  if (result === 'invalid' && options.notifyOnInvalid !== false && !cycle.invalidNotified) {
+    cycle.invalidNotified = true;
+    notifySessionExpired();
+  }
+  return result;
 }
 
 function mergeHeaders(init?: RequestInit): HeadersInit {
@@ -168,7 +185,7 @@ async function requestUnknown(path: string, init?: RequestInit, retried = false)
       return requestUnknown(path, init, true);
     }
     if (refreshResult === 'unavailable') {
-      throw new ApiError(503, 'Serviço de sessão temporariamente indisponível');
+      throw new ApiError(503, SESSION_SERVICE_UNAVAILABLE_MESSAGE);
     }
   }
 

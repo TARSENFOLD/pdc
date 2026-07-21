@@ -20,12 +20,17 @@ describe('trustedDeviceService', () => {
 
     expect(token.length).toBeGreaterThanOrEqual(40);
     expect(redisMock.eval).toHaveBeenCalledWith(
-      expect.stringContaining('SADD'),
+      expect.stringContaining('ZREMRANGEBYSCORE'),
       [
         expect.stringMatching(/^trusted_device:[a-f0-9]{64}$/),
-        'user_trusted_devices:user-1',
+        'user_trusted_devices_v2:user-1',
       ],
-      ['user-1', TRUSTED_DEVICE_TTL_SECONDS],
+      [
+        'user-1',
+        TRUSTED_DEVICE_TTL_SECONDS,
+        expect.any(Number),
+        expect.any(Number),
+      ],
     );
     expect(JSON.stringify(redisMock.eval.mock.calls)).not.toContain(token);
   });
@@ -44,9 +49,10 @@ describe('trustedDeviceService', () => {
     await trustedDeviceService.revoke('device-token');
 
     expect(redisMock.eval).toHaveBeenCalledWith(
-      expect.stringContaining('SREM'),
+      expect.stringContaining('ZREM'),
       [
         expect.stringMatching(/^trusted_device:[a-f0-9]{64}$/),
+        'user_trusted_devices_v2:user-1',
         'user_trusted_devices:user-1',
       ],
       [],
@@ -57,14 +63,28 @@ describe('trustedDeviceService', () => {
   it('revoga todos os dispositivos indexados do utilizador', async () => {
     redisMock.eval
       .mockResolvedValueOnce([1, 1])
-      .mockResolvedValueOnce([1, 0]);
+      .mockResolvedValueOnce([1, 0])
+      .mockResolvedValueOnce([2, 0]);
 
-    await expect(trustedDeviceService.revokeAll('user-1')).resolves.toBe(2);
+    await expect(trustedDeviceService.revokeAll('user-1')).resolves.toBe(4);
+    expect(redisMock.eval).toHaveBeenCalledWith(
+      expect.stringContaining('ZRANGE'),
+      ['user_trusted_devices_v2:user-1'],
+      [50],
+    );
     expect(redisMock.eval).toHaveBeenCalledWith(
       expect.stringContaining('SPOP'),
       ['user_trusted_devices:user-1'],
       [50],
     );
-    expect(redisMock.eval).toHaveBeenCalledTimes(2);
+    expect(redisMock.eval).toHaveBeenCalledTimes(3);
+  });
+
+  it('renova a lease antes de cada lote de revogação', async () => {
+    const renewLease = vi.fn().mockResolvedValue(undefined);
+    redisMock.eval.mockResolvedValueOnce([1, 0]).mockResolvedValueOnce([0, 0]);
+
+    await expect(trustedDeviceService.revokeAll('user-1', renewLease)).resolves.toBe(1);
+    expect(renewLease).toHaveBeenCalledTimes(2);
   });
 });

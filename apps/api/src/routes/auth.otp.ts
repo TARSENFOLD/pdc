@@ -7,8 +7,9 @@ import { otpService } from '../modules/auth/otp.service.js';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { redis, hasPrimaryRedis } from '../lib/redis.js';
 import pino from 'pino';
-import { getAuthCookieOptions, setAuthCookies } from '../modules/auth/auth.helper.js';
 import {
+  getAuthCookieOptions,
+  setAuthCookies,
   setTrustedDeviceCookie,
   TRUSTED_DEVICE_COOKIE,
 } from '../modules/auth/auth.helper.js';

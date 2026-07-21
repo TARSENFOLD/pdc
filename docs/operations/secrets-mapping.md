@@ -88,12 +88,83 @@ alteradas isoladamente.
 
 1. Gerar a nova password e calcular a versão com percent-encoding para
    `PDC_REDIS_URL`.
-2. Atualizar ambas as variáveis na mesma edição atómica de `/opt/pdc/.env`.
-3. Recriar `redis` e `api` na mesma janela de manutenção.
-4. Validar o health nativo do Redis, `GET /health`, `GET /health/ready` e um
+2. Criar o candidato no mesmo filesystem, definindo owner e modo:
+
+   ```bash
+   sudo install -m 600 -o root -g root /opt/pdc/.env /opt/pdc/.env.next
+   sudoedit /opt/pdc/.env.next
+   ```
+
+3. Validar presença e igualdade da password BFF sem imprimir valores:
+
+   ```bash
+   sudo docker compose \
+     --env-file /opt/pdc/.env.next \
+     -f /opt/pdc/docker-compose.prod.yml \
+     config --environment \
+     | sudo node -e '
+       let input = "";
+       process.stdin.setEncoding("utf8");
+       process.stdin.on("data", (chunk) => { input += chunk; });
+       process.stdin.on("end", () => {
+         const values = new Map(input.split(/\r?\n/).filter(Boolean).map((line) => {
+           const separator = line.indexOf("=");
+           return [line.slice(0, separator), line.slice(separator + 1)];
+         }));
+         const password = values.get("REDIS_BFF_PASSWORD");
+         const rawUrl = values.get("PDC_REDIS_URL");
+         if (!password || !rawUrl) process.exit(1);
+         const url = new URL(rawUrl);
+         if (url.username !== "pdc" || decodeURIComponent(url.password) !== password) process.exit(1);
+       });
+     '
+   sudo stat -c '%U:%G %a' /opt/pdc/.env.next | grep -qx 'root:root 600'
+   ```
+
+   O `docker compose config --environment` é o parser dotenv; o ficheiro é
+   tratado como dados e nunca é executado por `source`.
+
+4. Trocar o ficheiro por rename atómico no mesmo filesystem:
+
+   ```bash
+   sudo mv -f /opt/pdc/.env.next /opt/pdc/.env
+   ```
+
+5. Recriar `redis` e `api` na mesma janela de manutenção.
+6. Validar o health nativo do Redis, `GET /health`, `GET /health/ready` e um
    login + refresh reais antes de encerrar a janela.
-5. Se qualquer validação falhar, repor os dois valores anteriores em conjunto,
-   recriar `redis` e `api` e repetir os mesmos checks.
+7. Se qualquer validação falhar, repor **os dois valores anteriores em
+   conjunto**, pelo mesmo procedimento de ficheiro temporário + rename, recriar
+   `redis` e `api` e repetir os checks. Nunca fazer rollback de apenas uma das
+   variáveis deste par.
+
+## Rotação das credenciais Redis operacionais
+
+`REDIS_HEALTH_PASSWORD` e `REDIS_BACKUP_PASSWORD` têm consumidores diferentes
+e a validação de login não os cobre. Cada rotação usa o mesmo procedimento
+atómico `/opt/pdc/.env.next` acima e esta ordem:
+
+1. Guardar os valores anteriores no secret store autorizado para rollback.
+2. Atualizar a credencial alvo no candidato `.env.next`, validar owner/mode e
+   fazer o rename atómico.
+3. Recriar o serviço `redis`, que regenera o ACL, sem apagar o volume.
+4. Para `REDIS_HEALTH_PASSWORD`, aguardar `pdc-redis` ficar `healthy`, executar
+   o teste autenticado abaixo e confirmar também que `GET /health/ready`
+   reporta `sessionRedis: up`:
+
+   ```bash
+   sudo docker exec pdc-redis /bin/sh -ec \
+     'REDISCLI_AUTH="$REDIS_HEALTH_PASSWORD" redis-cli --user health ping | grep -qx PONG'
+   ```
+5. Para `REDIS_BACKUP_PASSWORD`, executar `bash scripts/redis-snapshot.sh backup`
+   e depois `bash scripts/redis-snapshot.sh verify <arquivo-gerado>`; ambos devem
+   terminar sem expor a password.
+6. Recriar `api` e validar login + refresh apenas quando a rotação também incluir
+   `REDIS_BFF_PASSWORD`/`PDC_REDIS_URL`.
+7. Em falha, restaurar a credencial operacional anterior no `.env` por rename
+   atómico, recriar `redis` e repetir exatamente a validação específica. Se a
+   password BFF fizer parte da janela, o rollback sincronizado do par BFF é
+   obrigatório e prevalece sobre qualquer rollback genérico.
 
 ## Governação de Rotação
 
@@ -112,7 +183,21 @@ alteradas isoladamente.
 7. Revogar o secret antigo no provider de origem.
 8. Registar o incidente ou rotação programada no canal operacional.
 
-Rollback: se o novo secret causar erro em produção, reverter para o secret antigo, reiniciar apenas os services afetados, notificar stakeholders no canal operacional e investigar antes de nova tentativa.
+Rollback: se o novo secret causar erro em produção, reverter para o secret
+antigo, reiniciar apenas os services afetados, notificar stakeholders no canal
+operacional e investigar antes de nova tentativa. **Exceção Redis:**
+`REDIS_BFF_PASSWORD` e `PDC_REDIS_URL` são uma unidade inseparável e obedecem ao
+rollback sincronizado da secção anterior; `REDIS_HEALTH_PASSWORD` e
+`REDIS_BACKUP_PASSWORD` exigem também os respetivos checks autenticados.
+
+## Metadados de release e diagnóstico
+
+O `docker-compose.prod.yml` aceita os marcadores `unlabelled`/`unknown` para que
+comandos de incidente como `ps`, `logs` e `config` não dependam de variáveis da
+pipeline. Esses marcadores não são releases válidas: `scripts/deploy-vps.sh`
+recusa deploy sem `RELEASE_SHA` completo e `RELEASE_DATE` UTC válida antes de
+executar qualquer `build` ou `up`. O rollback também rejeita imagens sem SHA e
+data OCI verificáveis.
 
 ## Cloudflare Worker
 

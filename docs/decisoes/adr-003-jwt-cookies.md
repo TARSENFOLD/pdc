@@ -1,6 +1,6 @@
 # ADR-003 — JWT em httpOnly Cookies
 
-**Estado:** Aceite  
+**Estado:** Aceite, emendado pelo ADR-054
 **Data:** 2025-11-05  
 **Contexto:** Fase 1 — Autenticação Segura
 
@@ -83,12 +83,15 @@ const response = await fetch(`${BASE_URL}/cursos`, {
 ### Rotação de Refresh Token
 
 A cada uso do `refresh_token`:
-1. O hash corrente da família é comparado e substituído atomicamente no Redis
-2. Novo par de tokens é gerado
+1. O novo par e o hash do refresh token sucessor são gerados sem emitir cookies
+2. O hash corrente é comparado e substituído atomicamente pelo novo hash no Redis
 3. Cookies actualizados
 
-Se o mesmo refresh token for usado duas vezes, **toda a sessão é invalidada**
-(detecção de token theft). A rotação preserva a expiração absoluta de 90 dias.
+Durante 30 segundos, um retry do mesmo token devolve deterministicamente o mesmo
+refresh sucessor para tolerar uma resposta perdida. Depois dessa janela, reutilizar
+um token substituído invalida toda a sessão. A rotação preserva a expiração absoluta
+de 90 dias. Duração, replay, revogação e dispositivos confiáveis são regidos pelo
+ADR-054, que prevalece sobre versões anteriores desta decisão nesses pontos.
 
 ---
 
@@ -104,5 +107,6 @@ Se o mesmo refresh token for usado duas vezes, **toda a sessão é invalidada**
 
 ## Reavaliação
 
-Esta decisão é complementada pelo ADR-054 para duração, rotação atómica e
+Esta decisão continua canónica para transporte em cookies. O ADR-054 emenda e
+substitui qualquer política anterior sobre duração, rotação, revogação e
 dispositivos confiáveis.

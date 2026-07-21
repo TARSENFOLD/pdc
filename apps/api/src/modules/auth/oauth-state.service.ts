@@ -3,8 +3,17 @@ import { env } from '../../lib/env.js';
 import { hasPrimaryRedis, redis } from '../../lib/redis.js';
 
 const OAUTH_STATE_TTL_SECONDS = 600;
+// v1 states used JWT_SECRET directly. v2 separates the cryptographic domain;
+// v1 validation remains bounded by its signed timestamp and one-time Redis key.
+const OAUTH_STATE_SECRET = createHmac('sha256', env.JWT_SECRET)
+  .update('pdc/oauth-state/v2')
+  .digest();
 
-function signOAuthStatePayload(payload: string): string {
+function signCurrentOAuthStatePayload(payload: string): string {
+  return createHmac('sha256', OAUTH_STATE_SECRET).update(payload).digest('base64url');
+}
+
+function signLegacyOAuthStatePayload(payload: string): string {
   return createHmac('sha256', env.JWT_SECRET).update(payload).digest('base64url');
 }
 
@@ -18,9 +27,18 @@ function valuesMatch(expected: string, actual: string): boolean {
 function isValidSignedState(state: string | undefined): state is string {
   if (!state) return false;
   const parts = state.split('.');
-  if (parts.length !== 4 || parts[0] !== 'v1') return false;
-
-  const [, nonce, issuedAtRaw, signature] = parts;
+  let version: 'v1' | 'v2';
+  let nonce: string | undefined;
+  let issuedAtRaw: string | undefined;
+  let signature: string | undefined;
+  if (parts.length === 3) {
+    version = 'v1';
+    [nonce, issuedAtRaw, signature] = parts;
+  } else if (parts.length === 4 && (parts[0] === 'v1' || parts[0] === 'v2')) {
+    [version, nonce, issuedAtRaw, signature] = parts;
+  } else {
+    return false;
+  }
   if (!nonce || !issuedAtRaw || !signature) return false;
 
   const issuedAt = Number.parseInt(issuedAtRaw, 10);
@@ -29,7 +47,11 @@ function isValidSignedState(state: string | undefined): state is string {
   const now = Math.floor(Date.now() / 1_000);
   if (issuedAt > now + 30 || now - issuedAt > OAUTH_STATE_TTL_SECONDS) return false;
 
-  return valuesMatch(signOAuthStatePayload(`${nonce}.${issuedAtRaw}`), signature);
+  const payload = `${nonce}.${issuedAtRaw}`;
+  const expected = version === 'v1'
+    ? signLegacyOAuthStatePayload(payload)
+    : signCurrentOAuthStatePayload(payload);
+  return valuesMatch(expected, signature);
 }
 
 export const oauthStateService = {
@@ -42,7 +64,7 @@ export const oauthStateService = {
     const nonce = randomUUID();
     const issuedAt = Math.floor(Date.now() / 1_000).toString();
     const payload = `${nonce}.${issuedAt}`;
-    const state = `v1.${payload}.${signOAuthStatePayload(payload)}`;
+    const state = `v2.${payload}.${signCurrentOAuthStatePayload(payload)}`;
     const stored = await redis.set(`oauth_state:${state}`, 'true', {
       ex: OAUTH_STATE_TTL_SECONDS,
     });

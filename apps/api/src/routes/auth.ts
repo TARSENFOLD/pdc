@@ -6,8 +6,11 @@ import { authService } from '../modules/auth/auth.service.js';
 import { verifyAccessJwt, verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { StrapiHttpError } from '../modules/strapi/strapi.client.js';
 import { rateLimit } from '../middleware/rateLimit.js';
-import { setAuthCookies } from '../modules/auth/auth.helper.js';
-import { deleteTrustedDeviceCookie, TRUSTED_DEVICE_COOKIE } from '../modules/auth/auth.helper.js';
+import {
+  deleteTrustedDeviceCookie,
+  setAuthCookies,
+  TRUSTED_DEVICE_COOKIE,
+} from '../modules/auth/auth.helper.js';
 import { authSessionService } from '../modules/auth/auth-session.service.js';
 import { trustedDeviceService } from '../modules/auth/trusted-device.service.js';
 import { initiate2faChallenge } from './auth.otp.js';
@@ -99,11 +102,11 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
 authRoutes.post('/compliance/legal', verifyJwt, zValidator('json', LegalComplianceCompletionSchema), async (c) => {
   const user = c.get('user');
   const payload = c.req.valid('json');
+  const currentRefreshToken = getCookie(c, REFRESH_TOKEN_COOKIE);
+  if (!currentRefreshToken) return c.json({ error: 'Sessão expirada' }, 401);
   try {
     await authComplianceService.completeLegalCompliance(user.id, user.role, payload);
     const updatedUser = await authService.getUserById(user.id);
-    const currentRefreshToken = getCookie(c, REFRESH_TOKEN_COOKIE);
-    if (!currentRefreshToken) return c.json({ error: 'Sessão expirada' }, 401);
     const session = await authSessionService.rotate(currentRefreshToken, updatedUser);
     if (!session) return c.json({ error: 'Sessão expirada' }, 401);
     setAuthCookies(c, session);
@@ -177,11 +180,19 @@ authRoutes.post('/refresh', async (c) => {
   let userId: string | undefined;
   try {
     const verified = await authSessionService.verify(oldRefreshToken);
-    if (!verified) return c.json({ error: 'Invalid refresh token' }, 401);
+    if (!verified) {
+      deleteCookie(c, ACCESS_TOKEN_COOKIE, { path: '/' });
+      deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: '/' });
+      return c.json({ error: 'Invalid refresh token' }, 401);
+    }
     userId = verified.userId;
     const user = await authService.getUserById(userId);
     const session = await authSessionService.rotate(oldRefreshToken, user);
-    if (!session) return c.json({ error: 'Invalid refresh token' }, 401);
+    if (!session) {
+      deleteCookie(c, ACCESS_TOKEN_COOKIE, { path: '/' });
+      deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: '/' });
+      return c.json({ error: 'Invalid refresh token' }, 401);
+    }
     setAuthCookies(c, session);
     return c.json({ success: true });
   } catch (err) {
@@ -215,7 +226,13 @@ authRoutes.get('/me', async (c) => {
   const token = getCookie(c, ACCESS_TOKEN_COOKIE);
   if (!token) return c.json(null);
 
-  const payload = await verifyAccessJwt(token);
+  let payload: Awaited<ReturnType<typeof verifyAccessJwt>>;
+  try {
+    payload = await verifyAccessJwt(token);
+  } catch (err) {
+    log.error({ err }, 'Falha operacional ao validar sessão');
+    return c.json({ error: 'Serviço de sessão temporariamente indisponível' }, 503);
+  }
   if (!payload) {
     deleteCookie(c, ACCESS_TOKEN_COOKIE, { path: '/' });
     return c.json(null);

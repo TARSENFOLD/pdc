@@ -55,6 +55,52 @@ describe('http client', () => {
     await expect(http.getParsed('/dashboard/estudante', z.object({ ok: z.boolean() })))
       .rejects.toMatchObject({ status: 503 });
     expect(sessionExpired).not.toHaveBeenCalled();
+    window.removeEventListener('pdc:session-expired', sessionExpired);
+  });
+
+  it('emite sessão expirada uma única vez para pedidos protegidos concorrentes', async () => {
+    const sessionExpired = vi.fn();
+    let refreshRequests = 0;
+    window.addEventListener('pdc:session-expired', sessionExpired);
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+      if (url.includes('/auth/refresh')) {
+        refreshRequests += 1;
+        return new Response(JSON.stringify({ error: 'invalid' }), {
+          status: 401,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ error: 'expired' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      const schema = z.object({ ok: z.boolean() });
+      const results = await Promise.allSettled([
+        http.getParsed('/dashboard/estudante', schema),
+        http.getParsed('/perfil/me', schema),
+      ]);
+
+      expect(results).toHaveLength(2);
+      for (const result of results) {
+        expect(result.status).toBe('rejected');
+        if (result.status === 'rejected') {
+          expect(result.reason).toMatchObject({ status: 401 });
+        }
+      }
+      expect(refreshRequests).toBe(1);
+      expect(sessionExpired).toHaveBeenCalledOnce();
+    } finally {
+      window.removeEventListener('pdc:session-expired', sessionExpired);
+    }
   });
 
   it('deduplica refreshes concorrentes na mesma aba', async () => {

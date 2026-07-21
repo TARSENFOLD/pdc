@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { SignJWT } from 'jose';
 import { createHmac } from 'node:crypto';
+import { z } from 'zod';
 
 const redisMock = vi.hoisted(() => ({
   get: vi.fn(),
@@ -18,6 +19,7 @@ const authServiceMock = vi.hoisted(() => ({
 const authSessionServiceMock = vi.hoisted(() => ({
   issue: vi.fn(),
   rotate: vi.fn(),
+  isAccessTokenCurrent: vi.fn().mockResolvedValue(true),
 }));
 
 const setAuthCookiesMock = vi.hoisted(() => vi.fn());
@@ -86,8 +88,11 @@ function makeOAuthState(overrides: { issuedAt?: number; nonce?: string } = {}): 
   const nonce = overrides.nonce ?? 'test-nonce';
   const issuedAt = (overrides.issuedAt ?? Math.floor(Date.now() / 1000)).toString();
   const payload = `${nonce}.${issuedAt}`;
-  const signature = createHmac('sha256', TEST_SECRET_RAW).update(payload).digest('base64url');
-  return `v1.${payload}.${signature}`;
+  const stateSecret = createHmac('sha256', TEST_SECRET_RAW)
+    .update('pdc/oauth-state/v2')
+    .digest();
+  const signature = createHmac('sha256', stateSecret).update(payload).digest('base64url');
+  return `v2.${payload}.${signature}`;
 }
 
 const MOCK_USER_ONBOARDED = {
@@ -172,6 +177,10 @@ describe('Google OAuth happy path — onboarded user', () => {
     expect(authServiceMock.findOrCreateUser).toHaveBeenCalledWith('user@pdc.ao', 'Test User');
     expect(authSessionServiceMock.issue).toHaveBeenCalledWith(MOCK_USER_ONBOARDED);
     expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://oauth2.googleapis.com/token');
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('https://www.googleapis.com/oauth2/v3/userinfo');
+    z.object({ signal: z.instanceof(AbortSignal) }).parse(fetchMock.mock.calls[0]?.[1]);
+    z.object({ signal: z.instanceof(AbortSignal) }).parse(fetchMock.mock.calls[1]?.[1]);
     expect(res.status).toBe(302);
     expect(res.headers.get('location')).toBe('http://localhost:5173/app');
   });

@@ -83,14 +83,27 @@ rotate_pre_restore_backups() {
 }
 
 start_bgsave() {
-  local deadline output
+  local deadline output previous_lastsave current_epoch
   deadline=$((SECONDS + BGSAVE_TIMEOUT_SECONDS))
   while (( SECONDS < deadline )); do
+    if ! previous_lastsave="$(redis_backup_cli LASTSAVE 2>&1)" \
+      || [[ ! "${previous_lastsave}" =~ ^[0-9]+$ ]]; then
+      echo "[redis-snapshot] ERRO: LASTSAVE devolveu um valor inválido." >&2
+      return 1
+    fi
+    current_epoch="$(date -u +%s)"
+    if (( current_epoch <= previous_lastsave )); then
+      sleep 1
+      continue
+    fi
     if ! output="$(redis_backup_cli BGSAVE 2>&1)"; then
       echo "[redis-snapshot] ERRO: não foi possível solicitar BGSAVE." >&2
       return 1
     fi
-    if [[ "${output}" == *"Background saving started"* ]]; then return 0; fi
+    if [[ "${output}" == *"Background saving started"* ]]; then
+      printf '%s\n' "${previous_lastsave}"
+      return 0
+    fi
     if [[ "${output}" != *"Background save already in progress"* ]]; then
       echo "[redis-snapshot] ERRO: BGSAVE devolveu uma resposta inválida." >&2
       return 1
@@ -102,20 +115,15 @@ start_bgsave() {
 }
 
 wait_for_bgsave_completion() {
-  local deadline info in_progress status
+  local previous_lastsave="$1" deadline current_lastsave
   deadline=$((SECONDS + BGSAVE_TIMEOUT_SECONDS))
   while (( SECONDS < deadline )); do
-    if ! info="$(redis_backup_cli INFO persistence)"; then
-      echo "[redis-snapshot] ERRO: não foi possível consultar o estado do BGSAVE." >&2
+    if ! current_lastsave="$(redis_backup_cli LASTSAVE 2>&1)" \
+      || [[ ! "${current_lastsave}" =~ ^[0-9]+$ ]]; then
+      echo "[redis-snapshot] ERRO: LASTSAVE devolveu um valor inválido durante o BGSAVE." >&2
       return 1
     fi
-    in_progress="$(printf '%s\n' "${info}" | awk -F: '$1 == "rdb_bgsave_in_progress" { gsub(/\r/, "", $2); print $2; exit }')"
-    status="$(printf '%s\n' "${info}" | awk -F: '$1 == "rdb_last_bgsave_status" { gsub(/\r/, "", $2); print $2; exit }')"
-    if [[ "${in_progress}" == "0" && "${status}" == "ok" ]]; then return 0; fi
-    if [[ "${in_progress}" != "0" && "${in_progress}" != "1" ]]; then
-      echo "[redis-snapshot] ERRO: INFO persistence devolveu estado inválido." >&2
-      return 1
-    fi
+    if (( current_lastsave > previous_lastsave )); then return 0; fi
     sleep 1
   done
   echo "[redis-snapshot] ERRO: BGSAVE não concluiu dentro de ${BGSAVE_TIMEOUT_SECONDS} segundos." >&2
@@ -123,13 +131,13 @@ wait_for_bgsave_completion() {
 }
 
 backup() {
-  local tmp_dir timestamp archive checksum meta_checksum image_name key_count
+  local tmp_dir timestamp archive checksum meta_checksum image_name key_count lastsave_before
   mkdir -p "${BACKUP_DIR}"
   tmp_dir="$(mktemp -d "${BACKUP_DIR}/.backup.XXXXXX")"
   TEMP_DIRS+=("${tmp_dir}")
   image_name="$(redis_image)"
-  start_bgsave
-  wait_for_bgsave_completion
+  lastsave_before="$(start_bgsave)"
+  wait_for_bgsave_completion "${lastsave_before}"
 
   docker cp "${REDIS_CONTAINER}:/data/dump.rdb" "${tmp_dir}/dump.rdb"
   key_count="$(validate_rdb "${tmp_dir}/dump.rdb" "${image_name}")"

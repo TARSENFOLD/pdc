@@ -44,11 +44,15 @@ describe('authApi.restoreSession', () => {
   });
 
   it('retorna anónimo quando não existe refresh token válido', async () => {
+    const sessionExpired = vi.fn();
+    window.addEventListener('pdc:session-expired', sessionExpired, { once: true });
     vi.stubGlobal('fetch', vi.fn()
       .mockResolvedValueOnce(jsonResponse(null))
       .mockResolvedValueOnce(jsonResponse({ error: 'Invalid refresh token' }, 401)));
 
     await expect(authApi.restoreSession()).resolves.toBeNull();
+    expect(sessionExpired).not.toHaveBeenCalled();
+    window.removeEventListener('pdc:session-expired', sessionExpired);
   });
 
   it('não mascara indisponibilidade do serviço de sessão', async () => {
@@ -57,5 +61,32 @@ describe('authApi.restoreSession', () => {
       .mockResolvedValueOnce(jsonResponse({ error: 'unavailable' }, 503)));
 
     await expect(authApi.restoreSession()).rejects.toMatchObject({ status: 503 });
+  });
+});
+
+describe('authApi.sendOtp', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('valida a resposta do reenvio de OTP', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ success: true })));
+
+    await expect(authApi.sendOtp('email')).rejects.toThrow();
+  });
+
+  it('rejeita canal OTP não suportado na resposta', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({
+      success: true,
+      canal: 'whatsapp',
+    })));
+
+    await expect(authApi.sendOtp('email')).rejects.toThrow();
+  });
+
+  it.each(['email', 'sms'] as const)('aceita resposta válida de OTP por %s', async (canal) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ success: true, canal })));
+
+    await expect(authApi.sendOtp(canal)).resolves.toEqual({ success: true, canal });
   });
 });

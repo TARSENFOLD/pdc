@@ -11,6 +11,7 @@ import { UserSchema } from '@pdc/shared';
 import { z } from 'zod';
 import { ApiError, refreshSession } from './http';
 import { resolveApiBaseUrl } from './base-url';
+import { SESSION_SERVICE_UNAVAILABLE_MESSAGE } from './auth-errors';
 
 const AUTH_BASE_URL = resolveApiBaseUrl(
   import.meta.env.VITE_API_URL,
@@ -31,6 +32,10 @@ const LoginResponseSchema = z.union([
   UserSchema,
 ]);
 const SuccessResponseSchema = z.object({ success: z.boolean() });
+const SendOtpResponseSchema = z.object({
+  success: z.boolean(),
+  canal: z.enum(['email', 'sms']),
+});
 const ForgotPasswordResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
@@ -47,10 +52,10 @@ export const authApi = {
   restoreSession: async (): Promise<User | null> => {
     const currentUser = await http.getParsed('/auth/me', UserSchema.nullable());
     if (currentUser) return currentUser;
-    const refreshResult = await refreshSession();
+    const refreshResult = await refreshSession({ notifyOnInvalid: false });
     if (refreshResult === 'invalid') return null;
     if (refreshResult === 'unavailable') {
-      throw new ApiError(503, 'Serviço de sessão temporariamente indisponível');
+      throw new ApiError(503, SESSION_SERVICE_UNAVAILABLE_MESSAGE);
     }
     return http.getParsed('/auth/me', UserSchema.nullable());
   },
@@ -81,7 +86,7 @@ export const authApi = {
     LoginResponseSchema,
   ),
   sendOtp: (canal: 'email' | 'sms', phone?: string) =>
-    http.post<{ success: boolean; canal: string }>('/auth/otp/send', { canal, phone }),
+    http.postParsed('/auth/otp/send', { canal, phone }, SendOtpResponseSchema),
   verifyOtp: (otp: string, canal: 'email' | 'sms', trustDevice: boolean) =>
     http.postParsed('/auth/otp/verify', { otp, canal, trustDevice }, UserSchema),
   forgetTrustedDevice: () => http.deleteParsed(

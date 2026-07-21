@@ -1,10 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const redisMock = vi.hoisted(() => ({ get: vi.fn() }));
 
 vi.mock('../../lib/env.js', () => ({
   env: {
     JWT_SECRET: 'super-secret-at-least-32-chars-long',
   },
 }));
+vi.mock('../../lib/redis.js', () => ({ redis: redisMock }));
 
 import { Hono } from 'hono';
 import { SignJWT } from 'jose';
@@ -40,6 +43,11 @@ const OptionalUserResponseSchema = z.object({
 });
 
 describe('auth middleware JWT payload validation', () => {
+  beforeEach(() => {
+    redisMock.get.mockReset();
+    redisMock.get.mockResolvedValue(null);
+  });
+
   it('rejects a refresh token presented as an access token', async () => {
     const app = new Hono<{ Variables: AuthVariables }>();
     app.get('/private', verifyJwt, (c) => c.json({ user: c.get('user') }));
@@ -165,6 +173,32 @@ describe('auth middleware JWT payload validation', () => {
 
     expect(res.status).toBe(500);
     await expect(res.json()).resolves.toEqual({ error: 'Strapi indisponível' });
+  });
+
+  it('rejeita access token emitido antes da época global corrente', async () => {
+    redisMock.get.mockResolvedValueOnce('1').mockResolvedValueOnce(null);
+    const app = new Hono<{ Variables: AuthVariables }>();
+    app.get('/private', verifyJwt, (c) => c.json({ user: c.get('user') }));
+    const token = await signedToken({ sub: 'user-1', role: 'estudante', ver: 0 });
+
+    const res = await app.request('/private', {
+      headers: { cookie: `access_token=${token}` },
+    });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('reporta indisponibilidade sem converter falha Redis em token inválido', async () => {
+    redisMock.get.mockRejectedValueOnce(new Error('Redis unavailable'));
+    const app = new Hono<{ Variables: AuthVariables }>();
+    app.get('/private', verifyJwt, (c) => c.json({ user: c.get('user') }));
+    const token = await signedToken({ sub: 'user-1', role: 'estudante' });
+
+    const res = await app.request('/private', {
+      headers: { cookie: `access_token=${token}` },
+    });
+
+    expect(res.status).toBe(503);
   });
 
   it('keeps optional auth anonymous for malformed payloads', async () => {

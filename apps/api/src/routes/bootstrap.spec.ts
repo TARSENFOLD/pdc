@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const verifyAccessJwtMock = vi.hoisted(() => vi.fn());
 
 // Mocks devem ser os PRIMEIROS antes de importar a rota
 vi.mock('../lib/env.js', () => ({
@@ -11,8 +13,13 @@ vi.mock('../lib/env.js', () => ({
 
 vi.mock('pino', () => ({
   default: vi.fn(() => ({
+    error: vi.fn(),
     warn: vi.fn(),
   })),
+}));
+
+vi.mock('../modules/auth/auth.middleware.js', () => ({
+  verifyAccessJwt: verifyAccessJwtMock,
 }));
 
 import { bootstrapRoutes } from './bootstrap.js';
@@ -40,15 +47,12 @@ vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
   },
 }));
 
-vi.mock('jose', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('jose')>();
-  return {
-    ...actual,
-    jwtVerify: vi.fn(),
-  };
-});
-
 describe('GET /bootstrap', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    verifyAccessJwtMock.mockResolvedValue(null);
+  });
+
   it('deve retornar carga anonima baseada no registry canonico se nao autenticado', async () => {
     vi.mocked(featureFlagService.getEffectiveFlags).mockResolvedValueOnce({});
     
@@ -103,5 +107,22 @@ describe('GET /bootstrap', () => {
     expect(json.capabilities.features['DISCUSSIONS_ENABLED']).toBe(true);
     expect(json.capabilities.features['REPUTATION_VISIBLE']).toBe(false);
     expect(json.capabilities.features['MENSAGENS_INBOX']).toBeUndefined();
+  });
+
+  it('mantém o bootstrap público anónimo quando o Redis de sessão falha', async () => {
+    verifyAccessJwtMock.mockRejectedValueOnce(new Error('Redis unavailable'));
+    vi.mocked(featureFlagService.getEffectiveFlags).mockResolvedValueOnce({});
+
+    const req = new Request('http://localhost/', {
+      headers: { Cookie: 'access_token=token-valido' },
+    });
+    const res = await bootstrapRoutes.request(req);
+
+    expect(res.status).toBe(200);
+    const json: unknown = await res.json();
+    assertBootstrapPayload(json);
+    expect(json.session).toEqual({ isAuthenticated: false, user: null });
+    expect(json.capabilities.features['DISCUSSIONS_ENABLED']).toBe(true);
+    expect(featureFlagService.getEffectiveFlags).toHaveBeenCalledWith(undefined);
   });
 });

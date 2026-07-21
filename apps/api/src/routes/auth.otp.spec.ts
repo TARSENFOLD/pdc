@@ -16,7 +16,11 @@ const authServiceMock = vi.hoisted(() => ({
   getUserById: vi.fn(),
 }));
 
-const authSessionServiceMock = vi.hoisted(() => ({ issue: vi.fn(), revoke: vi.fn() }));
+const authSessionServiceMock = vi.hoisted(() => ({
+  issue: vi.fn(),
+  revoke: vi.fn(),
+  isAccessTokenCurrent: vi.fn().mockResolvedValue(true),
+}));
 const trustedDeviceServiceMock = vi.hoisted(() => ({
   issue: vi.fn(),
   belongsToUser: vi.fn(),

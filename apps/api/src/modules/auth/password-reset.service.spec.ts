@@ -8,6 +8,9 @@ const dependencyMocks = vi.hoisted(() => ({
   sendEmail: vi.fn(),
   revokeSessions: vi.fn(),
   revokeDevices: vi.fn(),
+  beginGlobalRevocation: vi.fn(),
+  endGlobalRevocation: vi.fn(),
+  renewGlobalRevocation: vi.fn(),
 }));
 
 vi.mock('../../lib/env.js', () => ({
@@ -25,7 +28,12 @@ vi.mock('../../lib/redis.js', () => ({
 }));
 
 vi.mock('./auth-session.service.js', () => ({
-  authSessionService: { revokeAll: dependencyMocks.revokeSessions },
+  authSessionService: {
+    revokeAll: dependencyMocks.revokeSessions,
+    beginGlobalRevocation: dependencyMocks.beginGlobalRevocation,
+    endGlobalRevocation: dependencyMocks.endGlobalRevocation,
+    renewGlobalRevocation: dependencyMocks.renewGlobalRevocation,
+  },
 }));
 
 vi.mock('./trusted-device.service.js', () => ({
@@ -48,7 +56,16 @@ describe('passwordResetService', () => {
     vi.clearAllMocks();
     dependencyMocks.redisSet.mockResolvedValue('OK');
     dependencyMocks.revokeSessions.mockResolvedValue(0);
-    dependencyMocks.revokeDevices.mockResolvedValue(0);
+    dependencyMocks.revokeDevices.mockImplementation(async (
+      _userId: string,
+      renewLease: () => Promise<void>,
+    ) => {
+      await renewLease();
+      return 0;
+    });
+    dependencyMocks.beginGlobalRevocation.mockResolvedValue('reset-lock-1');
+    dependencyMocks.endGlobalRevocation.mockResolvedValue(undefined);
+    dependencyMocks.renewGlobalRevocation.mockResolvedValue(undefined);
   });
 
   it('não envia email quando a conta não existe', async () => {
@@ -78,6 +95,19 @@ describe('passwordResetService', () => {
     expect(emailInput?.html).toContain('https://usepdc.com/reset-password?token=');
   });
 
+  it('não emite reset para conta bloqueada por administração', async () => {
+    vi.mocked(strapiGetRaw).mockResolvedValue([{
+      id: 'user-1',
+      email: 'blocked@pdc.ao',
+      blocked: true,
+    }]);
+
+    await passwordResetService.request('blocked@pdc.ao');
+
+    expect(dependencyMocks.redisSet).not.toHaveBeenCalled();
+    expect(dependencyMocks.sendEmail).not.toHaveBeenCalled();
+  });
+
   it('rejeita token inválido sem alterar o utilizador', async () => {
     dependencyMocks.redisEval.mockResolvedValue(null);
 
@@ -95,17 +125,19 @@ describe('passwordResetService', () => {
     expect(strapiPutRaw).toHaveBeenCalledWith('/users/user-1', {
       password: 'NovaPassword123!',
       confirmed: true,
-      blocked: false,
     });
     expect(dependencyMocks.redisEval).toHaveBeenCalledWith(
       expect.stringContaining('redis.call("DEL"'),
       [expect.stringMatching(/^password_reset:/)],
       [expect.stringMatching(/^claimed:/)],
     );
-    expect(dependencyMocks.revokeSessions).toHaveBeenCalledWith('user-1');
-    expect(dependencyMocks.revokeDevices).toHaveBeenCalledWith('user-1');
+    expect(dependencyMocks.revokeSessions).toHaveBeenCalledWith('user-1', 'reset-lock-1');
+    expect(dependencyMocks.revokeDevices).toHaveBeenCalledWith('user-1', expect.any(Function));
     expect(dependencyMocks.revokeSessions).toHaveBeenCalledTimes(2);
     expect(dependencyMocks.revokeDevices).toHaveBeenCalledTimes(2);
+    expect(dependencyMocks.beginGlobalRevocation).toHaveBeenCalledWith('user-1');
+    expect(dependencyMocks.endGlobalRevocation).toHaveBeenCalledWith('user-1', 'reset-lock-1');
+    expect(dependencyMocks.renewGlobalRevocation).toHaveBeenCalledTimes(2);
     const updateOrder = vi.mocked(strapiPutRaw).mock.invocationCallOrder[0] ?? 0;
     expect(dependencyMocks.revokeSessions.mock.invocationCallOrder[0]).toBeLessThan(updateOrder);
     expect(dependencyMocks.revokeSessions.mock.invocationCallOrder[1]).toBeGreaterThan(updateOrder);
@@ -127,7 +159,7 @@ describe('passwordResetService', () => {
     );
   });
 
-  it('não confirma o reset quando a revogação posterior falha', async () => {
+  it('confirma o reset quando limpeza posterior falha porque a época já revogou credenciais', async () => {
     dependencyMocks.redisEval
       .mockResolvedValueOnce('user-1')
       .mockResolvedValueOnce(1);
@@ -137,7 +169,7 @@ describe('passwordResetService', () => {
     vi.mocked(strapiPutRaw).mockResolvedValue({});
 
     await expect(passwordResetService.reset('token-valido', 'NovaPassword123!'))
-      .rejects.toThrow('Redis unavailable after password update');
+      .resolves.toBe(true);
     expect(strapiPutRaw).toHaveBeenCalledOnce();
     expect(dependencyMocks.redisEval).toHaveBeenCalledTimes(2);
   });

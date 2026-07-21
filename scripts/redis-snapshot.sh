@@ -70,6 +70,35 @@ redis_is_responding() {
   redis_backup_cli PING | grep -qx PONG
 }
 
+redis_backup_acl_is_scoped() {
+  local lastsave_output dbsize_output
+  if ! lastsave_output="$(redis_backup_cli LASTSAVE 2>&1)" \
+    || [[ ! "${lastsave_output}" =~ ^[0-9]+$ ]]; then
+    echo "[redis-snapshot] ERRO: utilizador backup não consegue executar LASTSAVE." >&2
+    return 1
+  fi
+  if ! dbsize_output="$(redis_backup_cli DBSIZE 2>&1)" \
+    || [[ ! "${dbsize_output}" =~ ^[0-9]+$ ]]; then
+    echo "[redis-snapshot] ERRO: utilizador backup não consegue executar DBSIZE." >&2
+    return 1
+  fi
+  redis_backup_command_must_be_denied 'INFO persistence' INFO persistence \
+    && redis_backup_command_must_be_denied 'INFO server' INFO server \
+    && redis_backup_command_must_be_denied 'INFO persistence server' INFO persistence server
+}
+
+redis_backup_command_must_be_denied() {
+  local description="$1" output
+  shift
+  if ! output="$(redis_backup_cli "$@" 2>&1)"; then
+    echo "[redis-snapshot] ERRO: probe ${description} não chegou ao Redis." >&2
+    return 1
+  fi
+  if grep -q 'NOPERM' <<<"${output}"; then return 0; fi
+  echo "[redis-snapshot] ERRO: utilizador backup executou comando proibido: ${description}." >&2
+  return 1
+}
+
 replace_volume_data() {
   local source_dir="$1" source_file="$2" volume_name="$3" image_name="$4"
   docker run --rm --entrypoint /bin/sh \
@@ -181,6 +210,10 @@ fi
 if [[ ! "${BGSAVE_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
   echo "[redis-snapshot] ERRO: PDC_REDIS_BGSAVE_TIMEOUT_SECONDS deve ser inteiro positivo." >&2
   exit 2
+fi
+
+if [[ "${MODE}" == "backup" || "${MODE}" == "restore" ]]; then
+  redis_backup_acl_is_scoped
 fi
 
 case "${MODE}" in

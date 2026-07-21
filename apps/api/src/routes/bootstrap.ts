@@ -20,33 +20,41 @@ bootstrapRoutes.get('/', async (c) => {
   let instituicaoId: number | undefined = undefined;
 
   if (token) {
+    let parsedPayload: Awaited<ReturnType<typeof verifyAccessJwt>>;
     try {
-      const parsedPayload = await verifyAccessJwt(token);
-      if (!parsedPayload) throw new Error('Invalid bootstrap JWT payload');
-      const dbUser = await authService.getUserById(parsedPayload.sub);
+      parsedPayload = await verifyAccessJwt(token);
+    } catch (err) {
+      log.error({ err }, 'Session store unavailable during bootstrap');
+      parsedPayload = null;
+    }
 
-      // Injectamos a Role real e Perfil (que está guardado no Strapi)
-      userPayload = {
-        id: dbUser.id,
-        email: dbUser.email,
-        role: dbUser.role,
-        perfilId: dbUser.perfilId || undefined,
-      };
+    if (parsedPayload) {
+      try {
+        const dbUser = await authService.getUserById(parsedPayload.sub);
 
-      // Instituição ID para extração de Flags override se existir no token
-      instituicaoId = parsedPayload.instituicaoId;
+        // Injectamos a Role real e Perfil (que está guardado no Strapi)
+        userPayload = {
+          id: dbUser.id,
+          email: dbUser.email,
+          role: dbUser.role,
+          perfilId: dbUser.perfilId || undefined,
+        };
 
-      // 2. Emissão Soberana do Telemetry Token assinado por RS256 (W1-T2)
-      if (userPayload.perfilId) {
-        telemetryToken = await signTelemetryToken(userPayload.id, userPayload.perfilId);
-      } else {
-        log.error(
-          { userId: userPayload.id },
-          'Perfil ausente numa sessão autenticada; token de telemetria não emitido',
-        );
+        // Instituição ID para extração de Flags override se existir no token
+        instituicaoId = parsedPayload.instituicaoId;
+
+        // 2. Emissão Soberana do Telemetry Token assinado por RS256 (W1-T2)
+        if (userPayload.perfilId) {
+          telemetryToken = await signTelemetryToken(userPayload.id, userPayload.perfilId);
+        } else {
+          log.error(
+            { userId: userPayload.id },
+            'Perfil ausente numa sessão autenticada; token de telemetria não emitido',
+          );
+        }
+      } catch (err) {
+        log.warn({ err, userId: parsedPayload.sub }, 'Bootstrap session enrichment unavailable');
       }
-    } catch {
-      // Ignoramos falhas de assinatura aqui, tratamo-los como utilizador não autenticado
     }
   }
 

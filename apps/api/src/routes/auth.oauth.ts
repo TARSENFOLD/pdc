@@ -21,6 +21,7 @@ import { AuthDomainError } from '../modules/auth/auth.errors.js';
 const log = pino({ name: 'oauth-routes' });
 export const oauthRoutes = new Hono<{ Variables: AuthVariables }>();
 const OAUTH_STATE_COOKIE = 'oauth_state';
+const OAUTH_FETCH_TIMEOUT_MS = 5_000;
 const OAuthTokenResponseSchema = z.object({ access_token: z.string().min(1) });
 const OAuthUserInfoSchema = z.object({
   email: z.string().email(),
@@ -163,6 +164,7 @@ oauthRoutes.get('/google/callback', async (c) => {
         redirect_uri: redirectUri,
         grant_type: 'authorization_code',
       }),
+      signal: AbortSignal.timeout(OAUTH_FETCH_TIMEOUT_MS),
     });
     if (!tokenRes.ok) return c.json({ error: 'Token error' }, 400);
     const tokenResult = OAuthTokenResponseSchema.safeParse(await tokenRes.json());
@@ -170,6 +172,7 @@ oauthRoutes.get('/google/callback', async (c) => {
     const tokens = tokenResult.data;
     const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
+      signal: AbortSignal.timeout(OAUTH_FETCH_TIMEOUT_MS),
     });
     if (!userRes.ok) return c.json({ error: 'Perfil Google indisponível' }, 400);
     const googleUserResult = OAuthUserInfoSchema.safeParse(await userRes.json());
@@ -239,6 +242,7 @@ oauthRoutes.get('/linkedin/callback', async (c) => {
         client_secret: clientSecret,
         redirect_uri: getOAuthRedirectUri(c, 'linkedin'),
       }),
+      signal: AbortSignal.timeout(OAUTH_FETCH_TIMEOUT_MS),
     });
     if (!tokenRes.ok) return c.json({ error: 'Token error' }, 400);
     const tokenResult = OAuthTokenResponseSchema.safeParse(await tokenRes.json());
@@ -246,6 +250,7 @@ oauthRoutes.get('/linkedin/callback', async (c) => {
     const tokens = tokenResult.data;
     const userRes = await fetch('https://api.linkedin.com/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
+      signal: AbortSignal.timeout(OAUTH_FETCH_TIMEOUT_MS),
     });
     if (!userRes.ok) return c.json({ error: 'Perfil LinkedIn indisponível' }, 400);
     const liUserResult = OAuthUserInfoSchema.safeParse(await userRes.json());

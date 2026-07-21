@@ -7,6 +7,7 @@ const authSessionServiceMock = vi.hoisted(() => ({
   verify: vi.fn(),
   rotate: vi.fn(),
   issue: vi.fn(),
+  isAccessTokenCurrent: vi.fn().mockResolvedValue(true),
 }));
 const trustedDeviceServiceMock = vi.hoisted(() => ({
   revoke: vi.fn(),
@@ -72,6 +73,11 @@ async function validAccessToken(userId = 'user-1'): Promise<string> {
 }
 
 describe('GET /auth/me', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authSessionServiceMock.isAccessTokenCurrent.mockResolvedValue(true);
+  });
+
   it('returns null instead of 401 when there is no session cookie', async () => {
     const res = await authRoutes.request('/me');
 
@@ -101,6 +107,19 @@ describe('GET /auth/me', () => {
 
     expect(res.status).toBe(502);
     expect(res.headers.get('set-cookie')).toBeNull();
+  });
+
+  it('preserva cookies quando a época de autenticação não pode ser consultada', async () => {
+    authSessionServiceMock.isAccessTokenCurrent.mockRejectedValueOnce(new Error('Redis unavailable'));
+    const token = await validAccessToken();
+
+    const res = await authRoutes.request('/me', {
+      headers: { cookie: `access_token=${token}; refresh_token=renewable` },
+    });
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get('set-cookie')).toBeNull();
+    expect(authServiceMock.getUserById).not.toHaveBeenCalled();
   });
 });
 
@@ -190,6 +209,7 @@ describe('POST /auth/compliance/legal', () => {
 
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: 'Sessão expirada' });
+    expect(completeLegalComplianceMock).not.toHaveBeenCalled();
     expect(authSessionServiceMock.rotate).not.toHaveBeenCalled();
     expect(authSessionServiceMock.issue).not.toHaveBeenCalled();
   });
@@ -323,6 +343,24 @@ describe('POST /auth/refresh', () => {
 
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: 'Invalid refresh token' });
+    const setCookie = res.headers.get('set-cookie') ?? '';
+    expect(setCookie).toContain('access_token=');
+    expect(setCookie).toContain('refresh_token=');
+  });
+
+  it('remove cookies quando o refresh já não corresponde a uma sessão', async () => {
+    authSessionServiceMock.verify.mockResolvedValueOnce(null);
+
+    const res = await authRoutes.request('/refresh', {
+      method: 'POST',
+      headers: { cookie: 'refresh_token=dead-refresh' },
+    });
+
+    expect(res.status).toBe(401);
+    const setCookie = res.headers.get('set-cookie') ?? '';
+    expect(setCookie).toContain('access_token=');
+    expect(setCookie).toContain('refresh_token=');
+    expect(authServiceMock.getUserById).not.toHaveBeenCalled();
   });
 
   it('revoga os cookies quando deteta reutilização do refresh token', async () => {

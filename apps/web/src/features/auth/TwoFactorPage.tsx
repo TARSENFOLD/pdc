@@ -143,6 +143,7 @@ export default function TwoFactorPage() {
                 type="checkbox"
                 checked={trustDevice}
                 onChange={(event) => { setTrustDevice(event.target.checked); }}
+                disabled={isLoading}
                 className="mt-0.5 size-5 accent-[var(--accent-terracotta)]"
               />
               <span>

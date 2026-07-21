@@ -164,8 +164,9 @@ bash scripts/redis-snapshot.sh verify /opt/pdc/backups/redis/redis-UTC.rdb.gz
 
 Configurar `REDIS_BACKUP_PASSWORD` com valor independente em `/opt/pdc/.env`.
 O utilizador ACL `backup` não lê chaves e só executa `BGSAVE`, `LASTSAVE`,
-`DBSIZE`, `INFO` e `PING`; o script usa `INFO persistence` para aguardar a
-conclusão do snapshot. Por defeito ficam 14 snapshots em `/opt/pdc/backups/redis`; alterar com
+`DBSIZE` e `PING`; o script aguarda a progressão de `LASTSAVE` e valida que
+`INFO`, inclusive com múltiplas secções, permanece proibido. Por defeito ficam
+14 snapshots em `/opt/pdc/backups/redis`; alterar com
 `PDC_REDIS_BACKUP_RETENTION`. Uma cópia cifrada deve ser enviada para storage
 fora do VPS depois da verificação.
 

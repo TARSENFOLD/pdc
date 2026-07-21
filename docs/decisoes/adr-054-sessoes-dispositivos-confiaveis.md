@@ -3,6 +3,8 @@
 **Data:** 2026-07-18
 **Estado:** Aceite
 **Caixa:** C - a política documental, a duração implementada e a experiência de login divergiam.
+**Relação:** Emenda e substitui as regras de duração, rotação e revogação do
+ADR-003; o ADR-003 permanece canónico apenas para transporte em cookies.
 
 ## Contexto
 
@@ -23,8 +25,13 @@ dispositivo explicitamente verificado, de alta entropia e revogável.
    90 dias após a autenticação que a criou. Rotação não prolonga esse limite.
 3. O refresh token fica em cookie `httpOnly`, `Secure` em produção,
    `SameSite=Strict` e persistente por no máximo o tempo restante da sessão.
-4. A rotação do refresh token é atómica no Redis. Reutilização ou concorrência
-   com um token já rotacionado invalida toda a família da sessão.
+4. A rotação gera primeiro o token sucessor e faz CAS do hash corrente no Redis.
+   Um registo de replay contém apenas hashes e permite, por 30 segundos, devolver
+   o mesmo refresh token sucessor quando a resposta anterior se perdeu. O valor
+   bruto não é persistido: ele é reconstruído deterministicamente a partir do
+   token anterior assinado, preservando `sid`, `iat` e `exp` e derivando o `jti`;
+   por isso, pedidos concorrentes produzem exatamente o mesmo JWT sucessor.
+   Fora dessa janela, reutilização de token já rotacionado invalida a família.
 5. Depois de validar OTP, o utilizador pode confiar no browser por 90 dias. A
    credencial é opaca, aleatória, `httpOnly`, `Secure` em produção e
    `SameSite=Strict`, guardada no servidor apenas por hash e vinculada ao
@@ -35,11 +42,17 @@ dispositivo explicitamente verificado, de alta entropia e revogável.
    revogadas continuam obrigados a concluir OTP.
 7. Logout encerra a sessão corrente, mas não revoga implicitamente a confiança
    do browser. Uma ação explícita permite esquecer o dispositivo corrente.
-8. Password reset e incident response devem poder revogar sessões e confiança;
-   sessões e dispositivos são indexados por utilizador no Redis e revogados em
-   lotes atómicos limitados. O reset reivindica o link atomicamente, revoga ambos
-   antes da alteração da palavra-passe, repete a revogação depois da escrita e
-   só então elimina o link.
+8. Password reset e incident response devem revogar sessões e confiança. Antes
+   de escrever a nova palavra-passe, o reset adquire um lock por utilizador e
+   incrementa atomicamente uma época global de autenticação. Access e refresh
+   tokens transportam essa época e deixam de validar imediatamente quando ela
+   muda; emissão de novas sessões fica bloqueada durante o reset. A limpeza dos
+   índices de sessões e dispositivos ocorre antes da escrita e repete-se depois,
+   mas já não é o mecanismo que garante a revogação imediata. Índices novos são
+   sorted sets por expiração para eliminar membros stale; durante a transição,
+   a revogação percorre também os índices legados baseados em sets. O lock é uma
+   lease renovada a cada lote; perda da lease interrompe o reset antes da escrita
+   da palavra-passe, e duração/contagens são emitidas em log estruturado.
 9. O frontend deve recuperar sessão em rotas públicas tentando uma única
    renovação quando `/auth/me` não encontrar access token válido.
 10. OAuth state é vinculado ao browser por cookie transitório e consumido uma
@@ -56,8 +69,9 @@ dispositivo explicitamente verificado, de alta entropia e revogável.
   dispositivo confiável numa credencial suficiente por si só.
 - O Redis primário passa a ser dependência obrigatória de sessão, OTP,
   confiança de dispositivo e OAuth state, conforme ADR-053.
-- Fluxos concorrentes de refresh devem ser deduplicados no cliente; reutilização
-  invalida deliberadamente a família por segurança.
+- Fluxos concorrentes de refresh são deduplicados no cliente e tolerados no
+  servidor durante a janela curta de replay; reutilização tardia invalida a
+  família por segurança.
 
 ## Alternativas rejeitadas
 
@@ -72,11 +86,12 @@ dispositivo explicitamente verificado, de alta entropia e revogável.
 ## Validação
 
 - Testes provam expiração absoluta, persistência do cookie e rotação atómica.
-- Dois refreshes com o mesmo token não podem produzir duas sessões válidas.
+- Dois refreshes com o mesmo token na janela de retry produzem exatamente o
+  mesmo sucessor; reutilização posterior revoga a sessão.
 - Browser confiável dispensa OTP somente após senha válida e vínculo servidor.
 - Revogar o dispositivo força OTP no login seguinte.
-- Reset de palavra-passe revoga todos os refresh tokens e browsers confiáveis
-  antes de aceitar a nova credencial.
+- Reset de palavra-passe incrementa a época e bloqueia emissão antes de aceitar
+  a nova credencial; limpeza de refresh tokens e browsers confiáveis é verificada.
 - Reabrir uma rota pública recupera a sessão através de refresh quando o access
   token expirou.
 - OAuth callback rejeita state válido usado noutro browser ou reutilizado.

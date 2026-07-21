@@ -36,9 +36,14 @@ bypass de segurança ou sessões inconsistentes entre restarts.
    desativado.
 7. As políticas do ADR-052 mantêm-se: capacidades de segurança continuam
    fail-closed e rate limit/cache só degradam segundo a política documentada.
+   `GET /bootstrap` é público e mantém capabilities/UX disponíveis, mas trata a
+   sessão como anónima quando o Redis primário não pode validá-la; isso não
+   autoriza nenhuma rota protegida nem degrada login, OTP ou refresh para aberto.
 8. O utilizador `backup` tem credencial independente e apenas pode executar
-   `BGSAVE`, `LASTSAVE`, `DBSIZE`, `INFO` e `PING`. `INFO` é limitado pelo
-   runbook à secção `persistence`. `scripts/redis-snapshot.sh` produz
+   `BGSAVE`, `LASTSAVE`, `DBSIZE` e `PING`. `INFO` fica totalmente proibido,
+   inclusive quando são pedidas várias secções na mesma chamada. O script
+   aguarda uma progressão monotónica de `LASTSAVE` e falha se qualquer variante
+   de `INFO` for aceite. `scripts/redis-snapshot.sh` produz
    snapshots RDB comprimidos, checksum SHA-256 e validação por
    `redis-check-rdb`, incluindo a contagem de chaves do próprio RDB.
 9. O runtime continua a usar AOF `everysec`; o RDB é o artefacto portátil de
@@ -82,3 +87,5 @@ bypass de segurança ou sessões inconsistentes entre restarts.
 - `bash scripts/redis-snapshot.sh backup` cria e volta a verificar o snapshot;
   `verify` rejeita checksum ou RDB inválidos; um ensaio periódico de `restore`
   comprova o runbook e a reposição automática do volume anterior em falha.
+- O utilizador `backup` executa `LASTSAVE` e `DBSIZE`, mas recebe `NOPERM` para
+  `INFO persistence`, `INFO server` e `INFO persistence server`.

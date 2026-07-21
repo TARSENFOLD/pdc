@@ -151,7 +151,7 @@ async function isRedisWritable(client: RedisProbeClient | null, timeoutMs = 1_00
         reject(new Error('Redis write probe timeout'));
       }, timeoutMs);
     });
-    const write = client.set('health:readiness', Date.now(), { ex: 5 });
+    const write = client.set('pdc:health:readiness', Date.now(), { ex: 5 });
     return await Promise.race([write, timeout]) === 'OK';
   } catch {
     return false;

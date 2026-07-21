@@ -17,6 +17,10 @@ vi.mock('../lib/redis.js', () => ({
   redis: { get: vi.fn(), set: vi.fn(), del: vi.fn() },
 }));
 
+vi.mock('../modules/auth/auth-session.service.js', () => ({
+  authSessionService: { isAccessTokenCurrent: vi.fn().mockResolvedValue(true) },
+}));
+
 vi.mock('../modules/strapi/strapi.client.js', () => ({
   strapiGet: vi.fn(),
   strapiPut: vi.fn(),
@@ -40,6 +44,7 @@ import { buildPerfilStrapiPayload, perfilRoutes, type PerfilStrapiPayload } from
 import type { UpdatePerfilPayload, StrapiListResponse } from '@pdc/shared';
 import { jwtVerify } from 'jose';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
+import { authSessionService } from '../modules/auth/auth-session.service.js';
 
 // ─── Payload-mapping tests (pre-existing) ────────────────────────────────────
 
@@ -101,6 +106,7 @@ describe('GET /perfis/:id — route characterization', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(authSessionService).isAccessTokenCurrent.mockResolvedValue(true);
     vi.mocked(jwtVerify).mockResolvedValue({
       payload: { sub: 'user-1', role: 'mentor' },
       protectedHeader: { alg: 'HS256', typ: 'access' },
@@ -139,6 +145,18 @@ describe('GET /perfis/:id — route characterization', () => {
     expect(json.data.bio).toBe('Mentora experiente');
     expect(json.data).not.toHaveProperty('email');
     expect(json.data).not.toHaveProperty('telefone');
+  });
+
+  it('rejeita access token revogado antes de consultar o perfil', async () => {
+    vi.mocked(authSessionService).isAccessTokenCurrent.mockResolvedValue(false);
+
+    const res = await perfilRoutes.request('/target-user', {
+      headers: { cookie: 'access_token=test-token' },
+    });
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: 'Unauthorized' });
+    expect(strapiGet).not.toHaveBeenCalled();
   });
 
   // ADR-029: self-view skips vinculos lookup; { data } envelope still applies

@@ -3,8 +3,9 @@ import { ShieldOff } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { authApi } from '@/lib/api/auth';
 import { toast } from '@/hooks/useToast';
+import type { JSX } from 'react';
 
-export function SecuritySettingsSection(): React.JSX.Element {
+export function SecuritySettingsSection(): JSX.Element {
   const forgetDevice = useMutation({
     mutationFn: () => authApi.forgetTrustedDevice(),
     onSuccess: () => {

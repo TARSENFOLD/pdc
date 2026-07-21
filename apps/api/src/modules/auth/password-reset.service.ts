@@ -34,6 +34,7 @@ return 1
 interface StrapiUser {
   id: string | number;
   email: string;
+  blocked?: boolean;
 }
 
 function tokenKey(token: string): string {
@@ -56,11 +57,17 @@ function resetEmailHtml(resetUrl: string): string {
   `;
 }
 
-async function revokeUserAuthentication(userId: string): Promise<void> {
-  await Promise.all([
-    authSessionService.revokeAll(userId),
-    trustedDeviceService.revokeAll(userId),
-  ]);
+async function revokeUserAuthentication(userId: string, lockId: string): Promise<void> {
+  const startedAt = Date.now();
+  const revokedSessions = await authSessionService.revokeAll(userId, lockId);
+  const revokedDevices = await trustedDeviceService.revokeAll(
+    userId,
+    () => authSessionService.renewGlobalRevocation(userId, lockId),
+  );
+  log.info(
+    { durationMs: Date.now() - startedAt, revokedDevices, revokedSessions, userId },
+    'Credenciais do utilizador revogadas durante reset',
+  );
 }
 
 export const passwordResetService = {
@@ -71,7 +78,7 @@ export const passwordResetService = {
       'pagination[pageSize]': '1',
     });
     const user = users[0];
-    if (!user) return;
+    if (!user || user.blocked === true) return;
 
     const token = randomBytes(32).toString('base64url');
     const stored = await redis.set(tokenKey(token), String(user.id), { ex: RESET_TTL_SECONDS });
@@ -97,16 +104,24 @@ export const passwordResetService = {
     );
     if (!userId) return false;
     const claimedValue = `claimed:${claimId}:${userId}`;
-    let readyToFinalize = false;
+    let resetLockId: string | undefined;
+    let passwordUpdated = false;
     try {
-      await revokeUserAuthentication(userId);
+      resetLockId = await authSessionService.beginGlobalRevocation(userId);
+      await revokeUserAuthentication(userId, resetLockId);
       await strapiPutRaw(`/users/${userId}`, {
         password,
         confirmed: true,
-        blocked: false,
       });
-      await revokeUserAuthentication(userId);
-      readyToFinalize = true;
+      passwordUpdated = true;
+      try {
+        await revokeUserAuthentication(userId, resetLockId);
+      } catch (cleanupError) {
+        log.error(
+          { cleanupError, userId },
+          'Limpeza posterior falhou; época global mantém credenciais anteriores inválidas',
+        );
+      }
       try {
         const finalized = await redis.eval<number>(
           FINALIZE_RESET_TOKEN_SCRIPT,
@@ -124,7 +139,7 @@ export const passwordResetService = {
       }
       return true;
     } catch (error) {
-      if (!readyToFinalize) {
+      if (!passwordUpdated) {
         try {
           await redis.eval<number>(
             RELEASE_RESET_TOKEN_SCRIPT,
@@ -136,6 +151,14 @@ export const passwordResetService = {
         }
       }
       throw error;
+    } finally {
+      if (resetLockId) {
+        try {
+          await authSessionService.endGlobalRevocation(userId, resetLockId);
+        } catch (releaseError) {
+          log.error({ releaseError, userId }, 'Falha ao libertar bloqueio global de autenticação');
+        }
+      }
     }
   },
 };
