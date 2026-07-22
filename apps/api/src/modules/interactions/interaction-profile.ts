@@ -24,6 +24,10 @@ export function interactionPerfilId(perfil: InteractionPerfil): string | number 
   return perfil.documentId ?? perfil.id;
 }
 
+export function interactionPerfilRelationField(perfil: InteractionPerfil): 'documentId' | 'id' {
+  return perfil.documentId ? 'documentId' : 'id';
+}
+
 export function interactionPerfilDto(perfil: InteractionPerfil) {
   return {
     id: String(interactionPerfilId(perfil)),

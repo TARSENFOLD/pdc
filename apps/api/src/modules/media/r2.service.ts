@@ -1,4 +1,4 @@
-import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { HeadBucketCommand, S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../../lib/env.js';
 import fs from 'node:fs';
@@ -8,6 +8,20 @@ import pino from 'pino';
 const log = pino({ name: 'r2-service' });
 
 const LOCAL_UPLOAD_DIR = '/tmp/pdc-uploads';
+const R2_CONNECTION_TIMEOUT_MS = 2_000;
+const R2_REQUEST_TIMEOUT_MS = 5_000;
+const R2_READINESS_CACHE_MS = 30_000;
+const R2_FAILURE_CACHE_MS = 3_000;
+
+export class MediaStorageError extends Error {
+  constructor(
+    public readonly code: 'MEDIA_STORAGE_MISCONFIGURED' | 'MEDIA_STORAGE_UNAVAILABLE',
+    cause: unknown,
+  ) {
+    super('Serviço de armazenamento temporariamente indisponível', { cause });
+    this.name = 'MediaStorageError';
+  }
+}
 
 export function isR2Configured(): boolean {
   return !!(env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY);
@@ -33,6 +47,11 @@ function getS3(): S3Client {
     _s3 = new S3Client({
       region: 'auto',
       endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      maxAttempts: 2,
+      requestHandler: {
+        connectionTimeout: R2_CONNECTION_TIMEOUT_MS,
+        requestTimeout: R2_REQUEST_TIMEOUT_MS,
+      },
       credentials: {
         accessKeyId: R2_ACCESS_KEY_ID,
         secretAccessKey: R2_SECRET_ACCESS_KEY,
@@ -40,6 +59,37 @@ function getS3(): S3Client {
     });
   }
   return _s3;
+}
+
+function errorStatus(error: unknown): number | undefined {
+  if (typeof error !== 'object' || error === null || !('$metadata' in error)) return undefined;
+  const metadata = error.$metadata;
+  if (typeof metadata !== 'object' || metadata === null || !('httpStatusCode' in metadata)) return undefined;
+  return typeof metadata.httpStatusCode === 'number' ? metadata.httpStatusCode : undefined;
+}
+
+function mediaStorageError(error: unknown): MediaStorageError {
+  const status = errorStatus(error);
+  const code = status === 401 || status === 403
+    ? 'MEDIA_STORAGE_MISCONFIGURED'
+    : 'MEDIA_STORAGE_UNAVAILABLE';
+  return new MediaStorageError(code, error);
+}
+
+let readinessCache: { ready: boolean; expiresAt: number } | undefined;
+
+export async function isR2Ready(): Promise<boolean> {
+  if (!isR2Configured()) return process.env.NODE_ENV !== 'production';
+  if (readinessCache && readinessCache.expiresAt > Date.now()) return readinessCache.ready;
+
+  try {
+    await getS3().send(new HeadBucketCommand({ Bucket: env.R2_BUCKET }));
+    readinessCache = { ready: true, expiresAt: Date.now() + R2_READINESS_CACHE_MS };
+  } catch (err) {
+    readinessCache = { ready: false, expiresAt: Date.now() + R2_FAILURE_CACHE_MS };
+    log.error({ err, bucket: env.R2_BUCKET }, 'Probe do armazenamento R2 falhou');
+  }
+  return readinessCache.ready;
 }
 
 export async function generatePresignedUrl(
@@ -77,14 +127,22 @@ export async function uploadToR2(key: string, buffer: Buffer, mimeType: string):
     log.warn({ key }, 'R2 não configurado — ficheiro salvo em /tmp/pdc-uploads');
     return;
   }
-  await getS3().send(
-    new PutObjectCommand({
-      Bucket: env.R2_BUCKET,
-      Key: key,
-      Body: buffer,
-      ContentType: mimeType,
-    })
-  );
+  try {
+    await getS3().send(
+      new PutObjectCommand({
+        Bucket: env.R2_BUCKET,
+        Key: key,
+        Body: buffer,
+        ContentType: mimeType,
+      })
+    );
+    readinessCache = { ready: true, expiresAt: Date.now() + R2_READINESS_CACHE_MS };
+  } catch (err) {
+    readinessCache = { ready: false, expiresAt: Date.now() + R2_FAILURE_CACHE_MS };
+    const storageError = mediaStorageError(err);
+    log.error({ err, code: storageError.code, bucket: env.R2_BUCKET }, 'Upload para R2 falhou');
+    throw storageError;
+  }
 }
 
 export function getPublicUrl(key: string): string {

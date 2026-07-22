@@ -127,6 +127,8 @@ validate_stack_health() {
 
   wait_for_internal api "API /health" 6 node -e \
     "fetch('http://localhost:3001/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))" || return 1
+  wait_for_internal api "R2 media storage" 6 node -e \
+    "fetch('http://localhost:3001/health/media-storage').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))" || return 1
   wait_for_internal redis "Redis PING" 6 /bin/sh -ec \
     'REDISCLI_AUTH="$REDIS_HEALTH_PASSWORD" redis-cli --user health ping | grep -q PONG' || return 1
   wait_for_internal strapi "Strapi /_health" 6 curl -fsS \

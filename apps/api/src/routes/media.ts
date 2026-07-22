@@ -9,7 +9,14 @@ import {
 } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { rateLimitMediaUpload } from '../middleware/rateLimit.js';
-import { generatePresignedUrl, getPublicUrl, uploadToR2, readLocalUpload } from '../modules/media/r2.service.js';
+import {
+  generatePresignedUrl,
+  getPublicUrl,
+  isR2Ready,
+  MediaStorageError,
+  readLocalUpload,
+  uploadToR2,
+} from '../modules/media/r2.service.js';
 import { ALLOWED_MEDIA_MIME_TYPES, validateMagicBytes } from '../modules/media/file-type-guard.js';
 import { formatBytes, getMediaSizeLimit } from '../modules/media/limits.js';
 import { eventBus } from '../modules/events/event-bus.js';
@@ -56,6 +63,9 @@ mediaRoutes.post('/presigned', rateLimitMediaUpload, zValidator('json', Presigne
   const key = `uploads/${user.id}/${mediaId}-${safeName}`;
 
   try {
+    if (!await isR2Ready()) {
+      throw new MediaStorageError('MEDIA_STORAGE_UNAVAILABLE', new Error('R2 readiness probe failed'));
+    }
     const uploadUrl = await generatePresignedUrl(key, mimeType);
     const publicUrl = getPublicUrl(key);
 
@@ -71,9 +81,13 @@ mediaRoutes.post('/presigned', rateLimitMediaUpload, zValidator('json', Presigne
       201
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
+    log.error({ err, userId: user.id, mediaId }, 'Falha ao gerar upload presigned');
     applyCorsHeaders(c);
-    return c.json({ error: message }, 502);
+    if (err instanceof MediaStorageError) {
+      c.header('Retry-After', '60');
+      return c.json({ error: err.message, code: err.code }, 503);
+    }
+    return c.json({ error: 'Falha ao preparar upload.', code: 'MEDIA_UPLOAD_FAILED' }, 502);
   }
 });
 
@@ -145,9 +159,13 @@ mediaRoutes.post('/upload', rateLimitMediaUpload, async (c) => {
 
     return c.json(uploadResult, 201);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
+    log.error({ err, userId: user.id }, 'Falha no upload de media');
     applyCorsHeaders(c);
-    return c.json({ error: message }, 502);
+    if (err instanceof MediaStorageError) {
+      c.header('Retry-After', '60');
+      return c.json({ error: err.message, code: err.code }, 503);
+    }
+    return c.json({ error: 'Falha ao processar upload.', code: 'MEDIA_UPLOAD_FAILED' }, 502);
   }
 });
 

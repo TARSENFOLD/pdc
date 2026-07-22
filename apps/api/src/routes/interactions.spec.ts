@@ -73,6 +73,46 @@ describe('interactionRoutes', () => {
     );
   });
 
+  it('consulta estado do like pelo documentId sem o enviar ao filtro numérico id', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce({
+        data: [],
+        meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
+      })
+      .mockResolvedValueOnce({
+        data: [],
+        meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
+      });
+
+    const response = await app.request('/interactions/like/status?targetType=post&targetId=1');
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ liked: false, count: 0 });
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/likes', {
+      'filters[actor][documentId][$eq]': 'perfil-doc-7',
+      'filters[targetType][$eq]': 'post',
+      'filters[targetId][$eq]': '1',
+    });
+  });
+
+  it('consulta estado do bookmark pelo documentId da relação', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce({
+      data: [],
+      meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
+    });
+
+    const response = await app.request('/interactions/bookmark/status?targetType=post&targetId=1');
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ bookmarked: false });
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/bookmarks', {
+      'filters[actor][documentId][$eq]': 'perfil-doc-7',
+      'filters[targetType][$eq]': 'post',
+      'filters[targetId][$eq]': '1',
+      'pagination[pageSize]': '1',
+    });
+  });
+
   it('cria bookmark ligado ao perfil canónico', async () => {
     vi.mocked(strapiGet).mockResolvedValueOnce({
       data: [],

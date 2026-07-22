@@ -190,6 +190,24 @@ operacional e investigar antes de nova tentativa. **Exceção Redis:**
 rollback sincronizado da secção anterior; `REDIS_HEALTH_PASSWORD` e
 `REDIS_BACKUP_PASSWORD` exigem também os respetivos checks autenticados.
 
+### Rotação R2 após `401 Unauthorized`
+
+1. No Cloudflare Dashboard, criar um token S3 R2 limitado a leitura/escrita no
+   bucket `pdc-media`. Registar `Access Key ID` e `Secret Access Key` no gestor
+   de segredos no momento da criação; o secret não pode ser recuperado depois.
+2. Atualizar `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY` juntos num ficheiro
+   temporário dentro de `/opt/pdc`, preservando owner e mode de `/opt/pdc/.env`.
+   Validar apenas que ambos estão presentes, sem imprimir os valores, e fazer
+   rename atómico do temporário para `/opt/pdc/.env`.
+3. Recriar apenas a API com os metadados da release atual e aguardar o container
+   ficar healthy.
+4. Exigir `200` em `GET https://api.usepdc.com/health/media-storage` e executar
+   um upload real pequeno. O probe usa `HeadBucket`, portanto valida conta,
+   assinatura, bucket e permissões sem escrever objetos.
+5. Só depois revogar a chave anterior. Se o probe falhar, restaurar o par
+   anterior de forma atómica; nunca combinar o access key novo com o secret
+   antigo.
+
 ## Metadados de release e diagnóstico
 
 O `docker-compose.prod.yml` aceita os marcadores `unlabelled`/`unknown` para que

@@ -14,6 +14,8 @@ const redisHealthMock = vi.hoisted(() => ({
 }));
 const isPrimaryRedisReadyMock = vi.hoisted(() => vi.fn(() => Promise.resolve(redisHealthMock.primaryReady)));
 const isUpstashRedisReadyMock = vi.hoisted(() => vi.fn(() => Promise.resolve(redisHealthMock.upstashReady)));
+const r2HealthMock = vi.hoisted(() => ({ configured: true, ready: true }));
+const isR2ReadyMock = vi.hoisted(() => vi.fn(() => Promise.resolve(r2HealthMock.ready)));
 
 vi.mock('../lib/env.js', () => ({
   env: {
@@ -36,6 +38,11 @@ vi.mock('../middleware/rateLimit.js', () => ({
   getRateLimitCircuitState: getRateLimitCircuitStateMock,
 }));
 
+vi.mock('../modules/media/r2.service.js', () => ({
+  isR2Configured: () => r2HealthMock.configured,
+  isR2Ready: isR2ReadyMock,
+}));
+
 const { healthRoutes } = await import('./health.js');
 
 describe('health routes', () => {
@@ -47,7 +54,21 @@ describe('health routes', () => {
     redisHealthMock.hasUpstashRedis = true;
     redisHealthMock.primaryReady = true;
     redisHealthMock.upstashReady = true;
+    r2HealthMock.configured = true;
+    r2HealthMock.ready = true;
     getRateLimitCircuitStateMock.mockReturnValue({ state: 'closed' });
+  });
+
+  it('reports media storage as degraded when R2 rejects the configured credentials', async () => {
+    r2HealthMock.ready = false;
+
+    const response = await app.request('/health/media-storage');
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'degraded',
+      dependency: 'down',
+    });
   });
 
   it('keeps liveness independent from external dependencies', async () => {
