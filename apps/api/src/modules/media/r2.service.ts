@@ -1,4 +1,4 @@
-import { HeadBucketCommand, S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../../lib/env.js';
 import fs from 'node:fs';
@@ -77,19 +77,35 @@ function mediaStorageError(error: unknown): MediaStorageError {
 }
 
 let readinessCache: { ready: boolean; expiresAt: number } | undefined;
+let readinessProbe: Promise<boolean> | undefined;
+
+async function runR2ReadinessProbe(): Promise<boolean> {
+  const key = '_health/media-storage-probe';
+  try {
+    await getS3().send(new PutObjectCommand({
+      Bucket: env.R2_BUCKET,
+      Key: key,
+      Body: Buffer.alloc(0),
+      ContentType: 'application/octet-stream',
+    }));
+    await getS3().send(new DeleteObjectCommand({ Bucket: env.R2_BUCKET, Key: key }));
+    readinessCache = { ready: true, expiresAt: Date.now() + R2_READINESS_CACHE_MS };
+  } catch (err) {
+    readinessCache = { ready: false, expiresAt: Date.now() + R2_FAILURE_CACHE_MS };
+    log.error({ err, bucket: env.R2_BUCKET }, 'Probe de escrita do armazenamento R2 falhou');
+  }
+  return readinessCache.ready;
+}
 
 export async function isR2Ready(): Promise<boolean> {
   if (!isR2Configured()) return process.env.NODE_ENV !== 'production';
   if (readinessCache && readinessCache.expiresAt > Date.now()) return readinessCache.ready;
+  if (readinessProbe) return readinessProbe;
 
-  try {
-    await getS3().send(new HeadBucketCommand({ Bucket: env.R2_BUCKET }));
-    readinessCache = { ready: true, expiresAt: Date.now() + R2_READINESS_CACHE_MS };
-  } catch (err) {
-    readinessCache = { ready: false, expiresAt: Date.now() + R2_FAILURE_CACHE_MS };
-    log.error({ err, bucket: env.R2_BUCKET }, 'Probe do armazenamento R2 falhou');
-  }
-  return readinessCache.ready;
+  readinessProbe = runR2ReadinessProbe().finally(() => {
+    readinessProbe = undefined;
+  });
+  return readinessProbe;
 }
 
 export async function generatePresignedUrl(
@@ -138,8 +154,11 @@ export async function uploadToR2(key: string, buffer: Buffer, mimeType: string):
     );
     readinessCache = { ready: true, expiresAt: Date.now() + R2_READINESS_CACHE_MS };
   } catch (err) {
-    readinessCache = { ready: false, expiresAt: Date.now() + R2_FAILURE_CACHE_MS };
     const storageError = mediaStorageError(err);
+    const status = errorStatus(err);
+    if (storageError.code === 'MEDIA_STORAGE_MISCONFIGURED' || status === undefined || status >= 500) {
+      readinessCache = { ready: false, expiresAt: Date.now() + R2_FAILURE_CACHE_MS };
+    }
     log.error({ err, code: storageError.code, bucket: env.R2_BUCKET }, 'Upload para R2 falhou');
     throw storageError;
   }

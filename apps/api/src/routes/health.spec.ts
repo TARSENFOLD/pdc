@@ -56,6 +56,7 @@ describe('health routes', () => {
     redisHealthMock.upstashReady = true;
     r2HealthMock.configured = true;
     r2HealthMock.ready = true;
+    isR2ReadyMock.mockClear();
     getRateLimitCircuitStateMock.mockReturnValue({ state: 'closed' });
   });
 
@@ -69,6 +70,29 @@ describe('health routes', () => {
       status: 'degraded',
       dependency: 'down',
     });
+  });
+
+  it('reports configured and write-capable media storage as ready', async () => {
+    const response = await app.request('/health/media-storage');
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'ready',
+      dependency: 'up',
+    });
+  });
+
+  it('reports media storage as unconfigured without invoking the provider', async () => {
+    r2HealthMock.configured = false;
+
+    const response = await app.request('/health/media-storage');
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      status: 'degraded',
+      dependency: 'unconfigured',
+    });
+    expect(isR2ReadyMock).not.toHaveBeenCalled();
   });
 
   it('keeps liveness independent from external dependencies', async () => {

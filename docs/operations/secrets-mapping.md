@@ -202,11 +202,13 @@ rollback sincronizado da secção anterior; `REDIS_HEALTH_PASSWORD` e
 3. Recriar apenas a API com os metadados da release atual e aguardar o container
    ficar healthy.
 4. Exigir `200` em `GET https://api.usepdc.com/health/media-storage` e executar
-   um upload real pequeno. O probe usa `HeadBucket`, portanto valida conta,
-   assinatura, bucket e permissões sem escrever objetos.
+   um upload real pequeno. O probe grava um objeto vazio reservado em `_health/`
+   e remove-o em seguida, validando conta, assinatura, bucket e permissões de
+   escrita/remoção sem preservar media de diagnóstico.
 5. Só depois revogar a chave anterior. Se o probe falhar, restaurar o par
-   anterior de forma atómica; nunca combinar o access key novo com o secret
-   antigo.
+   anterior de forma atómica, recriar novamente o container `api` para carregar
+   o ambiente restaurado e repetir o health check e o upload pequeno. Nunca
+   combinar o access key novo com o secret antigo.
 
 ## Metadados de release e diagnóstico
 

@@ -18,7 +18,7 @@ vi.mock('@aws-sdk/client-s3', () => ({
   GetObjectCommand: class GetObjectCommand {
     constructor(readonly input: unknown) {}
   },
-  HeadBucketCommand: class HeadBucketCommand {
+  DeleteObjectCommand: class DeleteObjectCommand {
     constructor(readonly input: unknown) {}
   },
   PutObjectCommand: class PutObjectCommand {
@@ -41,15 +41,15 @@ vi.mock('../../lib/env.js', () => ({
   },
 }));
 
-const { isR2Ready, uploadToR2 } = await import('./r2.service.js');
-
 describe('r2 service', () => {
   beforeEach(() => {
+    vi.resetModules();
     vi.clearAllMocks();
     s3Mock.config = undefined;
   });
 
   it('limita a chamada S3 e classifica credenciais rejeitadas sem expor o provider', async () => {
+    const { uploadToR2 } = await import('./r2.service.js');
     s3Mock.send.mockRejectedValueOnce(Object.assign(new Error('Unauthorized'), {
       $metadata: { httpStatusCode: 401 },
     }));
@@ -71,10 +71,11 @@ describe('r2 service', () => {
   });
 
   it('volta a testar rapidamente depois de um probe falhado', async () => {
+    const { isR2Ready } = await import('./r2.service.js');
     vi.useFakeTimers();
-    vi.setSystemTime(Date.now() + 4_000);
     s3Mock.send
       .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } })
       .mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } });
 
     await expect(isR2Ready()).resolves.toBe(false);
@@ -84,7 +85,38 @@ describe('r2 service', () => {
     await vi.advanceTimersByTimeAsync(3_001);
 
     await expect(isR2Ready()).resolves.toBe(true);
-    expect(s3Mock.send).toHaveBeenCalledTimes(2);
+    expect(s3Mock.send).toHaveBeenCalledTimes(3);
     vi.useRealTimers();
+  });
+
+  it('partilha um único probe entre chamadas concorrentes', async () => {
+    const { isR2Ready } = await import('./r2.service.js');
+    let completeWrite: ((value: unknown) => void) | undefined;
+    s3Mock.send
+      .mockImplementationOnce(() => new Promise((resolve) => { completeWrite = resolve; }))
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 204 } });
+
+    const first = isR2Ready();
+    const second = isR2Ready();
+
+    expect(s3Mock.send).toHaveBeenCalledTimes(1);
+    completeWrite?.({ $metadata: { httpStatusCode: 200 } });
+    await expect(Promise.all([first, second])).resolves.toEqual([true, true]);
+    expect(s3Mock.send).toHaveBeenCalledTimes(2);
+  });
+
+  it('não degrada a readiness global por uma rejeição isolada de input', async () => {
+    const { isR2Ready, uploadToR2 } = await import('./r2.service.js');
+    s3Mock.send
+      .mockRejectedValueOnce(Object.assign(new Error('Bad Request'), {
+        $metadata: { httpStatusCode: 400 },
+      }))
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } })
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 204 } });
+
+    await expect(uploadToR2('uploads/user/avatar.jpg', Buffer.from('image'), 'image/jpeg'))
+      .rejects.toMatchObject({ code: 'MEDIA_STORAGE_UNAVAILABLE' });
+    await expect(isR2Ready()).resolves.toBe(true);
+    expect(s3Mock.send).toHaveBeenCalledTimes(3);
   });
 });

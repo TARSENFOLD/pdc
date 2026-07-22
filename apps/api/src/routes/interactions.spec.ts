@@ -113,6 +113,32 @@ describe('interactionRoutes', () => {
     });
   });
 
+  it('usa o id numérico quando o perfil de compatibilidade não tem documentId', async () => {
+    vi.mocked(strapiGet).mockReset();
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce({
+        data: [{ id: 7, userId: 'user-1', nome: 'Ana' }],
+        meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
+      } as StrapiListResponse<InteractionPerfil>)
+      .mockResolvedValueOnce({
+        data: [],
+        meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
+      })
+      .mockResolvedValueOnce({
+        data: [],
+        meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
+      });
+
+    const response = await app.request('/interactions/like/status?targetType=post&targetId=1');
+
+    expect(response.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/likes', {
+      'filters[actor][id][$eq]': '7',
+      'filters[targetType][$eq]': 'post',
+      'filters[targetId][$eq]': '1',
+    });
+  });
+
   it('cria bookmark ligado ao perfil canónico', async () => {
     vi.mocked(strapiGet).mockResolvedValueOnce({
       data: [],

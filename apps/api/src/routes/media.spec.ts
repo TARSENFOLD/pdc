@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono, type Context, type Next } from 'hono';
 import { mediaRoutes } from './media.js';
-import { MediaStorageError, uploadToR2 } from '../modules/media/r2.service.js';
+import { isR2Ready, MediaStorageError, uploadToR2 } from '../modules/media/r2.service.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { UploadResultSchema } from '@pdc/shared';
 
@@ -178,6 +178,32 @@ describe('mediaRoutes', () => {
     await expect(res.json()).resolves.toEqual({
       error: 'Serviço de armazenamento temporariamente indisponível',
       code: 'MEDIA_STORAGE_MISCONFIGURED',
+    });
+  });
+
+  it('bloqueia presigned com 503 quando o storage não aceita escrita', async () => {
+    vi.mocked(isR2Ready).mockResolvedValueOnce(false);
+
+    const res = await app.request('/media/presigned', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: 'http://localhost:5173',
+      },
+      body: JSON.stringify({
+        filename: 'avatar.jpg',
+        mimeType: 'image/jpeg',
+        sizeBytes: 1024,
+        entityType: 'avatar',
+      }),
+    });
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get('retry-after')).toBe('60');
+    expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:5173');
+    await expect(res.json()).resolves.toEqual({
+      error: 'Serviço de armazenamento temporariamente indisponível',
+      code: 'MEDIA_STORAGE_UNAVAILABLE',
     });
   });
 });
