@@ -17,11 +17,12 @@ test.describe('Programa - criar, editar e consumir', () => {
       .fill('Agrupar um curso e confirmar a persistência da seleção ao editar.');
 
     await instituicaoPage.getByRole('button', { name: /Conteúdos/ }).click();
-    const checkboxes = instituicaoPage.getByRole('region', { name: 'Conteúdos Agrupados' })
+    const courseCheckboxes = instituicaoPage.getByRole('region', { name: 'Conteúdos Agrupados' })
+      .getByRole('region', { name: 'Cursos' })
       .getByRole('checkbox');
-    await expect(checkboxes).not.toHaveCount(0);
-    await checkboxes.first().check();
-    const cursoSelecionado = await checkboxes.first().getAttribute('value');
+    await expect(courseCheckboxes).not.toHaveCount(0);
+    await courseCheckboxes.first().check();
+    const cursoSelecionado = await courseCheckboxes.first().getAttribute('value');
     expect(cursoSelecionado).toBeTruthy();
 
     await instituicaoPage.getByRole('button', { name: /Inscrição/ }).click();

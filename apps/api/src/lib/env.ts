@@ -30,6 +30,7 @@ const envSchema = z.object({
   STRAPI_TIMEOUT: z.string().optional(),
   STRAPI_WRITE_TIMEOUT: z.string().optional(),
   JWT_SECRET: z.string().min(32),
+  OTP_HASH_SECRET: z.string().min(32).optional(),
   
   // Redis
   PDC_REDIS_URL: z.string().refine(isRedisUrl, 'PDC_REDIS_URL must be a valid Redis URL').optional(),
@@ -91,6 +92,7 @@ const envSchema = z.object({
 
   // Dev
   DEV_SKIP_OTP: z.string().optional(),
+  PDC_E2E_LONG_AUTH: z.enum(['true', 'false']).default('false'),
 
   // LTI (Learning Tools Interoperability)
   LTI_PRIVATE_KEY: z.string().optional(),
@@ -115,6 +117,10 @@ function hasValue(value: string | undefined): value is string {
   return typeof value === 'string' && value.trim().length > 0 && !isPlaceholder(value);
 }
 
+function hasSameOrigin(left: string, right: string): boolean {
+  return new URL(left).origin === new URL(right).origin;
+}
+
 function collectProductionMissingVars(parsedEnv: Env): string[] {
   const missing: string[] = [];
 
@@ -124,6 +130,7 @@ function collectProductionMissingVars(parsedEnv: Env): string[] {
     ['STRAPI_URL', 'STRAPI_URL required in production'],
     ['STRAPI_API_TOKEN', 'STRAPI_API_TOKEN required in production'],
     ['JWT_SECRET', 'JWT_SECRET required in production'],
+    ['OTP_HASH_SECRET', 'OTP_HASH_SECRET required in production'],
     ['PDC_REDIS_URL', 'PDC_REDIS_URL required in production'],
     ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_URL required in production'],
     ['UPSTASH_REDIS_REST_TOKEN', 'UPSTASH_REDIS_REST_TOKEN required in production'],
@@ -145,11 +152,43 @@ function collectProductionMissingVars(parsedEnv: Env): string[] {
     missing.push('DEEPSEEK_API_KEY required in production when AI_PROVIDER=deepseek');
   }
 
+  const oauthProviders = [
+    {
+      name: 'GOOGLE',
+      clientId: parsedEnv.GOOGLE_CLIENT_ID,
+      clientSecret: parsedEnv.GOOGLE_CLIENT_SECRET,
+      redirectUri: parsedEnv.GOOGLE_REDIRECT_URI,
+    },
+    {
+      name: 'LINKEDIN',
+      clientId: parsedEnv.LINKEDIN_CLIENT_ID,
+      clientSecret: parsedEnv.LINKEDIN_CLIENT_SECRET,
+      redirectUri: parsedEnv.LINKEDIN_REDIRECT_URI,
+    },
+  ];
+  for (const provider of oauthProviders) {
+    if (
+      !hasValue(provider.clientId)
+      && !hasValue(provider.clientSecret)
+      && !hasValue(provider.redirectUri)
+    ) continue;
+    if (!hasValue(provider.clientId)) missing.push(`${provider.name}_CLIENT_ID required when OAuth provider is enabled`);
+    if (!hasValue(provider.clientSecret)) missing.push(`${provider.name}_CLIENT_SECRET required when OAuth provider is enabled`);
+    if (!hasValue(provider.redirectUri)) {
+      missing.push(`${provider.name}_REDIRECT_URI required when OAuth provider is enabled`);
+    } else if (!hasSameOrigin(provider.redirectUri, parsedEnv.API_URL)) {
+      missing.push(`${provider.name}_REDIRECT_URI must use API_URL origin in production`);
+    }
+  }
+
   // Defense-in-depth (spec: Auth Fix): DEV_SKIP_OTP e proibido em producao.
   // O BFF recusa o boot se esta variavel estiver activa em NODE_ENV=production,
   // independentemente de o guard do auth.otp.ts a filtrar. Camada extra de seguranca.
   if (parsedEnv.DEV_SKIP_OTP === 'true') {
     missing.push('DEV_SKIP_OTP must not be enabled in production (security: OTP bypass disabled)');
+  }
+  if (parsedEnv.PDC_E2E_LONG_AUTH === 'true') {
+    missing.push('PDC_E2E_LONG_AUTH must not be enabled in production');
   }
 
   const hasSendGrid = hasValue(parsedEnv.SENDGRID_API_KEY);

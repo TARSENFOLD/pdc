@@ -1,6 +1,6 @@
 # ADR-003 — JWT em httpOnly Cookies
 
-**Estado:** Aceite  
+**Estado:** Aceite, emendado pelo ADR-054
 **Data:** 2025-11-05  
 **Contexto:** Fase 1 — Autenticação Segura
 
@@ -25,15 +25,14 @@ Usar **JWT em httpOnly cookies** com rotação de refresh tokens.
 
 Dois tokens separados:
 - `access_token`: JWT, 15 minutos, httpOnly, Secure, SameSite=Strict
-- `refresh_token`: JWT, 7 dias, httpOnly, Secure, SameSite=Strict, rotação automática
+- `refresh_token`: JWT, sessão absoluta de 90 dias, httpOnly, Secure,
+  SameSite=Strict e rotação automática conforme ADR-054
 
-**Emenda operacional de produção (2026-06-01):** enquanto o frontend público
-corre em `www.usepdc.com` e o BFF em `api-production-482b.up.railway.app`,
-os cookies de autenticação e o cookie transitório `auth_challenge` precisam de
-`SameSite=None; Secure`. Sem isso, o browser bloqueia o POST credentialed do
-fluxo OTP e o BFF responde `Sessão inválida` antes de validar o código. Esta
-exceção deve ser revista quando o BFF estiver em subdomínio first-party
-canónico, por exemplo `api.usepdc.com`.
+**Emenda operacional de produção (2026-07-18):** o frontend e o BFF usam os
+subdomínios first-party `usepdc.com` e `api.usepdc.com`. A exceção Railway com
+`SameSite=None` terminou. Cookies de autenticação usam `SameSite=Strict`; apenas
+o cookie transitório do OAuth usa `SameSite=Lax` para regressar do provider,
+mantendo `httpOnly`, `Secure` em produção, TTL de 10 minutos e path `/auth`.
 
 ---
 
@@ -66,7 +65,7 @@ canónico, por exemplo `api.usepdc.com`.
 setCookie(c, 'access_token', accessToken, {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+  sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
   maxAge: 15 * 60,      // 15 min
   path: '/',
 });
@@ -84,11 +83,15 @@ const response = await fetch(`${BASE_URL}/cursos`, {
 ### Rotação de Refresh Token
 
 A cada uso do `refresh_token`:
-1. Token antigo é revogado (removido do Strapi)
-2. Novo par de tokens é gerado
+1. O novo par e o hash do refresh token sucessor são gerados sem emitir cookies
+2. O hash corrente é comparado e substituído atomicamente pelo novo hash no Redis
 3. Cookies actualizados
 
-Se o mesmo refresh token for usado duas vezes, **toda a sessão é invalidada** (detecção de token theft).
+Durante 30 segundos, um retry do mesmo token devolve deterministicamente o mesmo
+refresh sucessor para tolerar uma resposta perdida. Depois dessa janela, reutilizar
+um token substituído invalida toda a sessão. A rotação preserva a expiração absoluta
+de 90 dias. Duração, replay, revogação e dispositivos confiáveis são regidos pelo
+ADR-054, que prevalece sobre versões anteriores desta decisão nesses pontos.
 
 ---
 
@@ -104,4 +107,6 @@ Se o mesmo refresh token for usado duas vezes, **toda a sessão é invalidada** 
 
 ## Reavaliação
 
-Esta decisão é robusta e alinhada com OWASP. Não há condições de reavaliação previstas.
+Esta decisão continua canónica para transporte em cookies. O ADR-054 emenda e
+substitui qualquer política anterior sobre duração, rotação, revogação e
+dispositivos confiáveis.

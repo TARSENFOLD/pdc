@@ -23,11 +23,17 @@ export interface PdcRedis {
   rpoplpush: <T>(source: string, destination: string) => Promise<T | null>;
   eval: <TResult = unknown>(script: string, keys: string[], args: unknown[]) => Promise<TResult>;
   ping: () => Promise<string>;
+  probeReadiness?: (timeoutMs: number) => Promise<boolean>;
 }
 
 export function assertValidRedisSetOptions(options: { ex?: number; px?: number }): void {
   if (options.ex !== undefined && options.px !== undefined) {
     throw new TypeError('Redis SET cannot combine EX and PX');
+  }
+  for (const [name, value] of [['EX', options.ex], ['PX', options.px]] as const) {
+    if (value !== undefined && (!Number.isSafeInteger(value) || value <= 0)) {
+      throw new TypeError(`Redis SET ${name} must be a positive integer`);
+    }
   }
 }
 

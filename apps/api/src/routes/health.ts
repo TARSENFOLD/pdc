@@ -2,7 +2,12 @@ import { Hono } from 'hono';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { Features } from '@pdc/shared';
 import { env } from '../lib/env.js';
-import { hasPrimaryRedis, hasUpstashRedis, isPrimaryRedisReady } from '../lib/redis.js';
+import {
+  hasPrimaryRedis,
+  hasUpstashRedis,
+  isPrimaryRedisReady,
+  isUpstashRedisReady,
+} from '../lib/redis.js';
 import { getRateLimitCircuitState } from '../middleware/rateLimit.js';
 
 export const healthRoutes = new Hono();
@@ -25,10 +30,17 @@ async function isStrapiReady(): Promise<boolean> {
 }
 
 healthRoutes.get('/ready', async (c) => {
-  const strapiReady = await isStrapiReady();
-  const sessionRedisReady = await isPrimaryRedisReady();
+  const [strapiReady, primaryRedisProbeReady, upstashRedisProbeReady] = await Promise.all([
+    isStrapiReady(),
+    isPrimaryRedisReady(),
+    isUpstashRedisReady(),
+  ]);
   const rateLimitCircuit = getRateLimitCircuitState();
-  const rateLimitRedisReady = hasUpstashRedis && rateLimitCircuit.state === 'closed';
+  const sessionRedisReady = hasPrimaryRedis && primaryRedisProbeReady;
+  const upstashRedisReady = hasUpstashRedis && upstashRedisProbeReady;
+  const rateLimitRedisReady = hasUpstashRedis
+    && upstashRedisReady
+    && rateLimitCircuit.state === 'closed';
   const ready = strapiReady && sessionRedisReady && rateLimitRedisReady;
 
   return c.json({
@@ -36,7 +48,13 @@ healthRoutes.get('/ready', async (c) => {
     dependencies: {
       strapi: strapiReady ? 'up' : 'down',
       sessionRedis: !hasPrimaryRedis ? 'unconfigured' : sessionRedisReady ? 'up' : 'down',
-      rateLimitRedis: !hasUpstashRedis ? 'unconfigured' : rateLimitRedisReady ? 'up' : 'degraded',
+      rateLimitRedis: !hasUpstashRedis
+        ? 'unconfigured'
+        : !upstashRedisReady
+          ? 'down'
+          : rateLimitRedisReady
+            ? 'up'
+            : 'degraded',
     },
     rateLimitCircuit,
     timestamp: new Date().toISOString(),

@@ -5,6 +5,19 @@ import { authApi } from '@/lib/api/auth';
 import { RefreshCw, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { AuthLeftPanel } from '@/components/auth/AuthLeftPanel';
+import { getErrorBody } from '@/lib/api/http';
+
+function verificationState(value: unknown): {
+  canal?: 'email' | 'sms';
+  from?: string;
+} | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const canal = 'canal' in value && (value.canal === 'email' || value.canal === 'sms')
+    ? value.canal
+    : undefined;
+  const from = 'from' in value && typeof value.from === 'string' ? value.from : undefined;
+  return { ...(canal ? { canal } : {}), ...(from ? { from } : {}) };
+}
 
 export default function TwoFactorPage() {
   const [otp, setOtp] = useState('');
@@ -13,11 +26,12 @@ export default function TwoFactorPage() {
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [trustDevice, setTrustDevice] = useState(false);
 
   const { completeOtp } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as { canal?: 'email' | 'sms'; from?: string } | null;
+  const state = verificationState(location.state);
   const canal = state?.canal ?? 'email';
   const from = state?.from ?? '/app';
 
@@ -40,10 +54,10 @@ export default function TwoFactorPage() {
     setIsLoading(true);
 
     try {
-      await completeOtp(otp, canal);
+      await completeOtp(otp, canal, trustDevice);
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      const body = err instanceof Error && 'body' in err ? (err as { body?: Record<string, string> }).body : undefined;
+      const body = getErrorBody(err);
       setError(body?.error ?? 'Código inválido ou expirado.');
     } finally {
       setIsLoading(false);
@@ -63,7 +77,7 @@ export default function TwoFactorPage() {
       setCountdown(60);
       setTimeout(() => { setResendSuccess(false); }, 5000);
     } catch (err: unknown) {
-      const body = err instanceof Error && 'body' in err ? (err as { body?: Record<string, string> }).body : undefined;
+      const body = getErrorBody(err);
       setError(body?.error ?? 'Erro ao reenviar código.');
     } finally {
       setIsResending(false);
@@ -124,6 +138,22 @@ export default function TwoFactorPage() {
               />
             </div>
 
+            <label className="flex min-h-11 cursor-pointer items-start gap-3 text-sm text-ink-secondary">
+              <input
+                type="checkbox"
+                checked={trustDevice}
+                onChange={(event) => { setTrustDevice(event.target.checked); }}
+                disabled={isLoading}
+                className="mt-0.5 size-5 accent-[var(--accent-terracotta)]"
+              />
+              <span>
+                Confiar neste browser por 90 dias
+                <span className="mt-1 block text-xs text-ink-tertiary">
+                  Usa esta opção apenas num dispositivo privado.
+                </span>
+              </span>
+            </label>
+
             <Button
               type="submit"
               disabled={isLoading || otp.length !== 6}
@@ -159,10 +189,6 @@ export default function TwoFactorPage() {
               <ArrowLeft size={12} />
               Voltar ao Login
             </button>
-          </div>
-
-          <div className="mt-12 text-center text-[10px] font-mono text-ink-tertiary/30 uppercase tracking-[0.2em]">
-            Security Layer: OTP_V2_ENFORCED
           </div>
         </div>
       </div>

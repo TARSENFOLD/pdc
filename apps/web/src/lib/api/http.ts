@@ -1,8 +1,11 @@
 import { z, type ZodType, type ZodTypeDef } from 'zod';
+import { resolveApiBaseUrl } from './base-url';
+import { SESSION_SERVICE_UNAVAILABLE_MESSAGE } from './auth-errors';
 
-const configuredBaseUrl = import.meta.env.VITE_API_URL as string | undefined;
-const BASE_URL: string = configuredBaseUrl
-  ?? (import.meta.env.PROD ? 'https://api.usepdc.com' : '/api');
+const BASE_URL = resolveApiBaseUrl(
+  import.meta.env.VITE_API_URL,
+  import.meta.env.PROD === true,
+);
 
 export class ApiError extends Error {
   constructor(
@@ -18,8 +21,8 @@ export class ApiError extends Error {
 export function getErrorBody(error: unknown): { error?: string } | undefined {
   if (!(error instanceof ApiError)) return undefined;
   if (typeof error.body !== 'object' || error.body === null) return undefined;
-  const body = error.body as Record<string, unknown>;
-  return typeof body['error'] === 'string' ? { error: body['error'] } : undefined;
+  if (!('error' in error.body) || typeof error.body.error !== 'string') return undefined;
+  return { error: error.body.error };
 }
 
 const SKIP_REFRESH_PATHS = new Set([
@@ -32,26 +35,89 @@ const SKIP_REFRESH_PATHS = new Set([
   '/auth/reset-password',
 ]);
 
-let refreshPromise: Promise<boolean> | null = null;
+type RefreshResult = 'refreshed' | 'invalid' | 'unavailable';
+interface CoordinatedRefreshCycle {
+  promise: Promise<RefreshResult>;
+  invalidNotified: boolean;
+}
+
+let coordinatedRefreshCycle: CoordinatedRefreshCycle | null = null;
+const REFRESH_LOCK_NAME = 'pdc-auth-refresh';
+const REFRESH_COMPLETED_AT_KEY = 'pdc:auth-refresh-completed-at';
 
 function notifySessionExpired(): void {
   window.dispatchEvent(new Event('pdc:session-expired'));
 }
 
-function tryRefresh(): Promise<boolean> {
-  if (!refreshPromise) {
-    refreshPromise = fetch(`${BASE_URL}/auth/refresh`, {
+function readLastRefreshCompletedAt(): number {
+  try {
+    const value = Number.parseInt(localStorage.getItem(REFRESH_COMPLETED_AT_KEY) ?? '', 10);
+    return Number.isFinite(value) ? value : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function recordRefreshCompleted(): void {
+  try {
+    localStorage.setItem(REFRESH_COMPLETED_AT_KEY, Date.now().toString());
+  } catch {
+    // Storage pode estar bloqueado; a rotação continua protegida na aba atual.
+  }
+}
+
+async function performRefresh(): Promise<RefreshResult> {
+  try {
+    const response = await fetch(`${BASE_URL}/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
-    })
-      .then((response) => {
-        if (!response.ok) notifySessionExpired();
-        return response.ok;
-      })
-      .catch(() => false)
-      .finally(() => { refreshPromise = null; });
+    });
+    if (response.ok) {
+      recordRefreshCompleted();
+      return 'refreshed';
+    }
+    if (response.status === 401) {
+      return 'invalid';
+    }
+    return 'unavailable';
+  } catch {
+    return 'unavailable';
   }
-  return refreshPromise;
+}
+
+async function coordinateRefreshAcrossTabs(requestedAt: number): Promise<RefreshResult> {
+  if (!navigator.locks) return performRefresh();
+  try {
+    return await navigator.locks.request(REFRESH_LOCK_NAME, async () => {
+      if (readLastRefreshCompletedAt() >= requestedAt) return 'refreshed';
+      return performRefresh();
+    });
+  } catch {
+    return performRefresh();
+  }
+}
+
+export async function refreshSession(
+  options: { notifyOnInvalid?: boolean } = {},
+): Promise<RefreshResult> {
+  if (!coordinatedRefreshCycle) {
+    const requestedAt = Date.now();
+    const cycle: CoordinatedRefreshCycle = {
+      promise: coordinateRefreshAcrossTabs(requestedAt),
+      invalidNotified: false,
+    };
+    coordinatedRefreshCycle = cycle;
+    void cycle.promise.finally(() => {
+      if (coordinatedRefreshCycle === cycle) coordinatedRefreshCycle = null;
+    }).catch(() => undefined);
+  }
+  const cycle = coordinatedRefreshCycle;
+  const result = await cycle.promise;
+  if (result === 'invalid' && options.notifyOnInvalid !== false && !cycle.invalidNotified) {
+    cycle.invalidNotified = true;
+    notifySessionExpired();
+  }
+  return result;
 }
 
 function mergeHeaders(init?: RequestInit): HeadersInit {
@@ -114,9 +180,12 @@ async function requestUnknown(path: string, init?: RequestInit, retried = false)
   });
 
   if (response.status === 401 && !retried && !SKIP_REFRESH_PATHS.has(path)) {
-    const refreshed = await tryRefresh();
-    if (refreshed) {
+    const refreshResult = await refreshSession();
+    if (refreshResult === 'refreshed') {
       return requestUnknown(path, init, true);
+    }
+    if (refreshResult === 'unavailable') {
+      throw new ApiError(503, SESSION_SERVICE_UNAVAILABLE_MESSAGE);
     }
   }
 

@@ -35,19 +35,17 @@ test.describe('OAuth', () => {
 
   test('Google OAuth redirects to Google consent', async ({ page }) => {
     await clearSession(page);
-    await page.route('https://accounts.google.com/**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'text/html',
-        body: '<!doctype html><title>Google OAuth</title><main>Google OAuth consent</main>',
-      });
-    });
+    await page.context().route('https://accounts.google.com/**', (route) => route.abort());
     const requestPromise = page.waitForRequest(/\/auth\/google/);
-    const navigationPromise = page.waitForURL(/accounts\.google\.com/, { timeout: 15_000 });
+    const providerRequestPromise = page.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return url.hostname === 'accounts.google.com' && url.pathname === '/o/oauth2/v2/auth';
+    });
     await page.click('text=Google');
     const request = await requestPromise;
     expect(request.url()).toMatch(/\/auth\/google/);
-    await navigationPromise;
-    expect(page.url()).toMatch(/accounts\.google\.com/);
+    const providerRequest = await providerRequestPromise;
+    const providerUrl = new URL(providerRequest.url());
+    expect(providerUrl.searchParams.get('client_id')).toBe('e2e-google-client-id');
   });
 });

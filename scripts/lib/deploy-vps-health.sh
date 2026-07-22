@@ -113,6 +113,12 @@ wait_for_external_cors() {
 
 validate_stack_health() {
   local native_tries="${1:-30}" external_tries="${2:-18}"
+  local api_url="${PDC_DEPLOY_API_URL:-https://api.usepdc.com}"
+  local cms_url="${PDC_DEPLOY_CMS_URL:-https://cms.usepdc.com}"
+  local web_origin="${PDC_DEPLOY_WEB_ORIGIN:-https://usepdc.com}"
+  api_url="${api_url%/}"
+  cms_url="${cms_url%/}"
+  web_origin="${web_origin%/}"
 
   wait_for_container_health traefik "${native_tries}" || return 1
   wait_for_container_health redis "${native_tries}" || return 1
@@ -126,10 +132,10 @@ validate_stack_health() {
   wait_for_internal strapi "Strapi /_health" 6 curl -fsS \
     http://localhost:1337/_health || return 1
 
-  wait_for_external https://api.usepdc.com/health "${external_tries}" || return 1
-  wait_for_external https://cms.usepdc.com/_health "${external_tries}" || return 1
-  wait_for_external_cors https://api.usepdc.com/bootstrap https://usepdc.com \
+  wait_for_external "${api_url}/health" "${external_tries}" || return 1
+  wait_for_external "${cms_url}/_health" "${external_tries}" || return 1
+  wait_for_external_cors "${api_url}/bootstrap" "${web_origin}" \
     "API /bootstrap" "${external_tries}" || return 1
-  wait_for_external_cors 'https://api.usepdc.com/socket.io/?EIO=4&transport=polling' https://usepdc.com \
+  wait_for_external_cors "${api_url}/socket.io/?EIO=4&transport=polling" "${web_origin}" \
     "Socket.IO polling" "${external_tries}" || return 1
 }

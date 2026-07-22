@@ -145,6 +145,29 @@ class RedisTcpAdapter implements PdcRedis {
   async ping(): Promise<string> {
     return (await this.connectedClient()).ping();
   }
+
+  async probeReadiness(timeoutMs: number): Promise<boolean> {
+    const controller = new AbortController();
+    const timeoutError = new Error('Redis readiness probe timed out');
+    const timeoutId = setTimeout(() => {
+      controller.abort(timeoutError);
+    }, timeoutMs);
+    const abortConnection = new Promise<never>((_resolve, reject) => {
+      controller.signal.addEventListener('abort', () => {
+        reject(timeoutError);
+      }, { once: true });
+    });
+    try {
+      const client = await Promise.race([this.connectedClient(), abortConnection]);
+      const probeClient = client.withAbortSignal(controller.signal);
+      if (await probeClient.ping() !== 'PONG') return false;
+      return await probeClient.set(this.key('health:readiness'), Date.now().toString(), { EX: 5 }) === 'OK';
+    } catch {
+      return false;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 export function createRedisTcpAdapter(url: string): PdcRedis {

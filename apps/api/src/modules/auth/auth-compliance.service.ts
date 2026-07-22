@@ -6,6 +6,7 @@ import {
 import { strapiGet, strapiPut } from '../strapi/strapi.client.js';
 import { consentService } from '../consent/consent.service.js';
 import { buildPerfilComplianceFields } from './auth.compliance.js';
+import { AuthDomainError } from './auth.errors.js';
 
 interface PerfilComplianceItem {
   id: string | number;
@@ -16,14 +17,10 @@ function perfilPersistedId(perfil: PerfilComplianceItem): string {
   return perfil.documentId ?? String(perfil.id);
 }
 
-function semanticError(message: string, status: 400 | 404): Error & { status: 400 | 404 } {
-  return Object.assign(new Error(message), { status });
-}
-
 function assertRoleAgeEligibility(role: Role, dataNascimento: string): void {
   if (role === 'estudante') return;
   if (resolveEstadoMenoridade(dataNascimento) === 'menor') {
-    throw semanticError('Este papel deve ser representado por um utilizador adulto.', 400);
+    throw new AuthDomainError('Este papel deve ser representado por um utilizador adulto.', 400);
   }
 }
 
@@ -41,7 +38,7 @@ export const authComplianceService = {
       'pagination[pageSize]': '1',
     });
     const perfil = res.data[0];
-    if (!perfil) throw semanticError('Perfil não encontrado', 404);
+    if (!perfil) throw new AuthDomainError('Perfil não encontrado', 404);
 
     await consentService.recordLegalAcceptance({
       userId,

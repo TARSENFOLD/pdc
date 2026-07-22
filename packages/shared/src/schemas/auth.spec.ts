@@ -4,6 +4,7 @@ import {
   AprovacaoActionSchema,
   OAuthFinalizarRoleChoiceSchema,
   OAuthFinalizarOtpSchema,
+  LoginOtpVerifySchema,
 } from './auth.js';
 import { DomainEventName, EventPayloadSchemas } from '../domain-events.js';
 import { LEGAL_DOCUMENT_CURRENT_VERSIONS } from '../compliance.js';
@@ -213,6 +214,24 @@ describe('OAuthFinalizarOtpSchema', () => {
 
   it('does not require email in body', () => {
     expect(() => OAuthFinalizarOtpSchema.parse({ otp: '123456' })).not.toThrow();
+  });
+});
+
+describe('LoginOtpVerifySchema', () => {
+  it('does not trust the device when opt-in is omitted', () => {
+    expect(LoginOtpVerifySchema.parse({ otp: '123456', canal: 'email' })).toEqual({
+      otp: '123456',
+      canal: 'email',
+      trustDevice: false,
+    });
+  });
+
+  it('allows explicit opt-in to trust the browser', () => {
+    expect(LoginOtpVerifySchema.parse({
+      otp: '123456',
+      canal: 'email',
+      trustDevice: true,
+    }).trustDevice).toBe(true);
   });
 });
 

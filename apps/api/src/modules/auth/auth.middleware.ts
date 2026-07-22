@@ -4,6 +4,8 @@ import { getCookie } from 'hono/cookie';
 import { RoleSchema, type Role } from '@pdc/shared';
 import { z } from 'zod';
 import { env } from '../../lib/env.js';
+import { ACCESS_TOKEN_COOKIE } from './auth.constants.js';
+import { authSessionService } from './auth-session.service.js';
 
 
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
@@ -23,6 +25,7 @@ export const JwtUserPayloadSchema = z.object({
   isMinor: z.boolean().optional(),
   estadoMenoridade: z.enum(['pendente', 'adulto', 'menor']).optional(),
   consentimentoEstado: z.enum(['pendente', 'completo', 'requer_reconsentimento', 'bloqueado']).optional(),
+  ver: z.number().int().nonnegative().default(0),
 });
 
 function hasExplicitComplianceBlock(payload: z.infer<typeof JwtUserPayloadSchema>): boolean {
@@ -58,22 +61,38 @@ export interface OptionalAuthVariables {
   };
 }
 
+export async function verifyAccessJwt(
+  token: string,
+): Promise<z.infer<typeof JwtUserPayloadSchema> | null> {
+  let parsedPayload: z.infer<typeof JwtUserPayloadSchema>;
+  try {
+    const { payload, protectedHeader } = await jwtVerify(token, JWT_SECRET);
+    if (protectedHeader.typ !== 'access') return null;
+    const payloadResult = JwtUserPayloadSchema.safeParse(payload);
+    if (!payloadResult.success) return null;
+    parsedPayload = payloadResult.data;
+  } catch {
+    return null;
+  }
+  return await authSessionService.isAccessTokenCurrent(parsedPayload.sub, parsedPayload.ver)
+    ? parsedPayload
+    : null;
+}
+
 export async function verifyJwt(c: Context<{ Variables: AuthVariables }>, next: Next) {
-  const token = getCookie(c, 'access_token');
+  const token = getCookie(c, ACCESS_TOKEN_COOKIE);
 
   if (!token) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
-  let parsedPayload: z.infer<typeof JwtUserPayloadSchema>;
+  let parsedPayload: Awaited<ReturnType<typeof verifyAccessJwt>>;
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    const payloadResult = JwtUserPayloadSchema.safeParse(payload);
-    if (!payloadResult.success) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-    parsedPayload = payloadResult.data;
+    parsedPayload = await verifyAccessJwt(token);
   } catch {
+    return c.json({ error: 'Serviço de sessão temporariamente indisponível' }, 503);
+  }
+  if (!parsedPayload) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
@@ -106,25 +125,26 @@ export async function verifyJwt(c: Context<{ Variables: AuthVariables }>, next: 
 }
 
 export async function optionalJwt(c: Context<{ Variables: OptionalAuthVariables }>, next: Next) {
-  const token = getCookie(c, 'access_token');
+  const token = getCookie(c, ACCESS_TOKEN_COOKIE);
   if (token) {
+    let parsedPayload: Awaited<ReturnType<typeof verifyAccessJwt>> = null;
     try {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
-      const payloadResult = JwtUserPayloadSchema.safeParse(payload);
-      if (payloadResult.success) {
-        const parsedPayload = payloadResult.data;
-        c.set('user', {
-          id: parsedPayload.sub,
-          role: parsedPayload.role,
-          perfilId: parsedPayload.perfilId,
-          instituicaoId: parsedPayload.instituicaoId,
-          isMinor: parsedPayload.isMinor,
-          estadoMenoridade: parsedPayload.estadoMenoridade,
-          consentimentoEstado: parsedPayload.consentimentoEstado,
-        });
-      }
+      parsedPayload = await verifyAccessJwt(token);
     } catch {
-      // Invalid token — proceed as anonymous
+      await next();
+      return;
+    }
+    if (parsedPayload) {
+      c.set('user', {
+        id: parsedPayload.sub,
+        role: parsedPayload.role,
+        perfilId: parsedPayload.perfilId,
+        instituicaoId: parsedPayload.instituicaoId,
+        onboardingCompleto: parsedPayload.onboardingCompleto ?? undefined,
+        isMinor: parsedPayload.isMinor,
+        estadoMenoridade: parsedPayload.estadoMenoridade,
+        consentimentoEstado: parsedPayload.consentimentoEstado,
+      });
     }
   }
   await next();

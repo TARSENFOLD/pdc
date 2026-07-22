@@ -1,12 +1,12 @@
 import type { Context } from 'hono';
 import { getCookie } from 'hono/cookie';
-import { jwtVerify } from 'jose';
 import { z } from 'zod';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { redis } from '../lib/redis.js';
 import { calcRecencyScore, calcScore, type FeedFeatures } from '../modules/feed/feed.scoring.js';
 import { AreaVocacionalSchema, type FeedItem, type FeedItemTipo } from '@pdc/shared';
-import { env } from '../lib/env.js';
+import { verifyAccessJwt } from '../modules/auth/auth.middleware.js';
+import { ACCESS_TOKEN_COOKIE } from '../modules/auth/auth.constants.js';
 import { isPublicCatalogEstado } from './publication-state.js';
 import { resolvePerfilAvatar } from '../modules/perfil/perfil-media.js';
 
@@ -56,14 +56,11 @@ export interface StrapiUserProfile {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
-
 export async function getOptionalUserId(c: Context): Promise<string | undefined> {
+  const token = getCookie(c, ACCESS_TOKEN_COOKIE);
+  if (!token) return undefined;
   try {
-    const token = getCookie(c, 'access_token');
-    if (!token) return undefined;
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload.sub as string;
+    return (await verifyAccessJwt(token))?.sub;
   } catch {
     return undefined;
   }

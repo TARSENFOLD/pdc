@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { decodeJwt } from 'jose';
 import { z } from 'zod';
-import { DomainEventName } from '@pdc/shared';
+import { DomainEventName, UserSchema } from '@pdc/shared';
 
 const publishWithOutboxMock = vi.hoisted(() => vi.fn().mockResolvedValue({ id: 'evt-auth-1' }));
 
@@ -14,7 +14,7 @@ vi.mock('../../lib/env.js', () => ({
 }));
 
 vi.mock('../../lib/redis.js', () => ({
-  redis: { set: vi.fn(), get: vi.fn(), del: vi.fn() },
+  redis: { set: vi.fn(), get: vi.fn(), del: vi.fn(), eval: vi.fn().mockResolvedValue(1) },
 }));
 
 vi.mock('../strapi/strapi.client.js', () => ({
@@ -45,6 +45,7 @@ vi.mock('../events/event-bus.js', () => ({
 }));
 
 import { authService } from './auth.service.js';
+import { authSessionService } from './auth-session.service.js';
 import { strapiDelete, strapiDeleteRaw, strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
 import { consentService } from '../consent/consent.service.js';
 
@@ -99,7 +100,7 @@ describe('authService.mapStrapiUser — new fields', () => {
       estadoMenoridade: 'pendente',
     });
 
-    const { accessToken } = await authService.generateTokens(user);
+    const { accessToken } = await authSessionService.issue(user);
     const claims = decodeJwt(accessToken);
     expect(claims).not.toHaveProperty('onboardingCompleto');
     expect(claims).not.toHaveProperty('consentimentoEstado');
@@ -168,6 +169,24 @@ describe('authService.mapStrapiUser — new fields', () => {
     expect(user.onboardingCompleto).toBeUndefined();
   });
 
+  it('normaliza campos opcionais nulos devolvidos pelo Strapi', () => {
+    const user = authService.mapStrapiUser(BASE_USER, {
+      ...BASE_PERFIL,
+      bio: null,
+      bannerUrl: null,
+      aprovado: null,
+      oauthVerified: null,
+      oauthProvider: null,
+    });
+
+    expect(UserSchema.parse(user)).toEqual(user);
+    expect(user.bio).toBeUndefined();
+    expect(user.bannerUrl).toBeUndefined();
+    expect(user.aprovado).toBeUndefined();
+    expect(user.oauthVerified).toBeUndefined();
+    expect(user.oauthProvider).toBeUndefined();
+  });
+
   it('preserves existing fields unchanged', () => {
     const user = authService.mapStrapiUser(BASE_USER, BASE_PERFIL);
     expect(user.id).toBe('42');
@@ -178,10 +197,10 @@ describe('authService.mapStrapiUser — new fields', () => {
   });
 });
 
-describe('authService.generateTokens', () => {
+describe('authSessionService access claims', () => {
   it('includes the canonical perfilId in the access token', async () => {
     const user = authService.mapStrapiUser(BASE_USER, BASE_PERFIL);
-    const { accessToken } = await authService.generateTokens(user);
+    const { accessToken } = await authSessionService.issue(user);
 
     expect(decodeJwt(accessToken)).toMatchObject({
       sub: '42',
@@ -193,7 +212,7 @@ describe('authService.generateTokens', () => {
 
   it('normalizes numeric Strapi profile ids before signing access tokens', async () => {
     const user = authService.mapStrapiUser(BASE_USER, { ...BASE_PERFIL, id: 42 });
-    const { accessToken } = await authService.generateTokens(user);
+    const { accessToken } = await authSessionService.issue(user);
 
     expect(user.perfilId).toBe('42');
     expect(decodeJwt(accessToken)).toMatchObject({ perfilId: '42' });

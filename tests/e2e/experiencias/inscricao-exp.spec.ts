@@ -6,12 +6,14 @@ test.describe('Experiências - Inscrição', () => {
     await expect(alunoPage.getByRole('main', { name: 'Lista de experiências' })).toBeVisible({ timeout: 10_000 });
   });
 
-  test('experiencias page renders list region', async ({ alunoPage }) => {
+  test('experiencias page renders available items or the empty state', async ({ alunoPage }) => {
     await alunoPage.goto('/app/experiencias');
     const listRegion = alunoPage.getByRole('main', { name: 'Lista de experiências' });
     await expect(listRegion).toBeVisible();
-    await expect(
-      listRegion.getByRole('list', { name: 'Experiências disponíveis' }),
-    ).toBeVisible();
+    const contentState = listRegion.locator(
+      '[aria-label="Experiências disponíveis"], [data-testid="experiencias-empty"]',
+    );
+    await expect(contentState).toHaveCount(1);
+    await expect(contentState.first()).toBeVisible();
   });
 });

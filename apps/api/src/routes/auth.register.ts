@@ -11,18 +11,24 @@ import { initiate2faChallenge } from './auth.otp.js';
 import { type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { provisionInstituicaoForUser } from '../modules/instituicoes/instituicao.provision.js';
 import pino from 'pino';
+import { DuplicateEmailError } from '../modules/auth/auth.errors.js';
 
 export const registerRoutes = new Hono<{ Variables: AuthVariables }>();
 const log = pino({ name: 'auth-register' });
 
 registerRoutes.use('/*', rateLimitRegisto);
 
-function getRegisterErrorStatus(err: unknown): 400 | 409 | 500 {
-  const status = err !== null && typeof err === 'object' && 'status' in err
-    ? (err as { status?: unknown }).status
-    : undefined;
-  if (status === 409) return 409;
-  return 400;
+export function getRegisterErrorDetails(err: unknown): {
+  status: 409 | 502;
+  message: string;
+} {
+  if (err instanceof DuplicateEmailError) {
+    return {
+      status: 409,
+      message: 'Já existe uma conta com este email. Inicia sessão ou usa recuperação de palavra-passe.',
+    };
+  }
+  return { status: 502, message: 'Serviço de registo temporariamente indisponível' };
 }
 
 registerRoutes.post('/estudante', zValidator('json', RegistoEstudantePayloadSchema), async (c) => {
@@ -48,8 +54,8 @@ registerRoutes.post('/estudante', zValidator('json', RegistoEstudantePayloadSche
     });
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erro desconhecido';
-    return c.json({ error: message }, getRegisterErrorStatus(err));
+    const { status, message } = getRegisterErrorDetails(err);
+    return c.json({ error: message }, status);
   }
 });
 
@@ -66,8 +72,8 @@ registerRoutes.post('/mentor', zValidator('json', RegistoMentorPayloadSchema), a
     });
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erro desconhecido';
-    return c.json({ error: message }, getRegisterErrorStatus(err));
+    const { status, message } = getRegisterErrorDetails(err);
+    return c.json({ error: message }, status);
   }
 });
 
@@ -98,7 +104,7 @@ registerRoutes.post('/instituicao', zValidator('json', RegistoInstituicaoPayload
     }
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erro desconhecido';
-    return c.json({ error: message }, getRegisterErrorStatus(err));
+    const { status, message } = getRegisterErrorDetails(err);
+    return c.json({ error: message }, status);
   }
 });

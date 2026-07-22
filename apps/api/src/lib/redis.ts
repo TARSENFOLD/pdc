@@ -11,7 +11,10 @@ import type { PdcRedis, RedisSetOptions } from './redis-contract.js';
 
 export type { PdcRedis, RedisSetOptions } from './redis-contract.js';
 
-function createUpstashAdapter(client: Redis): PdcRedis {
+function createUpstashAdapter(
+  client: Redis,
+  readinessProbe?: (timeoutMs: number) => Promise<boolean>,
+): PdcRedis {
   return {
     get: async <T>(key: string) => decodeRedisValue(await client.get<unknown>(key)) as T | null,
     set: async (key, value, options = {}) => {
@@ -66,6 +69,7 @@ function createUpstashAdapter(client: Redis): PdcRedis {
       await client.eval(script, keys, args.map(encodeRedisScriptArgument)),
     ) as TResult,
     ping: () => client.ping(),
+    ...(readinessProbe ? { probeReadiness: readinessProbe } : {}),
   };
 }
 
@@ -88,7 +92,25 @@ const upstashDataRedis = hasUpstashConfiguration
     })
   : null;
 
-const upstashAdapter = upstashDataRedis ? createUpstashAdapter(upstashDataRedis) : null;
+async function probeUpstashReadiness(timeoutMs: number): Promise<boolean> {
+  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) return false;
+  try {
+    const client = new Redis({
+      url: env.UPSTASH_REDIS_REST_URL,
+      token: env.UPSTASH_REDIS_REST_TOKEN,
+      automaticDeserialization: false,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (await client.ping() !== 'PONG') return false;
+    return await client.set('pdc:health:readiness', Date.now(), { ex: 5 }) === 'OK';
+  } catch {
+    return false;
+  }
+}
+
+const upstashAdapter = upstashDataRedis
+  ? createUpstashAdapter(upstashDataRedis, probeUpstashReadiness)
+  : null;
 const localRedis = env.PDC_REDIS_URL ? createRedisTcpAdapter(env.PDC_REDIS_URL) : null;
 
 export const hasUpstashRedis = upstashAdapter !== null;
@@ -99,7 +121,10 @@ const redisUnavailableError = () => new Error('Redis não configurado: operaçã
 
 const redisMock = {
   get: <T>(_key: string): Promise<T | null> => Promise.resolve(null),
-  set: (_key: string, _value: unknown, _opts?: RedisSetOptions): Promise<'OK' | null> => Promise.resolve('OK'),
+  set: (_key: string, _value: unknown, options: RedisSetOptions = {}): Promise<'OK' | null> => {
+    assertValidRedisSetOptions(options);
+    return Promise.resolve('OK');
+  },
   del: (_key: string): Promise<number> => Promise.resolve(1),
   sadd: (_key: string, _member: unknown, ..._members: unknown[]): Promise<number> => Promise.resolve(1),
   sismember: (_key: string, _member: unknown): Promise<0 | 1> => Promise.resolve(0),
@@ -120,11 +145,62 @@ const redisMock = {
 export const redis: PdcRedis = localRedis ?? upstashAdapter ?? redisMock;
 export const telemetryRedis: PdcRedis = upstashAdapter ?? localRedis ?? redisMock;
 
-export async function isPrimaryRedisReady(): Promise<boolean> {
-  if (!localRedis) return false;
+type RedisProbeClient = Pick<PdcRedis, 'ping' | 'set' | 'probeReadiness'>;
+
+async function isRedisReady(client: RedisProbeClient | null, timeoutMs = 1_000): Promise<boolean> {
+  if (!client) return false;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await localRedis.ping() === 'PONG';
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error('Redis PING timeout'));
+      }, timeoutMs);
+    });
+    return await Promise.race([client.ping(), timeout]) === 'PONG';
   } catch {
     return false;
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
   }
+}
+
+async function isRedisWritable(client: RedisProbeClient | null, timeoutMs = 1_000): Promise<boolean> {
+  if (!client) return false;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error('Redis write probe timeout'));
+      }, timeoutMs);
+    });
+    const write = client.set('pdc:health:readiness', Date.now(), { ex: 5 });
+    return await Promise.race([write, timeout]) === 'OK';
+  } catch {
+    return false;
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
+}
+
+export async function probeRedisReadiness(
+  client: RedisProbeClient | null,
+  timeoutMs = 1_000,
+): Promise<boolean> {
+  if (client?.probeReadiness) {
+    try {
+      return await client.probeReadiness(timeoutMs);
+    } catch {
+      return false;
+    }
+  }
+  if (!await isRedisReady(client, timeoutMs)) return false;
+  return isRedisWritable(client, timeoutMs);
+}
+
+export async function isPrimaryRedisReady(): Promise<boolean> {
+  return probeRedisReadiness(localRedis);
+}
+
+export async function isUpstashRedisReady(): Promise<boolean> {
+  return probeRedisReadiness(upstashAdapter);
 }

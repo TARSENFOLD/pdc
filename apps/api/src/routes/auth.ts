@@ -2,24 +2,32 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { deleteCookie, getCookie } from 'hono/cookie';
-import { jwtVerify } from 'jose';
-import { env } from '../lib/env.js';
 import { authService } from '../modules/auth/auth.service.js';
-import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
+import { verifyAccessJwt, verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { StrapiHttpError } from '../modules/strapi/strapi.client.js';
 import { rateLimit } from '../middleware/rateLimit.js';
-import { setAuthCookies } from '../modules/auth/auth.helper.js';
+import {
+  deleteTrustedDeviceCookie,
+  setAuthCookies,
+  TRUSTED_DEVICE_COOKIE,
+} from '../modules/auth/auth.helper.js';
+import { authSessionService } from '../modules/auth/auth-session.service.js';
+import { trustedDeviceService } from '../modules/auth/trusted-device.service.js';
 import { initiate2faChallenge } from './auth.otp.js';
 import { otpRoutes } from './auth.otp.js';
 import { oauthRoutes } from './auth.oauth.js';
-import { registerRoutes } from './auth.register.js';
+import { getRegisterErrorDetails, registerRoutes } from './auth.register.js';
 import { passwordResetService } from '../modules/auth/password-reset.service.js';
 import { DomainEventName, LegalComplianceCompletionSchema, RegistoEstudantePayloadSchema } from '@pdc/shared';
 import { authComplianceService } from '../modules/auth/auth-compliance.service.js';
 import { eventBus } from '../modules/events/event-bus.js';
+import pino from 'pino';
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '../modules/auth/auth.constants.js';
+import { RefreshTokenReuseError } from '../modules/auth/auth-session.errors.js';
+import { AuthDomainError } from '../modules/auth/auth.errors.js';
 
 export const authRoutes = new Hono<{ Variables: AuthVariables }>();
-const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
+const log = pino({ name: 'auth-routes' });
 
 // Montar sub-routers
 authRoutes.route('/otp', otpRoutes);
@@ -73,8 +81,8 @@ authRoutes.post('/register', zValidator('json', RegistoEstudantePayloadSchema), 
     });
     return await initiate2faChallenge(c, user);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erro desconhecido';
-    return c.json({ error: message }, 400);
+    const { status, message } = getRegisterErrorDetails(err);
+    return c.json({ error: message }, status);
   }
 });
 
@@ -94,19 +102,26 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
 authRoutes.post('/compliance/legal', verifyJwt, zValidator('json', LegalComplianceCompletionSchema), async (c) => {
   const user = c.get('user');
   const payload = c.req.valid('json');
+  const currentRefreshToken = getCookie(c, REFRESH_TOKEN_COOKIE);
+  if (!currentRefreshToken) return c.json({ error: 'Sessão expirada' }, 401);
   try {
     await authComplianceService.completeLegalCompliance(user.id, user.role, payload);
     const updatedUser = await authService.getUserById(user.id);
-    const { accessToken, refreshToken } = await authService.generateTokens(updatedUser);
-    await authService.saveRefreshToken(updatedUser.id, refreshToken);
-    setAuthCookies(c, accessToken, refreshToken);
+    const session = await authSessionService.rotate(currentRefreshToken, updatedUser);
+    if (!session) return c.json({ error: 'Sessão expirada' }, 401);
+    setAuthCookies(c, session);
     return c.json(updatedUser);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Não foi possível regularizar a conta';
-    if (typeof err === 'object' && err !== null && 'status' in err && err.status === 404) {
-      return c.json({ error: message }, 404);
+    if (err instanceof RefreshTokenReuseError) {
+      deleteCookie(c, ACCESS_TOKEN_COOKIE, { path: '/' });
+      deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: '/' });
+      return c.json({ error: 'Sessão expirada' }, 401);
     }
-    return c.json({ error: message }, 400);
+    if (err instanceof AuthDomainError && (err.status === 400 || err.status === 404)) {
+      return c.json({ error: err.message }, err.status);
+    }
+    log.error({ err, userId: user.id }, 'Falha operacional ao regularizar conta');
+    return c.json({ error: 'Não foi possível regularizar a conta' }, 502);
   }
 });
 
@@ -135,50 +150,100 @@ authRoutes.post('/reset-password', zValidator('json', resetPasswordSchema), asyn
 });
 
 authRoutes.post('/logout', async (c) => {
-  const refreshToken = getCookie(c, 'refresh_token');
-  if (refreshToken) {
-    const verified = await authService.verifyRefreshToken(refreshToken);
-    if (verified) {
-      await authService.revokeRefreshToken(verified.userId, refreshToken);
-      await eventBus.publishWithOutbox(DomainEventName.LOGOUT, { userId: verified.userId });
+  const refreshToken = getCookie(c, REFRESH_TOKEN_COOKIE);
+  let revocationFailed = false;
+  try {
+    if (refreshToken) {
+      const userId = await authSessionService.revoke(refreshToken);
+      if (userId) {
+        try {
+          await eventBus.publishWithOutbox(DomainEventName.LOGOUT, { userId });
+        } catch (err) {
+          log.error({ err, userId }, 'Falha ao publicar LOGOUT após revogação');
+        }
+      }
     }
+  } catch (err) {
+    revocationFailed = true;
+    log.error({ err }, 'Falha ao revogar sessão durante logout');
   }
-  deleteCookie(c, 'access_token');
-  deleteCookie(c, 'refresh_token');
-  return c.json({ success: true });
+  deleteCookie(c, ACCESS_TOKEN_COOKIE, { path: '/' });
+  deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: '/' });
+  return revocationFailed
+    ? c.json({ error: 'Não foi possível confirmar a revogação da sessão' }, 503)
+    : c.json({ success: true });
 });
 
 authRoutes.post('/refresh', async (c) => {
-  const oldRefreshToken = getCookie(c, 'refresh_token');
+  const oldRefreshToken = getCookie(c, REFRESH_TOKEN_COOKIE);
   if (!oldRefreshToken) return c.json({ error: 'No refresh token' }, 401);
-  const verified = await authService.verifyRefreshToken(oldRefreshToken);
-  if (!verified) return c.json({ error: 'Invalid refresh token' }, 401);
+  let userId: string | undefined;
   try {
-    const user = await authService.getUserById(verified.userId);
-    const { accessToken, refreshToken } = await authService.generateTokens(user);
-    await authService.revokeRefreshToken(user.id, oldRefreshToken);
-    await authService.saveRefreshToken(user.id, refreshToken);
-    setAuthCookies(c, accessToken, refreshToken);
+    const verified = await authSessionService.verify(oldRefreshToken);
+    if (!verified) {
+      deleteCookie(c, ACCESS_TOKEN_COOKIE, { path: '/' });
+      deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: '/' });
+      return c.json({ error: 'Invalid refresh token' }, 401);
+    }
+    userId = verified.userId;
+    const user = await authService.getUserById(userId);
+    const session = await authSessionService.rotate(oldRefreshToken, user);
+    if (!session) {
+      deleteCookie(c, ACCESS_TOKEN_COOKIE, { path: '/' });
+      deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: '/' });
+      return c.json({ error: 'Invalid refresh token' }, 401);
+    }
+    setAuthCookies(c, session);
     return c.json({ success: true });
-  } catch {
-    return c.json({ error: 'Session expired' }, 401);
+  } catch (err) {
+    if (err instanceof RefreshTokenReuseError) {
+      deleteCookie(c, ACCESS_TOKEN_COOKIE, { path: '/' });
+      deleteCookie(c, REFRESH_TOKEN_COOKIE, { path: '/' });
+      return c.json({ error: 'Invalid refresh token' }, 401);
+    }
+    log.error({ err, userId }, 'Falha operacional ao renovar sessão');
+    return c.json({ error: 'Serviço de sessão temporariamente indisponível' }, 503);
   }
 });
 
+authRoutes.delete('/trusted-device', async (c) => {
+  const token = getCookie(c, TRUSTED_DEVICE_COOKIE);
+  let revocationFailed = false;
+  try {
+    if (token) await trustedDeviceService.revoke(token);
+  } catch (err) {
+    revocationFailed = true;
+    log.error({ err }, 'Falha ao revogar dispositivo confiável');
+  } finally {
+    deleteTrustedDeviceCookie(c);
+  }
+  return revocationFailed
+    ? c.json({ error: 'Não foi possível confirmar a revogação do dispositivo' }, 503)
+    : c.json({ success: true });
+});
+
 authRoutes.get('/me', async (c) => {
-  const token = getCookie(c, 'access_token');
+  const token = getCookie(c, ACCESS_TOKEN_COOKIE);
   if (!token) return c.json(null);
 
+  let payload: Awaited<ReturnType<typeof verifyAccessJwt>>;
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
-      deleteCookie(c, 'access_token');
-      return c.json(null);
-    }
-    const user = await authService.getUserById(payload.sub);
-    return c.json(user);
-  } catch {
-    deleteCookie(c, 'access_token');
+    payload = await verifyAccessJwt(token);
+  } catch (err) {
+    log.error({ err }, 'Falha operacional ao validar sessão');
+    return c.json({ error: 'Serviço de sessão temporariamente indisponível' }, 503);
+  }
+  if (!payload) {
+    deleteCookie(c, ACCESS_TOKEN_COOKIE, { path: '/' });
     return c.json(null);
+  }
+  const userId = payload.sub;
+
+  try {
+    const user = await authService.getUserById(userId);
+    return c.json(user);
+  } catch (err) {
+    log.error({ err, userId }, 'Falha operacional ao recuperar sessão');
+    return c.json({ error: 'Serviço de autenticação temporariamente indisponível' }, 502);
   }
 });

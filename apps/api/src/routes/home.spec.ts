@@ -17,6 +17,10 @@ vi.mock('../lib/redis.js', () => ({
   redis: { get: vi.fn(), set: vi.fn() },
 }));
 
+vi.mock('../modules/auth/auth-session.service.js', () => ({
+  authSessionService: { isAccessTokenCurrent: vi.fn().mockResolvedValue(true) },
+}));
+
 vi.mock('../modules/strapi/strapi.client.js', () => ({
   strapiGet: vi.fn(),
 }));
@@ -44,6 +48,7 @@ import { homeRoutes } from './home.js';
 import { jwtVerify } from 'jose';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { redis } from '../lib/redis.js';
+import { authSessionService } from '../modules/auth/auth-session.service.js';
 import { fetchCandidates, getItemStats, buildFeatures, calcRecencyScore, calcScore, mapConcurrent } from './feed.helpers.js';
 import { getWeights } from '../modules/feed/feed.weights.js';
 import type { StrapiListResponse, HomeSummary } from '@pdc/shared';
@@ -76,10 +81,11 @@ const DEFAULT_WEIGHTS = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(authSessionService).isAccessTokenCurrent.mockResolvedValue(true);
 
   vi.mocked(jwtVerify).mockResolvedValue({
     payload: { sub: 'user-1', role: 'estudante' },
-    protectedHeader: { alg: 'HS256' },
+    protectedHeader: { alg: 'HS256', typ: 'access' },
   } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
 
   vi.mocked(redis.get).mockResolvedValue(null);
@@ -235,7 +241,7 @@ describe('GET /app/home', () => {
   it('role-awareness: filtro de onboarding-videos usa role do JWT', async () => {
     vi.mocked(jwtVerify).mockResolvedValue({
       payload: { sub: 'user-2', role: 'mentor' },
-      protectedHeader: { alg: 'HS256' },
+      protectedHeader: { alg: 'HS256', typ: 'access' },
     } as unknown as Awaited<ReturnType<typeof jwtVerify>>);
 
     await homeRoutes.request(authRequest());
@@ -297,5 +303,15 @@ describe('GET /app/home', () => {
   it('não requer autenticação → 401', async () => {
     const res = await homeRoutes.request(new Request('http://localhost/'));
     expect(res.status).toBe(401);
+  });
+
+  it('rejeita access token revogado no Redis', async () => {
+    vi.mocked(authSessionService).isAccessTokenCurrent.mockResolvedValue(false);
+
+    const res = await homeRoutes.request(authRequest());
+
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toEqual({ error: 'Unauthorized' });
+    expect(strapiGet).not.toHaveBeenCalled();
   });
 });

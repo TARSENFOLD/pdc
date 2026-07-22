@@ -1,24 +1,8 @@
 import { type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { http } from '@/lib/api/http';
-import type { BootstrapResponse } from '@pdc/shared';
 import BootstrapErrorScreen from '@/components/layout/BootstrapErrorScreen';
 import { BootstrapContext } from './bootstrap-context';
-import { isPublicAuthPath } from './public-auth-path';
-
-async function fetchBootstrap(): Promise<BootstrapResponse> {
-  const bootstrap = await http.get<BootstrapResponse>('/bootstrap');
-  if (bootstrap.session.isAuthenticated) return bootstrap;
-
-  if (isPublicAuthPath(window.location.pathname)) return bootstrap;
-
-  try {
-    await http.post<{ success: boolean }>('/auth/refresh', {});
-    return await http.get<BootstrapResponse>('/bootstrap');
-  } catch {
-    return bootstrap;
-  }
-}
+import { fetchBootstrap } from './bootstrap-client';
 
 function exponentialBackoff(failureCount: number): number {
   // Exponential backoff: 1s, 2s, 4s

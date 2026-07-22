@@ -7,7 +7,11 @@ export interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (payload: LoginPayload) => Promise<LoginResponse>;
-  completeOtp: (otp: string, canal: 'email' | 'sms') => Promise<void>;
+  completeOtp: (
+    otp: string,
+    canal: 'email' | 'sms',
+    trustDevice: boolean,
+  ) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<LoginResponse>;
   logout: () => Promise<void>;
 }

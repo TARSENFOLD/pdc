@@ -43,4 +43,16 @@ describe('Redis adapter contract', () => {
       assertValidRedisSetOptions({ ex: 60, px: 1_000 });
     }).toThrow(/cannot combine EX and PX/);
   });
+
+  it.each([
+    { ex: 0 },
+    { ex: -1 },
+    { ex: 1.5 },
+    { px: Number.NaN },
+    { px: Number.POSITIVE_INFINITY },
+  ])('rejects invalid Redis expiry %j', (options) => {
+    expect(() => {
+      assertValidRedisSetOptions(options);
+    }).toThrow(/must be a positive integer/);
+  });
 });

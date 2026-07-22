@@ -1,59 +1,70 @@
 import { Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
-import { jwtVerify } from 'jose';
 import pino from 'pino';
-import { env } from '../lib/env.js';
 import { authService } from '../modules/auth/auth.service.js';
-import { JwtUserPayloadSchema } from '../modules/auth/auth.middleware.js';
+import { verifyAccessJwt } from '../modules/auth/auth.middleware.js';
+import { ACCESS_TOKEN_COOKIE } from '../modules/auth/auth.constants.js';
 import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 import { signTelemetryToken } from '../modules/auth/telemetry-token.js';
 import { Features, type BootstrapResponse } from '@pdc/shared';
-// Role import removed as it is unused
 
-const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 const log = pino({ name: 'routes:bootstrap' });
 
 export const bootstrapRoutes = new Hono();
 
 bootstrapRoutes.get('/', async (c) => {
   // 1. Soft Session Extraction (Tolerante a utilizadores não autenticados)
-  const token = getCookie(c, 'access_token');
+  const token = getCookie(c, ACCESS_TOKEN_COOKIE);
   let userPayload: BootstrapResponse['session']['user'] = null;
+  let sessionStatus: BootstrapResponse['session']['status'] = token ? 'unknown' : 'anonymous';
   let telemetryToken: string | undefined = undefined;
   let instituicaoId: number | undefined = undefined;
 
   if (token) {
+    let parsedPayload: Awaited<ReturnType<typeof verifyAccessJwt>>;
+    let sessionValidationUnavailable = false;
     try {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
-      const payloadResult = JwtUserPayloadSchema.safeParse(payload);
-      if (!payloadResult.success) {
-        throw new Error('Invalid bootstrap JWT payload');
+      parsedPayload = await verifyAccessJwt(token);
+    } catch (err) {
+      log.error({ err }, 'Session store unavailable during bootstrap');
+      parsedPayload = null;
+      sessionValidationUnavailable = true;
+    }
+
+    if (parsedPayload) {
+      try {
+        const dbUser = await authService.getUserById(parsedPayload.sub);
+
+        // Injectamos a Role real e Perfil (que está guardado no Strapi)
+        userPayload = {
+          id: dbUser.id,
+          email: dbUser.email,
+          role: dbUser.role,
+          perfilId: dbUser.perfilId || undefined,
+        };
+        sessionStatus = 'authenticated';
+
+        // Instituição ID para extração de Flags override se existir no token
+        instituicaoId = parsedPayload.instituicaoId;
+      } catch (err) {
+        log.warn({ err, userId: parsedPayload.sub }, 'Bootstrap session enrichment unavailable');
       }
-      const parsedPayload = payloadResult.data;
-      const dbUser = await authService.getUserById(parsedPayload.sub);
+    } else {
+      sessionStatus = sessionValidationUnavailable ? 'unknown' : 'anonymous';
+    }
 
-      // Injectamos a Role real e Perfil (que está guardado no Strapi)
-      userPayload = {
-        id: dbUser.id,
-        email: dbUser.email,
-        role: dbUser.role,
-        perfilId: dbUser.perfilId || undefined,
-      };
-
-      // Instituição ID para extração de Flags override se existir no token
-      instituicaoId = parsedPayload.instituicaoId;
-
-      // 2. Emissão Soberana do Telemetry Token assinado por RS256 (W1-T2)
-      if (userPayload.perfilId) {
+    // 2. Emissão Soberana do Telemetry Token assinado por RS256 (W1-T2)
+    if (sessionStatus === 'authenticated' && userPayload?.perfilId) {
+      try {
         telemetryToken = await signTelemetryToken(userPayload.id, userPayload.perfilId);
-      } else {
-        log.error(
-          { userId: userPayload.id },
-          'Perfil ausente numa sessão autenticada; token de telemetria não emitido',
-        );
+      } catch (err) {
+        log.warn({ err, userId: userPayload.id }, 'Telemetry token unavailable during bootstrap');
       }
-    } catch {
-      // Ignoramos falhas de assinatura aqui, tratamo-los como utilizador não autenticado
+    } else if (sessionStatus === 'authenticated' && userPayload) {
+      log.warn(
+        { userId: userPayload.id },
+        'Perfil ausente numa sessão autenticada; token de telemetria não emitido',
+      );
     }
   }
 
@@ -84,11 +95,11 @@ bootstrapRoutes.get('/', async (c) => {
   }
 
   // 4. Composição da Resposta Global (Schema-compliant)
+  const session: BootstrapResponse['session'] = sessionStatus === 'authenticated' && userPayload
+    ? { status: 'authenticated', isAuthenticated: true, user: userPayload }
+    : { status: sessionStatus === 'authenticated' ? 'unknown' : sessionStatus, isAuthenticated: false, user: null };
   const response: BootstrapResponse = {
-    session: {
-      isAuthenticated: userPayload !== null,
-      user: userPayload,
-    },
+    session,
     capabilities: {
       features: cleanFeatures,
       roles: ['estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin', 'patrocinador'],

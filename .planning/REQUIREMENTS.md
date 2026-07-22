@@ -63,9 +63,9 @@
 ## 4. Plataforma & Identidade (P1–P10)
 | ID | Requisito | Estado | Notas |
 | --- | --- | --- | --- |
-| P1 | Auth JWT em httpOnly cookie + RBAC 7 roles (6 ativos + patrocinador futuro) | `[x]` | RBAC 7 roles completo + `requireApproved` middleware. Aprovação de mentores continua em `/admin/aprovacoes`; instituições usam `instituicao.estado` via `/instituicoes/admin/*` conforme ADR-036. Rotação de tokens: deferida pós-launch. PROD-A. |
+| P1 | Auth JWT em httpOnly cookie + RBAC 7 roles (6 ativos + patrocinador futuro) | `[x]` | RBAC 7 roles completo + `requireApproved` middleware. Sessão absoluta de 90 dias e rotação atómica no Redis conforme ADR-054. |
 | P2 | OAuth social login + OTP SMS (Twilio) | `[x]` | Google + LinkedIn com onboarding completo (`oauthVerified`, `oauthProvider`, `onboardingCompleto` em `perfil`). 5 estados canónicos documentados em ADR-010. PROD-A-T05. |
-| P3 | 2FA obrigatório no login | `[x]` | Hardening completo |
+| P3 | 2FA obrigatório em dispositivo novo/não confiável | `[x]` | Browser pode ser confiado por 90 dias após OTP explícito; password login continua obrigatório. ADR-054. |
 | P4 | FeatureRegistry SSOT | `[x]` | Registry híbrido com flags operacionais + 6 HUBs; `SIM_TIPO_2/3_PUBLISH_ENABLED` promovidas para `STABLE` (PE-T03 · DT-15 fechado) |
 | P5 | `GET /bootstrap` (session/capabilities) | `[x]` | 4 camadas ativas |
 | P6 | Rate limiting via Upstash | `[x]` | Middleware integrado |

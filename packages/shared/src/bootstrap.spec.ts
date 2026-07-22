@@ -6,6 +6,7 @@ describe('BootstrapResponseSchema', () => {
   it('deve validar um payload autêntico e íntegro com 4 camadas', () => {
     const payload = {
       session: {
+        status: 'authenticated',
         isAuthenticated: true,
         user: {
           id: 'usr_xyz123',
@@ -31,6 +32,27 @@ describe('BootstrapResponseSchema', () => {
 
     const result = BootstrapResponseSchema.safeParse(payload);
     expect(result.success).toBe(true);
+  });
+
+  it('distingue sessão anónima de sessão temporariamente desconhecida', () => {
+    const common = {
+      capabilities: { features: {}, roles: [] },
+      security: {},
+      ux: { theme: 'claro' },
+    };
+
+    expect(BootstrapResponseSchema.safeParse({
+      ...common,
+      session: { status: 'anonymous', isAuthenticated: false, user: null },
+    }).success).toBe(true);
+    expect(BootstrapResponseSchema.safeParse({
+      ...common,
+      session: { status: 'unknown', isAuthenticated: false, user: null },
+    }).success).toBe(true);
+    expect(BootstrapResponseSchema.safeParse({
+      ...common,
+      session: { status: 'unknown', isAuthenticated: true, user: null },
+    }).success).toBe(false);
   });
 
   it('deve validar o registry de funcionalidades sem erros', () => {
