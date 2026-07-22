@@ -11,6 +11,8 @@ ENV_FILE="${PDC_ENV_FILE:-${DEPLOY_DIR}/.env}"
 BACKUP_DIR="${PDC_REDIS_BACKUP_DIR:-${DEPLOY_DIR}/backups/redis}"
 RETENTION="${PDC_REDIS_BACKUP_RETENTION:-14}"
 BGSAVE_TIMEOUT_SECONDS="${PDC_REDIS_BGSAVE_TIMEOUT_SECONDS:-120}"
+REDIS_COMMAND_TIMEOUT_SECONDS="${PDC_REDIS_COMMAND_TIMEOUT_SECONDS:-10}"
+REDIS_TRANSFER_TIMEOUT_SECONDS="${PDC_REDIS_TRANSFER_TIMEOUT_SECONDS:-300}"
 REDIS_CONTAINER="${PDC_REDIS_CONTAINER:-pdc-redis}"
 MODE="${1:-}"
 declare -a TEMP_DIRS=()
@@ -49,7 +51,8 @@ redis_image() {
 }
 
 redis_backup_cli() {
-  docker exec "${REDIS_CONTAINER}" /bin/sh -ec \
+  timeout --signal=TERM --kill-after=2 "${REDIS_COMMAND_TIMEOUT_SECONDS}" \
+    docker exec "${REDIS_CONTAINER}" /bin/sh -ec \
     'REDISCLI_AUTH="$REDIS_BACKUP_PASSWORD" redis-cli --user backup "$@"' -- "$@"
 }
 
@@ -200,6 +203,7 @@ require_command docker
 require_command gzip
 require_command sha256sum
 require_command flock
+require_command timeout
 mkdir -p "${BACKUP_DIR}"
 exec 9>"${BACKUP_DIR}/.redis-snapshot.lock"
 flock 9
@@ -209,6 +213,14 @@ if [[ ! "${RETENTION}" =~ ^[1-9][0-9]*$ ]]; then
 fi
 if [[ ! "${BGSAVE_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
   echo "[redis-snapshot] ERRO: PDC_REDIS_BGSAVE_TIMEOUT_SECONDS deve ser inteiro positivo." >&2
+  exit 2
+fi
+if [[ ! "${REDIS_COMMAND_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "[redis-snapshot] ERRO: PDC_REDIS_COMMAND_TIMEOUT_SECONDS deve ser inteiro positivo." >&2
+  exit 2
+fi
+if [[ ! "${REDIS_TRANSFER_TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "[redis-snapshot] ERRO: PDC_REDIS_TRANSFER_TIMEOUT_SECONDS deve ser inteiro positivo." >&2
   exit 2
 fi
 

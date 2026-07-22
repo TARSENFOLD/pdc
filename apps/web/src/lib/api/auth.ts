@@ -50,7 +50,13 @@ export interface RegisterPayload {
 export const authApi = {
   me: () => http.getParsed('/auth/me', UserSchema.nullable()),
   restoreSession: async (): Promise<User | null> => {
-    const currentUser = await http.getParsed('/auth/me', UserSchema.nullable());
+    let currentUser: User | null;
+    try {
+      currentUser = await http.getParsed('/auth/me', UserSchema.nullable());
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 401) throw error;
+      currentUser = null;
+    }
     if (currentUser) return currentUser;
     const refreshResult = await refreshSession({ notifyOnInvalid: false });
     if (refreshResult === 'invalid') return null;

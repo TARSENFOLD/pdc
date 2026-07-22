@@ -36,7 +36,7 @@ const renderSidebar = (role: Role) => {
             data: {
               capabilities: { features: { HUB_LEARN: true, HUB_EXPLORE: true, HUB_FUTURE: true, HUB_COMMUNITY: true, HUB_MENTOR: true, HUB_INSTITUTION: true }, roles: ['estudante', 'mentor', 'instituicao', 'moderador', 'comite_cientifico', 'super_admin', 'patrocinador'] },
               security: {},
-              session: { isAuthenticated: true, user: { id: '1', email: 'test@test.com', role } },
+              session: { status: 'authenticated', isAuthenticated: true, user: { id: '1', email: 'test@test.com', role } },
               ux: { theme: 'claro' },
             },
             isLoading: false,

@@ -139,7 +139,9 @@ backup() {
   lastsave_before="$(start_bgsave)"
   wait_for_bgsave_completion "${lastsave_before}"
 
-  docker cp "${REDIS_CONTAINER}:/data/dump.rdb" "${tmp_dir}/dump.rdb"
+  timeout --signal=TERM --kill-after=2 "${REDIS_TRANSFER_TIMEOUT_SECONDS}" \
+    docker exec "${REDIS_CONTAINER}" /bin/sh -ec 'cat /data/dump.rdb' \
+    > "${tmp_dir}/dump.rdb"
   key_count="$(validate_rdb "${tmp_dir}/dump.rdb" "${image_name}")"
   timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
   archive="${BACKUP_DIR}/redis-${timestamp}.rdb.gz"

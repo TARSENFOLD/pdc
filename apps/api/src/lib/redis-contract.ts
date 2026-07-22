@@ -23,6 +23,7 @@ export interface PdcRedis {
   rpoplpush: <T>(source: string, destination: string) => Promise<T | null>;
   eval: <TResult = unknown>(script: string, keys: string[], args: unknown[]) => Promise<TResult>;
   ping: () => Promise<string>;
+  probeReadiness?: (timeoutMs: number) => Promise<boolean>;
 }
 
 export function assertValidRedisSetOptions(options: { ex?: number; px?: number }): void {

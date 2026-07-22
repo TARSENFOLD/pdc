@@ -43,6 +43,21 @@ describe('authApi.restoreSession', () => {
     );
   });
 
+  it('renova quando /auth/me responde 401 mas o refresh token ainda é válido', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ error: 'Unauthorized' }, 401))
+      .mockResolvedValueOnce(jsonResponse({ success: true }))
+      .mockResolvedValueOnce(jsonResponse(user));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(authApi.restoreSession()).resolves.toEqual(user);
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/auth/refresh'),
+      expect.objectContaining({ method: 'POST', credentials: 'include' }),
+    );
+  });
+
   it('retorna anónimo quando não existe refresh token válido', async () => {
     const sessionExpired = vi.fn();
     window.addEventListener('pdc:session-expired', sessionExpired, { once: true });

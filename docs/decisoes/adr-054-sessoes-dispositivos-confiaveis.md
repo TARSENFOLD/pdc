@@ -53,6 +53,9 @@ dispositivo explicitamente verificado, de alta entropia e revogável.
    a revogação percorre também os índices legados baseados em sets. O lock é uma
    lease renovada a cada lote; perda da lease interrompe o reset antes da escrita
    da palavra-passe, e duração/contagens são emitidas em log estruturado.
+   A ordem é deliberadamente fail-safe: se a escrita no Strapi falhar depois da
+   revogação, o utilizador precisa de voltar a autenticar-se, mas credenciais
+   potencialmente comprometidas não são restauradas.
 9. O frontend deve recuperar sessão em rotas públicas tentando uma única
    renovação quando `/auth/me` não encontrar access token válido.
 10. OAuth state é vinculado ao browser por cookie transitório e consumido uma
@@ -72,6 +75,8 @@ dispositivo explicitamente verificado, de alta entropia e revogável.
 - Fluxos concorrentes de refresh são deduplicados no cliente e tolerados no
   servidor durante a janela curta de replay; reutilização tardia invalida a
   família por segurança.
+- Uma tentativa de reset que falhe depois da revogação pode terminar sessões
+  sem alterar a palavra-passe; o token de reset é libertado para nova tentativa.
 
 ## Alternativas rejeitadas
 

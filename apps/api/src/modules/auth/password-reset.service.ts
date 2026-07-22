@@ -107,6 +107,8 @@ export const passwordResetService = {
     let resetLockId: string | undefined;
     let passwordUpdated = false;
     try {
+      // ADR-054: fail-safe intencional. Uma falha posterior no Strapi pode exigir
+      // novo login, mas nenhuma credencial antiga sobrevive a uma tentativa de reset.
       resetLockId = await authSessionService.beginGlobalRevocation(userId);
       await revokeUserAuthentication(userId, resetLockId);
       await strapiPutRaw(`/users/${userId}`, {

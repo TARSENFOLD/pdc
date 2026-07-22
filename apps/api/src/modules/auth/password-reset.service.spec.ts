@@ -159,6 +159,24 @@ describe('passwordResetService', () => {
     );
   });
 
+  it('mantém credenciais revogadas quando a escrita da palavra-passe falha', async () => {
+    dependencyMocks.redisEval
+      .mockResolvedValueOnce('user-1')
+      .mockResolvedValueOnce(1);
+    vi.mocked(strapiPutRaw).mockRejectedValueOnce(new Error('Strapi unavailable'));
+
+    await expect(passwordResetService.reset('token-valido', 'NovaPassword123!'))
+      .rejects.toThrow('Strapi unavailable');
+    expect(dependencyMocks.revokeSessions).toHaveBeenCalledOnce();
+    expect(dependencyMocks.revokeDevices).toHaveBeenCalledOnce();
+    expect(dependencyMocks.endGlobalRevocation).toHaveBeenCalledWith('user-1', 'reset-lock-1');
+    expect(dependencyMocks.redisEval).toHaveBeenLastCalledWith(
+      expect.stringContaining('redis.call("PTTL"'),
+      [expect.stringMatching(/^password_reset:/)],
+      [expect.stringMatching(/^claimed:/), 'user-1'],
+    );
+  });
+
   it('confirma o reset quando limpeza posterior falha porque a época já revogou credenciais', async () => {
     dependencyMocks.redisEval
       .mockResolvedValueOnce('user-1')

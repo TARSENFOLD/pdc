@@ -167,7 +167,10 @@ O utilizador ACL `backup` não lê chaves e só executa `BGSAVE`, `LASTSAVE`,
 `DBSIZE` e `PING`; o script aguarda a progressão de `LASTSAVE` e valida que
 `INFO`, inclusive com múltiplas secções, permanece proibido. Por defeito ficam
 14 snapshots em `/opt/pdc/backups/redis`; alterar com
-`PDC_REDIS_BACKUP_RETENTION`. Uma cópia cifrada deve ser enviada para storage
+`PDC_REDIS_BACKUP_RETENTION`. Cada comando Redis é limitado a 10 segundos;
+ajustar apenas quando necessário com `PDC_REDIS_COMMAND_TIMEOUT_SECONDS`. A
+transferência do RDB tem deadline independente de 300 segundos, configurável por
+`PDC_REDIS_TRANSFER_TIMEOUT_SECONDS`. Uma cópia cifrada deve ser enviada para storage
 fora do VPS depois da verificação.
 
 Exemplo de cron diário, sem expor segredos:

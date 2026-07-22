@@ -11,7 +11,10 @@ import type { PdcRedis, RedisSetOptions } from './redis-contract.js';
 
 export type { PdcRedis, RedisSetOptions } from './redis-contract.js';
 
-function createUpstashAdapter(client: Redis): PdcRedis {
+function createUpstashAdapter(
+  client: Redis,
+  readinessProbe?: (timeoutMs: number) => Promise<boolean>,
+): PdcRedis {
   return {
     get: async <T>(key: string) => decodeRedisValue(await client.get<unknown>(key)) as T | null,
     set: async (key, value, options = {}) => {
@@ -66,6 +69,7 @@ function createUpstashAdapter(client: Redis): PdcRedis {
       await client.eval(script, keys, args.map(encodeRedisScriptArgument)),
     ) as TResult,
     ping: () => client.ping(),
+    ...(readinessProbe ? { probeReadiness: readinessProbe } : {}),
   };
 }
 
@@ -88,7 +92,25 @@ const upstashDataRedis = hasUpstashConfiguration
     })
   : null;
 
-const upstashAdapter = upstashDataRedis ? createUpstashAdapter(upstashDataRedis) : null;
+async function probeUpstashReadiness(timeoutMs: number): Promise<boolean> {
+  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) return false;
+  try {
+    const client = new Redis({
+      url: env.UPSTASH_REDIS_REST_URL,
+      token: env.UPSTASH_REDIS_REST_TOKEN,
+      automaticDeserialization: false,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (await client.ping() !== 'PONG') return false;
+    return await client.set('pdc:health:readiness', Date.now(), { ex: 5 }) === 'OK';
+  } catch {
+    return false;
+  }
+}
+
+const upstashAdapter = upstashDataRedis
+  ? createUpstashAdapter(upstashDataRedis, probeUpstashReadiness)
+  : null;
 const localRedis = env.PDC_REDIS_URL ? createRedisTcpAdapter(env.PDC_REDIS_URL) : null;
 
 export const hasUpstashRedis = upstashAdapter !== null;
@@ -123,7 +145,7 @@ const redisMock = {
 export const redis: PdcRedis = localRedis ?? upstashAdapter ?? redisMock;
 export const telemetryRedis: PdcRedis = upstashAdapter ?? localRedis ?? redisMock;
 
-type RedisProbeClient = Pick<PdcRedis, 'ping' | 'set'>;
+type RedisProbeClient = Pick<PdcRedis, 'ping' | 'set' | 'probeReadiness'>;
 
 async function isRedisReady(client: RedisProbeClient | null, timeoutMs = 1_000): Promise<boolean> {
   if (!client) return false;
@@ -164,6 +186,13 @@ export async function probeRedisReadiness(
   client: RedisProbeClient | null,
   timeoutMs = 1_000,
 ): Promise<boolean> {
+  if (client?.probeReadiness) {
+    try {
+      return await client.probeReadiness(timeoutMs);
+    } catch {
+      return false;
+    }
+  }
   if (!await isRedisReady(client, timeoutMs)) return false;
   return isRedisWritable(client, timeoutMs);
 }

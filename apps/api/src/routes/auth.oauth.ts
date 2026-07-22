@@ -107,8 +107,6 @@ function getOAuthRedirectUri(c: Context<{ Variables: AuthVariables }>, provider:
   }
   if (configured) return configured;
   const origin = getRequestOrigin(c);
-  if (c.req.header('x-pdc-public-origin')) return `${origin}/auth/${provider}/callback`;
-  if (c.req.header('x-forwarded-host')) return `${origin}/auth/${provider}/callback`;
   return `${origin}/auth/${provider}/callback`;
 }
 

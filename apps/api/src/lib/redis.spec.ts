@@ -20,6 +20,29 @@ describe('probeRedisReadiness', () => {
     );
   });
 
+  it('delega ao probe cancelável fornecido pelo adapter real', async () => {
+    const client = {
+      ping: vi.fn(),
+      set: vi.fn(),
+      probeReadiness: vi.fn().mockResolvedValue(true),
+    };
+
+    await expect(probeRedisReadiness(client, 25)).resolves.toBe(true);
+    expect(client.probeReadiness).toHaveBeenCalledWith(25);
+    expect(client.ping).not.toHaveBeenCalled();
+    expect(client.set).not.toHaveBeenCalled();
+  });
+
+  it('falha fechado quando o probe do adapter rejeita', async () => {
+    const client = {
+      ping: vi.fn(),
+      set: vi.fn(),
+      probeReadiness: vi.fn().mockRejectedValue(new Error('adapter unavailable')),
+    };
+
+    await expect(probeRedisReadiness(client, 25)).resolves.toBe(false);
+  });
+
   it('fica indisponível quando leitura funciona mas escrita é recusada', async () => {
     const client = {
       ping: vi.fn().mockResolvedValue('PONG'),
