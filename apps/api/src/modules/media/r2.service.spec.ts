@@ -85,6 +85,18 @@ describe('r2 service', () => {
     expect(s3Mock.send).not.toHaveBeenCalled();
   });
 
+  it('usa o bucket configurado no probe de escrita e remoção', async () => {
+    envMock.R2_BUCKET = 'media-institucional';
+    const { isR2Ready } = await import('./r2.service.js');
+    s3Mock.send
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } })
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 204 } });
+
+    await expect(isR2Ready()).resolves.toBe(true);
+    expect(s3Mock.send.mock.calls.map(([command]) => commandBucket(command)))
+      .toEqual(['media-institucional', 'media-institucional']);
+  });
+
   it('volta a testar rapidamente depois de um probe falhado', async () => {
     const { isR2Ready } = await import('./r2.service.js');
     vi.useFakeTimers();
@@ -164,4 +176,27 @@ describe('r2 service', () => {
     await expect(isR2Ready()).resolves.toBe(true);
     expect(s3Mock.send).toHaveBeenCalledTimes(5);
   });
+
+  it('invalida readiness quando o bucket deixa de existir', async () => {
+    const { isR2Ready, uploadToR2 } = await import('./r2.service.js');
+    s3Mock.send
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } })
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 204 } })
+      .mockRejectedValueOnce(Object.assign(new Error('Not Found'), {
+        $metadata: { httpStatusCode: 404 },
+      }));
+
+    await expect(isR2Ready()).resolves.toBe(true);
+    await expect(uploadToR2('uploads/user/avatar.jpg', Buffer.from('image'), 'image/jpeg'))
+      .rejects.toMatchObject({ code: 'MEDIA_STORAGE_UNAVAILABLE' });
+    await expect(isR2Ready()).resolves.toBe(false);
+    expect(s3Mock.send).toHaveBeenCalledTimes(3);
+  });
 });
+
+function commandBucket(command: unknown): string | undefined {
+  if (typeof command !== 'object' || command === null || !('input' in command)) return undefined;
+  const input = command.input;
+  if (typeof input !== 'object' || input === null || !('Bucket' in input)) return undefined;
+  return typeof input.Bucket === 'string' ? input.Bucket : undefined;
+}

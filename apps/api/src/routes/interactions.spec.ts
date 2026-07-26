@@ -119,6 +119,7 @@ describe('interactionRoutes', () => {
   });
 
   it('usa o id numérico quando o perfil de compatibilidade não tem documentId', async () => {
+    vi.mocked(strapiGet).mockReset();
     mockLegacyProfile();
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(emptyList())
@@ -284,6 +285,7 @@ describe('interactionRoutes', () => {
   });
 
   it('usa id legado no toggle de like', async () => {
+    vi.mocked(strapiGet).mockReset();
     mockLegacyProfile();
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(emptyList())
@@ -305,6 +307,7 @@ describe('interactionRoutes', () => {
   });
 
   it('usa id legado no toggle de bookmark', async () => {
+    vi.mocked(strapiGet).mockReset();
     mockLegacyProfile();
     vi.mocked(strapiGet).mockResolvedValueOnce(emptyList());
     vi.mocked(strapiPost).mockResolvedValueOnce({ data: { id: 2 }, meta: {} });
@@ -324,6 +327,7 @@ describe('interactionRoutes', () => {
   });
 
   it('usa id legado na listagem de bookmarks', async () => {
+    vi.mocked(strapiGet).mockReset();
     mockLegacyProfile();
     vi.mocked(strapiGet).mockResolvedValueOnce(emptyList());
 
@@ -336,6 +340,7 @@ describe('interactionRoutes', () => {
   });
 
   it('usa id legado ao criar partilha', async () => {
+    vi.mocked(strapiGet).mockReset();
     mockLegacyProfile();
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(emptyList<StrapiShare>())
@@ -368,6 +373,7 @@ describe('interactionRoutes', () => {
   });
 
   it('usa id legado ao consultar estado de partilha', async () => {
+    vi.mocked(strapiGet).mockReset();
     mockLegacyProfile();
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(emptyList<StrapiShare>())
@@ -386,6 +392,7 @@ describe('interactionRoutes', () => {
   });
 
   it('restringe remoção de partilha pelo id legado do perfil', async () => {
+    vi.mocked(strapiGet).mockReset();
     mockLegacyProfile();
     vi.mocked(strapiGet).mockResolvedValueOnce({
       data: [{
@@ -429,7 +436,6 @@ function legacyProfileResponse(): StrapiListResponse<InteractionPerfil> {
 }
 
 function mockLegacyProfile(): void {
-  vi.mocked(strapiGet).mockReset();
   vi.mocked(strapiGet).mockResolvedValueOnce(legacyProfileResponse());
 }
 

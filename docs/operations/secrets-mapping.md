@@ -199,10 +199,12 @@ rollback sincronizado da secção anterior; `REDIS_HEALTH_PASSWORD` e
    identificada do par atualmente ativo. Verificar, sem imprimir valores, que
    essa versão contém `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY`; registar o ID
    da versão no ticket operacional. Não criar `.env.bak` desprotegido.
-3. Atualizar `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY` juntos num ficheiro
-   temporário dentro de `/opt/pdc`, preservando owner e mode de `/opt/pdc/.env`.
-   Validar apenas que ambos estão presentes, sem imprimir os valores, e fazer
-   rename atómico do temporário para `/opt/pdc/.env`.
+3. Definir `umask 077`, criar o temporário com `mktemp` dentro de `/opt/pdc` e
+   instalar imediatamente owner e mode de `/opt/pdc/.env` antes de escrever
+   segredos. Registar um `trap` que remova o temporário em qualquer falha.
+   Atualizar `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY` juntos, validar apenas
+   que ambos estão presentes sem imprimir valores e fazer rename atómico para
+   `/opt/pdc/.env`; remover o `trap` apenas depois do rename concluído.
 4. Recriar apenas a API com os metadados da release atual e aguardar o container
    ficar healthy.
 5. Exigir `200` em `GET https://api.usepdc.com/health/media-storage` e executar

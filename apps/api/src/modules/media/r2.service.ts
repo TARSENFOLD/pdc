@@ -164,6 +164,7 @@ export async function uploadToR2(key: string, buffer: Buffer, mimeType: string):
     if (
       storageError.code === 'MEDIA_STORAGE_MISCONFIGURED'
       || status === undefined
+      || status === 404
       || status === 408
       || status === 429
       || status >= 500
