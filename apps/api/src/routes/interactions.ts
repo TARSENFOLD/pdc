@@ -20,7 +20,11 @@ import {
 import { rateLimitInteractions } from '../middleware/rateLimit.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
-import { getInteractionPerfil, interactionPerfilId } from '../modules/interactions/interaction-profile.js';
+import {
+  getInteractionPerfil,
+  interactionPerfilId,
+  interactionPerfilRelationField,
+} from '../modules/interactions/interaction-profile.js';
 import {
   toBookmark,
   type StrapiInteractionEntity,
@@ -60,9 +64,10 @@ interactionRoutes.post('/like', rateLimitInteractions, zValidator('json', Toggle
   const { targetType, targetId } = c.req.valid('json');
   const perfil = await getInteractionPerfil(user.id);
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
+  const actorField = interactionPerfilRelationField(perfil);
 
   const p: Record<string, string> = {
-    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
+    [`filters[actor][${actorField}][$eq]`]: String(interactionPerfilId(perfil)),
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
   };
@@ -103,9 +108,10 @@ interactionRoutes.get('/like/status', zValidator('query', z.object({
   const { targetType, targetId } = c.req.valid('query');
   const perfil = await getInteractionPerfil(user.id);
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
+  const actorField = interactionPerfilRelationField(perfil);
 
   const exactUserReq = await strapiGet<StrapiInteractionEntity>('/likes', {
-    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
+    [`filters[actor][${actorField}][$eq]`]: String(interactionPerfilId(perfil)),
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
   });
@@ -125,9 +131,10 @@ interactionRoutes.post('/bookmark', rateLimitInteractions, zValidator('json', To
   const { targetType, targetId } = c.req.valid('json');
   const perfil = await getInteractionPerfil(user.id);
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
+  const actorField = interactionPerfilRelationField(perfil);
 
   const p: Record<string, string> = {
-    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
+    [`filters[actor][${actorField}][$eq]`]: String(interactionPerfilId(perfil)),
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
   };
@@ -165,8 +172,9 @@ interactionRoutes.get('/bookmark/status', zValidator('query', z.object({
   const { targetType, targetId } = c.req.valid('query');
   const perfil = await getInteractionPerfil(user.id);
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
+  const actorField = interactionPerfilRelationField(perfil);
   const existing = await strapiGet<StrapiInteractionEntity>('/bookmarks', {
-    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
+    [`filters[actor][${actorField}][$eq]`]: String(interactionPerfilId(perfil)),
     'filters[targetType][$eq]': targetType,
     'filters[targetId][$eq]': targetId,
     'pagination[pageSize]': '1',
@@ -178,9 +186,10 @@ interactionRoutes.get('/bookmarks', async (c) => {
   const user = c.get('user');
   const perfil = await getInteractionPerfil(user.id);
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
+  const actorField = interactionPerfilRelationField(perfil);
 
   const req = await strapiGet<StrapiInteractionEntity>('/bookmarks', {
-    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
+    [`filters[actor][${actorField}][$eq]`]: String(interactionPerfilId(perfil)),
   });
 
   const data = req.data.map((entity) => toBookmark(entity, perfil));
@@ -195,9 +204,10 @@ interactionRoutes.post('/share', rateLimitInteractions, zValidator('json', Share
   const payload = c.req.valid('json');
   const perfil = await getInteractionPerfil(user.id);
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
+  const actorField = interactionPerfilRelationField(perfil);
 
   const filters = {
-    'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
+    [`filters[actor][${actorField}][$eq]`]: String(interactionPerfilId(perfil)),
     'filters[targetType][$eq]': payload.targetType,
     'filters[targetId][$eq]': payload.targetId,
     'filters[canal][$eq]': payload.canal,
@@ -276,10 +286,11 @@ interactionRoutes.get('/share/status', zValidator('query', z.object({
   const { targetType, targetId } = c.req.valid('query');
   const perfil = await getInteractionPerfil(user.id);
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
+  const actorField = interactionPerfilRelationField(perfil);
 
   const [mine, all] = await Promise.all([
     strapiGet<StrapiShare>('/partilhas', {
-      'filters[actor][id][$eq]': String(interactionPerfilId(perfil)),
+      [`filters[actor][${actorField}][$eq]`]: String(interactionPerfilId(perfil)),
       'filters[targetType][$eq]': targetType,
       'filters[targetId][$eq]': targetId,
       'filters[canal][$eq]': 'interno',
@@ -304,11 +315,12 @@ interactionRoutes.delete('/share/:id', async (c) => {
   const shareId = c.req.param('id');
   const perfil = await getInteractionPerfil(user.id);
   if (!perfil) return c.json({ error: 'Perfil não encontrado' }, 404);
+  const actorField = interactionPerfilRelationField(perfil);
 
   const existing = await strapiGet<StrapiShare>('/partilhas', {
     'filters[$and][0][$or][0][id][$eq]': shareId,
     'filters[$and][0][$or][1][documentId][$eq]': shareId,
-    'filters[$and][1][actor][id][$eq]': String(interactionPerfilId(perfil)),
+    [`filters[$and][1][actor][${actorField}][$eq]`]: String(interactionPerfilId(perfil)),
     'pagination[pageSize]': '1',
   });
   const share = existing.data[0];

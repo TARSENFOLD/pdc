@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono, type Context, type Next } from 'hono';
 import { mediaRoutes } from './media.js';
-import { uploadToR2 } from '../modules/media/r2.service.js';
+import {
+  generatePresignedUrl,
+  isR2Ready,
+  MediaStorageError,
+  uploadToR2,
+} from '../modules/media/r2.service.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { UploadResultSchema } from '@pdc/shared';
 
@@ -16,8 +21,14 @@ vi.mock('../modules/auth/auth.middleware.js', () => ({
 }));
 
 vi.mock('../modules/media/r2.service.js', () => ({
+  MediaStorageError: class MediaStorageError extends Error {
+    constructor(public readonly code: string, options?: { cause?: unknown }) {
+      super('Serviço de armazenamento temporariamente indisponível', options);
+    }
+  },
   generatePresignedUrl: vi.fn().mockResolvedValue('https://r2.example/upload'),
   getPublicUrl: vi.fn((key: string) => `http://localhost:3001/media/local/${key}`),
+  isR2Ready: vi.fn().mockResolvedValue(true),
   readLocalUpload: vi.fn(),
   uploadToR2: vi.fn().mockResolvedValue(undefined),
 }));
@@ -153,5 +164,53 @@ describe('mediaRoutes', () => {
 
     expect(res.status).toBe(502);
     expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:5173');
+  });
+
+  it('devolve 503 estável quando as credenciais do storage são rejeitadas', async () => {
+    vi.mocked(uploadToR2).mockRejectedValueOnce(
+      new MediaStorageError('MEDIA_STORAGE_MISCONFIGURED', new Error('Unauthorized')),
+    );
+    const file = new File([fileBuffer(1024)], 'avatar.jpg', { type: 'image/jpeg' });
+
+    const res = await app.request('/media/upload', {
+      method: 'POST',
+      headers: { Origin: 'http://localhost:5173' },
+      body: formWithFile(file, 'avatar'),
+    });
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get('retry-after')).toBe('60');
+    expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:5173');
+    await expect(res.json()).resolves.toEqual({
+      error: 'Serviço de armazenamento temporariamente indisponível',
+      code: 'MEDIA_STORAGE_MISCONFIGURED',
+    });
+  });
+
+  it('bloqueia presigned com 503 quando o storage não aceita escrita', async () => {
+    vi.mocked(isR2Ready).mockResolvedValueOnce(false);
+
+    const res = await app.request('/media/presigned', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: 'http://localhost:5173',
+      },
+      body: JSON.stringify({
+        filename: 'avatar.jpg',
+        mimeType: 'image/jpeg',
+        sizeBytes: 1024,
+        entityType: 'avatar',
+      }),
+    });
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get('retry-after')).toBe('60');
+    expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:5173');
+    expect(generatePresignedUrl).not.toHaveBeenCalled();
+    await expect(res.json()).resolves.toEqual({
+      error: 'Serviço de armazenamento temporariamente indisponível',
+      code: 'MEDIA_STORAGE_UNAVAILABLE',
+    });
   });
 });

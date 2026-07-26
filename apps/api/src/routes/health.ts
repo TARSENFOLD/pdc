@@ -9,6 +9,7 @@ import {
   isUpstashRedisReady,
 } from '../lib/redis.js';
 import { getRateLimitCircuitState } from '../middleware/rateLimit.js';
+import { isR2Configured, isR2Ready } from '../modules/media/r2.service.js';
 
 export const healthRoutes = new Hono();
 
@@ -57,6 +58,16 @@ healthRoutes.get('/ready', async (c) => {
             : 'degraded',
     },
     rateLimitCircuit,
+    timestamp: new Date().toISOString(),
+  }, ready ? 200 : 503);
+});
+
+healthRoutes.get('/media-storage', async (c) => {
+  const configured = isR2Configured();
+  const ready = configured && await isR2Ready();
+  return c.json({
+    status: ready ? 'ready' : 'degraded',
+    dependency: configured ? (ready ? 'up' : 'down') : 'unconfigured',
     timestamp: new Date().toISOString(),
   }, ready ? 200 : 503);
 });

@@ -41,7 +41,7 @@ test.describe('OAuth', () => {
       const url = new URL(request.url());
       return url.hostname === 'accounts.google.com' && url.pathname === '/o/oauth2/v2/auth';
     });
-    await page.click('text=Google');
+    await page.getByRole('button', { name: /Google/i }).click({ noWaitAfter: true });
     const request = await requestPromise;
     expect(request.url()).toMatch(/\/auth\/google/);
     const providerRequest = await providerRequestPromise;

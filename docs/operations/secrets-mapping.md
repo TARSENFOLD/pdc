@@ -190,6 +190,34 @@ operacional e investigar antes de nova tentativa. **Exceção Redis:**
 rollback sincronizado da secção anterior; `REDIS_HEALTH_PASSWORD` e
 `REDIS_BACKUP_PASSWORD` exigem também os respetivos checks autenticados.
 
+### Rotação R2 após `401 Unauthorized`
+
+1. No Cloudflare Dashboard, criar um token S3 R2 limitado a leitura/escrita no
+   bucket `pdc-media`. Registar `Access Key ID` e `Secret Access Key` no gestor
+   de segredos no momento da criação; o secret não pode ser recuperado depois.
+2. Antes de alterar o VPS, criar no gestor de segredos uma versão protegida e
+   identificada do par atualmente ativo. Verificar, sem imprimir valores, que
+   essa versão contém `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY`; registar o ID
+   da versão no ticket operacional. Não criar `.env.bak` desprotegido.
+3. Definir `umask 077`, criar o temporário com `mktemp` dentro de `/opt/pdc` e
+   instalar imediatamente owner e mode de `/opt/pdc/.env` antes de escrever
+   segredos. Registar um `trap` que remova o temporário em qualquer falha.
+   Atualizar `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY` juntos, validar apenas
+   que ambos estão presentes sem imprimir valores e fazer rename atómico para
+   `/opt/pdc/.env`; remover o `trap` apenas depois do rename concluído.
+4. Recriar apenas a API com os metadados da release atual e aguardar o container
+   ficar healthy.
+5. Exigir `200` em `GET https://api.usepdc.com/health/media-storage` e executar
+   um upload real pequeno. O probe grava um objeto vazio reservado em `_health/`
+   e remove-o em seguida, validando conta, assinatura, bucket e permissões de
+   escrita/remoção sem preservar media de diagnóstico.
+6. Só depois revogar a chave anterior. Se o probe falhar, obter pelo ID registado
+   a versão protegida do par anterior, verificar novamente a presença dos dois
+   valores sem os imprimir e restaurar ambos pelo mesmo fluxo de ficheiro
+   temporário e rename atómico. Recriar novamente o container `api` para carregar
+   o ambiente restaurado e repetir o health check e o upload pequeno. Nunca
+   combinar credenciais de versões diferentes.
+
 ## Metadados de release e diagnóstico
 
 O `docker-compose.prod.yml` aceita os marcadores `unlabelled`/`unknown` para que
