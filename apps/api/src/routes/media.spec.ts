@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono, type Context, type Next } from 'hono';
 import { mediaRoutes } from './media.js';
-import { isR2Ready, MediaStorageError, uploadToR2 } from '../modules/media/r2.service.js';
+import {
+  generatePresignedUrl,
+  isR2Ready,
+  MediaStorageError,
+  uploadToR2,
+} from '../modules/media/r2.service.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { UploadResultSchema } from '@pdc/shared';
 
@@ -175,6 +180,7 @@ describe('mediaRoutes', () => {
 
     expect(res.status).toBe(503);
     expect(res.headers.get('retry-after')).toBe('60');
+    expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:5173');
     await expect(res.json()).resolves.toEqual({
       error: 'Serviço de armazenamento temporariamente indisponível',
       code: 'MEDIA_STORAGE_MISCONFIGURED',
@@ -201,6 +207,7 @@ describe('mediaRoutes', () => {
     expect(res.status).toBe(503);
     expect(res.headers.get('retry-after')).toBe('60');
     expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:5173');
+    expect(generatePresignedUrl).not.toHaveBeenCalled();
     await expect(res.json()).resolves.toEqual({
       error: 'Serviço de armazenamento temporariamente indisponível',
       code: 'MEDIA_STORAGE_UNAVAILABLE',

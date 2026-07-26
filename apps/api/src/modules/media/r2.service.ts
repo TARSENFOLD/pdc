@@ -156,7 +156,13 @@ export async function uploadToR2(key: string, buffer: Buffer, mimeType: string):
   } catch (err) {
     const storageError = mediaStorageError(err);
     const status = errorStatus(err);
-    if (storageError.code === 'MEDIA_STORAGE_MISCONFIGURED' || status === undefined || status >= 500) {
+    if (
+      storageError.code === 'MEDIA_STORAGE_MISCONFIGURED'
+      || status === undefined
+      || status === 408
+      || status === 429
+      || status >= 500
+    ) {
       readinessCache = { ready: false, expiresAt: Date.now() + R2_FAILURE_CACHE_MS };
     }
     log.error({ err, code: storageError.code, bucket: env.R2_BUCKET }, 'Upload para R2 falhou');

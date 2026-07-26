@@ -31,6 +31,10 @@ vi.mock('../modules/auth/auth.middleware.js', () => ({
 
 describe('interactionRoutes', () => {
   const app = new Hono().route('/interactions', interactionRoutes);
+  const emptyList = {
+    data: [],
+    meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -62,6 +66,11 @@ describe('interactionRoutes', () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ liked: true, count: 1 });
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/likes', {
+      'filters[actor][documentId][$eq]': 'perfil-doc-7',
+      'filters[targetType][$eq]': 'post',
+      'filters[targetId][$eq]': 'post-1',
+    });
     expect(strapiPost).toHaveBeenCalledWith('/likes', expect.objectContaining({
       actor: 'perfil-doc-7',
       targetType: 'post',
@@ -156,6 +165,11 @@ describe('interactionRoutes', () => {
     });
 
     expect(response.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/bookmarks', {
+      'filters[actor][documentId][$eq]': 'perfil-doc-7',
+      'filters[targetType][$eq]': 'post',
+      'filters[targetId][$eq]': 'post-1',
+    });
     expect(strapiPost).toHaveBeenCalledWith('/bookmarks', expect.objectContaining({
       actor: 'perfil-doc-7',
       targetType: 'post',
@@ -218,11 +232,190 @@ describe('interactionRoutes', () => {
 
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({ shared: true, shareId: 'share-doc-9', count: 1 });
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/partilhas', {
+      'filters[actor][documentId][$eq]': 'perfil-doc-7',
+      'filters[targetType][$eq]': 'post',
+      'filters[targetId][$eq]': 'post-1',
+      'filters[canal][$eq]': 'interno',
+      'pagination[pageSize]': '1',
+    });
     expect(publishWithOutboxMock).toHaveBeenCalledTimes(1);
     expect(publishWithOutboxMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ autorId: 'perfil-doc-7' }),
     );
+  });
+
+  it('lista bookmarks pelo documentId do perfil', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce(emptyList);
+
+    const response = await app.request('/interactions/bookmarks');
+
+    expect(response.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/bookmarks', {
+      'filters[actor][documentId][$eq]': 'perfil-doc-7',
+    });
+  });
+
+  it('consulta partilha interna pelo documentId do perfil', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(emptyList as StrapiListResponse<StrapiShare>)
+      .mockResolvedValueOnce(emptyList);
+
+    const response = await app.request('/interactions/share/status?targetType=post&targetId=post-1');
+
+    expect(response.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/partilhas', {
+      'filters[actor][documentId][$eq]': 'perfil-doc-7',
+      'filters[targetType][$eq]': 'post',
+      'filters[targetId][$eq]': 'post-1',
+      'filters[canal][$eq]': 'interno',
+      'pagination[pageSize]': '1',
+    });
+  });
+
+  it('restringe remoção de partilha pelo documentId do perfil', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce({
+      data: [{
+        id: 9,
+        documentId: 'share-doc-9',
+        targetType: 'post',
+        targetId: 'post-1',
+        canal: 'interno',
+      }],
+      meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
+    } as StrapiListResponse<StrapiShare>);
+
+    const response = await app.request('/interactions/share/share-doc-9', { method: 'DELETE' });
+
+    expect(response.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/partilhas', {
+      'filters[$and][0][$or][0][id][$eq]': 'share-doc-9',
+      'filters[$and][0][$or][1][documentId][$eq]': 'share-doc-9',
+      'filters[$and][1][actor][documentId][$eq]': 'perfil-doc-7',
+      'pagination[pageSize]': '1',
+    });
+  });
+
+  it('usa id legado no toggle de like', async () => {
+    mockLegacyProfile();
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(emptyList)
+      .mockResolvedValueOnce(emptyList);
+    vi.mocked(strapiPost).mockResolvedValueOnce({ data: { id: 1 }, meta: {} });
+
+    const response = await app.request('/interactions/like', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetType: 'post', targetId: 'post-1' }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/likes', {
+      'filters[actor][id][$eq]': '7',
+      'filters[targetType][$eq]': 'post',
+      'filters[targetId][$eq]': 'post-1',
+    });
+  });
+
+  it('usa id legado no toggle e na listagem de bookmarks', async () => {
+    mockLegacyProfile();
+    vi.mocked(strapiGet).mockResolvedValueOnce(emptyList);
+    vi.mocked(strapiPost).mockResolvedValueOnce({ data: { id: 2 }, meta: {} });
+
+    const toggleResponse = await app.request('/interactions/bookmark', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetType: 'post', targetId: 'post-1' }),
+    });
+
+    expect(toggleResponse.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/bookmarks', {
+      'filters[actor][id][$eq]': '7',
+      'filters[targetType][$eq]': 'post',
+      'filters[targetId][$eq]': 'post-1',
+    });
+
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(legacyProfileResponse())
+      .mockResolvedValueOnce(emptyList);
+    const listResponse = await app.request('/interactions/bookmarks');
+
+    expect(listResponse.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(4, '/bookmarks', {
+      'filters[actor][id][$eq]': '7',
+    });
+  });
+
+  it('usa id legado ao criar e consultar partilhas', async () => {
+    mockLegacyProfile();
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(emptyList as StrapiListResponse<StrapiShare>)
+      .mockResolvedValueOnce(emptyList);
+    vi.mocked(strapiPost).mockResolvedValueOnce({
+      data: {
+        id: 9,
+        documentId: 'share-doc-9',
+        targetType: 'post',
+        targetId: 'post-1',
+        canal: 'interno',
+      },
+      meta: {},
+    } as StrapiSingleResponse<StrapiShare>);
+
+    const createResponse = await app.request('/interactions/share', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetType: 'post', targetId: 'post-1', canal: 'interno' }),
+    });
+
+    expect(createResponse.status).toBe(201);
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/partilhas', {
+      'filters[actor][id][$eq]': '7',
+      'filters[targetType][$eq]': 'post',
+      'filters[targetId][$eq]': 'post-1',
+      'filters[canal][$eq]': 'interno',
+      'pagination[pageSize]': '1',
+    });
+
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(legacyProfileResponse())
+      .mockResolvedValueOnce(emptyList as StrapiListResponse<StrapiShare>)
+      .mockResolvedValueOnce(emptyList);
+    const statusResponse = await app.request('/interactions/share/status?targetType=post&targetId=post-1');
+
+    expect(statusResponse.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(5, '/partilhas', {
+      'filters[actor][id][$eq]': '7',
+      'filters[targetType][$eq]': 'post',
+      'filters[targetId][$eq]': 'post-1',
+      'filters[canal][$eq]': 'interno',
+      'pagination[pageSize]': '1',
+    });
+  });
+
+  it('restringe remoção de partilha pelo id legado do perfil', async () => {
+    mockLegacyProfile();
+    vi.mocked(strapiGet).mockResolvedValueOnce({
+      data: [{
+        id: 9,
+        documentId: 'share-doc-9',
+        targetType: 'post',
+        targetId: 'post-1',
+        canal: 'interno',
+      }],
+      meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
+    } as StrapiListResponse<StrapiShare>);
+
+    const response = await app.request('/interactions/share/share-doc-9', { method: 'DELETE' });
+
+    expect(response.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/partilhas', {
+      'filters[$and][0][$or][0][id][$eq]': 'share-doc-9',
+      'filters[$and][0][$or][1][documentId][$eq]': 'share-doc-9',
+      'filters[$and][1][actor][id][$eq]': '7',
+      'pagination[pageSize]': '1',
+    });
   });
 
   it('rejeita targetType inválido antes de consultar o Strapi', async () => {
@@ -236,3 +429,15 @@ describe('interactionRoutes', () => {
     expect(strapiPost).not.toHaveBeenCalled();
   });
 });
+
+function legacyProfileResponse(): StrapiListResponse<InteractionPerfil> {
+  return {
+    data: [{ id: 7, userId: 'user-1', nome: 'Ana' }],
+    meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
+  };
+}
+
+function mockLegacyProfile(): void {
+  vi.mocked(strapiGet).mockReset();
+  vi.mocked(strapiGet).mockResolvedValueOnce(legacyProfileResponse());
+}

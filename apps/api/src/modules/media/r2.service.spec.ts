@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const s3Mock = vi.hoisted(() => ({
   config: undefined as unknown,
@@ -48,6 +48,10 @@ describe('r2 service', () => {
     s3Mock.config = undefined;
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('limita a chamada S3 e classifica credenciais rejeitadas sem expor o provider', async () => {
     const { uploadToR2 } = await import('./r2.service.js');
     s3Mock.send.mockRejectedValueOnce(Object.assign(new Error('Unauthorized'), {
@@ -86,7 +90,6 @@ describe('r2 service', () => {
 
     await expect(isR2Ready()).resolves.toBe(true);
     expect(s3Mock.send).toHaveBeenCalledTimes(3);
-    vi.useRealTimers();
   });
 
   it('partilha um único probe entre chamadas concorrentes', async () => {
@@ -118,5 +121,28 @@ describe('r2 service', () => {
       .rejects.toMatchObject({ code: 'MEDIA_STORAGE_UNAVAILABLE' });
     await expect(isR2Ready()).resolves.toBe(true);
     expect(s3Mock.send).toHaveBeenCalledTimes(3);
+  });
+
+  it('invalida readiness após throttling e força novo probe', async () => {
+    const { isR2Ready, uploadToR2 } = await import('./r2.service.js');
+    vi.useFakeTimers();
+    s3Mock.send
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } })
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 204 } })
+      .mockRejectedValueOnce(Object.assign(new Error('Too Many Requests'), {
+        $metadata: { httpStatusCode: 429 },
+      }))
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } })
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 204 } });
+
+    await expect(isR2Ready()).resolves.toBe(true);
+    await expect(uploadToR2('uploads/user/avatar.jpg', Buffer.from('image'), 'image/jpeg'))
+      .rejects.toMatchObject({ code: 'MEDIA_STORAGE_UNAVAILABLE' });
+    await expect(isR2Ready()).resolves.toBe(false);
+
+    await vi.advanceTimersByTimeAsync(3_001);
+
+    await expect(isR2Ready()).resolves.toBe(true);
+    expect(s3Mock.send).toHaveBeenCalledTimes(5);
   });
 });

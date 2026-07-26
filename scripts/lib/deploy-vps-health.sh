@@ -135,6 +135,7 @@ validate_stack_health() {
     http://localhost:1337/_health || return 1
 
   wait_for_external "${api_url}/health" "${external_tries}" || return 1
+  wait_for_external "${api_url}/health/media-storage" "${external_tries}" || return 1
   wait_for_external "${cms_url}/_health" "${external_tries}" || return 1
   wait_for_external_cors "${api_url}/bootstrap" "${web_origin}" \
     "API /bootstrap" "${external_tries}" || return 1
