@@ -24,7 +24,12 @@ export class MediaStorageError extends Error {
 }
 
 export function isR2Configured(): boolean {
-  return !!(env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY);
+  return !!(
+    env.R2_ACCOUNT_ID
+    && env.R2_ACCESS_KEY_ID
+    && env.R2_SECRET_ACCESS_KEY
+    && env.R2_BUCKET
+  );
 }
 
 function resolveLocalUploadPath(key: string): string {

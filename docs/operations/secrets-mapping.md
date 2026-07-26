@@ -195,20 +195,26 @@ rollback sincronizado da secção anterior; `REDIS_HEALTH_PASSWORD` e
 1. No Cloudflare Dashboard, criar um token S3 R2 limitado a leitura/escrita no
    bucket `pdc-media`. Registar `Access Key ID` e `Secret Access Key` no gestor
    de segredos no momento da criação; o secret não pode ser recuperado depois.
-2. Atualizar `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY` juntos num ficheiro
+2. Antes de alterar o VPS, criar no gestor de segredos uma versão protegida e
+   identificada do par atualmente ativo. Verificar, sem imprimir valores, que
+   essa versão contém `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY`; registar o ID
+   da versão no ticket operacional. Não criar `.env.bak` desprotegido.
+3. Atualizar `R2_ACCESS_KEY_ID` e `R2_SECRET_ACCESS_KEY` juntos num ficheiro
    temporário dentro de `/opt/pdc`, preservando owner e mode de `/opt/pdc/.env`.
    Validar apenas que ambos estão presentes, sem imprimir os valores, e fazer
    rename atómico do temporário para `/opt/pdc/.env`.
-3. Recriar apenas a API com os metadados da release atual e aguardar o container
+4. Recriar apenas a API com os metadados da release atual e aguardar o container
    ficar healthy.
-4. Exigir `200` em `GET https://api.usepdc.com/health/media-storage` e executar
+5. Exigir `200` em `GET https://api.usepdc.com/health/media-storage` e executar
    um upload real pequeno. O probe grava um objeto vazio reservado em `_health/`
    e remove-o em seguida, validando conta, assinatura, bucket e permissões de
    escrita/remoção sem preservar media de diagnóstico.
-5. Só depois revogar a chave anterior. Se o probe falhar, restaurar o par
-   anterior de forma atómica, recriar novamente o container `api` para carregar
+6. Só depois revogar a chave anterior. Se o probe falhar, obter pelo ID registado
+   a versão protegida do par anterior, verificar novamente a presença dos dois
+   valores sem os imprimir e restaurar ambos pelo mesmo fluxo de ficheiro
+   temporário e rename atómico. Recriar novamente o container `api` para carregar
    o ambiente restaurado e repetir o health check e o upload pequeno. Nunca
-   combinar o access key novo com o secret antigo.
+   combinar credenciais de versões diferentes.
 
 ## Metadados de release e diagnóstico
 

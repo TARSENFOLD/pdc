@@ -4,6 +4,14 @@ const s3Mock = vi.hoisted(() => ({
   config: undefined as unknown,
   send: vi.fn<(command: unknown) => Promise<unknown>>(),
 }));
+const envMock = vi.hoisted(() => ({
+  API_URL: 'http://localhost:3001',
+  R2_ACCOUNT_ID: 'account-id',
+  R2_ACCESS_KEY_ID: 'access-key',
+  R2_SECRET_ACCESS_KEY: 'secret-key',
+  R2_BUCKET: 'pdc-media',
+  R2_PUBLIC_URL: 'https://media.example.com',
+}));
 
 vi.mock('@aws-sdk/client-s3', () => ({
   S3Client: class S3Client {
@@ -31,21 +39,16 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
 }));
 
 vi.mock('../../lib/env.js', () => ({
-  env: {
-    API_URL: 'http://localhost:3001',
-    R2_ACCOUNT_ID: 'account-id',
-    R2_ACCESS_KEY_ID: 'access-key',
-    R2_SECRET_ACCESS_KEY: 'secret-key',
-    R2_BUCKET: 'pdc-media',
-    R2_PUBLIC_URL: 'https://media.example.com',
-  },
+  env: envMock,
 }));
 
 describe('r2 service', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    s3Mock.send.mockReset();
     s3Mock.config = undefined;
+    envMock.R2_BUCKET = 'pdc-media';
   });
 
   afterEach(() => {
@@ -74,6 +77,14 @@ describe('r2 service', () => {
     });
   });
 
+  it('considera configuração sem bucket como incompleta', async () => {
+    envMock.R2_BUCKET = '';
+    const { isR2Configured } = await import('./r2.service.js');
+
+    expect(isR2Configured()).toBe(false);
+    expect(s3Mock.send).not.toHaveBeenCalled();
+  });
+
   it('volta a testar rapidamente depois de um probe falhado', async () => {
     const { isR2Ready } = await import('./r2.service.js');
     vi.useFakeTimers();
@@ -86,7 +97,11 @@ describe('r2 service', () => {
     await expect(isR2Ready()).resolves.toBe(false);
     expect(s3Mock.send).toHaveBeenCalledTimes(1);
 
-    await vi.advanceTimersByTimeAsync(3_001);
+    await vi.advanceTimersByTimeAsync(2_999);
+    await expect(isR2Ready()).resolves.toBe(false);
+    expect(s3Mock.send).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(2);
 
     await expect(isR2Ready()).resolves.toBe(true);
     expect(s3Mock.send).toHaveBeenCalledTimes(3);
@@ -140,7 +155,11 @@ describe('r2 service', () => {
       .rejects.toMatchObject({ code: 'MEDIA_STORAGE_UNAVAILABLE' });
     await expect(isR2Ready()).resolves.toBe(false);
 
-    await vi.advanceTimersByTimeAsync(3_001);
+    await vi.advanceTimersByTimeAsync(2_999);
+    await expect(isR2Ready()).resolves.toBe(false);
+    expect(s3Mock.send).toHaveBeenCalledTimes(3);
+
+    await vi.advanceTimersByTimeAsync(2);
 
     await expect(isR2Ready()).resolves.toBe(true);
     expect(s3Mock.send).toHaveBeenCalledTimes(5);

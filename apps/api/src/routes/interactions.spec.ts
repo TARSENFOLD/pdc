@@ -31,10 +31,6 @@ vi.mock('../modules/auth/auth.middleware.js', () => ({
 
 describe('interactionRoutes', () => {
   const app = new Hono().route('/interactions', interactionRoutes);
-  const emptyList = {
-    data: [],
-    meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
-  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -123,20 +119,10 @@ describe('interactionRoutes', () => {
   });
 
   it('usa o id numérico quando o perfil de compatibilidade não tem documentId', async () => {
-    vi.mocked(strapiGet).mockReset();
+    mockLegacyProfile();
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce({
-        data: [{ id: 7, userId: 'user-1', nome: 'Ana' }],
-        meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
-      } as StrapiListResponse<InteractionPerfil>)
-      .mockResolvedValueOnce({
-        data: [],
-        meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
-      })
-      .mockResolvedValueOnce({
-        data: [],
-        meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
-      });
+      .mockResolvedValueOnce(emptyList())
+      .mockResolvedValueOnce(emptyList());
 
     const response = await app.request('/interactions/like/status?targetType=post&targetId=1');
 
@@ -247,7 +233,7 @@ describe('interactionRoutes', () => {
   });
 
   it('lista bookmarks pelo documentId do perfil', async () => {
-    vi.mocked(strapiGet).mockResolvedValueOnce(emptyList);
+    vi.mocked(strapiGet).mockResolvedValueOnce(emptyList());
 
     const response = await app.request('/interactions/bookmarks');
 
@@ -259,8 +245,8 @@ describe('interactionRoutes', () => {
 
   it('consulta partilha interna pelo documentId do perfil', async () => {
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce(emptyList as StrapiListResponse<StrapiShare>)
-      .mockResolvedValueOnce(emptyList);
+      .mockResolvedValueOnce(emptyList<StrapiShare>())
+      .mockResolvedValueOnce(emptyList());
 
     const response = await app.request('/interactions/share/status?targetType=post&targetId=post-1');
 
@@ -300,8 +286,8 @@ describe('interactionRoutes', () => {
   it('usa id legado no toggle de like', async () => {
     mockLegacyProfile();
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce(emptyList)
-      .mockResolvedValueOnce(emptyList);
+      .mockResolvedValueOnce(emptyList())
+      .mockResolvedValueOnce(emptyList());
     vi.mocked(strapiPost).mockResolvedValueOnce({ data: { id: 1 }, meta: {} });
 
     const response = await app.request('/interactions/like', {
@@ -318,40 +304,42 @@ describe('interactionRoutes', () => {
     });
   });
 
-  it('usa id legado no toggle e na listagem de bookmarks', async () => {
+  it('usa id legado no toggle de bookmark', async () => {
     mockLegacyProfile();
-    vi.mocked(strapiGet).mockResolvedValueOnce(emptyList);
+    vi.mocked(strapiGet).mockResolvedValueOnce(emptyList());
     vi.mocked(strapiPost).mockResolvedValueOnce({ data: { id: 2 }, meta: {} });
 
-    const toggleResponse = await app.request('/interactions/bookmark', {
+    const response = await app.request('/interactions/bookmark', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ targetType: 'post', targetId: 'post-1' }),
     });
 
-    expect(toggleResponse.status).toBe(200);
+    expect(response.status).toBe(200);
     expect(strapiGet).toHaveBeenNthCalledWith(2, '/bookmarks', {
       'filters[actor][id][$eq]': '7',
       'filters[targetType][$eq]': 'post',
       'filters[targetId][$eq]': 'post-1',
     });
+  });
 
-    vi.mocked(strapiGet)
-      .mockResolvedValueOnce(legacyProfileResponse())
-      .mockResolvedValueOnce(emptyList);
-    const listResponse = await app.request('/interactions/bookmarks');
+  it('usa id legado na listagem de bookmarks', async () => {
+    mockLegacyProfile();
+    vi.mocked(strapiGet).mockResolvedValueOnce(emptyList());
 
-    expect(listResponse.status).toBe(200);
-    expect(strapiGet).toHaveBeenNthCalledWith(4, '/bookmarks', {
+    const response = await app.request('/interactions/bookmarks');
+
+    expect(response.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/bookmarks', {
       'filters[actor][id][$eq]': '7',
     });
   });
 
-  it('usa id legado ao criar e consultar partilhas', async () => {
+  it('usa id legado ao criar partilha', async () => {
     mockLegacyProfile();
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce(emptyList as StrapiListResponse<StrapiShare>)
-      .mockResolvedValueOnce(emptyList);
+      .mockResolvedValueOnce(emptyList<StrapiShare>())
+      .mockResolvedValueOnce(emptyList());
     vi.mocked(strapiPost).mockResolvedValueOnce({
       data: {
         id: 9,
@@ -363,13 +351,13 @@ describe('interactionRoutes', () => {
       meta: {},
     } as StrapiSingleResponse<StrapiShare>);
 
-    const createResponse = await app.request('/interactions/share', {
+    const response = await app.request('/interactions/share', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ targetType: 'post', targetId: 'post-1', canal: 'interno' }),
     });
 
-    expect(createResponse.status).toBe(201);
+    expect(response.status).toBe(201);
     expect(strapiGet).toHaveBeenNthCalledWith(2, '/partilhas', {
       'filters[actor][id][$eq]': '7',
       'filters[targetType][$eq]': 'post',
@@ -377,15 +365,18 @@ describe('interactionRoutes', () => {
       'filters[canal][$eq]': 'interno',
       'pagination[pageSize]': '1',
     });
+  });
 
+  it('usa id legado ao consultar estado de partilha', async () => {
+    mockLegacyProfile();
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce(legacyProfileResponse())
-      .mockResolvedValueOnce(emptyList as StrapiListResponse<StrapiShare>)
-      .mockResolvedValueOnce(emptyList);
-    const statusResponse = await app.request('/interactions/share/status?targetType=post&targetId=post-1');
+      .mockResolvedValueOnce(emptyList<StrapiShare>())
+      .mockResolvedValueOnce(emptyList());
 
-    expect(statusResponse.status).toBe(200);
-    expect(strapiGet).toHaveBeenNthCalledWith(5, '/partilhas', {
+    const response = await app.request('/interactions/share/status?targetType=post&targetId=post-1');
+
+    expect(response.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/partilhas', {
       'filters[actor][id][$eq]': '7',
       'filters[targetType][$eq]': 'post',
       'filters[targetId][$eq]': 'post-1',
@@ -440,4 +431,11 @@ function legacyProfileResponse(): StrapiListResponse<InteractionPerfil> {
 function mockLegacyProfile(): void {
   vi.mocked(strapiGet).mockReset();
   vi.mocked(strapiGet).mockResolvedValueOnce(legacyProfileResponse());
+}
+
+function emptyList<T = never>(): StrapiListResponse<T> {
+  return {
+    data: [],
+    meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
+  };
 }
