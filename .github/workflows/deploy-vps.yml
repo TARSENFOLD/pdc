@@ -85,6 +85,8 @@ jobs:
             --exclude='.git' \
             --exclude='.venv' \
             --exclude='node_modules' \
+            --exclude='dist' \
+            --exclude='.strapi' \
             --exclude='apps/web/node_modules' \
             --exclude='apps/api/node_modules' \
             --exclude='infra/strapi/node_modules' \
