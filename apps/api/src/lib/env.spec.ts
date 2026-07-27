@@ -152,6 +152,22 @@ describe('env boot validation', () => {
     await expect(import('./env.js')).rejects.toThrow(/GOOGLE_CLIENT_ID required/);
   });
 
+  it('aceita provider OAuth desativado com variáveis opcionais vazias', async () => {
+    setBaseEnv('production');
+    setRequiredProductionIntegrations();
+    process.env.GOOGLE_CLIENT_ID = '';
+    process.env.GOOGLE_CLIENT_SECRET = '';
+    process.env.GOOGLE_REDIRECT_URI = '';
+
+    const { validateEnv } = await import('./env.js');
+
+    expect(validateEnv()).toMatchObject({
+      GOOGLE_CLIENT_ID: '',
+      GOOGLE_CLIENT_SECRET: '',
+      GOOGLE_REDIRECT_URI: '',
+    });
+  });
+
   it('falha em produção quando o callback OAuth não pertence ao BFF', async () => {
     setBaseEnv('production');
     setRequiredProductionIntegrations();

@@ -1,4 +1,4 @@
-import { Redis } from '@upstash/redis';
+import pino from 'pino';
 import { aiService } from '../ai/ai.service.js';
 import { TINA_KNOWLEDGE, type TinaKnowledgeItem } from './tina.knowledge.js';
 import { validarMensagem } from './tina.guardrails.js';
@@ -11,16 +11,11 @@ import {
 } from '@pdc/shared';
 import { z } from 'zod';
 import { env } from '../../lib/env.js';
+import { hasPrimaryRedis, redis } from '../../lib/redis.js';
 import { tinaContextService } from './tina-context.service.js';
 
-const redis = env.UPSTASH_REDIS_REST_URL
-  ? new Redis({
-      url: env.UPSTASH_REDIS_REST_URL,
-      token: env.UPSTASH_REDIS_REST_TOKEN,
-    })
-  : null;
-
 const AI_PROVIDER = env.AI_PROVIDER;
+const log = pino({ name: 'tina-service' });
 
 interface AiChatResponse {
   choices?: { message: { content: string } }[];
@@ -95,27 +90,35 @@ Regras:
   },
 
   async buscarChunks(query: string): Promise<string> {
-    if (!redis) return '';
-    const keys = await redis.keys('tina:kb:*');
-    if (keys.length === 0) return '';
-    
-    const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-    const matches: string[] = [];
-    
-    for (const key of keys) {
-      const item = await redis.get<TinaKnowledgeItem>(key);
-      if (item && words.some(w => item.conteudo.toLowerCase().includes(w) || item.titulo.toLowerCase().includes(w))) {
-        matches.push(`${item.titulo}: ${item.conteudo}`);
+    if (!hasPrimaryRedis) return '';
+    try {
+      const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+      const matches: string[] = [];
+
+      for (let i = 0; i < TINA_KNOWLEDGE.length; i += 1) {
+        const item = await redis.get<TinaKnowledgeItem>(`tina:kb:${i.toString()}`);
+        if (
+          item
+          && words.some((word) => (
+            item.conteudo.toLowerCase().includes(word)
+            || item.titulo.toLowerCase().includes(word)
+          ))
+        ) {
+          matches.push(`${item.titulo}: ${item.conteudo}`);
+        }
       }
+
+      return matches.slice(0, 3).join(' | ');
+    } catch (error: unknown) {
+      log.warn({ error }, 'Cache de conhecimento indisponível; Tina continuará sem chunks');
+      return '';
     }
-    
-    return matches.slice(0, 3).join(' | ');
   },
 
   async indexarKnowledge(): Promise<void> {
-    if (!redis) return;
-    for (let i = 0; i < TINA_KNOWLEDGE.length; i++) {
-      await redis.set(`tina:kb:${i.toString()}`, JSON.stringify(TINA_KNOWLEDGE[i]));
+    if (!hasPrimaryRedis) return;
+    for (let i = 0; i < TINA_KNOWLEDGE.length; i += 1) {
+      await redis.set(`tina:kb:${i.toString()}`, TINA_KNOWLEDGE[i]);
     }
   },
 

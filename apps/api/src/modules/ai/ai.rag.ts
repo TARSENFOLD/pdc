@@ -1,24 +1,21 @@
-import { Redis } from '@upstash/redis';
+import pino from 'pino';
+import { z } from 'zod';
+import { hasPrimaryRedis, redis } from '../../lib/redis.js';
 import { strapiGet } from '../strapi/strapi.client.js';
-import { env } from '../../lib/env.js';
 
-const redis = env.UPSTASH_REDIS_REST_URL
-  ? new Redis({
-      url: env.UPSTASH_REDIS_REST_URL,
-      token: env.UPSTASH_REDIS_REST_TOKEN,
-    })
-  : null;
-
-interface ContentItem {
-  id: string;
-  titulo: string;
-  descricao: string;
-  tipo: 'curso' | 'experiencia';
-}
+const log = pino({ name: 'ai-rag' });
+const ContentItemSchema = z.object({
+  id: z.string(),
+  titulo: z.string(),
+  descricao: z.string(),
+  tipo: z.enum(['curso', 'experiencia']),
+});
+const ContentItemsSchema = z.array(ContentItemSchema);
+type ContentItem = z.infer<typeof ContentItemSchema>;
 
 export const aiRag = {
   async indexarConteudo(): Promise<void> {
-    if (!redis) return;
+    if (!hasPrimaryRedis) return;
 
     // Fix: Strapi client already flattens and wraps in data array.
     // Removed nested { data: ... } and attributes access.
@@ -40,16 +37,21 @@ export const aiRag = {
       })),
     ];
 
-    await redis.set('rag:conteudo', JSON.stringify(items));
+    await redis.set('rag:conteudo', items);
   },
 
   async buscarContextoRelevante(query: string): Promise<string> {
-    if (!redis) return '';
-
-    const rawData = await redis.get<string>('rag:conteudo');
-    if (!rawData) return '';
-
-    const items = (typeof rawData === 'string' ? JSON.parse(rawData) : rawData) as ContentItem[];
+    if (!hasPrimaryRedis) return '';
+    let items: ContentItem[];
+    try {
+      const rawData = await redis.get<unknown>('rag:conteudo');
+      if (!rawData) return '';
+      const normalized: unknown = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+      items = ContentItemsSchema.parse(normalized);
+    } catch (error: unknown) {
+      log.warn({ error }, 'Cache RAG indisponível ou inválido; IA continuará sem contexto');
+      return '';
+    }
     const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
 
     const relevant = items

@@ -40,10 +40,10 @@ const envSchema = z.object({
   // OAuth 2.0
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
-  GOOGLE_REDIRECT_URI: z.string().url().optional(),
+  GOOGLE_REDIRECT_URI: z.string().url().optional().or(z.literal('')),
   LINKEDIN_CLIENT_ID: z.string().optional(),
   LINKEDIN_CLIENT_SECRET: z.string().optional(),
-  LINKEDIN_REDIRECT_URI: z.string().url().optional(),
+  LINKEDIN_REDIRECT_URI: z.string().url().optional().or(z.literal('')),
   OAUTH_REDIRECT_BASE_URL: z.string().url().default('http://localhost:5173'),
 
   // Database

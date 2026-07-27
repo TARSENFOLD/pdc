@@ -6,18 +6,21 @@ import { env } from '../lib/env.js';
 
 const log = pino({ name: 'rate-limit' });
 
-type RateLimitWindow = `${number} ${'s' | 'm' | 'h' | 'd'}`;
+export type RateLimitWindow = `${number} ${'s' | 'm' | 'h' | 'd'}`;
 type RateLimitKey = 'ip' | 'user';
 
-export interface RateLimitOptions {
+export interface RateLimiterOptions {
   tokens: number;
   window: RateLimitWindow;
   keyPrefix: string;
+}
+
+export interface RateLimitOptions extends RateLimiterOptions {
   key: RateLimitKey;
   errorMessage?: string;
 }
 
-interface LimitResult {
+export interface LimitResult {
   success: boolean;
   limit: number;
   remaining: number;
@@ -200,7 +203,7 @@ function memoryLimit(storageKey: string, limit: number, window: RateLimitWindow)
     reset: bucket.reset,
   };
 }
-function createLimiter(options: RateLimitOptions) {
+function createLimiter(options: RateLimiterOptions) {
   const profiledTokens = applyProfile(options.tokens);
   if (!Number.isFinite(profiledTokens)) return null;
 
@@ -215,9 +218,54 @@ function createLimiter(options: RateLimitOptions) {
     : null;
 }
 
+export function createRateLimiter(options: RateLimiterOptions): {
+  limit: (identity: string) => Promise<LimitResult>;
+} {
+  const profiledTokens = applyProfile(options.tokens);
+  if (!Number.isFinite(profiledTokens)) {
+    return {
+      limit: () => Promise.resolve({
+        success: true,
+        limit: Number.MAX_SAFE_INTEGER,
+        remaining: Number.MAX_SAFE_INTEGER,
+        reset: 0,
+      }),
+    };
+  }
+  const limiter = createLimiter(options);
+
+  return {
+    async limit(identity: string): Promise<LimitResult> {
+      const storageKey = `${options.keyPrefix}:${identity}`;
+      if (limiter && claimRedisProbe()) {
+        try {
+          const remoteResult = await limiter.limit(identity);
+          if (remoteResult.reason === 'timeout') {
+            openCircuit(new Error('Upstash rate limiter timed out'));
+            return memoryLimit(storageKey, profiledTokens, options.window);
+          }
+          closeCircuit();
+          return remoteResult;
+        } catch (error: unknown) {
+          openCircuit(error);
+          return memoryLimit(storageKey, profiledTokens, options.window);
+        }
+      }
+
+      if (!limiter && circuitState.state === 'closed') {
+        transitionCircuit(
+          { state: 'open', reason: 'transient', retryAt: null },
+          new Error('Redis rate limiter is not configured'),
+        );
+      }
+      return memoryLimit(storageKey, profiledTokens, options.window);
+    },
+  };
+}
+
 export function createRateLimit(options: RateLimitOptions) {
   const profiledTokens = applyProfile(options.tokens);
-  const limiter = createLimiter(options);
+  const rateLimiter = createRateLimiter(options);
 
   return async function rateLimitMiddleware(c: Context, next: Next) {
     if (!Number.isFinite(profiledTokens)) {
@@ -228,32 +276,7 @@ export function createRateLimit(options: RateLimitOptions) {
     const identity = options.key === 'user'
       ? getUserId(c) ?? `ip:${getClientIp(c)}`
       : getClientIp(c);
-    const storageKey = `${options.keyPrefix}:${identity}`;
-
-    let result: LimitResult;
-    if (limiter && claimRedisProbe()) {
-      try {
-        const remoteResult = await limiter.limit(identity);
-        if (remoteResult.reason === 'timeout') {
-          openCircuit(new Error('Upstash rate limiter timed out'));
-          result = memoryLimit(storageKey, profiledTokens, options.window);
-        } else {
-          closeCircuit();
-          result = remoteResult;
-        }
-      } catch (error: unknown) {
-        openCircuit(error);
-        result = memoryLimit(storageKey, profiledTokens, options.window);
-      }
-    } else {
-      if (!limiter && circuitState.state === 'closed') {
-        transitionCircuit(
-          { state: 'open', reason: 'transient', retryAt: null },
-          new Error('Redis rate limiter is not configured'),
-        );
-      }
-      result = memoryLimit(storageKey, profiledTokens, options.window);
-    }
+    const result = await rateLimiter.limit(identity);
 
     c.header('X-RateLimit-Limit', result.limit.toString());
     c.header('X-RateLimit-Remaining', result.remaining.toString());
