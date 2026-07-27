@@ -10,13 +10,23 @@ interface MockLimitResult {
   reason?: 'timeout' | 'cacheBlock' | 'denyList';
 }
 
+interface MockRateLimitEnv {
+  NODE_ENV: 'test';
+  RATE_LIMIT_PROFILE: 'strict' | 'permissive' | 'off';
+}
+
 const mocks = vi.hoisted(() => {
   const configs: unknown[] = [];
+  const env: MockRateLimitEnv = {
+    NODE_ENV: 'test',
+    RATE_LIMIT_PROFILE: 'strict',
+  };
   return {
     limit: vi.fn<(identity: string) => Promise<MockLimitResult>>(),
     warn: vi.fn(),
     info: vi.fn(),
     configs,
+    env,
   };
 });
 
@@ -33,7 +43,7 @@ vi.mock('@upstash/ratelimit', () => {
 
 vi.mock('../lib/redis.js', () => ({ upstashRedis: {} }));
 vi.mock('../lib/env.js', () => ({
-  env: { NODE_ENV: 'test', RATE_LIMIT_PROFILE: 'strict' },
+  env: mocks.env,
 }));
 vi.mock('pino', () => ({
   default: vi.fn(() => ({ warn: mocks.warn, info: mocks.info })),
@@ -41,6 +51,7 @@ vi.mock('pino', () => ({
 
 import {
   createRateLimit,
+  createRateLimiter,
   getRateLimitCircuitState,
   rateLimit,
   rateLimitRegisto,
@@ -94,6 +105,7 @@ beforeEach(() => {
   mocks.info.mockClear();
   resetMemoryBuckets();
   resetRateLimitCircuitState();
+  mocks.env.RATE_LIMIT_PROFILE = 'strict';
   process.env['DEV_SKIP_OTP'] = 'false';
 });
 
@@ -185,6 +197,49 @@ describe('rate limit Redis circuit breaker', () => {
 
     expect((await app.request('/')).status).toBe(200);
     expect(getRateLimitCircuitState().reason).toBe('transient');
+  });
+
+  it('expõe a mesma degradação para consumidores sem contexto HTTP', async () => {
+    mocks.limit.mockRejectedValueOnce(new Error(
+      'Command failed: ERR max requests limit exceeded. Limit: 500000, Usage: 500001.',
+    ));
+    const limiter = createRateLimiter({
+      tokens: 2,
+      window: '1 h',
+      keyPrefix: 'tina-test',
+    });
+
+    await expect(limiter.limit('user-1')).resolves.toMatchObject({
+      success: true,
+      limit: 2,
+      remaining: 1,
+    });
+    await expect(limiter.limit('user-1')).resolves.toMatchObject({
+      success: true,
+      remaining: 0,
+    });
+    await expect(limiter.limit('user-1')).resolves.toMatchObject({
+      success: false,
+      remaining: 0,
+    });
+    expect(mocks.limit).toHaveBeenCalledOnce();
+  });
+
+  it('representa o perfil off sem valores infinitos', async () => {
+    mocks.env.RATE_LIMIT_PROFILE = 'off';
+    const limiter = createRateLimiter({
+      tokens: 2,
+      window: '1 h',
+      keyPrefix: 'disabled-test',
+    });
+
+    await expect(limiter.limit('user-1')).resolves.toEqual({
+      success: true,
+      limit: Number.MAX_SAFE_INTEGER,
+      remaining: Number.MAX_SAFE_INTEGER,
+      reset: 0,
+    });
+    expect(mocks.limit).not.toHaveBeenCalled();
   });
 });
 

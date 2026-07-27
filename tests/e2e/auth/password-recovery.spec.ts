@@ -27,8 +27,10 @@ test.describe('Autenticação - Recuperação de Password', () => {
     await page.getByRole('link', { name: /recover password|recuperar password|recuperar/i }).click();
     await expect(page).toHaveURL(/.*recuperar/);
 
-    await page.fill('input[name="email"]', 'test-recovery@example.com');
-    await page.click('button[type="submit"]');
+    const email = page.getByRole('textbox', { name: 'Email' });
+    await email.pressSequentially('test-recovery@example.com');
+    await expect(email).toHaveValue('test-recovery@example.com');
+    await page.getByRole('button', { name: /enviar link/i }).click();
 
     await expect(page.getByRole('status')).toContainText(/sucesso|email enviado/i, { timeout: 10_000 });
   });
@@ -36,8 +38,10 @@ test.describe('Autenticação - Recuperação de Password', () => {
   test('user sees error with invalid email', async ({ page }) => {
     await clearSession(page);
     await page.getByRole('link', { name: /recover password|recuperar password|recuperar/i }).click();
-    await page.fill('input[name="email"]', 'invalid-email');
-    await page.click('button[type="submit"]');
+    const email = page.getByRole('textbox', { name: 'Email' });
+    await email.pressSequentially('invalid-email');
+    await expect(email).toHaveValue('invalid-email');
+    await page.getByRole('button', { name: /enviar link/i }).click();
 
     await expect(page.getByRole('alert')).toContainText(/inválido|error/i, { timeout: 5_000 });
   });

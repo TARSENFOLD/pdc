@@ -83,6 +83,7 @@ jobs:
         run: |
           rsync -avz --delete \
             --exclude='.git' \
+            --exclude='.venv' \
             --exclude='node_modules' \
             --exclude='apps/web/node_modules' \
             --exclude='apps/api/node_modules' \
@@ -91,17 +92,22 @@ jobs:
             --exclude='.env' \
             --exclude='.env.*' \
             --exclude='.rollback' \
+            --exclude='.secrets-history' \
             ./ vps:${{ env.VPS_DEPLOY_DIR }}
 
       - name: Deploy services on VPS
         run: |
-          ssh vps "cd ${{ env.VPS_DEPLOY_DIR }} && RELEASE_SHA='${RELEASE_SHA}' bash scripts/deploy-vps.sh"
+          ssh vps bash -s -- "${VPS_DEPLOY_DIR}" "${RELEASE_SHA}" <<'REMOTE'
+          set -eu
+          cd "$1"
+          RELEASE_SHA="$2" bash scripts/deploy-vps.sh
+          REMOTE
 
       - name: Health check API
         run: |
           wait_for() {
             local url="$1" tries="${2:-24}"
-            for i in $(seq 1 "$tries"); do
+            for _attempt in $(seq 1 "$tries"); do
               curl -sf --max-time 10 "$url" >/dev/null && return 0
               sleep 5
             done
@@ -114,7 +120,7 @@ jobs:
         run: |
           wait_for() {
             local url="$1" tries="${2:-24}"
-            for i in $(seq 1 "$tries"); do
+            for _attempt in $(seq 1 "$tries"); do
               curl -sf --max-time 10 "$url" >/dev/null && return 0
               sleep 5
             done
@@ -127,4 +133,8 @@ jobs:
         if: ${{ failure() }}
         continue-on-error: true
         run: |
-          ssh vps "cd ${{ env.VPS_DEPLOY_DIR }} && RELEASE_SHA='${RELEASE_SHA}' bash scripts/deploy-vps.sh diagnostics"
+          ssh vps bash -s -- "${VPS_DEPLOY_DIR}" "${RELEASE_SHA}" <<'REMOTE'
+          set -eu
+          cd "$1"
+          RELEASE_SHA="$2" bash scripts/deploy-vps.sh diagnostics
+          REMOTE

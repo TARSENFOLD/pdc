@@ -27,6 +27,9 @@ bypass de segurança ou sessões inconsistentes entre restarts.
 4. O código expõe clientes explícitos: `redis` para o plano primário do BFF e
    `telemetryRedis` para a fila Edge. Não existe fallback silencioso entre os
    dois em produção.
+   O cache de conhecimento Tina e o índice RAG são cache do BFF e usam
+   exclusivamente `redis`; indisponibilidade de cache remove contexto
+   suplementar, mas não impede o chat de responder.
 5. O deploy exige credenciais independentes `REDIS_BFF_PASSWORD` e
    `REDIS_HEALTH_PASSWORD`, além de `PDC_REDIS_URL`; espera o health nativo do
    container e executa `PING` com o utilizador restrito `health` antes de
@@ -36,6 +39,8 @@ bypass de segurança ou sessões inconsistentes entre restarts.
    desativado.
 7. As políticas do ADR-052 mantêm-se: capacidades de segurança continuam
    fail-closed e rate limit/cache só degradam segundo a política documentada.
+   Todos os rate limiters do BFF, incluindo Tina, reutilizam o mesmo circuito
+   Upstash e os buckets locais limitados durante quota ou indisponibilidade.
    `GET /bootstrap` é público e mantém capabilities/UX disponíveis, mas trata a
    sessão como anónima quando o Redis primário não pode validá-la; isso não
    autoriza nenhuma rota protegida nem degrada login, OTP ou refresh para aberto.
