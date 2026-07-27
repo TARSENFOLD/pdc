@@ -220,7 +220,7 @@ O PDC v2 é distribuído como PWA, mas possui "invólucros" nativos para presen�
 
 ### Configuração por Provider
 - **Cloudflare (Pages/Workers)**: Configurar via Dashboard em `Settings > Variables` ou `wrangler secret put NAME`.
-- **VPS Hetzner**: Secrets injetados via ficheiro `/opt/pdc/.env` com permissões `600`. O GitHub Actions sincroniza o repo via `rsync`, exclui ambientes locais e preserva `/opt/pdc/.secrets-history`; os containers lêem o env file no deploy.
+- **VPS Hetzner**: Secrets injetados via ficheiro `/opt/pdc/.env` com permissões `600`. O GitHub Actions sincroniza o repo via `rsync`, exclui ambientes locais e artefactos `dist`/`.strapi` gerados pelos containers, e preserva `/opt/pdc/.secrets-history`; os containers lêem o env file no deploy.
 - **Upstash/Neon/Resend**: Os segredos devem ser injectados no BFF e Strapi via `/opt/pdc/.env` no VPS.
 
 ---
