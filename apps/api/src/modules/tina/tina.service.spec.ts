@@ -52,8 +52,9 @@ describe('cache de conhecimento Tina', () => {
   it('indexa objetos tipados no Redis primário', async () => {
     await tinaService.indexarKnowledge();
 
-    expect(mocks.redisSet).toHaveBeenCalledTimes(TINA_KNOWLEDGE.length);
-    expect(mocks.redisSet).toHaveBeenNthCalledWith(1, 'tina:kb:0', TINA_KNOWLEDGE[0]);
+    expect(mocks.redisSet.mock.calls).toEqual(
+      TINA_KNOWLEDGE.map((item, index) => [`tina:kb:${String(index)}`, item]),
+    );
   });
 
   it('consulta apenas as chaves determinísticas conhecidas', async () => {
@@ -62,13 +63,19 @@ describe('cache de conhecimento Tina', () => {
     ));
 
     await expect(tinaService.buscarChunks('simulações práticas')).resolves.toContain('Simulações:');
-    expect(mocks.redisGet).toHaveBeenCalledTimes(TINA_KNOWLEDGE.length);
+    expect(mocks.redisGet.mock.calls).toEqual(
+      TINA_KNOWLEDGE.map((_, index) => [`tina:kb:${String(index)}`]),
+    );
   });
 
   it('continua sem chunks quando o cache primário falha', async () => {
-    mocks.redisGet.mockRejectedValueOnce(new Error('Redis indisponível'));
+    const error = new Error('Redis indisponível');
+    mocks.redisGet.mockRejectedValueOnce(error);
 
     await expect(tinaService.buscarChunks('simulações')).resolves.toBe('');
-    expect(mocks.warn).toHaveBeenCalledOnce();
+    expect(mocks.warn).toHaveBeenCalledWith(
+      { err: error },
+      'Cache de conhecimento indisponível; Tina continuará sem chunks',
+    );
   });
 });

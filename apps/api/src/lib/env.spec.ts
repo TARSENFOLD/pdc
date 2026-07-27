@@ -158,6 +158,9 @@ describe('env boot validation', () => {
     process.env.GOOGLE_CLIENT_ID = '';
     process.env.GOOGLE_CLIENT_SECRET = '';
     process.env.GOOGLE_REDIRECT_URI = '';
+    process.env.LINKEDIN_CLIENT_ID = '';
+    process.env.LINKEDIN_CLIENT_SECRET = '';
+    process.env.LINKEDIN_REDIRECT_URI = '';
 
     const { validateEnv } = await import('./env.js');
 
@@ -165,7 +168,17 @@ describe('env boot validation', () => {
       GOOGLE_CLIENT_ID: '',
       GOOGLE_CLIENT_SECRET: '',
       GOOGLE_REDIRECT_URI: '',
+      LINKEDIN_CLIENT_ID: '',
+      LINKEDIN_CLIENT_SECRET: '',
+      LINKEDIN_REDIRECT_URI: '',
     });
+  });
+
+  it('rejeita limites Tina inválidos em vez de desativar rate limiting', async () => {
+    setBaseEnv('test');
+    process.env.TINA_RATE_LIMIT_PER_USER = 'not-a-number';
+
+    await expect(import('./env.js')).rejects.toThrow();
   });
 
   it('falha em produção quando o callback OAuth não pertence ao BFF', async () => {

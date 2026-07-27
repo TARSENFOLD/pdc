@@ -1,27 +1,82 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
+import type { ErrorEvent, NodeOptions } from '@sentry/node';
 
 const captureExceptionMock = vi.fn();
 const setUserMock = vi.fn();
 const setTagMock = vi.fn();
+const initMock = vi.fn<(options: NodeOptions) => void>();
+const profilingIntegrationMock = vi.fn(() => ({ name: 'profiling-test' }));
+const withIsolationScopeMock = vi.fn(async (callback: () => Promise<void>) => callback());
 
 vi.mock('@sentry/node', () => ({
   captureException: captureExceptionMock,
   setUser: setUserMock,
   setTag: setTagMock,
-  init: vi.fn(),
+  init: initMock,
+  withIsolationScope: withIsolationScopeMock,
 }));
 
 vi.mock('@sentry/profiling-node', () => ({
-  nodeProfilingIntegration: vi.fn(() => ({})),
+  nodeProfilingIntegration: profilingIntegrationMock,
 }));
 
-vi.mock('../lib/env.js', () => ({
-  env: {
-    SENTRY_DSN: 'https://public@example.ingest.sentry.io/123',
-    NODE_ENV: 'test',
-  },
-}));
+describe('Sentry bootstrap instrumentation', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('stays disabled when SENTRY_DSN is absent', async () => {
+    vi.stubEnv('SENTRY_DSN', '');
+
+    await import('../instrument.js');
+
+    expect(initMock).not.toHaveBeenCalled();
+  });
+
+  it('initializes before the app and strips sensitive request data', async () => {
+    vi.stubEnv('SENTRY_DSN', 'https://public@example.ingest.sentry.io/123');
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('RELEASE_SHA', '0123456789abcdef0123456789abcdef01234567');
+
+    await import('../instrument.js');
+
+    expect(initMock).toHaveBeenCalledOnce();
+    const options = initMock.mock.calls[0]?.[0];
+    expect(options).toMatchObject({
+      environment: 'production',
+      release: '0123456789abcdef0123456789abcdef01234567',
+      sendDefaultPii: false,
+      tracesSampleRate: 0.1,
+      profilesSampleRate: 0.05,
+    });
+
+    const event: ErrorEvent = {
+      type: undefined,
+      request: {
+        cookies: { access_token: 'secret' },
+        data: { otp: '123456' },
+        query_string: 'code=oauth-code&state=csrf-state',
+        headers: {
+          Authorization: 'Bearer secret',
+          Cookie: 'refresh_token=secret',
+          Accept: 'application/json',
+        },
+      },
+    };
+    const sanitized = await options?.beforeSend?.(event, {});
+    expect(sanitized?.request).not.toHaveProperty('cookies');
+    expect(sanitized?.request).not.toHaveProperty('data');
+    expect(sanitized?.request).not.toHaveProperty('query_string');
+    expect(sanitized?.request?.headers).toEqual({ Accept: 'application/json' });
+    expect(options?.beforeSendTransaction).toBeTypeOf('function');
+  });
+});
 
 describe('sentryUserContext middleware', () => {
   beforeEach(() => {
@@ -40,22 +95,23 @@ describe('sentryUserContext middleware', () => {
 
     const response = await app.request('/test');
     expect(response.status).toBe(200);
+    expect(withIsolationScopeMock).toHaveBeenCalledOnce();
     expect(setUserMock).not.toHaveBeenCalled();
-    // setTag é chamado pelo initSentry via Sentry.init({ environment }), não por sentryUserContext
   });
 
-  it('calls setUser with id only when user is authenticated', async () => {
-    const { sentryUserContext } = await import('./sentry.js');
-    const app = new Hono<{ Variables: { user: { id: string; role: string } } }>();
-    app.use('*', async (c, next) => {
-      c.set('user', { id: 'user-42', role: 'estudante' });
+  it('binds only the authenticated id inside the isolated request scope', async () => {
+    const { sentryUserContext, setSentryUser } = await import('./sentry.js');
+    const app = new Hono();
+    app.use('*', sentryUserContext);
+    app.use('*', async (_c, next) => {
+      setSentryUser('user-42');
       await next();
     });
-    app.use('*', sentryUserContext);
     app.get('/test', (c) => c.json({ ok: true }));
 
     const response = await app.request('/test');
     expect(response.status).toBe(200);
+    expect(withIsolationScopeMock).toHaveBeenCalledOnce();
     expect(setUserMock).toHaveBeenCalledWith({ id: 'user-42' });
     // No email ou PII
     const callArg = setUserMock.mock.calls[0]?.[0] as Record<string, unknown> | undefined;

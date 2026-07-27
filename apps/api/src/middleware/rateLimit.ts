@@ -59,7 +59,7 @@ export function resetRateLimitCircuitState(): void {
   circuitState = { state: 'closed', reason: null, retryAt: null };
 }
 
-function transitionCircuit(next: InternalCircuitState, error?: unknown): void {
+function transitionCircuit(next: InternalCircuitState, limiter: string, error?: unknown): void {
   const from = circuitState.state;
   circuitState = next;
   const context = {
@@ -67,6 +67,7 @@ function transitionCircuit(next: InternalCircuitState, error?: unknown): void {
     to: next.state,
     ...(next.reason !== null ? { reason: next.reason } : {}),
     ...(next.retryAt !== null ? { retryAt: next.retryAt } : {}),
+    limiter,
     ...(error !== undefined ? { err: error } : {}),
   };
   if (next.state === 'open') {
@@ -110,7 +111,7 @@ function quotaRetryAt(error: unknown, message: string, now: number): number {
   return now + QUOTA_COOLDOWN_MS;
 }
 
-function openCircuit(error: unknown): void {
+function openCircuit(error: unknown, limiter: string): void {
   const now = Date.now();
   const message = error instanceof Error ? error.message : String(error);
   const status = numericProperty(error, 'status') ?? numericProperty(error, 'statusCode');
@@ -118,20 +119,20 @@ function openCircuit(error: unknown): void {
     || /quota|daily requests? limit|requests? limit exceeded|usage limit|too many requests|\b429\b/i.test(message);
   const reason: RateLimitCircuitReason = quota ? 'quota' : 'transient';
   const retryAt = quota ? quotaRetryAt(error, message, now) : now + TRANSIENT_COOLDOWN_MS;
-  transitionCircuit({ state: 'open', reason, retryAt }, error);
+  transitionCircuit({ state: 'open', reason, retryAt }, limiter, error);
 }
 
-function claimRedisProbe(): boolean {
+function claimRedisProbe(limiter: string): boolean {
   if (circuitState.state === 'closed') return true;
   if (circuitState.state === 'half-open' || circuitState.retryAt === null) return false;
   if (Date.now() < circuitState.retryAt) return false;
-  transitionCircuit({ ...circuitState, state: 'half-open' });
+  transitionCircuit({ ...circuitState, state: 'half-open' }, limiter);
   return true;
 }
 
-function closeCircuit(): void {
+function closeCircuit(limiter: string): void {
   if (circuitState.state === 'closed') return;
-  transitionCircuit({ state: 'closed', reason: null, retryAt: null });
+  transitionCircuit({ state: 'closed', reason: null, retryAt: null }, limiter);
 }
 
 const memoryBuckets = new Map<string, { count: number; reset: number }>();
@@ -237,17 +238,17 @@ export function createRateLimiter(options: RateLimiterOptions): {
   return {
     async limit(identity: string): Promise<LimitResult> {
       const storageKey = `${options.keyPrefix}:${identity}`;
-      if (limiter && claimRedisProbe()) {
+      if (limiter && claimRedisProbe(options.keyPrefix)) {
         try {
           const remoteResult = await limiter.limit(identity);
           if (remoteResult.reason === 'timeout') {
-            openCircuit(new Error('Upstash rate limiter timed out'));
+            openCircuit(new Error('Upstash rate limiter timed out'), options.keyPrefix);
             return memoryLimit(storageKey, profiledTokens, options.window);
           }
-          closeCircuit();
+          closeCircuit(options.keyPrefix);
           return remoteResult;
         } catch (error: unknown) {
-          openCircuit(error);
+          openCircuit(error, options.keyPrefix);
           return memoryLimit(storageKey, profiledTokens, options.window);
         }
       }
@@ -255,6 +256,7 @@ export function createRateLimiter(options: RateLimiterOptions): {
       if (!limiter && circuitState.state === 'closed') {
         transitionCircuit(
           { state: 'open', reason: 'transient', retryAt: null },
+          options.keyPrefix,
           new Error('Redis rate limiter is not configured'),
         );
       }

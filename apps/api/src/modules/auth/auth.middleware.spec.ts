@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const redisMock = vi.hoisted(() => ({ get: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  redisGet: vi.fn(),
+  setSentryUser: vi.fn(),
+}));
 
 vi.mock('../../lib/env.js', () => ({
   env: {
     JWT_SECRET: 'super-secret-at-least-32-chars-long',
   },
 }));
-vi.mock('../../lib/redis.js', () => ({ redis: redisMock }));
+vi.mock('../../lib/redis.js', () => ({ redis: { get: mocks.redisGet } }));
+vi.mock('../../middleware/sentry.js', () => ({ setSentryUser: mocks.setSentryUser }));
 
 import { Hono } from 'hono';
 import { SignJWT } from 'jose';
@@ -44,8 +48,9 @@ const OptionalUserResponseSchema = z.object({
 
 describe('auth middleware JWT payload validation', () => {
   beforeEach(() => {
-    redisMock.get.mockReset();
-    redisMock.get.mockResolvedValue(null);
+    mocks.redisGet.mockReset();
+    mocks.redisGet.mockResolvedValue(null);
+    mocks.setSentryUser.mockReset();
   });
 
   it('rejects a refresh token presented as an access token', async () => {
@@ -98,6 +103,7 @@ describe('auth middleware JWT payload validation', () => {
       perfilId: 'perfil-1',
       instituicaoId: 42,
     });
+    expect(mocks.setSentryUser).toHaveBeenCalledWith('user-1');
   });
 
   it('propaga claim isMinor como eixo separado do role', async () => {
@@ -176,7 +182,7 @@ describe('auth middleware JWT payload validation', () => {
   });
 
   it('rejeita access token emitido antes da época global corrente', async () => {
-    redisMock.get.mockResolvedValueOnce('1').mockResolvedValueOnce(null);
+    mocks.redisGet.mockResolvedValueOnce('1').mockResolvedValueOnce(null);
     const app = new Hono<{ Variables: AuthVariables }>();
     app.get('/private', verifyJwt, (c) => c.json({ user: c.get('user') }));
     const token = await signedToken({ sub: 'user-1', role: 'estudante', ver: 0 });
@@ -189,7 +195,7 @@ describe('auth middleware JWT payload validation', () => {
   });
 
   it('reporta indisponibilidade sem converter falha Redis em token inválido', async () => {
-    redisMock.get.mockRejectedValueOnce(new Error('Redis unavailable'));
+    mocks.redisGet.mockRejectedValueOnce(new Error('Redis unavailable'));
     const app = new Hono<{ Variables: AuthVariables }>();
     app.get('/private', verifyJwt, (c) => c.json({ user: c.get('user') }));
     const token = await signedToken({ sub: 'user-1', role: 'estudante' });
@@ -217,5 +223,6 @@ describe('auth middleware JWT payload validation', () => {
 
     expect(res.status).toBe(200);
     expect(body.user).toBeNull();
+    expect(mocks.setSentryUser).not.toHaveBeenCalled();
   });
 });

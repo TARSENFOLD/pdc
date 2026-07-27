@@ -1,4 +1,5 @@
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
+import * as Sentry from '@sentry/react';
 import { EmptyState } from './EmptyState';
 import { AlertTriangle } from 'lucide-react';
 
@@ -19,7 +20,18 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
 
 export function AppErrorBoundary({ children }: { children: React.ReactNode }) {
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onError={(error, info) => {
+        Sentry.captureException(error, {
+          contexts: {
+            react: {
+              componentStack: info.componentStack,
+            },
+          },
+        });
+      }}
+    >
       {children}
     </ErrorBoundary>
   );

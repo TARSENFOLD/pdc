@@ -1,8 +1,8 @@
 import { env } from '../../lib/env.js';
 import { createRateLimiter } from '../../middleware/rateLimit.js';
 
-const TINA_LIMIT_PER_USER = Number(env.TINA_RATE_LIMIT_PER_USER);
-const TINA_LIMIT_GLOBAL = Number(env.TINA_RATE_LIMIT_GLOBAL);
+const TINA_LIMIT_PER_USER = env.TINA_RATE_LIMIT_PER_USER;
+const TINA_LIMIT_GLOBAL = env.TINA_RATE_LIMIT_GLOBAL;
 
 // Limites:
 // Autenticado: 20/h (default) e 5/min

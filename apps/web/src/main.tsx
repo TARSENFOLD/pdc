@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import * as Sentry from '@sentry/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from 'react-router-dom';
@@ -11,19 +10,10 @@ import { BootstrapProvider } from './lib/bootstrap/BootstrapContext';
 import { ThemeProvider } from './lib/theme/ThemeContext';
 import { Toaster, InstallPrompt } from './components/ui';
 import { CookieBanner } from './components/privacy/CookieBanner';
+import { initWebSentry } from './lib/sentry';
 import './index.css';
 
-if (import.meta.env.VITE_SENTRY_DSN) {
-  Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN as string,
-    environment: import.meta.env.MODE,
-    release: (import.meta.env.VITE_APP_VERSION as string | undefined) ?? '0.0.0',
-    integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
-    tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
-  });
-}
+initWebSentry();
 
 const SERVICE_WORKER_CLEANUP_VERSION_KEY = 'pdc:service-worker-cleanup:v1';
 

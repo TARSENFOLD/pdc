@@ -110,7 +110,7 @@ Regras:
 
       return matches.slice(0, 3).join(' | ');
     } catch (error: unknown) {
-      log.warn({ error }, 'Cache de conhecimento indisponível; Tina continuará sem chunks');
+      log.warn({ err: error }, 'Cache de conhecimento indisponível; Tina continuará sem chunks');
       return '';
     }
   },

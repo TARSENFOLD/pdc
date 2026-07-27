@@ -116,6 +116,7 @@ services:
       API_URL: https://api.usepdc.com
       FRONTEND_URL: https://usepdc.com
       STRAPI_URL: http://strapi:1337
+      RELEASE_SHA: "${RELEASE_SHA:-unlabelled}"
       PDC_REDIS_URL: "${PDC_REDIS_URL:?PDC_REDIS_URL e obrigatorio}"
     depends_on:
       traefik:

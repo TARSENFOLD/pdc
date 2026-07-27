@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { env } from '../../lib/env.js';
 import { ACCESS_TOKEN_COOKIE } from './auth.constants.js';
 import { authSessionService } from './auth-session.service.js';
+import { setSentryUser } from '../../middleware/sentry.js';
 
 
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
@@ -108,6 +109,7 @@ export async function verifyJwt(c: Context<{ Variables: AuthVariables }>, next: 
   };
 
   c.set('user', user);
+  setSentryUser(user.id);
 
   // Block incomplete OAuth sessions from all routes except auth, finalizar, and media upload
   if (parsedPayload.onboardingCompleto === false) {
@@ -135,7 +137,7 @@ export async function optionalJwt(c: Context<{ Variables: OptionalAuthVariables 
       return;
     }
     if (parsedPayload) {
-      c.set('user', {
+      const user: NonNullable<OptionalAuthVariables['user']> = {
         id: parsedPayload.sub,
         role: parsedPayload.role,
         perfilId: parsedPayload.perfilId,
@@ -144,7 +146,9 @@ export async function optionalJwt(c: Context<{ Variables: OptionalAuthVariables 
         isMinor: parsedPayload.isMinor,
         estadoMenoridade: parsedPayload.estadoMenoridade,
         consentimentoEstado: parsedPayload.consentimentoEstado,
-      });
+      };
+      c.set('user', user);
+      setSentryUser(user.id);
     }
   }
   await next();
