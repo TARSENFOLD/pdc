@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCandidates, toFeedItem, type StrapiEntity, type ItemStats } from './feed.helpers.js';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import type { FeedItemTipo, StrapiListResponse } from '@pdc/shared';
+import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
 vi.mock('../modules/strapi/strapi.client.js', () => ({
   strapiGet: vi.fn(),
@@ -14,6 +15,12 @@ vi.mock('../lib/redis.js', () => ({
   },
 }));
 
+vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
+  featureFlagService: {
+    isEnabled: vi.fn(),
+  },
+}));
+
 function listResponse<T extends { id: string | number }>(data: T[]): StrapiListResponse<T> {
   return {
     data,
@@ -22,6 +29,11 @@ function listResponse<T extends { id: string | number }>(data: T[]): StrapiListR
 }
 
 describe('feed helpers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(true);
+  });
+
   it('inclui apenas feed-posts aprovados como candidatos do feed', async () => {
     vi.mocked(strapiGet).mockImplementation((path: string) => {
       if (path === '/cursos' || path === '/simulacoes' || path === '/experiencias') {
@@ -118,6 +130,35 @@ describe('feed helpers', () => {
       tipo: 'curso',
       estado: 'approved',
     });
+  });
+
+  it('não inclui experiências VWX nos candidatos do feed com catálogo desligado', async () => {
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(false);
+    vi.mocked(strapiGet).mockImplementation((path: string) => {
+      if (path === '/experiencias') {
+        return Promise.resolve(listResponse<StrapiEntity>([
+          {
+            id: 'exp-institucional',
+            tipoExperiencia: 'institucional',
+            estado: 'published',
+            visibilidade: 'publico',
+            createdAt: '2026-07-30T10:00:00.000Z',
+          },
+          {
+            id: 'exp-vwx',
+            tipoExperiencia: 'vwx',
+            estado: 'published',
+            visibilidade: 'publico',
+            createdAt: '2026-07-30T10:00:00.000Z',
+          },
+        ]));
+      }
+      return Promise.resolve(listResponse<StrapiEntity>([]));
+    });
+
+    const candidates = await fetchCandidates();
+
+    expect(candidates.map((candidate) => candidate.id)).toEqual(['exp-institucional']);
   });
 
   it('mapeia feed-post aprovado para FeedItem social', () => {

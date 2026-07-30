@@ -50,5 +50,7 @@ export const programasApi = {
     http.post<{ success: boolean }>(`/programas/${id}/concluir`, {}),
 
   updateEstado: (id: string, estado: string) =>
-    http.patch<{ success: boolean }>(`/programas/${id}/estado`, { estado }),
+    estado === 'review'
+      ? http.post<{ success: boolean }>(`/programas/${id}/submeter`, {})
+      : http.patch<{ success: boolean }>(`/programas/${id}/estado`, { estado }),
 };

@@ -17,6 +17,18 @@ import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { applyPublicCatalogStateFilter } from './publication-state.js';
 import { toPaginatedResponse } from './pagination.js';
+import { findStrapiEntity, persistedEntityId } from '../modules/strapi/strapi-entity.js';
+import {
+  disabledFeatureResponse,
+  requireContentSubmissionEnabled,
+  requireInternalQaCreatorAccess,
+} from '../modules/feature-flags/cor-0001-gates.js';
+import {
+  canExposeExperience,
+  filterVwxExperiences,
+  isVwxCatalogEnabled,
+  type ExperienceVariantCarrier,
+} from '../modules/feature-flags/vwx-catalog-gate.js';
 
 type Vars = { Variables: AuthVariables };
 const log = pino({ name: 'routes:experiencias' });
@@ -26,6 +38,7 @@ interface StrapiExperiencia {
   documentId?: string;
   titulo: string;
   estado: string;
+  tipoExperiencia?: 'institucional' | 'vwx';
   autor?: {
     id?: string | number;
     userId?: string;
@@ -83,8 +96,10 @@ experienciaRoutes.get('/', zValidator('query', experienciaQuerySchema), async (c
     if (q.page !== undefined) params['pagination[page]'] = q.page.toString();
     if (q.pageSize !== undefined) params['pagination[pageSize]'] = q.pageSize.toString();
     applyPublicCatalogStateFilter(params);
-    const res = await strapiGet<Experiencia>('/experiencias', params);
-    return c.json(toPaginatedResponse({ ...res, data: res.data.map(normalizeExperiencia) }));
+    const res = await strapiGet<Experiencia & ExperienceVariantCarrier>('/experiencias', params);
+    const vwxEnabled = await isVwxCatalogEnabled();
+    const visible = filterVwxExperiences(res.data, vwxEnabled);
+    return c.json(toPaginatedResponse({ ...res, data: visible.map(normalizeExperiencia) }));
   } catch {
     return c.json({ error: 'Falha ao sincronizar o catálogo de experiências' }, 502);
   }
@@ -105,7 +120,7 @@ experienciaRoutes.get('/minhas', verifyJwt, checkRole(['instituicao', 'mentor', 
   }
 });
 
-experienciaRoutes.get('/minhas/:id', verifyJwt, checkRole(['instituicao', 'mentor', 'super_admin']), async (c) => {
+experienciaRoutes.get('/minhas/:id', verifyJwt, checkRole(['instituicao', 'mentor', 'super_admin']), requireInternalQaCreatorAccess(), async (c) => {
   const user = c.get('user');
   const id = c.req.param('id');
   if (!id) return c.json({ error: 'Experiência não identificada' }, 400);
@@ -162,15 +177,18 @@ experienciaRoutes.get('/stats', verifyJwt, checkRole(['instituicao', 'super_admi
 experienciaRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
   try {
-    const params: Record<string, string | string[]> = {
-      'filters[id][$eq]': id,
-      'pagination[pageSize]': '1',
+    const params: Record<string, string> = {
       populate: 'instituicao',
     };
     applyPublicCatalogStateFilter(params);
-    const res = await strapiGet<Experiencia>('/experiencias', params);
-    const exp = res.data[0];
-    if (!exp) return c.json({ error: 'Experiência não encontrada' }, 404);
+    const exp = await findStrapiEntity<Experiencia & StrapiExperiencia>(
+      'experiencias',
+      id,
+      params,
+    );
+    if (!exp || !canExposeExperience(exp, await isVwxCatalogEnabled())) {
+      return c.json({ error: 'Experiência não encontrada' }, 404);
+    }
     return c.json(normalizeExperiencia(exp));
   } catch {
     return c.json({ error: 'Falha ao carregar experiência' }, 502);
@@ -181,6 +199,7 @@ experienciaRoutes.get('/:id', async (c) => {
 experienciaRoutes.post('/',
   verifyJwt,
   checkRole(['instituicao', 'mentor', 'super_admin']),
+  requireInternalQaCreatorAccess(),
   requireApproved(),
   rateLimitContentCreate,
   zValidator('json', CriarExperienciaPayloadSchema),
@@ -290,6 +309,7 @@ experienciaRoutes.post('/:id/inscrever',
 experienciaRoutes.put('/:id',
   verifyJwt,
   checkRole(['instituicao', 'mentor', 'super_admin']),
+  requireInternalQaCreatorAccess(),
   zValidator('json', CriarExperienciaPayloadSchema.partial()),
   async (c) => {
     const id = c.req.param('id');
@@ -320,10 +340,47 @@ experienciaRoutes.put('/:id',
   }
 );
 
+// POST /experiencias/:id/submeter — submissão canónica para revisão
+experienciaRoutes.post(
+  '/:id/submeter',
+  verifyJwt,
+  checkRole(['instituicao', 'mentor', 'super_admin']),
+  requireContentSubmissionEnabled(),
+  requireInternalQaCreatorAccess(),
+  async (c) => {
+    const id = c.req.param('id');
+    const { id: userId, role } = c.get('user');
+    try {
+      const existing = await findStrapiEntity<StrapiExperiencia>('experiencias', id, {
+        populate: 'autor',
+      });
+      if (!existing) return c.json({ error: 'Experiência não identificada' }, 404);
+      if (existing.autor?.userId !== userId && role !== 'super_admin') {
+        return c.json({ error: 'Autoridade insuficiente' }, 403);
+      }
+      if (existing.estado !== 'draft') {
+        return c.json({ error: `Transição inválida de ${existing.estado} para review` }, 409);
+      }
+      const missing = missingRequiredSections(existing.secoes);
+      if (missing.length > 0) {
+        return c.json({
+          error: 'A Experiência ainda não cumpre a estrutura mínima para revisão',
+          missingSections: missing,
+        }, 422);
+      }
+      await strapiPut(`/experiencias/${persistedEntityId(existing)}`, { estado: 'review' });
+      return c.json({ success: true });
+    } catch {
+      return c.json({ error: 'Falha na transição de estado' }, 502);
+    }
+  },
+);
+
 // PATCH /experiencias/:id/estado — protegido
 experienciaRoutes.patch('/:id/estado',
   verifyJwt,
   checkRole(['instituicao', 'mentor', 'comite_cientifico', 'moderador', 'super_admin']),
+  requireInternalQaCreatorAccess(),
   zValidator('json', z.object({ estado: z.string().min(1) })),
   async (c) => {
     const id = c.req.param('id');
@@ -331,6 +388,14 @@ experienciaRoutes.patch('/:id/estado',
     const { id: userId, role } = c.get('user');
 
     try {
+      if (estado === 'review') {
+        const unavailable = await disabledFeatureResponse(
+          c,
+          'content_submission_enabled',
+          'CONTENT_SUBMISSION_TEMPORARILY_DISABLED',
+        );
+        if (unavailable) return unavailable;
+      }
       // BUG-012: mesmo fix — filtro em vez de endpoint single-entity
       const resGet = await strapiGet<StrapiExperiencia>('/experiencias', {
         'filters[id][$eq]': id,

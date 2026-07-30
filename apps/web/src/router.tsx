@@ -21,6 +21,11 @@ import { SuportePage } from '@/pages/SuportePage';
 import { LegalDocPage } from '@/pages/LegalDocPage';
 import { DashboardRedirect, RoleGuard } from './router-guards';
 import { LegacyMentorSimulacaoEditRedirect } from '@/features/simulacoes/LegacyMentorSimulacaoEditRedirect';
+import {
+  CreatorStudioBoundary,
+  ExternalCreatorSignupBoundary,
+  ProjectPublicationBoundary,
+} from '@/features/feature-flags/ProtectedFeatureBoundary';
 
 const ReputacaoPage = React.lazy(() => import('@/features/reputacao/ReputacaoPage').then(m => ({ default: m.ReputacaoPage })));
 
@@ -178,9 +183,9 @@ export const router = createBrowserRouter([
       { path: 'perfil/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><PerfilPublicoPage /></Suspense> },
       { path: 'configuracoes', element: <ConfiguracoesPage /> },
       { path: 'projetos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoListPage /></Suspense> },
-      { path: 'projetos/novo', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoFormPage /></Suspense> },
+      { path: 'projetos/novo', element: <ProjectPublicationBoundary><Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoFormPage /></Suspense></ProjectPublicationBoundary> },
       { path: 'projetos/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoDetailPage /></Suspense> },
-      { path: 'projetos/:id/editar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoFormPage /></Suspense> },
+      { path: 'projetos/:id/editar', element: <ProjectPublicationBoundary><Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoFormPage /></Suspense></ProjectPublicationBoundary> },
       { path: 'projetos/:id/colaboracao', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoColaboracaoPage /></Suspense> },
       { path: 'projetos/:id/pedidos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoPedidosPage /></Suspense> },
       { path: 'mentorias', element: <MentoriaListPage /> },
@@ -196,17 +201,17 @@ export const router = createBrowserRouter([
 
       // Mentor
       { path: 'mentor/cursos', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><MentorCursosPage /></RoleGuard> },
-      { path: 'mentor/cursos/criar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><SovereignCourseBuilder /></RoleGuard> },
-      { path: 'mentor/cursos/:id/editar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><SovereignCourseBuilder /></RoleGuard> },
-      { path: 'instituicao/cursos/criar', element: <RoleGuard allowed={['instituicao', 'super_admin']}><SovereignCourseBuilder /></RoleGuard> },
+      { path: 'mentor/cursos/criar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CreatorStudioBoundary><SovereignCourseBuilder /></CreatorStudioBoundary></RoleGuard> },
+      { path: 'mentor/cursos/:id/editar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CreatorStudioBoundary><SovereignCourseBuilder /></CreatorStudioBoundary></RoleGuard> },
+      { path: 'instituicao/cursos/criar', element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><SovereignCourseBuilder /></CreatorStudioBoundary></RoleGuard> },
       { path: 'instituicao/cursos', element: <RoleGuard allowed={['instituicao', 'super_admin']}><MentorCursosPage /></RoleGuard> },
-      { path: 'instituicao/cursos/:id/editar', element: <RoleGuard allowed={['instituicao', 'super_admin']}><SovereignCourseBuilder /></RoleGuard> },
+      { path: 'instituicao/cursos/:id/editar', element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><SovereignCourseBuilder /></CreatorStudioBoundary></RoleGuard> },
       { path: 'instituicao/simulacoes', element: <RoleGuard allowed={['instituicao', 'super_admin']}><MentorSimulacoesPage /></RoleGuard> },
-      { path: 'instituicao/simulacoes/criar', element: <RoleGuard allowed={['instituicao', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
-      { path: 'instituicao/simulacoes/:id/editar', element: <RoleGuard allowed={['instituicao', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
+      { path: 'instituicao/simulacoes/criar', element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><CriarSimulacaoPage /></CreatorStudioBoundary></RoleGuard> },
+      { path: 'instituicao/simulacoes/:id/editar', element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><CriarSimulacaoPage /></CreatorStudioBoundary></RoleGuard> },
       { path: 'mentor/simulacoes', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><MentorSimulacoesPage /></RoleGuard> },
-      { path: 'mentor/simulacoes/criar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
-      { path: 'mentor/simulacoes/:id/editar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CriarSimulacaoPage /></RoleGuard> },
+      { path: 'mentor/simulacoes/criar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CreatorStudioBoundary><CriarSimulacaoPage /></CreatorStudioBoundary></RoleGuard> },
+      { path: 'mentor/simulacoes/:id/editar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CreatorStudioBoundary><CriarSimulacaoPage /></CreatorStudioBoundary></RoleGuard> },
       { path: 'mentor/simulacoes/editar/:id', element: <LegacyMentorSimulacaoEditRedirect /> },
       { path: 'mentor/upload', element: <RoleGuard allowed={['mentor', 'super_admin']}><UploadConteudoPage /></RoleGuard> },
       { path: 'mentor/estudantes/inscritos', element: <RoleGuard allowed={['mentor', 'super_admin']}><EstudantesInscritosPage /></RoleGuard> },
@@ -259,11 +264,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'instituicao/editar-experiencia/:id',
-        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CriarExperienciaPage /></RoleGuard>
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><CriarExperienciaPage /></CreatorStudioBoundary></RoleGuard>
       },
       {
         path: 'instituicao/criar-experiencia',
-        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CriarExperienciaPage /></RoleGuard>
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><CriarExperienciaPage /></CreatorStudioBoundary></RoleGuard>
       },
       {
         path: 'instituicao/programas',
@@ -271,11 +276,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'instituicao/criar-programa',
-        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CriarProgramaPage /></RoleGuard>
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><CriarProgramaPage /></CreatorStudioBoundary></RoleGuard>
       },
       {
         path: 'instituicao/editar-programa/:id',
-        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CriarProgramaPage /></RoleGuard>
+        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><CriarProgramaPage /></CreatorStudioBoundary></RoleGuard>
       },
       {
         path: 'instituicao/estudantes-vinculados',
@@ -370,8 +375,8 @@ export const router = createBrowserRouter([
   { path: '/criar-conta', element: <EscolhaTipoContaPage /> },
   { path: '/criar-conta/finalizar', element: <FinalizarOAuthPage /> },
   { path: '/criar-conta/estudante', element: <RegistoEstudantePage /> },
-  { path: '/criar-conta/mentor', element: <RegistoMentorPage /> },
-  { path: '/criar-conta/instituicao', element: <RegistoInstituicaoPage /> },
+  { path: '/criar-conta/mentor', element: <ExternalCreatorSignupBoundary><RegistoMentorPage /></ExternalCreatorSignupBoundary> },
+  { path: '/criar-conta/instituicao', element: <ExternalCreatorSignupBoundary><RegistoInstituicaoPage /></ExternalCreatorSignupBoundary> },
   { path: '/termos', element: <TermosPage /> },
   { path: '/privacidade', element: <PrivacidadePage /> },
   { path: '/cookies', element: <CookiesPage /> },

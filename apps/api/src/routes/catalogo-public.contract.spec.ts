@@ -3,6 +3,7 @@ import { Hono, type Context, type Next } from 'hono';
 import type { StrapiListResponse } from '@pdc/shared';
 import { catalogoRoutes } from './catalogo.js';
 import { strapiGet, strapiGetRaw } from '../modules/strapi/strapi.client.js';
+import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
 function listResponse<T>(data: Array<T & { id: string | number }>): StrapiListResponse<T> {
   return {
@@ -32,11 +33,49 @@ vi.mock('../middleware/cache.js', () => ({
   },
 }));
 
+vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
+  featureFlagService: {
+    isEnabled: vi.fn(),
+  },
+}));
+
 describe('Catálogo público contracts', () => {
   const app = new Hono().route('/catalogo', catalogoRoutes);
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(true);
+  });
+
+  it('oculta VWX no catálogo de experiências', async () => {
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(false);
+    vi.mocked(strapiGet).mockImplementation((path: string) => {
+      if (path === '/experiencias') {
+        return Promise.resolve(listResponse([
+          {
+            id: 'exp-institucional',
+            slug: 'exp-institucional',
+            titulo: 'Experiência institucional',
+            descricao: 'Disponível',
+            tipoExperiencia: 'institucional',
+          },
+          {
+            id: 'exp-vwx',
+            slug: 'exp-vwx',
+            titulo: 'VWX',
+            descricao: 'Protegida',
+            tipoExperiencia: 'vwx',
+          },
+        ]));
+      }
+      return Promise.resolve(listResponse([]));
+    });
+
+    const res = await app.request('/catalogo/experiencias');
+    const body = await res.json() as { data: Array<{ id: string }> };
+
+    expect(res.status).toBe(200);
+    expect(body.data.map((item) => item.id)).toEqual(['exp-institucional']);
   });
 
   it('honra pageSize documentado nos catálogos públicos', async () => {

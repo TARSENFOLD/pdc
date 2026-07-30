@@ -52,8 +52,14 @@ function normalizeProgress(value: unknown): ProgressoItem[] {
 type CursoModuloPayload = CriarCursoPayload['modulos'][number];
 type CursoItemPayload = CursoModuloPayload['itens'][number];
 type CursoBasePayload = Omit<CriarCursoPayload, 'modulos' | 'regrasAcesso' | 'estado'>;
+type CursoBaseUpdatePayload = {
+  [K in keyof CursoBasePayload]?: CursoBasePayload[K] | undefined;
+};
 type CursoWithThumbnail = Curso & { thumbnailUrl?: string; documentId?: string };
 type CursoPersisted = Curso & { documentId?: string };
+type CursoUpdatePayload = {
+  [K in keyof CriarCursoPayload]?: CriarCursoPayload[K] | undefined;
+};
 
 function persistedId(entity: { id: string | number; documentId?: string }): string {
   return entity.documentId ?? String(entity.id);
@@ -155,7 +161,9 @@ async function syncCursoItems(moduloId: string, existingItems: ExistingModuloIte
   }
 }
 
-function toCursoStrapiData(cursoData: Partial<CursoBasePayload>): Record<string, unknown> {
+function toCursoStrapiData(
+  cursoData: CursoBasePayload | CursoBaseUpdatePayload,
+): Record<string, unknown> {
   const {
     capaUrl,
     comissao: _comissao,
@@ -249,7 +257,7 @@ export const cursosService = {
     return res.data;
   },
 
-  async atualizarCurso(id: string, payload: Partial<CriarCursoPayload>, autorId: string): Promise<Curso> {
+  async atualizarCurso(id: string, payload: CursoUpdatePayload, autorId: string): Promise<Curso> {
     const { modulos, regrasAcesso, estado, ...cursoData } = payload;
     const cursoDocumentId = await resolveCursoDocumentId(id);
     const resPut = await strapiPut<Curso>(`/cursos/${cursoDocumentId}`, {

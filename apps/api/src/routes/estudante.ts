@@ -10,6 +10,7 @@ import {
   type StrapiListResponse,
 } from '@pdc/shared';
 import { vocacionalService } from '../modules/vocacional/vocacional.service.js';
+import { requireCertificatesEnabled } from '../modules/feature-flags/cor-0001-gates.js';
 
 type Vars = { Variables: AuthVariables };
 export const estudanteRoutes = new Hono<Vars>();
@@ -20,7 +21,7 @@ estudanteRoutes.use('*', verifyJwt, checkRole(['estudante']));
  * GET /estudante/certificados
  * Retorna inscrições concluídas com dados do curso (para a página de certificados).
  */
-estudanteRoutes.get('/certificados', async (c) => {
+estudanteRoutes.get('/certificados', requireCertificatesEnabled(), async (c) => {
   const { id: userId } = c.get('user');
 
   try {

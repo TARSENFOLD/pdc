@@ -53,7 +53,9 @@ export const cursosApi = {
     http.patch<ProgressoItem>(`/cursos/${cursoId}/progresso/${itemId}`, { concluido }),
 
   updateEstado: (id: string, estado: 'draft' | 'review' | 'published' | 'archived') =>
-    http.patch<{ success: boolean }>(`/cursos/${id}/estado`, { estado }),
+    estado === 'review'
+      ? http.post<{ success: boolean }>(`/cursos/${id}/submeter`, {})
+      : http.patch<{ success: boolean }>(`/cursos/${id}/estado`, { estado }),
 
   getMinhasInscricoes: () =>
     http.get<{ data: InscricaoComCurso[] }>('/cursos/me/inscricoes'),

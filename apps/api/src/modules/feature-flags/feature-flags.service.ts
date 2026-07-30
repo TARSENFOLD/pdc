@@ -1,4 +1,5 @@
 import pino from 'pino';
+import { Features, isFeatureKey, type FeatureKey } from '@pdc/shared';
 import { redis } from '../../lib/redis.js';
 import { strapiGet, strapiPut, strapiPost, strapiDelete } from '../strapi/strapi.client.js';
 
@@ -53,11 +54,15 @@ async function invalidateCache(): Promise<void> {
  */
 export async function getEffectiveFlags(
   instituicaoId?: number,
-): Promise<Record<string, boolean>> {
+): Promise<Partial<Record<FeatureKey, boolean>>> {
   const flags = await getAllFlags();
-  const result: Record<string, boolean> = {};
+  const result: Partial<Record<FeatureKey, boolean>> = {};
 
   for (const flag of flags) {
+    if (!isFeatureKey(flag.domain)) {
+      log.warn({ domain: flag.domain }, 'Ignoring unregistered feature flag');
+      continue;
+    }
     let effective = flag.enabled;
 
     if (instituicaoId != null && Array.isArray(flag.overrides)) {
@@ -75,11 +80,20 @@ export async function getEffectiveFlags(
   return result;
 }
 
+export async function isEnabled(
+  flag: FeatureKey,
+  instituicaoId?: number,
+): Promise<boolean> {
+  const effectiveFlags = await getEffectiveFlags(instituicaoId);
+  const override = effectiveFlags[flag];
+  return override ?? (Features[flag] === 'STABLE');
+}
+
 /**
  * Create or update (upsert) a flag's global default.
  */
 export async function upsertDefault(
-  domain: string,
+  domain: FeatureKey,
   enabled: boolean,
   description?: string,
 ): Promise<FeatureFlag> {
@@ -119,6 +133,7 @@ export async function updateDefaultStrict(
   domain: string,
   enabled: boolean,
 ): Promise<FeatureFlag | null> {
+  if (!isFeatureKey(domain)) return null;
   const all = await getAllFlags();
   const existing = all.find((f) => f.domain === domain);
   if (!existing) return null;
@@ -139,6 +154,7 @@ export async function setInstitutionOverride(
   instituicaoId: number,
   enabled: boolean,
 ): Promise<FeatureFlag | null> {
+  if (!isFeatureKey(domain)) return null;
   const all = await getAllFlags();
   const flag = all.find((f) => f.domain === domain);
   if (!flag) return null;
@@ -165,6 +181,7 @@ export async function removeInstitutionOverride(
   domain: string,
   instituicaoId: number,
 ): Promise<FeatureFlag | null> {
+  if (!isFeatureKey(domain)) return null;
   const all = await getAllFlags();
   const flag = all.find((f) => f.domain === domain);
   if (!flag) return null;
@@ -194,6 +211,7 @@ export async function listAll(): Promise<FeatureFlag[]> {
  * Delete a flag entirely.
  */
 export async function deleteFlag(domain: string): Promise<void> {
+  if (!isFeatureKey(domain)) return;
   const all = await getAllFlags();
   const flag = all.find((f) => f.domain === domain);
   if (!flag) return;
@@ -205,6 +223,7 @@ export async function deleteFlag(domain: string): Promise<void> {
 
 export const featureFlagService = {
   getEffectiveFlags,
+  isEnabled,
   upsertDefault,
   updateDefaultStrict,
   setInstitutionOverride,

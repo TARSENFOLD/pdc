@@ -35,7 +35,9 @@ export const simulacoesApi = {
     http.put<MutationResult>(`/simulacoes/${id}`, payload),
 
   updateEstado: (id: string, estado: 'review' | 'published' | 'archived') =>
-    http.patch<{ success: boolean }>(`/simulacoes/${id}/estado`, { estado }),
+    estado === 'review'
+      ? http.post<{ success: boolean }>(`/simulacoes/${id}/submeter`, {})
+      : http.patch<{ success: boolean }>(`/simulacoes/${id}/estado`, { estado }),
 
   iniciarTentativa: (payload: IniciarTentativaPayload) => 
     http.post<Tentativa>(`/simulacoes/tentativas`, payload),

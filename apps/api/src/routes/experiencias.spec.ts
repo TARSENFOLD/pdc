@@ -4,6 +4,7 @@ import { experienciaRoutes } from './experiencias.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { DomainEventName } from '../modules/events/types.js';
 import type { StrapiListResponse, StrapiSingleResponse } from '@pdc/shared';
+import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
 const publishWithOutboxMock = vi.hoisted(() => vi.fn().mockResolvedValue({ id: 'evt-1' }));
 
@@ -26,6 +27,12 @@ vi.mock('../modules/strapi/strapi.client.js', () => ({
 
 vi.mock('../modules/events/event-bus.js', () => ({
   eventBus: { publishWithOutbox: publishWithOutboxMock },
+}));
+
+vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
+  featureFlagService: {
+    isEnabled: vi.fn(),
+  },
 }));
 
 vi.mock('../middleware/requireApproved.js', () => ({
@@ -60,7 +67,10 @@ vi.mock('../modules/auth/rbac.middleware.js', () => ({
 describe('experienciaRoutes E2E contracts', () => {
   const app = new Hono().route('/experiencias', experienciaRoutes);
 
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(true);
+  });
 
   const requiredSections = [
     'boas_vindas',
@@ -107,6 +117,20 @@ describe('experienciaRoutes E2E contracts', () => {
     }));
   });
 
+  it('remove VWX do catálogo público quando o flag está desligado', async () => {
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(false);
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([
+      { ...expPublicada, id: 'exp-institucional', tipoExperiencia: 'institucional' },
+      { ...expPublicada, id: 'exp-vwx', tipoExperiencia: 'vwx' },
+    ]));
+
+    const res = await app.request('/experiencias');
+    const body = await res.json() as { data: Array<{ id: string }> };
+
+    expect(res.status).toBe(200);
+    expect(body.data.map((item) => item.id)).toEqual(['exp-institucional']);
+  });
+
   // ─── GET /:id — detalhe público ───────────────────────────────────────────
 
   it('GET /:id retorna experiência publicada sem autenticação', async () => {
@@ -117,7 +141,8 @@ describe('experienciaRoutes E2E contracts', () => {
     expect(res.status).toBe(200);
     // Garante que drafts não são expostos: filtro de estado é aplicado
     expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      'filters[id][$eq]': 'exp-1',
+      'filters[$or][0][documentId][$eq]': 'exp-1',
+      'filters[$or][1][id][$eq]': 'exp-1',
       'filters[estado][$in]': ['approved', 'published'],
     }));
   });
@@ -129,6 +154,24 @@ describe('experienciaRoutes E2E contracts', () => {
     const res = await app.request('/experiencias/exp-draft');
 
     expect(res.status).toBe(404);
+  });
+
+  it('oculta VWX por documentId quando o flag está desligado', async () => {
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(false);
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
+      ...expPublicada,
+      id: 'exp-vwx',
+      documentId: 'doc-vwx',
+      tipoExperiencia: 'vwx',
+    }]));
+
+    const res = await app.request('/experiencias/doc-vwx');
+
+    expect(res.status).toBe(404);
+    expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
+      'filters[$or][0][documentId][$eq]': 'doc-vwx',
+      'filters[$or][1][id][$eq]': 'doc-vwx',
+    }));
   });
 
   // ─── GET /minhas — protegido ──────────────────────────────────────────────

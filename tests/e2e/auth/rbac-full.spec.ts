@@ -22,9 +22,11 @@ test.describe('RBAC', () => {
     await expect(mentorPage.getByRole('heading').first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test('mentor can access curso creation', async ({ mentorPage }) => {
+  test('mentor externo vê indisponibilidade no curso builder', async ({ mentorPage }) => {
     await mentorPage.goto('/app/mentor/cursos/criar');
-    await expect(mentorPage.locator('form').first()).toBeVisible({ timeout: 10_000 });
+    await expect(mentorPage.getByText('Estúdio temporariamente indisponível')).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test('admin can access admin dashboard', async ({ adminPage }) => {

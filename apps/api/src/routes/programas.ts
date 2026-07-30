@@ -25,6 +25,11 @@ import {
   sameRelation,
 } from './programas-access.js';
 import { programaParticipationRoutes } from './programas-participation.js';
+import {
+  disabledFeatureResponse,
+  requireContentSubmissionEnabled,
+  requireInternalQaCreatorAccess,
+} from '../modules/feature-flags/cor-0001-gates.js';
 
 // GET / e GET /:id são públicos (optionalJwt); rotas protegidas usam verifyJwt individualmente
 type Vars = { Variables: OptionalAuthVariables };
@@ -109,6 +114,7 @@ programaRoutes.get('/:id', optionalJwt, async (c) => {
 programaRoutes.post('/',
   verifyJwt,
   checkRole(['mentor', 'instituicao', 'super_admin']),
+  requireInternalQaCreatorAccess(),
   requireApproved(),
   rateLimitContentCreate,
   zValidator('json', CriarProgramaPayloadSchema),
@@ -168,6 +174,7 @@ programaRoutes.post('/',
 programaRoutes.put('/:id',
   verifyJwt,
   checkRole(['mentor', 'instituicao', 'super_admin']),
+  requireInternalQaCreatorAccess(),
   zValidator('json', CriarProgramaPayloadSchema.partial()),
   async (c) => {
     const id = c.req.param('id');
@@ -201,10 +208,49 @@ programaRoutes.put('/:id',
   }
 );
 
+// POST /programas/:id/submeter — submissão canónica para revisão
+programaRoutes.post(
+  '/:id/submeter',
+  verifyJwt,
+  checkRole(['mentor', 'instituicao', 'super_admin']),
+  requireContentSubmissionEnabled(),
+  requireInternalQaCreatorAccess(),
+  async (c) => {
+    const id = c.req.param('id');
+    const user = c.get('user');
+    try {
+      const actor = await resolveProgramaActor(user);
+      if (!actor) return c.json({ error: 'Perfil não encontrado' }, 404);
+      const programa = await findStrapiEntity<StrapiProgramaRecord>('programas', id, {
+        populate: 'responsavel,instituicao',
+      });
+      if (!programa) return c.json({ error: 'Programa não encontrado' }, 404);
+      if (!canManagePrograma(actor, programa)) {
+        return c.json({ error: 'Autoridade insuficiente' }, 403);
+      }
+      if (!canTransitionPrograma(programa.estado, 'review', user.role)) {
+        return c.json({ error: `Transição inválida de ${programa.estado} para review` }, 409);
+      }
+      await strapiPut<unknown>(`/programas/${persistedEntityId(programa)}`, {
+        estado: 'review',
+        historicoEstados: [...(programa.historicoEstados ?? []), {
+          estado: 'review',
+          timestamp: new Date().toISOString(),
+          autorId: user.id,
+        }],
+      });
+      return c.json({ success: true });
+    } catch {
+      return c.json({ error: 'Falha na transição de estado' }, 502);
+    }
+  },
+);
+
 // PATCH /programas/:id/estado — transição de estado editorial (protegido)
 programaRoutes.patch('/:id/estado',
   verifyJwt,
   checkRole(['mentor', 'instituicao', 'moderador', 'super_admin']),
+  requireInternalQaCreatorAccess(),
   zValidator('json', AtualizarProgramaEstadoSchema),
   async (c) => {
     const id = c.req.param('id');
@@ -213,6 +259,14 @@ programaRoutes.patch('/:id/estado',
     const { estado, motivoRejeicao } = c.req.valid('json');
     const { id: userId, role } = user;
     try {
+      if (estado === 'review') {
+        const unavailable = await disabledFeatureResponse(
+          c,
+          'content_submission_enabled',
+          'CONTENT_SUBMISSION_TEMPORARILY_DISABLED',
+        );
+        if (unavailable) return unavailable;
+      }
       const actor = await resolveProgramaActor(user);
       if (!actor) return c.json({ error: 'Perfil não encontrado' }, 404);
 

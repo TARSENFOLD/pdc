@@ -23,6 +23,7 @@ import {
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { toPaginatedResponse } from './pagination.js';
+import { requireExternalProjectPublication } from '../modules/feature-flags/cor-0001-gates.js';
 
 type Vars = { Variables: OptionalAuthVariables };
 export const projetoRoutes = new Hono<Vars>();
@@ -207,6 +208,7 @@ projetoRoutes.get('/:id', optionalJwt, async (c) => {
 projetoRoutes.post('/',
   verifyJwt,
   checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
+  requireExternalProjectPublication(),
   requireApproved(),
   rateLimitContentCreate,
   zValidator('json', CriarProjetoPayloadSchema),
@@ -255,6 +257,7 @@ projetoRoutes.post('/',
 // PUT /projetos/:id — apenas o autor pode editar
 projetoRoutes.put('/:id',
   verifyJwt,
+  requireExternalProjectPublication(),
   zValidator('json', CriarProjetoPayloadSchema),
   async (c) => {
     const id = c.req.param('id');
@@ -696,6 +699,7 @@ const TRANSICOES_MODERADOR: Record<string, string[]> = {
 
 projetoRoutes.patch('/:id/estado',
   verifyJwt,
+  requireExternalProjectPublication(),
   zValidator('json', TransicaoEstadoPayloadSchema),
   async (c) => {
     const id = c.req.param('id');

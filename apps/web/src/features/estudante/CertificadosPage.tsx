@@ -4,16 +4,32 @@ import { Spinner, Badge, Card, Button, EmptyState } from '@/components/ui';
 import { GraduationCap, Award, ShieldCheck, Download, Share2, Zap, Lock } from 'lucide-react';
 import type { InscricaoComCurso } from '@pdc/shared';
 import { motion } from 'motion/react';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 export function CertificadosPage() {
+  const { isEnabled, isLoading: flagsLoading } = useFeatureFlags();
+  const certificatesEnabled = isEnabled('certificates_enabled');
   const { data, isLoading } = useQuery({
     queryKey: ['estudante', 'certificados'],
     queryFn: () => cursosApi.getCertificados(),
+    enabled: certificatesEnabled,
   });
 
   const certificados = data?.data ?? [];
 
-  if (isLoading) return <div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>;
+  if (flagsLoading || isLoading) return <div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>;
+
+  if (!certificatesEnabled) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center px-6">
+        <EmptyState
+          icon={Award}
+          title="Certificados temporariamente indisponíveis"
+          description="Esta área ainda não está disponível."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 pb-20 animate-in fade-in duration-1000">

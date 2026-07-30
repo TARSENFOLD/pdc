@@ -12,6 +12,10 @@ import { mentoresRoutes, instituicoesRoutes, perfilPublicoRoutes, pessoasRoutes 
 import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
 import { applyPublicCatalogStateFilter } from './publication-state.js';
 import { vocacionalService } from '../modules/vocacional/vocacional.service.js';
+import {
+  filterVwxExperiences,
+  isVwxCatalogEnabled,
+} from '../modules/feature-flags/vwx-catalog-gate.js';
 
 export const catalogoRoutes = new Hono();
 const log = pino({ name: 'catalogo' });
@@ -48,6 +52,7 @@ interface StrapiExperiencia {
   modalidade?: string;
   duracaoEstimada?: number;
   vagas?: number;
+  tipoExperiencia?: 'institucional' | 'vwx';
 }
 
 const NivelSchema = z.enum(['basico', 'medio', 'avancado']);
@@ -256,9 +261,10 @@ catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
   
   try {
     const res = await strapiGet<StrapiExperiencia>('/experiencias', p);
+    const visible = filterVwxExperiences(res.data, await isVwxCatalogEnabled());
     // Enriquecer cada experiência com ratingAvg em paralelo
     const enriched = await Promise.all(
-      res.data.map(async (d) => {
+      visible.map(async (d) => {
         const ratingAvg = await fetchRatingAvg(sid(d.id));
         return mapExp(d, ratingAvg);
       })

@@ -4,11 +4,14 @@ import { motion } from 'motion/react';
 import { useTranslation as useI18nTranslation } from 'react-i18next';
 import { useTranslation } from '@/hooks/useTranslation';
 import { AuthDivider, OAuthButtons } from './OAuthButtons';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 export function EscolhaTipoContaPage() {
   const { t } = useTranslation('common');
   const { t: tRaw } = useI18nTranslation('common');
   const [searchParams] = useSearchParams();
+  const { isEnabled } = useFeatureFlags();
+  const externalCreatorEnabled = isEnabled('external_creator_onboarding_enabled');
   const area = searchParams.get('area');
   const query = area ? `?area=${area}` : '';
 
@@ -72,7 +75,15 @@ export function EscolhaTipoContaPage() {
                 >
                   <Link
                     to={tipo.href + query}
-                    className="group relative flex flex-col min-h-[420px] overflow-hidden border border-ink-tertiary/10 bg-elevated rounded-2xl p-8 transition-all duration-300 hover:border-accent/40 hover:shadow-2xl hover:shadow-accent/10 hover:-translate-y-1"
+                    aria-disabled={tipo.id !== 'estudante' && !externalCreatorEnabled}
+                    onClick={(event) => {
+                      if (tipo.id !== 'estudante' && !externalCreatorEnabled) event.preventDefault();
+                    }}
+                    className={`group relative flex flex-col min-h-[420px] overflow-hidden border border-ink-tertiary/10 bg-elevated rounded-2xl p-8 transition-all duration-300 ${
+                      tipo.id !== 'estudante' && !externalCreatorEnabled
+                        ? 'cursor-not-allowed opacity-60'
+                        : 'hover:border-accent/40 hover:shadow-2xl hover:shadow-accent/10 hover:-translate-y-1'
+                    }`}
                   >
                     {/* Orbe de fundo */}
                     <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-accent/5 blur-3xl group-hover:bg-accent/15 transition-all duration-500" />
@@ -108,7 +119,9 @@ export function EscolhaTipoContaPage() {
                     {/* CTA bottom */}
                     <div className="relative z-10 mt-8 flex items-center justify-between border-t border-ink-tertiary/8 pt-5">
                       <span className="text-xs font-semibold text-ink-tertiary group-hover:text-accent transition-colors duration-300 uppercase tracking-wider">
-                        {t('auth.common.start')}
+                        {tipo.id !== 'estudante' && !externalCreatorEnabled
+                          ? 'Temporariamente indisponível'
+                          : t('auth.common.start')}
                       </span>
                       <div className="flex h-8 w-8 items-center justify-center rounded-full border border-ink-tertiary/15 text-ink-tertiary group-hover:bg-accent group-hover:border-accent group-hover:text-white group-hover:translate-x-1 transition-all duration-300">
                         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">

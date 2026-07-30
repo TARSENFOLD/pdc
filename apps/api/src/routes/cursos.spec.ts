@@ -4,6 +4,7 @@ import { cursoRoutes } from './cursos.js';
 import { strapiDelete, strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { DomainEventName } from '../modules/events/types.js';
 import type { StrapiListResponse, StrapiSingleResponse } from '@pdc/shared';
+import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
 const publishWithOutboxMock = vi.hoisted(() => vi.fn().mockResolvedValue({ id: 'evt-1' }));
 
@@ -28,6 +29,12 @@ vi.mock('../modules/strapi/strapi.client.js', () => ({
 vi.mock('../modules/events/event-bus.js', () => ({
   eventBus: {
     publishWithOutbox: publishWithOutboxMock,
+  },
+}));
+
+vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
+  featureFlagService: {
+    isEnabled: vi.fn(),
   },
 }));
 
@@ -65,6 +72,23 @@ describe('cursoRoutes E2E contracts', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(true);
+  });
+
+  it('POST /:id/submeter devolve 503 mesmo numa chamada directa ao BFF', async () => {
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(false);
+
+    const res = await app.request('/cursos/curso-1/submeter', {
+      method: 'POST',
+      headers: { 'x-test-user': 'mentor-1', 'x-test-role': 'mentor' },
+    });
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'A submissão de conteúdos está temporariamente indisponível.',
+      code: 'CONTENT_SUBMISSION_TEMPORARILY_DISABLED',
+    });
+    expect(strapiGet).not.toHaveBeenCalled();
   });
 
   const payload = {
@@ -84,14 +108,14 @@ describe('cursoRoutes E2E contracts', () => {
     }],
   };
 
-  it('instituição cria curso em review e não publica direto', async () => {
+  it('conta permitida guarda curso como draft sem publicar ou submeter', async () => {
     vi.mocked(strapiPost)
       .mockResolvedValueOnce(singleResponse({
         id: 'curso-1',
         documentId: 'doc-curso-1',
         ...payload,
         autorId: 'inst-user',
-        estado: 'review',
+        estado: 'draft',
       }))
       .mockResolvedValueOnce(singleResponse({
         id: 'mod-1',
@@ -117,7 +141,7 @@ describe('cursoRoutes E2E contracts', () => {
     expect(strapiPost).toHaveBeenCalledWith('/cursos', expect.objectContaining({
       autorId: 'inst-user',
       autor: 'perfil-inst',
-      estado: 'review',
+      estado: 'draft',
     }));
     expect(strapiPost).toHaveBeenCalledWith('/modulos', expect.objectContaining({
       curso: 'doc-curso-1',
@@ -125,11 +149,53 @@ describe('cursoRoutes E2E contracts', () => {
     expect(strapiPost).toHaveBeenCalledWith('/modulo-items', expect.objectContaining({
       modulo: 'doc-mod-1',
     }));
-    expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.CURSO_SUBMETIDO_COMITE, {
-      cursoId: 'curso-1',
-      autorId: 'inst-user',
-    });
+    expect(publishWithOutboxMock).not.toHaveBeenCalledWith(
+      DomainEventName.CURSO_SUBMETIDO_COMITE,
+      expect.anything(),
+    );
     expect(publishWithOutboxMock).not.toHaveBeenCalledWith(DomainEventName.CURSO_PUBLICADO, expect.anything());
+  });
+
+  it('QA interno guarda draft mesmo com onboarding externo desligado', async () => {
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(false);
+    vi.mocked(strapiPost)
+      .mockResolvedValueOnce(singleResponse({
+        id: 'curso-qa',
+        documentId: 'doc-curso-qa',
+        ...payload,
+        autorId: 'qa-user',
+        estado: 'draft',
+      }))
+      .mockResolvedValueOnce(singleResponse({
+        id: 'mod-qa',
+        documentId: 'doc-mod-qa',
+        titulo: 'Módulo Inicial',
+        ordem: 1,
+        itens: [],
+      }))
+      .mockResolvedValueOnce(singleResponse({
+        id: 'item-qa',
+        titulo: 'Aula de abertura',
+        tipo: 'texto',
+        ordem: 1,
+      }));
+
+    const res = await app.request('/cursos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-user': 'qa-user',
+        'x-test-role': 'super_admin',
+        'x-test-perfil': 'perfil-qa',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    expect(res.status).toBe(201);
+    expect(strapiPost).toHaveBeenCalledWith('/cursos', expect.objectContaining({
+      autorId: 'qa-user',
+      estado: 'draft',
+    }));
   });
 
   it('inscreve mentor/instituição/estudante usando relação perfil+curso', async () => {

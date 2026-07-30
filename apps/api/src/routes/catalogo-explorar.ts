@@ -6,6 +6,10 @@ import {
   type ExplorarItemTipo 
 } from '@pdc/shared';
 import { applyPublicCatalogStateFilter } from './publication-state.js';
+import {
+  filterVwxExperiences,
+  isVwxCatalogEnabled,
+} from '../modules/feature-flags/vwx-catalog-gate.js';
 
 export const catalogoExplorarRoutes = new Hono();
 
@@ -22,6 +26,7 @@ interface CatalogoExplorarEntity {
   regiao?: string;
   avatarUrl?: string;
   logoUrl?: string;
+  tipoExperiencia?: 'institucional' | 'vwx';
 }
 
 type CatalogoField = keyof Omit<CatalogoExplorarEntity, 'id'>;
@@ -76,6 +81,7 @@ catalogoExplorarRoutes.get('/', async (c) => {
     : (['curso', 'simulacao', 'experiencia', 'mentor', 'instituicao'] as ExplorarItemTipo[]);
 
   const perType = Math.max(1, Math.floor(limit / types.length));
+  const vwxCatalogEnabled = await isVwxCatalogEnabled();
 
   const fetches = types.map(async (t): Promise<ExplorarItem[]> => {
     const cfg = CONFIGS[t];
@@ -97,7 +103,10 @@ catalogoExplorarRoutes.get('/', async (c) => {
 
     try {
       const res = await strapiGet<CatalogoExplorarEntity>(cfg.endpoint, params);
-      return res.data.map((d): ExplorarItem => ({
+      const visible = t === 'experiencia'
+        ? filterVwxExperiences(res.data, vwxCatalogEnabled)
+        : res.data;
+      return visible.map((d): ExplorarItem => ({
         tipo: t,
         id: sid(d.id),
         slug: d.slug ?? sid(d.id),
