@@ -200,6 +200,32 @@ describe('env boot validation', () => {
     }
   );
 
+  it('converte limites válidos da Tina para números', async () => {
+    setBaseEnv('test');
+    process.env.TINA_RATE_LIMIT_PER_USER = '37';
+    process.env.TINA_RATE_LIMIT_GLOBAL = '901';
+
+    const { validateEnv } = await import('./env.js');
+
+    expect(validateEnv()).toMatchObject({
+      TINA_RATE_LIMIT_PER_USER: 37,
+      TINA_RATE_LIMIT_GLOBAL: 901,
+    });
+  });
+
+  it('aplica os limites canónicos da Tina quando as variáveis estão ausentes', async () => {
+    setBaseEnv('test');
+    Reflect.deleteProperty(process.env, 'TINA_RATE_LIMIT_PER_USER');
+    Reflect.deleteProperty(process.env, 'TINA_RATE_LIMIT_GLOBAL');
+
+    const { validateEnv } = await import('./env.js');
+
+    expect(validateEnv()).toMatchObject({
+      TINA_RATE_LIMIT_PER_USER: 20,
+      TINA_RATE_LIMIT_GLOBAL: 500,
+    });
+  });
+
   it('falha em produção quando o callback OAuth não pertence ao BFF', async () => {
     setBaseEnv('production');
     setRequiredProductionIntegrations();

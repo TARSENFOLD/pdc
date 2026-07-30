@@ -7,7 +7,7 @@
   "scripts": {
     "test": "vitest",
     "dev": "tsx watch --env-file=.env --import ./src/instrument.ts src/index.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node --import ./dist/src/instrument.js dist/src/index.js",
     "start:consumer": "node --import ./dist/src/instrument.js dist/src/modules/telemetria/consumer.js",
     "worker:telemetry": "node --import ./dist/src/instrument.js dist/src/workers/telemetry-worker.js",
@@ -42,6 +42,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.11.0",
+    "@sentry/cli": "^2.58.6",
     "@types/node": "^22.0.0",
     "@types/web-push": "^3.6.4",
     "@typescript-eslint/eslint-plugin": "^8.7.0",

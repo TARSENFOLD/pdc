@@ -28,6 +28,7 @@ Valores reais ficam apenas em secret stores dos providers ou no gestor local aut
 | `SENTRY_AUTH_TOKEN`                 | GitHub Actions       | per-environment   | 90d              | Sentry organization auth token             |
 | `SENTRY_ORG`                        | GitHub Actions       | cross-environment | never            | Sentry organization slug                   |
 | `SENTRY_WEB_PROJECT`                | GitHub Actions       | per-environment   | never            | Sentry web project slug                    |
+| `SENTRY_API_PROJECT`                | GitHub Actions       | per-environment   | never            | Sentry API project slug                    |
 | `CF_PAGES_PROJECT_NAME`             | GitHub Actions       | cross-environment | never            | Cloudflare Pages project settings          |
 | `CLOUDFLARE_ACCOUNT_ID`             | GitHub Actions       | cross-environment | on-incident      | Cloudflare dashboard account overview      |
 | `STRAPI_URL`                        | api, scripts         | per-environment   | never            | VPS Hetzner .env                                |
@@ -259,20 +260,27 @@ O workflow `Deploy Web (Cloudflare Pages)` só publica quando a repository varia
 
 O mesmo workflow exige `VITE_SENTRY_DSN`, `SENTRY_ORG`,
 `SENTRY_WEB_PROJECT` e o secret `SENTRY_AUTH_TOKEN`. O token existe apenas
-nos passos de validação e build de uma revisão aprovada da `main`, para criar
-a release e enviar sourcemaps; nunca recebe o prefixo `VITE_` nem é
-incorporado no bundle. O checkout é fixado e validado contra o mesmo SHA
-usado como release. Depois do upload, os ficheiros `.map` são removidos de
-`apps/web/dist` antes da publicação no Cloudflare Pages.
+no passo isolado de upload de sourcemaps de uma revisão aprovada da `main`;
+nunca fica disponível durante validação, instalação, build, injeção de Debug
+IDs ou deploy, não recebe o prefixo `VITE_` e não é incorporado no bundle. O
+checkout é fixado e validado contra o mesmo SHA usado como release. Depois do
+upload, os ficheiros `.map` são removidos de `apps/web/dist` antes da publicação
+no Cloudflare Pages.
 
 Session Replay permanece desativado até a revisão de privacidade validar
 mascaramento, consentimento, retenção e tratamento de dados de menores. A
 integração inicial cobre erros e tracing amostrado.
 
-O upload privado automatizado de sourcemaps cobre apenas `pdc-web`. A API
-produz sourcemaps no build e envia eventos ao projeto `pdc-api`, mas não deve
-ser considerada simbolizada no Sentry até existir um passo de upload
-autenticado no workflow VPS com o projeto da API explicitamente configurado.
+O workflow VPS exige também `SENTRY_API_PROJECT`. Ele compila a mesma revisão
+aprovada pelo CI, injeta Debug IDs determinísticos e envia os sourcemaps da API
+e do pacote partilhado ao projeto configurado antes de sincronizar o repositório
+para o VPS. O Dockerfile injeta os mesmos IDs no JavaScript executado.
+`SENTRY_AUTH_TOKEN` existe apenas nos passos isolados de upload dos runners web e
+VPS: não entra em validação, instalação, build, injeção de Debug IDs, deploy
+Cloudflare, `rsync`, Docker build, imagem ou `/opt/pdc/.env`. O build usado para
+os mapas da API exclui testes, fixtures e mocks; o workflow falha se detectar
+artefactos `*.spec.*`, `*.test.*`, `__fixtures__` ou `__mocks__` em
+`apps/api/dist` ou `packages/shared/dist`.
 
 Os projetos canónicos são `pdc-mr/pdc-web` para React e
 `pdc-mr/pdc-api` para Hono/Node. Ambos mantêm data scrubbing e IP scrubbing
