@@ -55,12 +55,30 @@ describe('AI RAG cache', () => {
     );
   });
 
+  it('normaliza payload JSON serializado pelo adaptador Redis', async () => {
+    mocks.redisGet.mockResolvedValueOnce(JSON.stringify([
+      {
+        id: '1',
+        titulo: 'Engenharia de Software',
+        descricao: 'Arquitetura de sistemas',
+        tipo: 'curso',
+      },
+    ]));
+
+    await expect(aiRag.buscarContextoRelevante('arquitetura')).resolves.toContain(
+      '[curso] Engenharia de Software: Arquitetura de sistemas',
+    );
+  });
+
   it('continua sem contexto quando o cache falha ou contém payload inválido', async () => {
     mocks.redisGet.mockRejectedValueOnce(new Error('Redis indisponível'));
     await expect(aiRag.buscarContextoRelevante('arquitetura')).resolves.toBe('');
 
     mocks.redisGet.mockResolvedValueOnce([{ id: 1, titulo: 'Inválido' }]);
     await expect(aiRag.buscarContextoRelevante('arquitetura')).resolves.toBe('');
-    expect(mocks.warn).toHaveBeenCalledTimes(2);
+
+    mocks.redisGet.mockResolvedValueOnce('{invalid-json');
+    await expect(aiRag.buscarContextoRelevante('arquitetura')).resolves.toBe('');
+    expect(mocks.warn).toHaveBeenCalledTimes(3);
   });
 });

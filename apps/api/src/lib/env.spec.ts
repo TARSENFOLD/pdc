@@ -93,7 +93,9 @@ describe('env boot validation', () => {
     setRequiredProductionIntegrations();
     Reflect.deleteProperty(process.env, 'RESEND_API_KEY');
 
-    await expect(import('./env.js')).rejects.toThrow(/SENDGRID_API_KEY or RESEND_API_KEY required in production/);
+    await expect(import('./env.js')).rejects.toThrow(
+      /SENDGRID_API_KEY or RESEND_API_KEY required in production/
+    );
   });
 
   it('falha em produção quando variável obrigatória ainda contém placeholder', async () => {
@@ -117,7 +119,9 @@ describe('env boot validation', () => {
     setRequiredProductionIntegrations();
     process.env.DEV_SKIP_OTP = 'true';
 
-    await expect(import('./env.js')).rejects.toThrow(/DEV_SKIP_OTP must not be enabled in production/);
+    await expect(import('./env.js')).rejects.toThrow(
+      /DEV_SKIP_OTP must not be enabled in production/
+    );
   });
 
   it('falha em produção quando PDC_E2E_LONG_AUTH está activo', async () => {
@@ -125,7 +129,9 @@ describe('env boot validation', () => {
     setRequiredProductionIntegrations();
     process.env.PDC_E2E_LONG_AUTH = 'true';
 
-    await expect(import('./env.js')).rejects.toThrow(/PDC_E2E_LONG_AUTH must not be enabled in production/);
+    await expect(import('./env.js')).rejects.toThrow(
+      /PDC_E2E_LONG_AUTH must not be enabled in production/
+    );
   });
 
   it('falha em produção quando OTP_HASH_SECRET está ausente', async () => {
@@ -158,6 +164,9 @@ describe('env boot validation', () => {
     process.env.GOOGLE_CLIENT_ID = '';
     process.env.GOOGLE_CLIENT_SECRET = '';
     process.env.GOOGLE_REDIRECT_URI = '';
+    process.env.LINKEDIN_CLIENT_ID = '';
+    process.env.LINKEDIN_CLIENT_SECRET = '';
+    process.env.LINKEDIN_REDIRECT_URI = '';
 
     const { validateEnv } = await import('./env.js');
 
@@ -165,8 +174,31 @@ describe('env boot validation', () => {
       GOOGLE_CLIENT_ID: '',
       GOOGLE_CLIENT_SECRET: '',
       GOOGLE_REDIRECT_URI: '',
+      LINKEDIN_CLIENT_ID: '',
+      LINKEDIN_CLIENT_SECRET: '',
+      LINKEDIN_REDIRECT_URI: '',
     });
   });
+
+  it.each(['0', '-1', '1.5', 'not-a-number'])(
+    'rejeita TINA_RATE_LIMIT_PER_USER inválido (%s)',
+    async (value) => {
+      setBaseEnv('test');
+      process.env.TINA_RATE_LIMIT_PER_USER = value;
+
+      await expect(import('./env.js')).rejects.toThrow(/TINA_RATE_LIMIT_PER_USER/);
+    }
+  );
+
+  it.each(['0', '-1', '1.5', 'not-a-number'])(
+    'rejeita TINA_RATE_LIMIT_GLOBAL inválido (%s)',
+    async (value) => {
+      setBaseEnv('test');
+      process.env.TINA_RATE_LIMIT_GLOBAL = value;
+
+      await expect(import('./env.js')).rejects.toThrow(/TINA_RATE_LIMIT_GLOBAL/);
+    }
+  );
 
   it('falha em produção quando o callback OAuth não pertence ao BFF', async () => {
     setBaseEnv('production');
@@ -175,7 +207,9 @@ describe('env boot validation', () => {
     process.env.LINKEDIN_CLIENT_SECRET = 'linkedin-secret';
     process.env.LINKEDIN_REDIRECT_URI = 'https://usepdc.com/auth/linkedin/callback';
 
-    await expect(import('./env.js')).rejects.toThrow(/LINKEDIN_REDIRECT_URI must use API_URL origin/);
+    await expect(import('./env.js')).rejects.toThrow(
+      /LINKEDIN_REDIRECT_URI must use API_URL origin/
+    );
   });
 
   it('falha em produção quando o Redis persistente do BFF está ausente', async () => {
@@ -207,7 +241,9 @@ describe('env boot validation', () => {
     setRequiredProductionIntegrations();
     process.env.WEB_PUSH_SUBJECT = 'ops@usepdc.com';
 
-    await expect(import('./env.js')).rejects.toThrow(/WEB_PUSH_SUBJECT must start with mailto: or https:/);
+    await expect(import('./env.js')).rejects.toThrow(
+      /WEB_PUSH_SUBJECT must start with mailto: or https:/
+    );
   });
 
   it('aceita produção quando R2 e um provider de email estão configurados', async () => {

@@ -25,6 +25,9 @@ Valores reais ficam apenas em secret stores dos providers ou no gestor local aut
 | `VITE_EDGE_URL`                     | web                  | per-environment   | never            | VPS Hetzner .env or Cloudflare Pages env            |
 | `VITE_SENTRY_DSN`                   | web                  | per-environment   | on-incident      | Sentry project settings                    |
 | `VITE_APP_VERSION`                  | web                  | per-deploy        | never            | CI release metadata                        |
+| `SENTRY_AUTH_TOKEN`                 | GitHub Actions       | per-environment   | 90d              | Sentry organization auth token             |
+| `SENTRY_ORG`                        | GitHub Actions       | cross-environment | never            | Sentry organization slug                   |
+| `SENTRY_WEB_PROJECT`                | GitHub Actions       | per-environment   | never            | Sentry web project slug                    |
 | `CF_PAGES_PROJECT_NAME`             | GitHub Actions       | cross-environment | never            | Cloudflare Pages project settings          |
 | `CLOUDFLARE_ACCOUNT_ID`             | GitHub Actions       | cross-environment | on-incident      | Cloudflare dashboard account overview      |
 | `STRAPI_URL`                        | api, scripts         | per-environment   | never            | VPS Hetzner .env                                |
@@ -253,3 +256,25 @@ Importante: `API_URL` é variável interna do service `api` e não altera chamad
 O workflow `Deploy Web (Cloudflare Pages)` só publica quando a repository variable `CF_PAGES_PROJECT_NAME` está configurada. Não há fallback para o nome do repositório, porque isso mascara um projeto Pages ausente e transforma configuração incompleta em falha de deploy na `main`.
 
 `CLOUDFLARE_ACCOUNT_ID` deve ser o Account ID hexadecimal da Cloudflare, nunca um API token. O token de deploy permanece apenas em `CLOUDFLARE_API_TOKEN`.
+
+O mesmo workflow exige `VITE_SENTRY_DSN`, `SENTRY_ORG`,
+`SENTRY_WEB_PROJECT` e o secret `SENTRY_AUTH_TOKEN`. O token existe apenas
+nos passos de validação e build de uma revisão aprovada da `main`, para criar
+a release e enviar sourcemaps; nunca recebe o prefixo `VITE_` nem é
+incorporado no bundle. O checkout é fixado e validado contra o mesmo SHA
+usado como release. Depois do upload, os ficheiros `.map` são removidos de
+`apps/web/dist` antes da publicação no Cloudflare Pages.
+
+Session Replay permanece desativado até a revisão de privacidade validar
+mascaramento, consentimento, retenção e tratamento de dados de menores. A
+integração inicial cobre erros e tracing amostrado.
+
+O upload privado automatizado de sourcemaps cobre apenas `pdc-web`. A API
+produz sourcemaps no build e envia eventos ao projeto `pdc-api`, mas não deve
+ser considerada simbolizada no Sentry até existir um passo de upload
+autenticado no workflow VPS com o projeto da API explicitamente configurado.
+
+Os projetos canónicos são `pdc-mr/pdc-web` para React e
+`pdc-mr/pdc-api` para Hono/Node. Ambos mantêm data scrubbing e IP scrubbing
+ativos e uma regra `Every New Issue`, que envia email ao issue owner ou,
+na ausência dele, aos membros ativos.

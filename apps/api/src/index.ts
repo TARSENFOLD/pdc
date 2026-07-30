@@ -1,12 +1,9 @@
 import { env } from './lib/env.js';
-import { initSentry, sentryUserContext } from './middleware/sentry.js';
+import { sentryUserContext } from './middleware/sentry.js';
 import { captureException } from '@sentry/node';
 import { serve } from '@hono/node-server';
 import type { Server } from 'node:http';
 import pino from 'pino';
-
-// Initialize Sentry first
-initSentry();
 
 const log = pino();
 import { Hono } from 'hono';
@@ -106,8 +103,10 @@ function resolveHttpErrorStatus(err: Error): 400 | 401 | 403 | 404 | 409 | 422 |
 }
 
 app.onError((err, c) => {
-  captureException(err);
   const status = resolveHttpErrorStatus(err);
+  if (status >= 500) {
+    captureException(err);
+  }
   log.error({ err, path: c.req.path, status }, 'Unhandled error');
   applyCorsHeaders(c);
   const message = status === 500 ? 'Internal Server Error' : err.message || 'Erro na requisição';

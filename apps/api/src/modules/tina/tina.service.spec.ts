@@ -1,13 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  aiChat: vi.fn(),
+  primaryEnabled: true,
   redisGet: vi.fn(),
   redisSet: vi.fn(),
   warn: vi.fn(),
 }));
 
+vi.mock('../ai/ai.service.js', () => ({
+  aiService: {
+    chat: mocks.aiChat,
+    fallbackOllama: vi.fn(),
+  },
+}));
+
 vi.mock('../../lib/redis.js', () => ({
-  hasPrimaryRedis: true,
+  get hasPrimaryRedis() {
+    return mocks.primaryEnabled;
+  },
   upstashRedis: null,
   redis: {
     get: mocks.redisGet,
@@ -22,6 +33,8 @@ import { TINA_KNOWLEDGE } from './tina.knowledge.js';
 import { extractJsonObject, tinaService } from './tina.service.js';
 
 beforeEach(() => {
+  mocks.aiChat.mockReset();
+  mocks.primaryEnabled = true;
   mocks.redisGet.mockReset();
   mocks.redisSet.mockReset();
   mocks.redisSet.mockResolvedValue('OK');
@@ -52,23 +65,133 @@ describe('cache de conhecimento Tina', () => {
   it('indexa objetos tipados no Redis primário', async () => {
     await tinaService.indexarKnowledge();
 
-    expect(mocks.redisSet).toHaveBeenCalledTimes(TINA_KNOWLEDGE.length);
-    expect(mocks.redisSet).toHaveBeenNthCalledWith(1, 'tina:kb:0', TINA_KNOWLEDGE[0]);
+    expect(mocks.redisSet.mock.calls).toEqual(
+      TINA_KNOWLEDGE.map((item, index) => [`tina:kb:${String(index)}`, item])
+    );
   });
 
   it('consulta apenas as chaves determinísticas conhecidas', async () => {
-    mocks.redisGet.mockImplementation((key: string) => Promise.resolve(
-      key === 'tina:kb:1' ? TINA_KNOWLEDGE[1] : null,
-    ));
+    mocks.redisGet.mockImplementation((key: string) =>
+      Promise.resolve(key === 'tina:kb:1' ? TINA_KNOWLEDGE[1] : null)
+    );
 
     await expect(tinaService.buscarChunks('simulações práticas')).resolves.toContain('Simulações:');
-    expect(mocks.redisGet).toHaveBeenCalledTimes(TINA_KNOWLEDGE.length);
+    expect(mocks.redisGet.mock.calls).toEqual(
+      TINA_KNOWLEDGE.map((_, index) => [`tina:kb:${String(index)}`])
+    );
+  });
+
+  it('aceita a representação JSON legada e ignora entradas inválidas isoladamente', async () => {
+    mocks.redisGet.mockImplementation((key: string) => {
+      if (key === 'tina:kb:0') return Promise.resolve('{invalid-json');
+      if (key === 'tina:kb:2')
+        return Promise.resolve(
+          JSON.stringify({
+            categoria: 'incompleta',
+            titulo: 'Sem conteúdo',
+          })
+        );
+      if (key === 'tina:kb:1') return Promise.resolve(JSON.stringify(TINA_KNOWLEDGE[1]));
+      return Promise.resolve(null);
+    });
+
+    await expect(tinaService.buscarChunks('simulações práticas')).resolves.toContain('Simulações:');
+    expect(mocks.warn).toHaveBeenCalledWith(
+      { key: 'tina:kb:0' },
+      'Entrada inválida no cache de conhecimento da Tina'
+    );
+    expect(mocks.warn).toHaveBeenCalledWith(
+      { key: 'tina:kb:2' },
+      'Entrada inválida no cache de conhecimento da Tina'
+    );
   });
 
   it('continua sem chunks quando o cache primário falha', async () => {
-    mocks.redisGet.mockRejectedValueOnce(new Error('Redis indisponível'));
+    const error = new Error('Redis indisponível');
+    mocks.redisGet.mockRejectedValueOnce(error);
 
     await expect(tinaService.buscarChunks('simulações')).resolves.toBe('');
-    expect(mocks.warn).toHaveBeenCalledOnce();
+    expect(mocks.warn).toHaveBeenCalledWith(
+      { err: error },
+      'Cache de conhecimento indisponível; Tina continuará sem chunks'
+    );
   });
+
+  it('não consulta nem indexa quando o Redis primário está desativado', async () => {
+    mocks.primaryEnabled = false;
+
+    await expect(tinaService.buscarChunks('simulações')).resolves.toBe('');
+    await expect(tinaService.indexarKnowledge()).resolves.toBeUndefined();
+
+    expect(mocks.redisGet).not.toHaveBeenCalled();
+    expect(mocks.redisSet).not.toHaveBeenCalled();
+  });
+
+  it('continua a indexação quando uma escrita falha', async () => {
+    mocks.redisSet.mockRejectedValueOnce(new Error('Redis indisponível'));
+
+    await expect(tinaService.indexarKnowledge()).resolves.toBeUndefined();
+
+    expect(mocks.redisSet).toHaveBeenCalledTimes(TINA_KNOWLEDGE.length);
+    expect(mocks.warn).toHaveBeenCalledWith(
+      { failedWrites: 1, totalWrites: TINA_KNOWLEDGE.length },
+      'Falha parcial ao indexar conhecimento da Tina'
+    );
+  });
+});
+
+describe('respostas externas da Tina', () => {
+  beforeEach(() => {
+    mocks.aiChat.mockReset();
+  });
+
+  it.each([
+    [
+      'JSON malformado',
+      () => new Response('{invalid-json', { status: 200 }),
+      'Falha ao interpretar resposta JSON do provider de IA',
+    ],
+    [
+      'envelope nulo',
+      () => Response.json(null),
+      'Payload do provider de IA não corresponde ao contrato',
+    ],
+    [
+      'envelope inesperado',
+      () => Response.json({ output: 'texto sem contrato' }),
+      'Payload do provider de IA não corresponde ao contrato',
+    ],
+    [
+      'resposta não-2xx',
+      () => new Response('upstream unavailable', { status: 503 }),
+      'Provider de IA devolveu resposta não-2xx',
+    ],
+  ])(
+    'preserva fallbacks quando a IA devolve %s',
+    async (_caseName, createResponse, expectedLogMessage) => {
+      mocks.aiChat.mockResolvedValue(createResponse());
+
+      await expect(tinaService.gerarPerguntasDesafio('Tecnologia')).resolves.toEqual([]);
+
+      mocks.aiChat.mockResolvedValue(createResponse());
+      await expect(
+        tinaService.gerarVereditoDesafio({
+          area: 'Tecnologia',
+          contexto: 'Teste',
+          respostas: ['A'],
+        })
+      ).resolves.toBeNull();
+
+      mocks.aiChat.mockResolvedValue(createResponse());
+      await expect(
+        tinaService.gerarVereditoPsicometrico({
+          phi: 7,
+          resilience: 8,
+          focus: 9,
+          domainId: 'TECNOLOGIA',
+        })
+      ).resolves.toBe('');
+      expect(mocks.warn).toHaveBeenCalledWith(expect.any(Object), expectedLogMessage);
+    }
+  );
 });

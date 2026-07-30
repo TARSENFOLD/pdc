@@ -31,4 +31,4 @@ COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
 EXPOSE 3001
 
-CMD ["node", "apps/api/dist/src/index.js"]
+CMD ["node", "--import", "/app/apps/api/dist/src/instrument.js", "apps/api/dist/src/index.js"]

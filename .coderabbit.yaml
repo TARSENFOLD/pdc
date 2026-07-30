@@ -1,72 +1,61 @@
-# CodeRabbit Global Configuration — PDC v2
-# https://docs.coderabbit.ai/configuration/overview
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit Global Configuration - PDC v2
 
-# Review settings
 reviews:
-  # Personality of the reviewer
-  profile: "assertive"
-  # Detailed reviews are mandatory for PDC v2 (End-to-End integrity)
-  request_review_command: 'coderabbit review'
-  # Enable summary and walkthrough for every PR
-  enable_summary: true
-  enable_walkthrough: true
+  profile: 'assertive'
+  request_changes_workflow: true
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  review_status: true
+  review_details: true
+  path_filters:
+    - '!node_modules/**'
+    - '!dist/**'
+    - '!.gemini/**'
+    - '!tmp/**'
+    - '!coverage/**'
+    - '!*.lock'
+    - '!package-lock.json'
+    - '!pnpm-lock.yaml'
+    - '!yarn.lock'
+    - '!infra/strapi/.cache/**'
+    - '!infra/strapi/build/**'
+    - '!infra/strapi/types/generated/**'
+    - '!apps/web/dist/**'
+    - '!apps/edge/dist/**'
+    - '!apps/web/src/locales/**'
+    - '!.windsurf/**'
+    - '!docs/_archive/**'
+    - '!public/**'
+  path_instructions:
+    - path: '**/*.{ts,tsx}'
+      instructions: |
+        Apply the repository AGENTS.md and canonical specs. Flag blind casts,
+        unvalidated external data, RBAC drift, hidden failures, and telemetry regressions.
+    - path: '**/*.spec.{ts,tsx}'
+      instructions: |
+        Require behavior-specific assertions and coverage for changed error paths.
+        Reject shell-only, tautological, or always-present fallback assertions.
+    - path: 'tests/e2e/**'
+      instructions: |
+        Require route-specific happy-path or explicit empty-state assertions.
+        Generic main or first-heading assertions are insufficient.
+    - path: '{Dockerfile,docker-compose*.yml,.github/workflows/**}'
+      instructions: |
+        Verify that secrets are scoped to trusted revisions and never embedded in artifacts.
+        Require consistent RELEASE_SHA metadata across checkout, build, runtime, Sentry,
+        deployment, and rollback paths. Flag fallbacks that hide missing production metadata.
+  tools:
+    shellcheck:
+      enabled: true
 
-# Advanced technical settings
-language_priorities:
-  typescript: high
-  javascript: medium
-  css: medium
-  markdown: high
-
-# Files and directories to ignore
-ignore_patterns:
-  - "node_modules/**"
-  - "dist/**"
-  - ".gemini/**"
-  - "tmp/**"
-  - "coverage/**"
-  - "*.lock"
-  - "package-lock.json"
-  - "pnpm-lock.yaml"
-  - "yarn.lock"
-  - "infra/strapi/.cache/**"
-  - "infra/strapi/build/**"
-  - "infra/strapi/types/generated/**"
-  - "apps/web/dist/**"
-  - "apps/edge/dist/**"
-  - "apps/web/src/locales/**"
-  - "**/*.spec.ts"
-  - "**/*.spec.tsx"
-  - ".windsurf/**"
-  - "docs/_archive/**"
-  - "public/**"
-  - "tests/e2e/**"
-
-# Knowledge base
 knowledge_base:
-  # Enable CodeRabbit to index project documentation
-  enabled: true
-  # Priority paths for documentation
-  paths:
-    - "docs/**"
-    - ".planning/**"
-    - ".planning/CONSTITUTION.md"
-    - ".planning/REQUIREMENTS.md"
-    - "specs/IMPORTANTE/**"
-    - "AGENTS.md"
-    - "CLAUDE.md"
-    - "GEMINI.md"
-    - "apps/web/DESIGN.md"
-    - "docs/decisoes/adr-025-neuralconstellation-dual.md"
-    - "docs/decisoes/adr-026-glow-policy-card-border-token.md"
-
-# Tools and linting
-# We rely on existing monorepo linting (ESLint). No Prettier in this project.
-tools:
-  shellcheck:
+  code_guidelines:
     enabled: true
-
-# PR Settings
-pull_requests:
-  # Require all code review comments to be resolved
-  label_on_review: true
+    filePatterns:
+      - 'specs/IMPORTANTE/**'
+      - '.planning/CONSTITUTION.md'
+      - '.planning/REQUIREMENTS.md'
+      - 'apps/web/DESIGN.md'
+      - 'docs/decisoes/adr-025-neuralconstellation-dual.md'
+      - 'docs/decisoes/adr-026-glow-policy-card-border-token.md'

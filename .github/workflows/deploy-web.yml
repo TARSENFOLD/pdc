@@ -3,20 +3,21 @@ name: Deploy Web (Cloudflare Pages)
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ['CI']
     types: [completed]
     branches: [main]
 
 env:
-  NODE_VERSION: "24"
+  NODE_VERSION: '24'
   PAGES_PROJECT_NAME: ${{ vars.CF_PAGES_PROJECT_NAME }}
   VITE_API_URL: ${{ vars.VITE_API_URL }}
   VITE_EDGE_URL: ${{ vars.VITE_EDGE_URL }}
-  VITE_APP_VERSION: ${{ github.sha }}
+  VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
+  VITE_APP_VERSION: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,34 +25,63 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.VITE_APP_VERSION }}
+          persist-credentials: false
+
+      - name: Verify approved revision
+        shell: bash
+        run: |
+          if [[ ! "${VITE_APP_VERSION}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "VITE_APP_VERSION must be the full 40-character Git commit SHA." >&2
+            exit 1
+          fi
+          checked_out_sha="$(git rev-parse HEAD)"
+          if [[ "${checked_out_sha}" != "${VITE_APP_VERSION}" ]]; then
+            echo "Checked-out revision does not match the CI-approved VITE_APP_VERSION." >&2
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Validate Sentry release configuration
+        shell: bash
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_WEB_PROJECT }}
+        run: |
+          missing=()
+          for variable in VITE_SENTRY_DSN SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT VITE_APP_VERSION; do
+            if [[ -z "${!variable:-}" ]]; then
+              missing+=("${variable}")
+            fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required Sentry build configuration: %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
 
       - name: Build shared package
         run: npm run build -w packages/shared
 
       - name: Build web app
         run: npm run build -w apps/web
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_WEB_PROJECT }}
 
       - name: Skip Cloudflare Pages deploy when project is not configured
         if: vars.CF_PAGES_PROJECT_NAME == ''
         run: echo "::notice title=Cloudflare Pages deploy skipped::Set repository variable CF_PAGES_PROJECT_NAME to enable Pages deploy."
-
-      - name: Deploy preview to Cloudflare Pages
-        if: vars.CF_PAGES_PROJECT_NAME != '' && github.ref == 'refs/heads/develop'
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: '.'
-          command: pages deploy apps/web/dist --project-name=${{ env.PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
 
       - name: Deploy production to Cloudflare Pages
         if: vars.CF_PAGES_PROJECT_NAME != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/principal')

@@ -14,7 +14,7 @@ services:
     image: redis:7.4.9-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: pdc-redis
     restart: unless-stopped
-    user: "999:1000"
+    user: '999:1000'
     command:
       - /bin/sh
       - -ec
@@ -33,9 +33,9 @@ services:
           --maxmemory-policy noeviction \
           --aclfile /run/redis/users.acl
     environment:
-      REDIS_BFF_PASSWORD: "${REDIS_BFF_PASSWORD:?REDIS_BFF_PASSWORD e obrigatorio}"
-      REDIS_HEALTH_PASSWORD: "${REDIS_HEALTH_PASSWORD:?REDIS_HEALTH_PASSWORD e obrigatorio}"
-      REDIS_BACKUP_PASSWORD: "${REDIS_BACKUP_PASSWORD:?REDIS_BACKUP_PASSWORD e obrigatorio}"
+      REDIS_BFF_PASSWORD: '${REDIS_BFF_PASSWORD:?REDIS_BFF_PASSWORD e obrigatorio}'
+      REDIS_HEALTH_PASSWORD: '${REDIS_HEALTH_PASSWORD:?REDIS_HEALTH_PASSWORD e obrigatorio}'
+      REDIS_BACKUP_PASSWORD: '${REDIS_BACKUP_PASSWORD:?REDIS_BACKUP_PASSWORD e obrigatorio}'
     volumes:
       - pdc-redis-data:/data
     tmpfs:
@@ -45,7 +45,11 @@ services:
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$${REDIS_HEALTH_PASSWORD}\" redis-cli --user health ping | grep -q PONG"]
+      test:
+        [
+          'CMD-SHELL',
+          'REDISCLI_AUTH="$${REDIS_HEALTH_PASSWORD}" redis-cli --user health ping | grep -q PONG',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -61,27 +65,27 @@ services:
     container_name: pdc-traefik
     restart: unless-stopped
     command:
-      - "--api.dashboard=false"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--ping=true"
-      - "--log.level=INFO"
-      - "--accesslog=true"
+      - '--api.dashboard=false'
+      - '--providers.docker=true'
+      - '--providers.docker.exposedbydefault=false'
+      - '--entrypoints.web.address=:80'
+      - '--entrypoints.websecure.address=:443'
+      - '--certificatesresolvers.letsencrypt.acme.httpchallenge=true'
+      - '--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web'
+      - '--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}'
+      - '--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json'
+      - '--entrypoints.web.http.redirections.entrypoint.to=websecure'
+      - '--entrypoints.web.http.redirections.entrypoint.scheme=https'
+      - '--ping=true'
+      - '--log.level=INFO'
+      - '--accesslog=true'
     environment:
-      DOCKER_API_VERSION: "1.44"
+      DOCKER_API_VERSION: '1.44'
     env_file:
       - /opt/pdc/.env
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - pdc-letsencrypt:/letsencrypt
@@ -92,7 +96,7 @@ services:
         limits:
           memory: 128M
     healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      test: ['CMD', 'traefik', 'healthcheck', '--ping']
       interval: 10s
       timeout: 5s
       retries: 3
@@ -104,8 +108,8 @@ services:
       context: .
       dockerfile: Dockerfile
       labels:
-        org.opencontainers.image.revision: "${RELEASE_SHA:-unlabelled}"
-        org.opencontainers.image.created: "${RELEASE_DATE:-unknown}"
+        org.opencontainers.image.revision: '${RELEASE_SHA:-unlabelled}'
+        org.opencontainers.image.created: '${RELEASE_DATE:-unknown}'
     container_name: pdc-api
     restart: unless-stopped
     env_file:
@@ -116,7 +120,8 @@ services:
       API_URL: https://api.usepdc.com
       FRONTEND_URL: https://usepdc.com
       STRAPI_URL: http://strapi:1337
-      PDC_REDIS_URL: "${PDC_REDIS_URL:?PDC_REDIS_URL e obrigatorio}"
+      RELEASE_SHA: '${RELEASE_SHA:?RELEASE_SHA e obrigatorio para iniciar a API}'
+      PDC_REDIS_URL: '${PDC_REDIS_URL:?PDC_REDIS_URL e obrigatorio}'
     depends_on:
       traefik:
         condition: service_started
@@ -127,15 +132,15 @@ services:
     networks:
       - pdc-network
     labels:
-      - "org.opencontainers.image.revision=${RELEASE_SHA:-unlabelled}"
-      - "org.opencontainers.image.created=${RELEASE_DATE:-unknown}"
-      - "traefik.enable=true"
-      - "traefik.http.routers.pdc-api.rule=Host(`api.usepdc.com`)"
-      - "traefik.http.routers.pdc-api.entrypoints=websecure"
-      - "traefik.http.routers.pdc-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.pdc-api.loadbalancer.server.port=3001"
-      - "traefik.http.services.pdc-api.loadbalancer.healthcheck.path=/health"
-      - "traefik.http.services.pdc-api.loadbalancer.healthcheck.interval=10s"
+      - 'org.opencontainers.image.revision=${RELEASE_SHA:-unlabelled}'
+      - 'org.opencontainers.image.created=${RELEASE_DATE:-unknown}'
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.pdc-api.rule=Host(`api.usepdc.com`)'
+      - 'traefik.http.routers.pdc-api.entrypoints=websecure'
+      - 'traefik.http.routers.pdc-api.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.pdc-api.loadbalancer.server.port=3001'
+      - 'traefik.http.services.pdc-api.loadbalancer.healthcheck.path=/health'
+      - 'traefik.http.services.pdc-api.loadbalancer.healthcheck.interval=10s'
     deploy:
       resources:
         limits:
@@ -143,9 +148,9 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "node",
-          "-e",
+          'CMD',
+          'node',
+          '-e',
           "fetch('http://localhost:3001/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
         ]
       interval: 15s
@@ -159,8 +164,8 @@ services:
       context: ./infra/strapi
       dockerfile: Dockerfile
       labels:
-        org.opencontainers.image.revision: "${RELEASE_SHA:-unlabelled}"
-        org.opencontainers.image.created: "${RELEASE_DATE:-unknown}"
+        org.opencontainers.image.revision: '${RELEASE_SHA:-unlabelled}'
+        org.opencontainers.image.created: '${RELEASE_DATE:-unknown}'
     container_name: pdc-strapi
     restart: unless-stopped
     env_file:
@@ -176,21 +181,21 @@ services:
     volumes:
       - pdc-strapi-uploads:/opt/app/public/uploads
     labels:
-      - "org.opencontainers.image.revision=${RELEASE_SHA:-unlabelled}"
-      - "org.opencontainers.image.created=${RELEASE_DATE:-unknown}"
-      - "traefik.enable=true"
-      - "traefik.http.routers.pdc-strapi.rule=Host(`cms.usepdc.com`)"
-      - "traefik.http.routers.pdc-strapi.entrypoints=websecure"
-      - "traefik.http.routers.pdc-strapi.tls.certresolver=letsencrypt"
-      - "traefik.http.services.pdc-strapi.loadbalancer.server.port=1337"
-      - "traefik.http.services.pdc-strapi.loadbalancer.healthcheck.path=/_health"
-      - "traefik.http.services.pdc-strapi.loadbalancer.healthcheck.interval=30s"
+      - 'org.opencontainers.image.revision=${RELEASE_SHA:-unlabelled}'
+      - 'org.opencontainers.image.created=${RELEASE_DATE:-unknown}'
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.pdc-strapi.rule=Host(`cms.usepdc.com`)'
+      - 'traefik.http.routers.pdc-strapi.entrypoints=websecure'
+      - 'traefik.http.routers.pdc-strapi.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.pdc-strapi.loadbalancer.server.port=1337'
+      - 'traefik.http.services.pdc-strapi.loadbalancer.healthcheck.path=/_health'
+      - 'traefik.http.services.pdc-strapi.loadbalancer.healthcheck.interval=30s'
     deploy:
       resources:
         limits:
           memory: 2G
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:1337/_health || exit 1"]
+      test: ['CMD-SHELL', 'curl -sf http://localhost:1337/_health || exit 1']
       interval: 30s
       timeout: 10s
       retries: 5

@@ -86,8 +86,8 @@ const envSchema = z.object({
 
   // SEO & Rates
   SEO_BOT_RENDER_ENABLED: z.string().default('true'),
-  TINA_RATE_LIMIT_PER_USER: z.string().default('20'),
-  TINA_RATE_LIMIT_GLOBAL: z.string().default('500'),
+  TINA_RATE_LIMIT_PER_USER: z.coerce.number().int().positive().default(20),
+  TINA_RATE_LIMIT_GLOBAL: z.coerce.number().int().positive().default(500),
   RATE_LIMIT_PROFILE: z.enum(['strict', 'permissive', 'off']).default('strict'),
 
   // Dev
@@ -108,6 +108,9 @@ const envSchema = z.object({
 });
 
 export type Env = z.infer<typeof envSchema>;
+type StringEnvKey = {
+  [Key in keyof Env]-?: Env[Key] extends string | undefined ? Key : never;
+}[keyof Env];
 
 function isPlaceholder(value: string): boolean {
   return /^<[^>]+>$/.test(value.trim());
@@ -124,7 +127,7 @@ function hasSameOrigin(left: string, right: string): boolean {
 function collectProductionMissingVars(parsedEnv: Env): string[] {
   const missing: string[] = [];
 
-  const requiredInProduction: Array<[keyof Env, string]> = [
+  const requiredInProduction: Array<[StringEnvKey, string]> = [
     ['API_URL', 'API_URL required in production'],
     ['FRONTEND_URL', 'FRONTEND_URL required in production'],
     ['STRAPI_URL', 'STRAPI_URL required in production'],

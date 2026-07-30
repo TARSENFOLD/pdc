@@ -131,6 +131,13 @@ describe('rate limit Redis circuit breaker', () => {
     expect((await app.request('/')).status).toBe(200);
     expect(mocks.limit).toHaveBeenCalledTimes(1);
     expect(mocks.warn).toHaveBeenCalledTimes(1);
+    expect(mocks.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limiter: 'quota-known',
+        reason: 'quota',
+      }),
+      'Redis rate limiter circuit opened; using local memory buckets',
+    );
   });
 
   it('usa cooldown longo quando a quota nao informa reset', async () => {
