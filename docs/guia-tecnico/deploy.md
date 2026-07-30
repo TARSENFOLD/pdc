@@ -123,6 +123,27 @@ Secrets necessários no GitHub:
 - `VPS_HOST_KEY`: linha completa de `known_hosts` para o VPS; obter via
   `ssh-keyscan` e verificar a fingerprint por canal independente antes de gravar
   o secret
+- `SENTRY_AUTH_TOKEN`: token de CI com permissão para enviar artefactos de
+  release; fica limitado ao passo de upload e nunca é enviado ao VPS
+
+Variables necessárias no GitHub:
+
+- `SENTRY_ORG`: organização Sentry canónica
+- `SENTRY_WEB_PROJECT`: projeto Sentry do frontend (`pdc-web`)
+- `SENTRY_API_PROJECT`: projeto Sentry da API (`pdc-api`)
+
+Antes do `rsync`, o runner compila `packages/shared` e `apps/api` a partir do
+`RELEASE_SHA` aprovado, rejeita testes, fixtures e mocks nos artefactos de
+produção, injeta Debug IDs determinísticos e envia os sourcemaps privados da API
+e do pacote partilhado para a release com o mesmo SHA usado pelo runtime. O
+Dockerfile injeta os mesmos IDs no JavaScript executado. Uma falha no upload
+bloqueia o deploy para evitar publicar uma release sem simbolização.
+
+Se um run do workflow `CI` terminar com `startup_failure` e zero jobs, não houve
+execução de lint, typecheck ou testes. Verificar primeiro o estado de GitHub
+Actions da conta/repositório, limites de billing/spending, suspensão e políticas
+de Actions; não tratar esse estado como falha de código nem alterar o YAML sem
+um erro de validação reproduzível.
 
 Deploy manual equivalente (bypass do gate, usar só em emergências):
 
@@ -254,6 +275,13 @@ Configuração canónica no Cloudflare Pages:
 | **Production branch**      | `main`                                  |
 | **Environment variable**   | `VITE_API_URL=https://api.usepdc.com`   |
 | **Environment variable**   | `VITE_EDGE_URL=https://edge.usepdc.com` |
+| **Environment variable**   | `VITE_SENTRY_DSN=<DSN público pdc-web>` |
+
+`SENTRY_ORG` e `SENTRY_WEB_PROJECT` são repository variables do GitHub Actions.
+O build gera sourcemaps ocultos e a injeção de Debug IDs ocorre sem credenciais;
+somente o passo isolado de upload recebe `SENTRY_AUTH_TOKEN`, apagando os mapas
+antes do deploy. O token é um GitHub Actions secret e não deve ser configurado
+como variável runtime do Pages nem receber o prefixo `VITE_`.
 
 Domínios canónicos do Pages:
 

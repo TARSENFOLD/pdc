@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 import type { ErrorEvent, NodeOptions } from '@sentry/node';
 
+type TransactionEvent = Parameters<NonNullable<NodeOptions['beforeSendTransaction']>>[0];
+
 const captureExceptionMock = vi.fn();
 const setUserMock = vi.fn();
 const setTagMock = vi.fn();
@@ -78,7 +80,32 @@ describe('Sentry bootstrap instrumentation', () => {
     expect(sanitized?.request).not.toHaveProperty('query_string');
     expect(sanitized?.request?.url).toBe('https://api.usepdc.com/auth/linkedin/callback');
     expect(sanitized?.request?.headers).toEqual({ Accept: 'application/json' });
-    expect(options?.beforeSendTransaction).toBeTypeOf('function');
+
+    const transaction: TransactionEvent = {
+      type: 'transaction',
+      transaction: 'GET /auth/linkedin/callback',
+      request: {
+        cookies: { access_token: 'secret' },
+        data: { otp: '123456' },
+        query_string: 'code=oauth-code&state=csrf-state',
+        url: 'https://api.usepdc.com/auth/linkedin/callback?code=oauth-code&state=csrf-state',
+        headers: {
+          Authorization: 'Bearer secret',
+          Cookie: 'refresh_token=secret',
+          Accept: 'application/json',
+          Referer: 'https://usepdc.com/oauth?code=oauth-code',
+          'X-Forwarded-For': '203.0.113.42',
+        },
+      },
+    };
+    const sanitizedTransaction = await options?.beforeSendTransaction?.(transaction, {});
+    expect(sanitizedTransaction?.request).not.toHaveProperty('cookies');
+    expect(sanitizedTransaction?.request).not.toHaveProperty('data');
+    expect(sanitizedTransaction?.request).not.toHaveProperty('query_string');
+    expect(sanitizedTransaction?.request?.url).toBe(
+      'https://api.usepdc.com/auth/linkedin/callback'
+    );
+    expect(sanitizedTransaction?.request?.headers).toEqual({ Accept: 'application/json' });
   });
 });
 
@@ -141,11 +168,14 @@ describe('app.onError Sentry integration', () => {
 
     const response = await app.request('/boom');
     expect(response.status).toBe(500);
-    const body = await response.json() as { error: string };
-    expect(body.error).toBe('Internal Server Error');
+    const body: unknown = await response.json();
+    expect(body).toEqual({ error: 'Internal Server Error' });
     expect(captureExceptionMock).toHaveBeenCalledOnce();
     const capturedErr: unknown = captureExceptionMock.mock.calls[0]?.[0];
     expect(capturedErr).toBeInstanceOf(Error);
-    expect((capturedErr as Error).message).toBe('Unhandled boom');
+    if (!(capturedErr instanceof Error)) {
+      throw new Error('Sentry should receive the original error');
+    }
+    expect(capturedErr.message).toBe('Unhandled boom');
   });
 });

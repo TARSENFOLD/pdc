@@ -23,13 +23,14 @@ export function sanitizeSentryEvent<EventType extends Event>(event: EventType): 
 }
 
 export function initWebSentry(): void {
-  const dsn = import.meta.env.VITE_SENTRY_DSN;
+  const dsn = import.meta.env.VITE_SENTRY_DSN?.trim();
+  const release = import.meta.env.VITE_APP_VERSION?.trim();
   if (!dsn) return;
 
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,
-    release: import.meta.env.VITE_APP_VERSION ?? '0.0.0',
+    ...(release ? { release } : {}),
     sendDefaultPii: false,
     integrations: [Sentry.browserTracingIntegration()],
     tracesSampleRate: import.meta.env.PROD ? 0.1 : 1,

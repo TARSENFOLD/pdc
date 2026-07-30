@@ -3,6 +3,13 @@ import type { Event } from '@sentry/react';
 import { sanitizeSentryEvent } from './sentry';
 
 describe('sanitizeSentryEvent', () => {
+  it('preserva eventos sem request sem inventar dados', () => {
+    const event: Event = { message: 'Falha de arranque' };
+
+    expect(sanitizeSentryEvent(event)).toBe(event);
+    expect(event).toEqual({ message: 'Falha de arranque' });
+  });
+
   it('remove conteúdo sensível e preserva headers operacionais', () => {
     const event: Event = {
       request: {

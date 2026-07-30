@@ -1,7 +1,6 @@
 name: Deploy Web (Cloudflare Pages)
 
 on:
-  workflow_dispatch:
   workflow_run:
     workflows: ['CI']
     types: [completed]
@@ -13,11 +12,11 @@ env:
   VITE_API_URL: ${{ vars.VITE_API_URL }}
   VITE_EDGE_URL: ${{ vars.VITE_EDGE_URL }}
   VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
-  VITE_APP_VERSION: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+  VITE_APP_VERSION: ${{ github.event.workflow_run.head_sha }}
 
 jobs:
   deploy:
-    if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository) }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,15 +50,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate Sentry release configuration
+      - name: Validate public Sentry build configuration
         shell: bash
         env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_WEB_PROJECT }}
         run: |
           missing=()
-          for variable in VITE_SENTRY_DSN SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT VITE_APP_VERSION; do
+          for variable in VITE_SENTRY_DSN SENTRY_ORG SENTRY_PROJECT VITE_APP_VERSION; do
             if [[ -z "${!variable:-}" ]]; then
               missing+=("${variable}")
             fi
@@ -74,20 +72,38 @@ jobs:
 
       - name: Build web app
         run: npm run build -w apps/web
+
+      - name: Inject web source-map Debug IDs
+        run: npx sentry-cli sourcemaps inject apps/web/dist
+
+      - name: Upload private web source maps to Sentry
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_WEB_PROJECT }}
+        run: |
+          if [[ -z "${SENTRY_AUTH_TOKEN:-}" ]]; then
+            echo "Missing required GitHub secret: SENTRY_AUTH_TOKEN" >&2
+            exit 1
+          fi
+          npx sentry-cli sourcemaps upload \
+            --org "${SENTRY_ORG}" \
+            --project "${SENTRY_PROJECT}" \
+            --release "${VITE_APP_VERSION}" \
+            --validate \
+            --wait \
+            apps/web/dist
+          find apps/web/dist -type f -name '*.map' -delete
 
       - name: Skip Cloudflare Pages deploy when project is not configured
         if: vars.CF_PAGES_PROJECT_NAME == ''
         run: echo "::notice title=Cloudflare Pages deploy skipped::Set repository variable CF_PAGES_PROJECT_NAME to enable Pages deploy."
 
       - name: Deploy production to Cloudflare Pages
-        if: vars.CF_PAGES_PROJECT_NAME != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/principal')
+        if: vars.CF_PAGES_PROJECT_NAME != ''
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: '.'
-          command: pages deploy apps/web/dist --project-name=${{ env.PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
+          command: pages deploy apps/web/dist --project-name=${{ env.PAGES_PROJECT_NAME }} --branch=${{ github.event.workflow_run.head_branch }}
