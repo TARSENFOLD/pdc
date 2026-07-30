@@ -10,6 +10,7 @@ import {
 } from '@pdc/shared';
 import { LegalConsentField } from './LegalConsentField';
 import { buildAceiteLegal, emptyConsentimentoEncarregado } from './registrationCompliance';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 type OnboardingRole = Extract<Role, 'estudante' | 'mentor' | 'instituicao'>;
 
@@ -36,6 +37,8 @@ export function FinalizarOAuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isUpgrade = searchParams.get('upgrade') === 'true';
+  const { isEnabled } = useFeatureFlags();
+  const externalCreatorEnabled = isEnabled('external_creator_onboarding_enabled');
 
   const [role, setRole] = useState<OnboardingRole>('estudante');
   const [areaEspecialidade, setAreaEspecialidade] = useState('');
@@ -125,6 +128,11 @@ export function FinalizarOAuthPage() {
             {error}
           </div>
         )}
+        {!externalCreatorEnabled && (
+          <div className="mb-6 rounded-lg border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-ink-secondary">
+            O onboarding de Mentor e Instituição está temporariamente indisponível.
+          </div>
+        )}
 
         <form onSubmit={(event) => { void handleChooseRole(event); }} className="space-y-7">
             <div className="grid gap-4 md:grid-cols-3">
@@ -132,7 +140,7 @@ export function FinalizarOAuthPage() {
                 { id: 'estudante' as const, label: 'Estudante', icon: GraduationCap },
                 { id: 'mentor' as const, label: 'Mentor', icon: UserCheck },
                 { id: 'instituicao' as const, label: 'Instituição', icon: Building2 },
-              ].map((item) => (
+              ].filter((item) => item.id === 'estudante' || externalCreatorEnabled).map((item) => (
                 <button
                   key={item.id}
                   type="button"

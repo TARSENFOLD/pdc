@@ -17,6 +17,7 @@ import { oauthStateService } from '../modules/auth/oauth-state.service.js';
 import { REFRESH_TOKEN_COOKIE } from '../modules/auth/auth.constants.js';
 import { RefreshTokenReuseError } from '../modules/auth/auth-session.errors.js';
 import { AuthDomainError } from '../modules/auth/auth.errors.js';
+import { disabledFeatureResponse } from '../modules/feature-flags/cor-0001-gates.js';
 
 const log = pino({ name: 'oauth-routes' });
 export const oauthRoutes = new Hono<{ Variables: AuthVariables }>();
@@ -281,6 +282,14 @@ const verificarOtpSchema = z.object({
 oauthRoutes.post('/finalizar/escolher-role', verifyJwt, zValidator('json', OAuthFinalizarRoleChoiceSchema), async (c) => {
   const user = c.get('user');
   const payload = c.req.valid('json');
+  if (payload.role !== 'estudante') {
+    const unavailable = await disabledFeatureResponse(
+      c,
+      'external_creator_onboarding_enabled',
+      'EXTERNAL_CREATOR_ONBOARDING_TEMPORARILY_DISABLED',
+    );
+    if (unavailable) return unavailable;
+  }
   try {
     await oauthOnboardingService.escolherRole(user.id, payload);
     const updatedUser = await authService.getUserById(user.id);

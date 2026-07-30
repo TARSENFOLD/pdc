@@ -11,6 +11,10 @@ import {
 import { type Recomendacao } from './vocacional.types.js';
 import { strapiGet } from '../strapi/strapi.client.js';
 import pino from 'pino';
+import {
+  filterVwxExperiences,
+  isVwxCatalogEnabled,
+} from '../feature-flags/vwx-catalog-gate.js';
 
 const log = pino({ name: 'vocacional-service' });
 
@@ -246,6 +250,7 @@ interface StrapiExperienciaRec {
   area?: string;
   modalidade?: string;
   duracaoEstimada?: number;
+  tipoExperiencia?: 'institucional' | 'vwx';
 }
 
 async function gerarRecomendacoesExperiencias(perfil: PerfilVocacional | null): Promise<Recomendacao[]> {
@@ -256,14 +261,11 @@ async function gerarRecomendacoesExperiencias(perfil: PerfilVocacional | null): 
     'filters[estado][$eq]': 'published',
     'pagination[pageSize]': '4',
     'sort': 'createdAt:desc',
-    'fields[0]': 'id',
-    'fields[1]': 'titulo',
-    'fields[2]': 'area',
-    'fields[3]': 'modalidade',
-    'fields[4]': 'duracaoEstimada',
   });
 
-  return res.data.map((exp) => {
+  const visible = filterVwxExperiences(res.data, await isVwxCatalogEnabled());
+
+  return visible.map((exp) => {
     // Heurística biométrica: distância entre scoreGlobal do perfil e "esperado" da área
     // Sem ratingAvg disponível na listagem leve, usamos score da área como proxy
     const areaWeight = exp.area === perfil.areaMatch ? 0 : 15;

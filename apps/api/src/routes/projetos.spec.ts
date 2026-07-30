@@ -4,6 +4,7 @@ import { projetoRoutes } from './projetos.js';
 import { strapiGet, strapiPost, strapiPut, strapiDelete } from '../modules/strapi/strapi.client.js';
 import { DomainEventName } from '../modules/events/types.js';
 import type { StrapiListResponse, StrapiSingleResponse } from '@pdc/shared';
+import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
 const publishWithOutboxMock = vi.hoisted(() => vi.fn().mockResolvedValue({ id: 'evt-1' }));
 
@@ -28,6 +29,12 @@ vi.mock('../modules/strapi/strapi.client.js', () => ({
 vi.mock('../modules/events/event-bus.js', () => ({
   eventBus: {
     publishWithOutbox: publishWithOutboxMock,
+  },
+}));
+
+vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
+  featureFlagService: {
+    isEnabled: vi.fn(),
   },
 }));
 
@@ -78,6 +85,7 @@ describe('projetoRoutes E2E contracts', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(true);
     vi.mocked(strapiGet).mockReset();
     vi.mocked(strapiPost).mockReset();
     vi.mocked(strapiPut).mockReset();

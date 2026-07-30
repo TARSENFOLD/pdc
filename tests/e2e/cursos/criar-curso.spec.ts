@@ -1,20 +1,20 @@
 import { test, expect } from '../../helpers/fixtures';
 
 test.describe('Criar Curso', () => {
-  test('mentor cria rascunho no RichShell e submete para revisão', async ({ mentorPage }) => {
-    await mentorPage.goto('/app/mentor/cursos/criar');
-    await expect(mentorPage.locator('form')).toBeVisible({ timeout: 10_000 });
-    await expect(mentorPage.getByRole('navigation', { name: 'Etapas de criação' })).toBeVisible();
+  test('QA interno cria e reabre rascunho no RichShell', async ({ adminPage }) => {
+    await adminPage.goto('/app/mentor/cursos/criar');
+    await expect(adminPage.locator('form')).toBeVisible({ timeout: 10_000 });
+    await expect(adminPage.getByRole('navigation', { name: 'Etapas de criação' })).toBeVisible();
 
     const title = `Curso E2E ${Date.now()}`;
-    await mentorPage.fill('input[name="titulo"]', title);
-    await mentorPage.fill('textarea[name="descricao"], input[name="descricao"]', 'Descrição automática do teste E2E com mais de dez caracteres.');
-    await mentorPage.selectOption('select[name="area"]', 'TECNOLOGIA');
+    await adminPage.fill('input[name="titulo"]', title);
+    await adminPage.fill('textarea[name="descricao"], input[name="descricao"]', 'Descrição automática do teste E2E com mais de dez caracteres.');
+    await adminPage.selectOption('select[name="area"]', 'TECNOLOGIA');
 
-    const createResponsePromise = mentorPage.waitForResponse((response) =>
+    const createResponsePromise = adminPage.waitForResponse((response) =>
       response.url().endsWith('/cursos') && response.request().method() === 'POST',
     );
-    await mentorPage.getByRole('button', { name: 'Salvar Rascunho' }).click();
+    await adminPage.getByRole('button', { name: 'Salvar Rascunho' }).click();
     const createResponse = await createResponsePromise;
     expect(createResponse.status()).toBe(201);
     const created = await createResponse.json() as { id: string | number };
@@ -22,28 +22,15 @@ test.describe('Criar Curso', () => {
       throw new Error('Resposta de criação do curso não contém id');
     }
 
-    await mentorPage.goto(`/app/mentor/cursos/${String(created.id)}/editar`);
-    await expect(mentorPage.locator('input[name="titulo"]')).toHaveValue(title);
-    await expect(mentorPage.locator('select[name="area"]')).toHaveValue('TECNOLOGIA');
+    await adminPage.goto(`/app/mentor/cursos/${String(created.id)}/editar`);
+    await expect(adminPage.locator('input[name="titulo"]')).toHaveValue(title);
+    await expect(adminPage.locator('select[name="area"]')).toHaveValue('TECNOLOGIA');
+  });
 
-    const reviewRequestPromise = mentorPage.waitForRequest(
-      (request) => request.url().includes('/cursos/') && request.method() === 'PUT',
-      { timeout: 10_000 },
-    );
-    await mentorPage.getByRole('button', { name: 'Submeter para Revisão' }).click();
-    const validationMessage = mentorPage.getByText(/Campos inválidos:/);
-    const reviewRequest = await Promise.race([
-      reviewRequestPromise,
-      validationMessage.waitFor({ state: 'visible', timeout: 10_000 }).then(async () => {
-        throw new Error(await validationMessage.textContent() ?? 'Validação do curso falhou');
-      }),
-    ]);
-    const reviewResponse = await reviewRequest.response();
-    expect(reviewResponse).not.toBeNull();
-    if (!reviewResponse) return;
-    if (!reviewResponse.ok()) {
-      throw new Error(`Falha ao submeter revisão de ${String(created.id)} (${String(reviewResponse.status())}): ${await reviewResponse.text()}`);
-    }
+  test('mentor externo recebe indisponibilidade clara no builder', async ({ mentorPage }) => {
+    await mentorPage.goto('/app/mentor/cursos/criar');
+    await expect(mentorPage.getByText('Estúdio temporariamente indisponível')).toBeVisible();
+    await expect(mentorPage.locator('form')).toHaveCount(0);
   });
 
   test('mentor sees curso list', async ({ mentorPage }) => {

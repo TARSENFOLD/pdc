@@ -1,9 +1,14 @@
 import { test, expect } from '../../helpers/fixtures';
 
 test.describe('Criar Simulação', () => {
-  test('mentor can access criar simulação', async ({ mentorPage }) => {
+  test('QA interno pode aceder à criação de simulação', async ({ adminPage }) => {
+    await adminPage.goto('/app/mentor/simulacoes/criar');
+    await expect(adminPage.locator('form').first()).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('mentor externo não pode aceder à criação de simulação', async ({ mentorPage }) => {
     await mentorPage.goto('/app/mentor/simulacoes/criar');
-    await expect(mentorPage.locator('form').first()).toBeVisible({ timeout: 10_000 });
+    await expect(mentorPage.getByText('Estúdio temporariamente indisponível')).toBeVisible();
   });
 
   test('mentor sees simulações list', async ({ mentorPage }) => {

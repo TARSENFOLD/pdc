@@ -23,6 +23,9 @@ const authSessionServiceMock = vi.hoisted(() => ({
 }));
 
 const setAuthCookiesMock = vi.hoisted(() => vi.fn());
+const featureFlagServiceMock = vi.hoisted(() => ({
+  isEnabled: vi.fn().mockResolvedValue(true),
+}));
 
 vi.mock('../lib/env.js', () => ({
   env: {
@@ -60,6 +63,10 @@ vi.mock('../modules/auth/oauth-onboarding.service.js', () => ({
     escolherRole: vi.fn(),
     verificarOtp: vi.fn(),
   },
+}));
+
+vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
+  featureFlagService: featureFlagServiceMock,
 }));
 
 vi.mock('pino', () => ({
@@ -356,6 +363,7 @@ describe('LinkedIn OAuth happy path — onboarded user', () => {
 describe('POST /finalizar/escolher-role — OAuth role finalization without OTP', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    featureFlagServiceMock.isEnabled.mockResolvedValue(true);
     escolherRoleMock.mockResolvedValue(undefined);
     authSessionServiceMock.rotate.mockResolvedValue(MOCK_TOKENS_FRESH);
   });
@@ -412,6 +420,44 @@ describe('POST /finalizar/escolher-role — OAuth role finalization without OTP'
     expect(authSessionServiceMock.rotate).toHaveBeenCalledWith('current-refresh', mentorUser);
     expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS_FRESH);
     expect(await res.json()).toMatchObject({ onboardingCompleto: true });
+  });
+
+  it('não provisiona mentor por OAuth com onboarding externo desligado', async () => {
+    featureFlagServiceMock.isEnabled.mockResolvedValue(false);
+    const provisionalToken = await makeTestToken({
+      sub: 'user-42',
+      role: 'estudante',
+      onboardingCompleto: false,
+    });
+
+    const res = await oauthRoutes.request('/finalizar/escolher-role', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `access_token=${provisionalToken}; refresh_token=current-refresh`,
+      },
+      body: JSON.stringify({
+        role: 'mentor',
+        dataNascimento: '1990-01-01',
+        aceiteLegal: {
+          termosUso: true,
+          politicaPrivacidade: true,
+          tratamentoDados: true,
+          termosUsoVersao: 'termos-uso@2026-06-22',
+          politicaPrivacidadeVersao: 'politica-privacidade@2026-06-22',
+          tratamentoDadosVersao: 'tratamento-dados@2026-06-22',
+          aceiteEm: '2026-06-22T10:00:00.000Z',
+        },
+        areaEspecialidade: 'TECNOLOGIA',
+        documentos: [{ tipo: 'comprovativo', url: 'https://www.usepdc.com/docs/mentor.pdf' }],
+      }),
+    });
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({
+      code: 'EXTERNAL_CREATOR_ONBOARDING_TEMPORARILY_DISABLED',
+    });
+    expect(escolherRoleMock).not.toHaveBeenCalled();
   });
 });
 

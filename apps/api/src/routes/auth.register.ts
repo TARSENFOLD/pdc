@@ -12,6 +12,7 @@ import { type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { provisionInstituicaoForUser } from '../modules/instituicoes/instituicao.provision.js';
 import pino from 'pino';
 import { DuplicateEmailError } from '../modules/auth/auth.errors.js';
+import { requireExternalCreatorOnboarding } from '../modules/feature-flags/cor-0001-gates.js';
 
 export const registerRoutes = new Hono<{ Variables: AuthVariables }>();
 const log = pino({ name: 'auth-register' });
@@ -59,7 +60,7 @@ registerRoutes.post('/estudante', zValidator('json', RegistoEstudantePayloadSche
   }
 });
 
-registerRoutes.post('/mentor', zValidator('json', RegistoMentorPayloadSchema), async (c) => {
+registerRoutes.post('/mentor', requireExternalCreatorOnboarding(), zValidator('json', RegistoMentorPayloadSchema), async (c) => {
   const { email, password, nome, areaEspecialidade, documentos, aceiteLegal } = c.req.valid('json');
   try {
     const user = await authService.registerWithRole(email, password, nome, 'mentor', { 
@@ -77,7 +78,7 @@ registerRoutes.post('/mentor', zValidator('json', RegistoMentorPayloadSchema), a
   }
 });
 
-registerRoutes.post('/instituicao', zValidator('json', RegistoInstituicaoPayloadSchema), async (c) => {
+registerRoutes.post('/instituicao', requireExternalCreatorOnboarding(), zValidator('json', RegistoInstituicaoPayloadSchema), async (c) => {
   const { nome, nomeInstituicao, email, password, regiao, tipo, nif, aceiteLegal } = c.req.valid('json');
   try {
     const user = await authService.registerWithRole(email, password, nome, 'instituicao', {

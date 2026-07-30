@@ -8,6 +8,17 @@ const INITIAL_FLAGS = [
   { domain: 'REPUTATION_VISIBLE', description: 'Mostrar pontuação de reputação nos perfis' },
   { domain: 'PROFILE_V2_PUBLIC', description: 'Ativar novo layout de perfil público (v2)' },
   { domain: 'AUTO_ACHIEVEMENTS', description: 'Desbloquear conquistas automaticamente' },
+  { domain: 'external_creator_onboarding_enabled', description: 'Permitir onboarding de criadores externos' },
+  { domain: 'content_submission_enabled', description: 'Permitir submissão de conteúdos para revisão' },
+  { domain: 'certificates_enabled', description: 'Disponibilizar certificados' },
+  { domain: 'institution_advanced_analytics_enabled', description: 'Disponibilizar analítica institucional avançada' },
+  { domain: 'vwx_creator_enabled', description: 'Permitir criação de experiências VWX' },
+  { domain: 'vwx_catalog_enabled', description: 'Expor experiências VWX no catálogo público' },
+  { domain: 'vwx_partner_onboarding_enabled', description: 'Permitir onboarding de parceiros VWX' },
+  { domain: 'vwx_opportunity_pathway_enabled', description: 'Ativar Opportunity Pathway VWX' },
+  { domain: 'external_project_publication_enabled', description: 'Permitir criação e publicação externa de projectos' },
+  { domain: 'mobile_store_release_enabled', description: 'Permitir promoção de builds para lojas móveis' },
+  { domain: 'mobile_paid_enrollment_enabled', description: 'Permitir matrícula paga no cliente móvel' },
 ] as const;
 
 export default {

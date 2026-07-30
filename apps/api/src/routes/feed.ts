@@ -9,6 +9,10 @@ import { getWeights, setWeights } from '../modules/feed/feed.weights.js';
 import { redis } from '../lib/redis.js';
 import { AreaVocacionalSchema, UpdateFeedWeightsPayloadSchema } from '@pdc/shared';
 import type { FeedItem, FeedWeights, FeedItemTipo, FeedSource } from '@pdc/shared';
+import {
+  filterVwxExperiences,
+  isVwxCatalogEnabled,
+} from '../modules/feature-flags/vwx-catalog-gate.js';
 
 type Vars = { Variables: AuthVariables };
 export const feedRoutes = new Hono<Vars>();
@@ -30,6 +34,42 @@ interface FeedEntryRecord {
   eventId?: string;
   publicadoEm?: string;
   createdAt?: string;
+}
+
+interface FeedExperienceVariant {
+  id: string | number;
+  documentId?: string;
+  tipoExperiencia?: 'institucional' | 'vwx';
+}
+
+async function filterVwxFeedItems(items: FeedItem[]): Promise<FeedItem[]> {
+  const experienceIds = [...new Set(
+    items.filter((item) => item.tipo === 'experiencia').map((item) => item.id),
+  )];
+  if (experienceIds.length === 0) return items;
+  if (await isVwxCatalogEnabled()) return items;
+
+  const filters: Record<string, string> = {
+    'pagination[pageSize]': String(experienceIds.length),
+  };
+  for (const [index, id] of experienceIds.entries()) {
+    filters[`filters[$or][${String(index * 2)}][id][$eq]`] = id;
+    filters[`filters[$or][${String(index * 2 + 1)}][documentId][$eq]`] = id;
+  }
+
+  try {
+    const response = await strapiGet<FeedExperienceVariant>('/experiencias', filters);
+    const visibleIds = new Set(
+      filterVwxExperiences(response.data, false).flatMap((experience) => [
+        String(experience.id),
+        ...(experience.documentId ? [experience.documentId] : []),
+      ]),
+    );
+    return items.filter((item) => item.tipo !== 'experiencia' || visibleIds.has(item.id));
+  } catch (err) {
+    log.error({ err, experienceIds }, 'Falha ao classificar experiências do feed; ocultando entradas');
+    return items.filter((item) => item.tipo !== 'experiencia');
+  }
 }
 
 function mapFeedEntry(entry: FeedEntryRecord): FeedItem | null {
@@ -64,7 +104,10 @@ async function readFeedEntries(
 ): Promise<{ data: FeedItem[]; meta: FeedEntriesMeta } | null> {
   const cacheKey = `feed:${source}:${cacheScope ?? area ?? 'all'}`;
   const cached = await redis.get<{ data: FeedItem[]; meta: FeedEntriesMeta }>(cacheKey).catch(() => null);
-  if (cached) return cached;
+  if (cached) {
+    const data = await filterVwxFeedItems(cached.data);
+    return { ...cached, data, meta: { ...cached.meta, total: data.length } };
+  }
 
   try {
     const params: Record<string, string> = {
@@ -78,13 +121,18 @@ async function readFeedEntries(
     const res = await strapiGet<FeedEntryRecord>('/feed-entries', params);
     if (res.data.length === 0) return null;
 
-    const data = res.data.flatMap((entry) => {
+    const mapped = res.data.flatMap((entry) => {
       const item = mapFeedEntry(entry);
       return item ? [item] : [];
     });
-    if (data.length === 0) return null;
+    if (mapped.length === 0) return null;
+    const data = await filterVwxFeedItems(mapped);
     const result = { data, meta: { total: data.length, fromFeedEntries: true as const, ...extraMeta } };
-    await redis.set(cacheKey, result, { ex: 300 }).catch(() => undefined);
+    const cacheValue = {
+      data: mapped,
+      meta: { total: mapped.length, fromFeedEntries: true as const, ...extraMeta },
+    };
+    await redis.set(cacheKey, cacheValue, { ex: 300 }).catch(() => undefined);
     return result;
   } catch (err) {
     log.warn({ err, source, area, cacheScope }, 'Falha ao ler feed-entries canónicas');
@@ -246,9 +294,13 @@ feedRoutes.get('/institucional', verifyJwt, async (c) => {
         populate: 'autor.foto',
       }),
     ]);
+    const visibleExperiencias = filterVwxExperiences(
+      experiencias.data,
+      await isVwxCatalogEnabled(),
+    );
 
     const candidates: Array<StrapiEntity & { tipo: FeedItemTipo }> = [
-      ...experiencias.data.map((d) => ({ ...d, tipo: 'experiencia' as const })),
+      ...visibleExperiencias.map((d) => ({ ...d, tipo: 'experiencia' as const })),
       ...feedPosts.data.map((d) => ({ ...d, tipo: 'post' as const })),
     ];
 

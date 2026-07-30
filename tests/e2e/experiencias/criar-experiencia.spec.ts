@@ -1,29 +1,29 @@
 import { test, expect } from '../../helpers/fixtures';
 
 test.describe('Experiências - Criar Experiência', () => {
-  test('instituição cria rascunho com empregador estruturado no RichShell', async ({ instituicaoPage }) => {
-    await instituicaoPage.addInitScript(() => {
+  test('QA interno cria rascunho com empregador estruturado no RichShell', async ({ adminPage }) => {
+    await adminPage.addInitScript(() => {
       window.localStorage.removeItem('pdc_builder_experiencia_draft');
     });
-    await instituicaoPage.goto('/app/instituicao/criar-experiencia');
-    await expect(instituicaoPage.getByRole('navigation', { name: 'Etapas de criação' })).toBeVisible({ timeout: 15_000 });
+    await adminPage.goto('/app/instituicao/criar-experiencia');
+    await expect(adminPage.getByRole('navigation', { name: 'Etapas de criação' })).toBeVisible({ timeout: 15_000 });
 
     const title = `Experiência E2E ${Date.now()}`;
-    await instituicaoPage.locator('input[name="titulo"]').fill(title);
-    await instituicaoPage.getByLabel('Descrição narrativa').fill(
+    await adminPage.locator('input[name="titulo"]').fill(title);
+    await adminPage.getByLabel('Descrição narrativa').fill(
       'Uma experiência institucional completa para orientar estudantes angolanos.',
     );
-    await instituicaoPage.getByRole('button', { name: /Realidade/ }).click();
-    await instituicaoPage.getByRole('button', { name: 'Adicionar' }).click();
-    await instituicaoPage.locator('input[name="painelRealidade.principaisEmpregadores.0.nome"]').fill('Sonangol');
-    await instituicaoPage.locator('input[name="painelRealidade.principaisEmpregadores.0.setor"]').fill('Energia');
-    await instituicaoPage.locator('input[name="painelRealidade.principaisEmpregadores.0.url"]').fill('https://www.sonangol.co.ao');
+    await adminPage.getByRole('button', { name: /Realidade/ }).click();
+    await adminPage.getByRole('button', { name: 'Adicionar' }).click();
+    await adminPage.locator('input[name="painelRealidade.principaisEmpregadores.0.nome"]').fill('Sonangol');
+    await adminPage.locator('input[name="painelRealidade.principaisEmpregadores.0.setor"]').fill('Energia');
+    await adminPage.locator('input[name="painelRealidade.principaisEmpregadores.0.url"]').fill('https://www.sonangol.co.ao');
 
-    const requestPromise = instituicaoPage.waitForRequest((request) =>
+    const requestPromise = adminPage.waitForRequest((request) =>
       request.url().endsWith('/experiencias') && request.method() === 'POST',
     );
-    await instituicaoPage.getByRole('button', { name: 'Salvar Rascunho' }).click();
-    const validationMessage = instituicaoPage.getByText(/Campos inválidos:/);
+    await adminPage.getByRole('button', { name: 'Salvar Rascunho' }).click();
+    const validationMessage = adminPage.getByText(/Campos inválidos:/);
     const request = await Promise.race([
       requestPromise,
       validationMessage.waitFor({ state: 'visible', timeout: 3_000 }).then(async () => {
@@ -41,8 +41,8 @@ test.describe('Experiências - Criar Experiência', () => {
     }]);
   });
 
-  test('draft legado com strings reidrata sem crash', async ({ instituicaoPage }) => {
-    await instituicaoPage.addInitScript(() => {
+  test('draft legado com strings reidrata sem crash para QA interno', async ({ adminPage }) => {
+    await adminPage.addInitScript(() => {
       window.localStorage.setItem('pdc_builder_experiencia_draft', JSON.stringify({
         titulo: 'Draft legado',
         descricao: 'Descrição válida de um rascunho anterior.',
@@ -52,10 +52,15 @@ test.describe('Experiências - Criar Experiência', () => {
         painelRealidade: { principaisEmpregadores: ['BAI'] },
       }));
     });
-    await instituicaoPage.goto('/app/instituicao/criar-experiencia');
-    await instituicaoPage.getByRole('button', { name: /Realidade/ }).click();
+    await adminPage.goto('/app/instituicao/criar-experiencia');
+    await adminPage.getByRole('button', { name: /Realidade/ }).click();
 
-    await expect(instituicaoPage.locator('input[name="painelRealidade.principaisEmpregadores.0.nome"]')).toHaveValue('BAI');
+    await expect(adminPage.locator('input[name="painelRealidade.principaisEmpregadores.0.nome"]')).toHaveValue('BAI');
+  });
+
+  test('instituição externa recebe indisponibilidade clara no builder', async ({ instituicaoPage }) => {
+    await instituicaoPage.goto('/app/instituicao/criar-experiencia');
+    await expect(instituicaoPage.getByText('Estúdio temporariamente indisponível')).toBeVisible();
   });
 
   test('instituicao can access experiencias page', async ({ instituicaoPage }) => {

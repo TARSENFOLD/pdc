@@ -4,6 +4,7 @@ import type { StrapiListResponse, StrapiSingleResponse } from '@pdc/shared';
 import { DomainEventName } from '../modules/events/types.js';
 import { strapiDelete, strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { programaRoutes } from './programas.js';
+import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
 const publishWithOutboxMock = vi.hoisted(() => vi.fn().mockResolvedValue({ id: 'evt-programa-1' }));
 
@@ -27,6 +28,12 @@ vi.mock('../modules/strapi/strapi.client.js', () => ({
 
 vi.mock('../modules/events/event-bus.js', () => ({
   eventBus: { publishWithOutbox: publishWithOutboxMock },
+}));
+
+vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
+  featureFlagService: {
+    isEnabled: vi.fn(),
+  },
 }));
 
 vi.mock('../middleware/requireApproved.js', () => ({
@@ -74,6 +81,7 @@ describe('programaRoutes contracts', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(true);
     publishWithOutboxMock.mockResolvedValue({ id: 'evt-programa-1' });
   });
 

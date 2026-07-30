@@ -14,6 +14,11 @@ import { canPublishSimTipo, DISABLED_SIM_TIPO_RESPONSE } from '../modules/simula
 import { simulacaoTentativasRoutes } from './simulacoes-tentativas.js';
 import { applyPublicCatalogStateFilter, isPublicCatalogEstado } from './publication-state.js';
 import { toPaginatedResponse } from './pagination.js';
+import {
+  disabledFeatureResponse,
+  requireContentSubmissionEnabled,
+  requireInternalQaCreatorAccess,
+} from '../modules/feature-flags/cor-0001-gates.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -140,7 +145,7 @@ simulacaoRoutes.get('/:id', async (c) => {
 });
 
 // POST /simulacoes — criar simulação
-simulacaoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), requireApproved(), rateLimitContentCreate, zValidator('json', CriarSimulacaoPayloadSchema), async (c) => {
+simulacaoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), requireInternalQaCreatorAccess(), requireApproved(), rateLimitContentCreate, zValidator('json', CriarSimulacaoPayloadSchema), async (c) => {
   const payload = c.req.valid('json');
   const { id: autorId } = c.get('user');
   
@@ -175,7 +180,7 @@ simulacaoRoutes.post('/', checkRole(['mentor', 'instituicao', 'super_admin']), r
 });
 
 // PUT /simulacoes/:id — editar simulação
-simulacaoRoutes.put('/:id', checkRole(['mentor', 'instituicao', 'super_admin']), zValidator('json', CriarSimulacaoPayloadSchema.partial()), async (c) => {
+simulacaoRoutes.put('/:id', checkRole(['mentor', 'instituicao', 'super_admin']), requireInternalQaCreatorAccess(), zValidator('json', CriarSimulacaoPayloadSchema.partial()), async (c) => {
   const id = c.req.param('id');
   const payload = c.req.valid('json');
   const user = c.get('user');
@@ -197,8 +202,34 @@ simulacaoRoutes.put('/:id', checkRole(['mentor', 'instituicao', 'super_admin']),
   }
 });
 
+// POST /simulacoes/:id/submeter — submissão canónica para revisão
+simulacaoRoutes.post(
+  '/:id/submeter',
+  checkRole(['mentor', 'instituicao', 'super_admin']),
+  requireContentSubmissionEnabled(),
+  requireInternalQaCreatorAccess(),
+  async (c) => {
+    const id = c.req.param('id');
+    const user = c.get('user');
+    try {
+      const sim = await findSimulacao(id);
+      if (!sim) return c.json({ error: 'Simulação não encontrada' }, 404);
+      if (sim.autorId !== user.id && user.role !== 'super_admin') {
+        return c.json({ error: 'Sem permissão para editar esta simulação' }, 403);
+      }
+      if (sim.estado !== 'draft') {
+        return c.json({ error: `Transição inválida de ${sim.estado} para review` }, 409);
+      }
+      await strapiPut<unknown>(`/simulacoes/${persistedEntityId(sim)}`, { estado: 'review' });
+      return c.json({ success: true });
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    }
+  },
+);
+
 // PATCH /simulacoes/:id/estado — transição de estado editorial
-simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'moderador', 'super_admin']), zValidator('json', z.object({
+simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'moderador', 'super_admin']), requireInternalQaCreatorAccess(), zValidator('json', z.object({
   estado: z.enum(['review', 'published', 'archived']),
 })), async (c) => {
   const id = c.req.param('id');
@@ -206,6 +237,14 @@ simulacaoRoutes.patch('/:id/estado', checkRole(['mentor', 'instituicao', 'modera
   const user = c.get('user');
 
   try {
+    if (estado === 'review') {
+      const unavailable = await disabledFeatureResponse(
+        c,
+        'content_submission_enabled',
+        'CONTENT_SUBMISSION_TEMPORARILY_DISABLED',
+      );
+      if (unavailable) return unavailable;
+    }
     // Buscar simulação actual
     const sim = await findSimulacao(id);
     if (!sim) {

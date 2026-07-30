@@ -35,7 +35,9 @@ export const experienciasApi = {
     http.put<Experiencia>(`/experiencias/${id}`, payload),
 
   updateEstado: (id: string, estado: string) =>
-    http.patch<{ success: boolean }>(`/experiencias/${id}/estado`, { estado }),
+    estado === 'review'
+      ? http.post<{ success: boolean }>(`/experiencias/${id}/submeter`, {})
+      : http.patch<{ success: boolean }>(`/experiencias/${id}/estado`, { estado }),
 
   inscrever: (id: string) =>
     http.post<{ id: string | number }>(`/experiencias/${id}/inscrever`, {}),

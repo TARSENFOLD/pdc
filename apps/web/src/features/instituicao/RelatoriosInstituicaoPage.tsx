@@ -3,8 +3,11 @@ import { experienciasApi } from '@/lib/api/experiencias';
 import { Card, Table, Spinner, Badge, Button, type Column } from '@/components/ui';
 import { BarChart3, TrendingDown, Users, Target, ShieldCheck, Download, Zap, PieChart } from 'lucide-react';
 import type { ExperienciaMinha } from '@pdc/shared';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 export function RelatoriosInstituicaoPage() {
+  const { isEnabled, isLoading: flagsLoading } = useFeatureFlags();
+  const advancedAnalyticsEnabled = isEnabled('institution_advanced_analytics_enabled');
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['experiencias', 'stats'],
     queryFn: () => experienciasApi.getStats(),
@@ -15,9 +18,54 @@ export function RelatoriosInstituicaoPage() {
     queryFn: () => experienciasApi.getMinhas(),
   });
 
-  if (statsLoading || expLoading) return <div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>;
+  if (flagsLoading || statsLoading || expLoading) return <div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>;
 
   const expData = experiencias?.data ?? [];
+
+  if (!advancedAnalyticsEnabled) {
+    const availableColumns: Column<ExperienciaMinha>[] = [
+      { header: 'Experiência', accessor: 'titulo', className: 'font-bold text-ink-primary' },
+      {
+        header: 'Inscrições',
+        accessor: (experiencia: ExperienciaMinha) => (
+          <span className="font-mono font-black text-accent">{experiencia.inscricoesCount ?? 0}</span>
+        ),
+      },
+    ];
+
+    return (
+      <div className="mx-auto max-w-6xl space-y-10 pb-20">
+        <header>
+          <Badge variant="info" className="mb-3 border-accent/20 bg-accent/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-accent">
+            Relatório institucional
+          </Badge>
+          <h1 className="font-display text-4xl font-black tracking-tighter text-ink-primary">
+            Contagens disponíveis
+          </h1>
+          <p className="mt-2 text-sm text-ink-secondary">
+            Apenas dados reais actualmente disponíveis.
+          </p>
+        </header>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            ['Experiências publicadas', stats?.experienciasPublicadas ?? 0],
+            ['Programas activos', stats?.programasActivos ?? 0],
+            ['Inscrições', stats?.inscricoesTotais ?? 0],
+          ].map(([label, value]) => (
+            <Card key={String(label)} className="p-6">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">{label}</p>
+              <p className="mt-3 font-mono text-4xl font-black text-ink-primary">{value}</p>
+            </Card>
+          ))}
+        </div>
+
+        <Card className="overflow-hidden">
+          <Table columns={availableColumns} data={expData} />
+        </Card>
+      </div>
+    );
+  }
 
   const columns: Column<ExperienciaMinha>[] = [
     { header: 'Experiência', accessor: 'titulo', className: 'font-bold text-ink-primary' },

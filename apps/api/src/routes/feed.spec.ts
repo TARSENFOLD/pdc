@@ -4,6 +4,7 @@ import { feedRoutes } from './feed.js';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { redis } from '../lib/redis.js';
 import type { StrapiListResponse } from '@pdc/shared';
+import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
 vi.mock('../modules/strapi/strapi.client.js', () => ({
   strapiGet: vi.fn(),
@@ -34,6 +35,12 @@ vi.mock('../modules/feed/feed.weights.js', () => ({
   setWeights: vi.fn(),
 }));
 
+vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
+  featureFlagService: {
+    isEnabled: vi.fn(),
+  },
+}));
+
 function listResponse<T>(data: Array<T & { id: string | number }>): StrapiListResponse<T> {
   return {
     data,
@@ -48,6 +55,7 @@ describe('feedRoutes', () => {
     vi.clearAllMocks();
     vi.mocked(redis.get).mockResolvedValue(null);
     vi.mocked(redis.set).mockResolvedValue('OK');
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(true);
   });
 
   it('lê /feed/geral a partir de feed-entries quando collection tem dados', async () => {
@@ -140,5 +148,28 @@ describe('feedRoutes', () => {
       'filters[instituicaoId][$eq]': 'inst-1',
     }));
     expect(redis.set).toHaveBeenCalledWith('feed:institucional:inst-1', expect.any(Object), { ex: 300 });
+  });
+
+  it('remove uma experiência VWX das feed-entries canónicas', async () => {
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(false);
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{
+        id: 'entry-vwx',
+        entityType: 'experiencia',
+        entityId: 'doc-vwx',
+        titulo: 'VWX',
+        source: 'geral',
+        publicadoEm: '2026-07-30T10:00:00.000Z',
+      }]))
+      .mockResolvedValueOnce(listResponse([{
+        id: 'exp-vwx',
+        documentId: 'doc-vwx',
+        tipoExperiencia: 'vwx',
+      }]));
+
+    const res = await app.request('/feed/geral');
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ data: [] });
   });
 });

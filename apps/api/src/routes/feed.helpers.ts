@@ -9,6 +9,10 @@ import { verifyAccessJwt } from '../modules/auth/auth.middleware.js';
 import { ACCESS_TOKEN_COOKIE } from '../modules/auth/auth.constants.js';
 import { isPublicCatalogEstado } from './publication-state.js';
 import { resolvePerfilAvatar } from '../modules/perfil/perfil-media.js';
+import {
+  filterVwxExperiences,
+  isVwxCatalogEnabled,
+} from '../modules/feature-flags/vwx-catalog-gate.js';
 
 // ── Strapi interfaces (Flat v5) ──────────────────────────────────────────────
 
@@ -48,6 +52,7 @@ export interface StrapiEntity {
     avatarUrl?: string | null;
   } | null;
   originalPost?: StrapiEntity;
+  tipoExperiencia?: 'institucional' | 'vwx';
 }
 
 export interface StrapiUserProfile {
@@ -132,7 +137,7 @@ export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<Item
 }
 
 export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: FeedItemTipo }>> {
-  const [cursos, simulacoes, experiencias, feedPosts, programas, projetos, partilhas] = await Promise.all([
+  const [cursos, simulacoes, experiencias, feedPosts, programas, projetos, partilhas, vwxCatalogEnabled] = await Promise.all([
     strapiGet<StrapiEntity>('/cursos', {
       'pagination[pageSize]': '100',
       sort: 'publishedAt:desc',
@@ -171,7 +176,9 @@ export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: Fe
       sort: 'criadoEm:desc',
       populate: 'actor.foto',
     }),
+    isVwxCatalogEnabled(),
   ]);
+  const visibleExperiencias = filterVwxExperiences(experiencias.data, vwxCatalogEnabled);
 
   const postsById = new Map(feedPosts.data.map((post) => [String(post.id), post]));
   const missingPostIds = [...new Set(partilhas.data
@@ -209,7 +216,7 @@ export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: Fe
   const all = [
     ...cursos.data.map((d) => ({ ...d, tipo: 'curso' as const })),
     ...simulacoes.data.map((d) => ({ ...d, tipo: 'simulacao' as const })),
-    ...experiencias.data.map((d) => ({ ...d, tipo: 'experiencia' as const })),
+    ...visibleExperiencias.map((d) => ({ ...d, tipo: 'experiencia' as const })),
     ...feedPosts.data.map((d) => ({ ...d, tipo: 'post' as const })),
     ...programas.data.map((d) => ({ ...d, tipo: 'programa' as const })),
     ...projetos.data.map((d) => ({ ...d, tipo: 'projeto' as const })),

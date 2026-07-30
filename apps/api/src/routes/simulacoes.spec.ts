@@ -31,6 +31,7 @@ vi.mock('../modules/events/event-bus.js', () => ({
 vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
   featureFlagService: {
     getEffectiveFlags: vi.fn(),
+    isEnabled: vi.fn(),
   },
 }));
 
@@ -56,6 +57,7 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
       SIM_TIPO_2_PUBLISH_ENABLED: true,
       SIM_TIPO_3_PUBLISH_ENABLED: true,
     });
+    vi.mocked(featureFlagService.isEnabled).mockResolvedValue(true);
   });
 
   const criarPayload = {
