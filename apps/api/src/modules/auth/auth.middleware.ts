@@ -8,7 +8,6 @@ import { ACCESS_TOKEN_COOKIE } from './auth.constants.js';
 import { authSessionService } from './auth-session.service.js';
 import { setSentryUser } from '../../middleware/sentry.js';
 
-
 const JWT_SECRET = new TextEncoder().encode(env.JWT_SECRET);
 
 function isAuthBypassPath(path: string): boolean {
@@ -19,21 +18,27 @@ export const JwtUserPayloadSchema = z.object({
   sub: z.string().min(1),
   role: RoleSchema,
   perfilId: z.string().min(1).optional(),
-  instituicaoId: z.union([z.string().min(1), z.number().int()]).optional()
+  instituicaoId: z
+    .union([z.string().min(1), z.number().int()])
+    .optional()
     .transform((value) => (value === undefined ? undefined : Number(value)))
     .pipe(z.number().int().positive().optional()),
   onboardingCompleto: z.boolean().nullish(),
   isMinor: z.boolean().optional(),
   estadoMenoridade: z.enum(['pendente', 'adulto', 'menor']).optional(),
-  consentimentoEstado: z.enum(['pendente', 'completo', 'requer_reconsentimento', 'bloqueado']).optional(),
+  consentimentoEstado: z
+    .enum(['pendente', 'completo', 'requer_reconsentimento', 'bloqueado'])
+    .optional(),
   ver: z.number().int().nonnegative().default(0),
 });
 
 function hasExplicitComplianceBlock(payload: z.infer<typeof JwtUserPayloadSchema>): boolean {
-  return payload.consentimentoEstado === 'pendente'
-    || payload.consentimentoEstado === 'requer_reconsentimento'
-    || payload.consentimentoEstado === 'bloqueado'
-    || payload.estadoMenoridade === 'pendente';
+  return (
+    payload.consentimentoEstado === 'pendente' ||
+    payload.consentimentoEstado === 'requer_reconsentimento' ||
+    payload.consentimentoEstado === 'bloqueado' ||
+    payload.estadoMenoridade === 'pendente'
+  );
 }
 
 export interface AuthVariables {
@@ -45,7 +50,12 @@ export interface AuthVariables {
     onboardingCompleto?: boolean | undefined;
     isMinor?: boolean | undefined;
     estadoMenoridade?: 'pendente' | 'adulto' | 'menor' | undefined;
-    consentimentoEstado?: 'pendente' | 'completo' | 'requer_reconsentimento' | 'bloqueado' | undefined;
+    consentimentoEstado?:
+      | 'pendente'
+      | 'completo'
+      | 'requer_reconsentimento'
+      | 'bloqueado'
+      | undefined;
   };
 }
 
@@ -58,12 +68,25 @@ export interface OptionalAuthVariables {
     onboardingCompleto?: boolean | undefined;
     isMinor?: boolean | undefined;
     estadoMenoridade?: 'pendente' | 'adulto' | 'menor' | undefined;
-    consentimentoEstado?: 'pendente' | 'completo' | 'requer_reconsentimento' | 'bloqueado' | undefined;
+    consentimentoEstado?:
+      | 'pendente'
+      | 'completo'
+      | 'requer_reconsentimento'
+      | 'bloqueado'
+      | undefined;
   };
 }
 
+function bindAuthenticatedUser(
+  setUser: (user: AuthVariables['user']) => void,
+  user: AuthVariables['user']
+): void {
+  setUser(user);
+  setSentryUser(user.id);
+}
+
 export async function verifyAccessJwt(
-  token: string,
+  token: string
 ): Promise<z.infer<typeof JwtUserPayloadSchema> | null> {
   let parsedPayload: z.infer<typeof JwtUserPayloadSchema>;
   try {
@@ -75,7 +98,7 @@ export async function verifyAccessJwt(
   } catch {
     return null;
   }
-  return await authSessionService.isAccessTokenCurrent(parsedPayload.sub, parsedPayload.ver)
+  return (await authSessionService.isAccessTokenCurrent(parsedPayload.sub, parsedPayload.ver))
     ? parsedPayload
     : null;
 }
@@ -108,8 +131,9 @@ export async function verifyJwt(c: Context<{ Variables: AuthVariables }>, next: 
     consentimentoEstado: parsedPayload.consentimentoEstado,
   };
 
-  c.set('user', user);
-  setSentryUser(user.id);
+  bindAuthenticatedUser((authenticatedUser) => {
+    c.set('user', authenticatedUser);
+  }, user);
 
   // Block incomplete OAuth sessions from all routes except auth, finalizar, and media upload
   if (parsedPayload.onboardingCompleto === false) {
@@ -147,8 +171,9 @@ export async function optionalJwt(c: Context<{ Variables: OptionalAuthVariables 
         estadoMenoridade: parsedPayload.estadoMenoridade,
         consentimentoEstado: parsedPayload.consentimentoEstado,
       };
-      c.set('user', user);
-      setSentryUser(user.id);
+      bindAuthenticatedUser((authenticatedUser) => {
+        c.set('user', authenticatedUser);
+      }, user);
     }
   }
   await next();

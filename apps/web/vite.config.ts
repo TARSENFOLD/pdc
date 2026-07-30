@@ -1,31 +1,34 @@
-import { defineConfig, type PluginOption } from 'vite';
+import { defineConfig, loadEnv, type PluginOption } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { resolve } from 'path';
 
-export default defineConfig(() => {
-  const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN?.trim();
-  const sentryOrg = process.env.SENTRY_ORG?.trim();
-  const sentryProject = process.env.SENTRY_PROJECT?.trim();
-  const release = process.env.VITE_APP_VERSION?.trim();
+export default defineConfig(({ mode }) => {
+  const buildEnv = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
+  const sentryAuthToken = buildEnv.SENTRY_AUTH_TOKEN?.trim();
+  const sentryOrg = buildEnv.SENTRY_ORG?.trim();
+  const sentryProject = buildEnv.SENTRY_PROJECT?.trim();
+  const release = buildEnv.VITE_APP_VERSION?.trim();
   const sentryConfigured = Boolean(sentryAuthToken && sentryOrg && sentryProject && release);
   const plugins: PluginOption[] = [react(), tailwindcss()];
 
   if (sentryAuthToken && sentryOrg && sentryProject && release) {
-    plugins.push(sentryVitePlugin({
-      authToken: sentryAuthToken,
-      org: sentryOrg,
-      project: sentryProject,
-      telemetry: false,
-      release: {
-        name: release,
-        setCommits: false,
-      },
-      sourcemaps: {
-        filesToDeleteAfterUpload: ['./dist/**/*.map'],
-      },
-    }));
+    plugins.push(
+      sentryVitePlugin({
+        authToken: sentryAuthToken,
+        org: sentryOrg,
+        project: sentryProject,
+        telemetry: false,
+        release: {
+          name: release,
+          setCommits: false,
+        },
+        sourcemaps: {
+          filesToDeleteAfterUpload: ['./dist/**/*.map'],
+        },
+      })
+    );
   }
 
   return {
@@ -44,7 +47,7 @@ export default defineConfig(() => {
       },
       proxy: {
         '/api': {
-          target: process.env.VITE_API_URL ?? 'http://localhost:3001',
+          target: buildEnv.VITE_API_URL ?? 'http://localhost:3001',
           changeOrigin: true,
           rewrite: (path: string) => path.replace(/^\/api/, ''),
         },

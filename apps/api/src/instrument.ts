@@ -5,6 +5,7 @@ interface SanitizableRequest {
   cookies?: unknown;
   data?: unknown;
   query_string?: unknown;
+  url?: unknown;
   headers?: Record<string, string>;
 }
 
@@ -12,13 +13,7 @@ interface SanitizableEvent {
   request?: SanitizableRequest;
 }
 
-const SENSITIVE_HEADERS = new Set([
-  'authorization',
-  'cookie',
-  'proxy-authorization',
-  'set-cookie',
-  'x-api-key',
-]);
+const SAFE_HEADERS = new Set(['accept', 'content-length', 'content-type', 'user-agent']);
 
 function sanitizeEvent<T extends SanitizableEvent>(event: T): T {
   if (!event.request) return event;
@@ -26,11 +21,14 @@ function sanitizeEvent<T extends SanitizableEvent>(event: T): T {
   delete event.request.cookies;
   delete event.request.data;
   delete event.request.query_string;
+  if (typeof event.request.url === 'string') {
+    event.request.url = event.request.url.replace(/[?#].*$/u, '');
+  }
   if (event.request.headers) {
     event.request.headers = Object.fromEntries(
-      Object.entries(event.request.headers).filter(
-        ([header]) => !SENSITIVE_HEADERS.has(header.toLowerCase()),
-      ),
+      Object.entries(event.request.headers).filter(([header]) =>
+        SAFE_HEADERS.has(header.toLowerCase())
+      )
     );
   }
   return event;

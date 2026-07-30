@@ -3,12 +3,12 @@ name: Deploy Web (Cloudflare Pages)
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ['CI']
     types: [completed]
     branches: [main]
 
 env:
-  NODE_VERSION: "24"
+  NODE_VERSION: '24'
   PAGES_PROJECT_NAME: ${{ vars.CF_PAGES_PROJECT_NAME }}
   VITE_API_URL: ${{ vars.VITE_API_URL }}
   VITE_EDGE_URL: ${{ vars.VITE_EDGE_URL }}
@@ -17,7 +17,7 @@ env:
 
 jobs:
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository) }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,7 +46,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
@@ -82,15 +82,6 @@ jobs:
       - name: Skip Cloudflare Pages deploy when project is not configured
         if: vars.CF_PAGES_PROJECT_NAME == ''
         run: echo "::notice title=Cloudflare Pages deploy skipped::Set repository variable CF_PAGES_PROJECT_NAME to enable Pages deploy."
-
-      - name: Deploy preview to Cloudflare Pages
-        if: vars.CF_PAGES_PROJECT_NAME != '' && github.ref == 'refs/heads/develop'
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: '.'
-          command: pages deploy apps/web/dist --project-name=${{ env.PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
 
       - name: Deploy production to Cloudflare Pages
         if: vars.CF_PAGES_PROJECT_NAME != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/principal')

@@ -10,10 +10,7 @@ import { BootstrapProvider } from './lib/bootstrap/BootstrapContext';
 import { ThemeProvider } from './lib/theme/ThemeContext';
 import { Toaster, InstallPrompt } from './components/ui';
 import { CookieBanner } from './components/privacy/CookieBanner';
-import { initWebSentry } from './lib/sentry';
 import './index.css';
-
-initWebSentry();
 
 const SERVICE_WORKER_CLEANUP_VERSION_KEY = 'pdc:service-worker-cleanup:v1';
 

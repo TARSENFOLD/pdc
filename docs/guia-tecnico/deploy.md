@@ -6,19 +6,19 @@ O PDC v2 utiliza uma arquitectura distribuída multi-provider para garantir lat�
 
 ## 🏛️ Matriz de Infraestrutura (Distributed Stack)
 
-| Componente | Provider | Estratégia | Domínio Prod |
-|------------|----------|------------|--------------|
-| **Frontend (PWA)** | **Cloudflare Pages** | Build Automático (Vite 6) | `usepdc.com` |
-| **Edge (Factos)** | **Cloudflare Workers** | Wrangler / Global Edge (`pdc`, root `wrangler.toml`) | `edge.usepdc.com` |
-| **BFF (Cérebro)** | **Hetzner VPS** | Docker + Traefik (Root Context) | `api.usepdc.com` |
-| **CMS (Strapi v5)** | **Hetzner VPS** | Docker + Traefik (Infra Context) | `cms.usepdc.com` |
-| **Base de Dados** | **Neon** | Serverless PostgreSQL 16 | `neon.tech` (Proxy) |
-| **Redis BFF** | **Hetzner VPS** | TCP privado + AOF | rede Docker interna |
-| **Queue Edge / Rate limit** | **Upstash** | Serverless Redis HTTP | `upstash.io` |
-| **Storage (Media)** | **Cloudflare R2** | S3-Compatible Storage | `r2.dev` / CDN |
-| **E-mail** | **Resend** | Transactional API | `resend.com` |
-| **AI (Tina)** | **DeepSeek** | Inference API (RAG) | `deepseek.com` |
-| **Observabilidade** | **Sentry** | Full-stack Tracing | `sentry.io` |
+| Componente                  | Provider               | Estratégia                                           | Domínio Prod        |
+| --------------------------- | ---------------------- | ---------------------------------------------------- | ------------------- |
+| **Frontend (PWA)**          | **Cloudflare Pages**   | Build Automático (Vite 6)                            | `usepdc.com`        |
+| **Edge (Factos)**           | **Cloudflare Workers** | Wrangler / Global Edge (`pdc`, root `wrangler.toml`) | `edge.usepdc.com`   |
+| **BFF (Cérebro)**           | **Hetzner VPS**        | Docker + Traefik (Root Context)                      | `api.usepdc.com`    |
+| **CMS (Strapi v5)**         | **Hetzner VPS**        | Docker + Traefik (Infra Context)                     | `cms.usepdc.com`    |
+| **Base de Dados**           | **Neon**               | Serverless PostgreSQL 16                             | `neon.tech` (Proxy) |
+| **Redis BFF**               | **Hetzner VPS**        | TCP privado + AOF                                    | rede Docker interna |
+| **Queue Edge / Rate limit** | **Upstash**            | Serverless Redis HTTP                                | `upstash.io`        |
+| **Storage (Media)**         | **Cloudflare R2**      | S3-Compatible Storage                                | `r2.dev` / CDN      |
+| **E-mail**                  | **Resend**             | Transactional API                                    | `resend.com`        |
+| **AI (Tina)**               | **DeepSeek**           | Inference API (RAG)                                  | `deepseek.com`      |
+| **Observabilidade**         | **Sentry**             | Full-stack Tracing                                   | `sentry.io`         |
 
 ---
 
@@ -49,12 +49,12 @@ Redis privado (sem porta publicada)
 
 ### Serviços e resources (CX23: 2 vCPU / 4 GB RAM / 40 GB NVMe)
 
-| Serviço | Container | RAM Limite | Nota |
-|---------|-----------|------------|------|
-| Reverse Proxy | `pdc-traefik` | 128 MB | SSL automático via Let's Encrypt. |
-| BFF | `pdc-api` | 1 GB | Build via `Dockerfile` (root context). |
-| CMS | `pdc-strapi` | 2 GB | Build via `infra/strapi/Dockerfile`. |
-| Redis BFF | `pdc-redis` | 384 MB | AOF persistente em `pdc-redis-data`. |
+| Serviço       | Container     | RAM Limite | Nota                                   |
+| ------------- | ------------- | ---------- | -------------------------------------- |
+| Reverse Proxy | `pdc-traefik` | 128 MB     | SSL automático via Let's Encrypt.      |
+| BFF           | `pdc-api`     | 1 GB       | Build via `Dockerfile` (root context). |
+| CMS           | `pdc-strapi`  | 2 GB       | Build via `infra/strapi/Dockerfile`.   |
+| Redis BFF     | `pdc-redis`   | 384 MB     | AOF persistente em `pdc-redis-data`.   |
 
 > A RAM é apertada. Monitorizar com `docker stats`. Se a utilização média passar consistentemente os 85%, fazer upgrade para CPX31/41.
 
@@ -88,9 +88,11 @@ sudo --preserve-env=RELEASE_SHA,RELEASE_DATE docker compose -f docker-compose.pr
 
 `RELEASE_SHA` e `RELEASE_DATE` são metadados não secretos e obrigatórios para
 deploy. O script rejeita SHA inválido e grava ambos nas labels OCI das imagens e
-dos containers `pdc-api` e `pdc-strapi`. Comandos incidentais como `compose ps`
-ou `compose logs` podem correr sem exportá-los; nesse caso, o Compose usa apenas
-os marcadores `unlabelled`/`unknown` e não constitui um deploy canónico.
+dos containers `pdc-api` e `pdc-strapi`. `RELEASE_SHA` também identifica a
+release enviada pelo runtime da API ao Sentry e, por isso, qualquer comando
+`compose up` ou `compose config` deve exportá-lo. Comandos de leitura que não
+recriam serviços devem usar `scripts/deploy-vps.sh diagnostics`, que recupera a
+identidade da release já instalada.
 
 ### Deploy automático (gated por CI)
 
@@ -214,11 +216,12 @@ O PDC v2 é distribuído como PWA, mas possui "invólucros" nativos para presen�
 ## 🔐 Gestão de Variáveis de Ambiente (Secrets)
 
 > [!CAUTION]
-> **NUNCA COMMITE FICHEIROS `.env`**. 
+> **NUNCA COMMITE FICHEIROS `.env`**.
 > O ficheiro `.env.example` é uma fixture de desenvolvimento, não um template para produção.
 > O ficheiro `.env.hetzner.example` é um template para o VPS; os valores reais vivem apenas em `/opt/pdc/.env` no VPS.
 
 ### Configuração por Provider
+
 - **Cloudflare (Pages/Workers)**: Configurar via Dashboard em `Settings > Variables` ou `wrangler secret put NAME`.
 - **VPS Hetzner**: Secrets injetados via ficheiro `/opt/pdc/.env` com permissões `600`. O GitHub Actions sincroniza o repo via `rsync`, exclui ambientes locais e artefactos `dist`/`.strapi` gerados pelos containers, e preserva `/opt/pdc/.secrets-history`; os containers lêem o env file no deploy.
 - **Upstash/Neon/Resend**: Os segredos devem ser injectados no BFF e Strapi via `/opt/pdc/.env` no VPS.
@@ -227,14 +230,14 @@ O PDC v2 é distribuído como PWA, mas possui "invólucros" nativos para presen�
 
 ## 🌊 Ambientes: Staging vs Produção
 
-| Recurso | Staging / Preview | Produção |
-|---------|-------------------|----------|
-| **Branch** | `develop` / PR Branches | `main` |
-| **Web** | `staging.usepdc.com` | `usepdc.com` |
-| **API (BFF)** | `api-staging.usepdc.com` | `api.usepdc.com` |
-| **CMS** | `cms-staging.usepdc.com` | `cms.usepdc.com` |
-| **Edge** | `edge-staging.usepdc.com` | `edge.usepdc.com` |
-| **Base de Dados** | Neon Branch `staging` | Neon Branch `main` |
+| Recurso           | Staging / Preview         | Produção           |
+| ----------------- | ------------------------- | ------------------ |
+| **Branch**        | `develop` / PR Branches   | `main`             |
+| **Web**           | `staging.usepdc.com`      | `usepdc.com`       |
+| **API (BFF)**     | `api-staging.usepdc.com`  | `api.usepdc.com`   |
+| **CMS**           | `cms-staging.usepdc.com`  | `cms.usepdc.com`   |
+| **Edge**          | `edge-staging.usepdc.com` | `edge.usepdc.com`  |
+| **Base de Dados** | Neon Branch `staging`     | Neon Branch `main` |
 
 ---
 
@@ -244,13 +247,13 @@ O projecto Pages `pdc` serve exclusivamente o frontend/PWA. O `wrangler.toml` da
 
 Configuração canónica no Cloudflare Pages:
 
-| Campo | Valor |
-|-------|-------|
-| **Build command** | `npm run build:web` |
-| **Build output directory** | `apps/web/dist` |
-| **Production branch** | `main` |
-| **Environment variable** | `VITE_API_URL=https://api.usepdc.com` |
-| **Environment variable** | `VITE_EDGE_URL=https://edge.usepdc.com` |
+| Campo                      | Valor                                   |
+| -------------------------- | --------------------------------------- |
+| **Build command**          | `npm run build:web`                     |
+| **Build output directory** | `apps/web/dist`                         |
+| **Production branch**      | `main`                                  |
+| **Environment variable**   | `VITE_API_URL=https://api.usepdc.com`   |
+| **Environment variable**   | `VITE_EDGE_URL=https://edge.usepdc.com` |
 
 Domínios canónicos do Pages:
 
@@ -359,4 +362,5 @@ O consumer de telemetria continua dependente do Upstash e deve preservar fila e
 DLQ até a quota recuperar.
 
 ---
-*Doc is Law — Última auditoria: 17 de Julho de 2026.*
+
+_Doc is Law — Última auditoria: 17 de Julho de 2026._

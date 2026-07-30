@@ -1,6 +1,10 @@
 import pino from 'pino';
 import { aiService } from '../ai/ai.service.js';
-import { TINA_KNOWLEDGE, type TinaKnowledgeItem } from './tina.knowledge.js';
+import {
+  TINA_KNOWLEDGE,
+  TinaKnowledgeItemSchema,
+  type TinaKnowledgeItem,
+} from './tina.knowledge.js';
 import { validarMensagem } from './tina.guardrails.js';
 import { verificarLimite } from './tina.ratelimit.js';
 import {
@@ -17,28 +21,79 @@ import { tinaContextService } from './tina-context.service.js';
 const AI_PROVIDER = env.AI_PROVIDER;
 const log = pino({ name: 'tina-service' });
 
-interface AiChatResponse {
-  choices?: { message: { content: string } }[];
-  message?: { content: string };
-}
+const AiChatResponseSchema = z
+  .object({
+    choices: z
+      .array(
+        z.object({
+          message: z.object({ content: z.string() }),
+        })
+      )
+      .optional(),
+    message: z.object({ content: z.string() }).optional(),
+  })
+  .refine((value) => value.choices !== undefined || value.message !== undefined, {
+    message: 'Resposta da IA deve conter choices ou message',
+  });
+
+type AiChatResponse = z.infer<typeof AiChatResponseSchema>;
 
 const JsonObjectSchema = z.record(z.string(), z.unknown());
 
 const PerguntaDesafioSchema = z.object({
   texto: z.string().min(1),
-  opcoes: z.array(z.object({
-    emoji: z.string().min(1),
-    texto: z.string().min(1),
-  })).min(2),
+  opcoes: z
+    .array(
+      z.object({
+        emoji: z.string().min(1),
+        texto: z.string().min(1),
+      })
+    )
+    .min(2),
 });
 
 const PerguntasDesafioResponseSchema = z.object({
   perguntas: z.array(PerguntaDesafioSchema),
 });
 
+function parseKnowledgeItem(rawItem: unknown): TinaKnowledgeItem | null {
+  let candidate = rawItem;
+  if (typeof candidate === 'string') {
+    try {
+      candidate = JSON.parse(candidate) as unknown;
+    } catch {
+      return null;
+    }
+  }
+
+  const parsed = TinaKnowledgeItemSchema.safeParse(candidate);
+  return parsed.success ? parsed.data : null;
+}
+
 function extractAiContent(data: AiChatResponse): string {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- payload externo pode omitir message em runtime
   return data.choices?.[0]?.message?.content ?? data.message?.content ?? '';
+}
+
+async function readAiChatResponse(response: Response): Promise<AiChatResponse | null> {
+  if (!response.ok) {
+    log.warn({ status: response.status }, 'Provider de IA devolveu resposta não-2xx');
+    return null;
+  }
+  try {
+    const parsed = AiChatResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      log.warn(
+        { issues: parsed.error.issues },
+        'Payload do provider de IA não corresponde ao contrato'
+      );
+      return null;
+    }
+    return parsed.data;
+  } catch (error: unknown) {
+    log.warn({ err: error }, 'Falha ao interpretar resposta JSON do provider de IA');
+    return null;
+  }
 }
 
 export function extractJsonObject(content: string): unknown {
@@ -92,17 +147,27 @@ Regras:
   async buscarChunks(query: string): Promise<string> {
     if (!hasPrimaryRedis) return '';
     try {
-      const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+      const words = query
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length > 3);
       const matches: string[] = [];
 
       for (let i = 0; i < TINA_KNOWLEDGE.length; i += 1) {
-        const item = await redis.get<TinaKnowledgeItem>(`tina:kb:${i.toString()}`);
+        const key = `tina:kb:${i.toString()}`;
+        const rawItem = await redis.get<unknown>(key);
+        if (rawItem === null) continue;
+
+        const item = parseKnowledgeItem(rawItem);
+        if (!item) {
+          log.warn({ key }, 'Entrada inválida no cache de conhecimento da Tina');
+          continue;
+        }
         if (
-          item
-          && words.some((word) => (
-            item.conteudo.toLowerCase().includes(word)
-            || item.titulo.toLowerCase().includes(word)
-          ))
+          words.some(
+            (word) =>
+              item.conteudo.toLowerCase().includes(word) || item.titulo.toLowerCase().includes(word)
+          )
         ) {
           matches.push(`${item.titulo}: ${item.conteudo}`);
         }
@@ -117,8 +182,15 @@ Regras:
 
   async indexarKnowledge(): Promise<void> {
     if (!hasPrimaryRedis) return;
-    for (let i = 0; i < TINA_KNOWLEDGE.length; i += 1) {
-      await redis.set(`tina:kb:${i.toString()}`, TINA_KNOWLEDGE[i]);
+    const results = await Promise.allSettled(
+      TINA_KNOWLEDGE.map((item, index) => redis.set(`tina:kb:${index.toString()}`, item))
+    );
+    const failedWrites = results.filter((result) => result.status === 'rejected');
+    if (failedWrites.length > 0) {
+      log.warn(
+        { failedWrites: failedWrites.length, totalWrites: results.length },
+        'Falha parcial ao indexar conhecimento da Tina'
+      );
     }
   },
 
@@ -127,7 +199,7 @@ Regras:
     userId: string | null,
     ip: string,
     stream: boolean,
-    role?: Role,
+    role?: Role
   ): Promise<Response> {
     const lastMessage = messages[messages.length - 1]?.content;
     if (!lastMessage) {
@@ -141,7 +213,10 @@ Regras:
 
     const rate = await verificarLimite(userId, ip);
     if (!rate.permitido) {
-      return new Response(JSON.stringify({ error: 'Limite de mensagens excedido. Tenta mais tarde.' }), { status: 429 });
+      return new Response(
+        JSON.stringify({ error: 'Limite de mensagens excedido. Tenta mais tarde.' }),
+        { status: 429 }
+      );
     }
 
     const chunks = await this.buscarChunks(lastMessage);
@@ -175,9 +250,14 @@ Retorna APENAS um JSON no formato:
   ]
 }`;
 
-    const res = await aiService.chat([{ role: 'user', content: prompt }], 'Geração de Desafio Vocacional', false);
-    const data = await res.json() as AiChatResponse;
-    
+    const res = await aiService.chat(
+      [{ role: 'user', content: prompt }],
+      'Geração de Desafio Vocacional',
+      false
+    );
+    const data = await readAiChatResponse(res);
+    if (!data) return [];
+
     const content = extractAiContent(data);
 
     try {
@@ -204,11 +284,10 @@ Retorna APENAS JSON válido:
     const res = await aiService.chat(
       [{ role: 'user', content: prompt }],
       'Diagnóstico vocacional público do PDC. Não inclua markdown.',
-      false,
+      false
     );
-    if (!res.ok) return null;
-
-    const data = await res.json() as AiChatResponse;
+    const data = await readAiChatResponse(res);
+    if (!data) return null;
     try {
       return LandingVereditoSchema.parse(extractJsonObject(extractAiContent(data)));
     } catch {
@@ -231,9 +310,14 @@ Gera um veredito curto (máx 2 parágrafos) impiedosamente honesto e técnico so
 Usa uma linguagem que misture rigor científico com visão de mercado.
 Retorna APENAS o texto do veredito.`;
 
-    const res = await aiService.chat([{ role: 'user', content: prompt }], 'Análise Psicométrica de Elite', false);
-    const data = await res.json() as AiChatResponse;
-    
+    const res = await aiService.chat(
+      [{ role: 'user', content: prompt }],
+      'Análise Psicométrica de Elite',
+      false
+    );
+    const data = await readAiChatResponse(res);
+    if (!data) return '';
+
     if (data.choices) {
       return data.choices[0]?.message.content || '';
     } else if (data.message) {

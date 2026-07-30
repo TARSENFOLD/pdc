@@ -62,10 +62,13 @@ describe('Sentry bootstrap instrumentation', () => {
         cookies: { access_token: 'secret' },
         data: { otp: '123456' },
         query_string: 'code=oauth-code&state=csrf-state',
+        url: 'https://api.usepdc.com/auth/linkedin/callback?code=oauth-code&state=csrf-state',
         headers: {
           Authorization: 'Bearer secret',
           Cookie: 'refresh_token=secret',
           Accept: 'application/json',
+          Referer: 'https://usepdc.com/oauth?code=oauth-code',
+          'X-Forwarded-For': '203.0.113.42',
         },
       },
     };
@@ -73,6 +76,7 @@ describe('Sentry bootstrap instrumentation', () => {
     expect(sanitized?.request).not.toHaveProperty('cookies');
     expect(sanitized?.request).not.toHaveProperty('data');
     expect(sanitized?.request).not.toHaveProperty('query_string');
+    expect(sanitized?.request?.url).toBe('https://api.usepdc.com/auth/linkedin/callback');
     expect(sanitized?.request?.headers).toEqual({ Accept: 'application/json' });
     expect(options?.beforeSendTransaction).toBeTypeOf('function');
   });
