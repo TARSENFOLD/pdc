@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   initialized: false,
@@ -22,6 +22,13 @@ vi.mock('./main', () => {
 });
 
 describe('web entrypoint', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+    mocks.initialized = false;
+    document.body.innerHTML = '<div id="root"></div>';
+  });
+
   it('inicializa o Sentry antes de carregar a aplicação', async () => {
     await import('./entry');
 
@@ -29,5 +36,21 @@ describe('web entrypoint', () => {
       expect(mocks.initWebSentry).toHaveBeenCalledOnce();
     });
     expect(mocks.captureException).not.toHaveBeenCalled();
+  });
+
+  it('captura falhas de importação e apresenta uma recuperação visível', async () => {
+    const importError = new Error('chunk indisponível');
+    const reloadPage = vi.fn();
+    const { loadWebApplication } = await import('./entry');
+
+    await loadWebApplication(() => Promise.reject(importError), reloadPage);
+
+    expect(mocks.captureException).toHaveBeenCalledWith(importError);
+    expect(document.querySelector('h1')?.textContent).toBe('Falha na inicialização');
+    const retryButton = document.querySelector<HTMLButtonElement>('button');
+    expect(retryButton?.textContent).toBe('Tentar novamente');
+
+    retryButton?.click();
+    expect(reloadPage).toHaveBeenCalledOnce();
   });
 });

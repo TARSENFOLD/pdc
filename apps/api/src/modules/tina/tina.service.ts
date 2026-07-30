@@ -317,12 +317,6 @@ Retorna APENAS o texto do veredito.`;
     );
     const data = await readAiChatResponse(res);
     if (!data) return '';
-
-    if (data.choices) {
-      return data.choices[0]?.message.content || '';
-    } else if (data.message) {
-      return data.message.content;
-    }
-    return '';
+    return extractAiContent(data);
   },
 };

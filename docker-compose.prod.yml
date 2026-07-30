@@ -33,9 +33,9 @@ services:
           --maxmemory-policy noeviction \
           --aclfile /run/redis/users.acl
     environment:
-      REDIS_BFF_PASSWORD: '${REDIS_BFF_PASSWORD:?REDIS_BFF_PASSWORD e obrigatorio}'
-      REDIS_HEALTH_PASSWORD: '${REDIS_HEALTH_PASSWORD:?REDIS_HEALTH_PASSWORD e obrigatorio}'
-      REDIS_BACKUP_PASSWORD: '${REDIS_BACKUP_PASSWORD:?REDIS_BACKUP_PASSWORD e obrigatorio}'
+      REDIS_BFF_PASSWORD: "${REDIS_BFF_PASSWORD:?REDIS_BFF_PASSWORD e obrigatorio}"
+      REDIS_HEALTH_PASSWORD: "${REDIS_HEALTH_PASSWORD:?REDIS_HEALTH_PASSWORD e obrigatorio}"
+      REDIS_BACKUP_PASSWORD: "${REDIS_BACKUP_PASSWORD:?REDIS_BACKUP_PASSWORD e obrigatorio}"
     volumes:
       - pdc-redis-data:/data
     tmpfs:
@@ -72,7 +72,7 @@ services:
       - '--entrypoints.websecure.address=:443'
       - '--certificatesresolvers.letsencrypt.acme.httpchallenge=true'
       - '--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web'
-      - '--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}'
+      - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL}"
       - '--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json'
       - '--entrypoints.web.http.redirections.entrypoint.to=websecure'
       - '--entrypoints.web.http.redirections.entrypoint.scheme=https'
@@ -107,9 +107,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        RELEASE_SHA: "${RELEASE_SHA:?RELEASE_SHA e obrigatorio}"
       labels:
-        org.opencontainers.image.revision: '${RELEASE_SHA:-unlabelled}'
-        org.opencontainers.image.created: '${RELEASE_DATE:-unknown}'
+        org.opencontainers.image.revision: "${RELEASE_SHA:?RELEASE_SHA e obrigatorio}"
+        org.opencontainers.image.created: "${RELEASE_DATE:?RELEASE_DATE e obrigatorio}"
     container_name: pdc-api
     restart: unless-stopped
     env_file:
@@ -120,8 +122,8 @@ services:
       API_URL: https://api.usepdc.com
       FRONTEND_URL: https://usepdc.com
       STRAPI_URL: http://strapi:1337
-      RELEASE_SHA: '${RELEASE_SHA:?RELEASE_SHA e obrigatorio para iniciar a API}'
-      PDC_REDIS_URL: '${PDC_REDIS_URL:?PDC_REDIS_URL e obrigatorio}'
+      RELEASE_SHA: "${RELEASE_SHA:?RELEASE_SHA e obrigatorio para iniciar a API}"
+      PDC_REDIS_URL: "${PDC_REDIS_URL:?PDC_REDIS_URL e obrigatorio}"
     depends_on:
       traefik:
         condition: service_started
@@ -132,8 +134,8 @@ services:
     networks:
       - pdc-network
     labels:
-      - 'org.opencontainers.image.revision=${RELEASE_SHA:-unlabelled}'
-      - 'org.opencontainers.image.created=${RELEASE_DATE:-unknown}'
+      - "org.opencontainers.image.revision=${RELEASE_SHA:?RELEASE_SHA e obrigatorio}"
+      - "org.opencontainers.image.created=${RELEASE_DATE:?RELEASE_DATE e obrigatorio}"
       - 'traefik.enable=true'
       - 'traefik.http.routers.pdc-api.rule=Host(`api.usepdc.com`)'
       - 'traefik.http.routers.pdc-api.entrypoints=websecure'
@@ -164,8 +166,8 @@ services:
       context: ./infra/strapi
       dockerfile: Dockerfile
       labels:
-        org.opencontainers.image.revision: '${RELEASE_SHA:-unlabelled}'
-        org.opencontainers.image.created: '${RELEASE_DATE:-unknown}'
+        org.opencontainers.image.revision: "${RELEASE_SHA:?RELEASE_SHA e obrigatorio}"
+        org.opencontainers.image.created: "${RELEASE_DATE:?RELEASE_DATE e obrigatorio}"
     container_name: pdc-strapi
     restart: unless-stopped
     env_file:
@@ -181,8 +183,8 @@ services:
     volumes:
       - pdc-strapi-uploads:/opt/app/public/uploads
     labels:
-      - 'org.opencontainers.image.revision=${RELEASE_SHA:-unlabelled}'
-      - 'org.opencontainers.image.created=${RELEASE_DATE:-unknown}'
+      - "org.opencontainers.image.revision=${RELEASE_SHA:?RELEASE_SHA e obrigatorio}"
+      - "org.opencontainers.image.created=${RELEASE_DATE:?RELEASE_DATE e obrigatorio}"
       - 'traefik.enable=true'
       - 'traefik.http.routers.pdc-strapi.rule=Host(`cms.usepdc.com`)'
       - 'traefik.http.routers.pdc-strapi.entrypoints=websecure'

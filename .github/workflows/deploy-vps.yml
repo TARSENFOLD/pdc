@@ -3,7 +3,7 @@ name: Deploy VPS (Hetzner)
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ['CI']
     types: [completed]
     branches: [main]
 
@@ -61,6 +61,52 @@ jobs:
             echo "Checked-out revision does not match the CI-approved RELEASE_SHA." >&2
             exit 1
           fi
+
+      - name: Setup Node.js for API source maps
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies for API source maps
+        run: npm ci
+
+      - name: Build API source maps
+        run: |
+          npm run build -w packages/shared
+          npm run build -w apps/api
+          if find apps/api/dist packages/shared/dist -type f \
+            \( -name '*.spec.*' -o -name '*.test.*' -o -path '*/__fixtures__/*' -o -path '*/__mocks__/*' \) \
+            -print -quit | grep -q .; then
+            echo "Production build contains test, fixture, or mock artifacts." >&2
+            exit 1
+          fi
+          npx sentry-cli sourcemaps inject packages/shared/dist apps/api/dist
+
+      - name: Upload private API source maps to Sentry
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_API_PROJECT }}
+        run: |
+          missing=()
+          for variable in SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT RELEASE_SHA; do
+            if [[ -z "${!variable:-}" ]]; then
+              missing+=("${variable}")
+            fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing required API source-map configuration: %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+          npx sentry-cli sourcemaps upload \
+            --org "${SENTRY_ORG}" \
+            --project "${SENTRY_PROJECT}" \
+            --release "${RELEASE_SHA}" \
+            --validate \
+            --wait \
+            packages/shared/dist \
+            apps/api/dist
 
       - name: Setup SSH
         shell: bash

@@ -23,6 +23,7 @@ reviews:
     - '!infra/strapi/types/generated/**'
     - '!apps/web/dist/**'
     - '!apps/edge/dist/**'
+    - '!apps/api/dist/**'
     - '!apps/web/src/locales/**'
     - '!.windsurf/**'
     - '!docs/_archive/**'

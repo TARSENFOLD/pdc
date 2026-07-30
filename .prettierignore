@@ -1,0 +1,5 @@
+# Preserve explicit quoting and required interpolation modifiers in production Compose.
+docker-compose.prod.yml
+
+# Preserve the manually aligned operational secrets matrix.
+docs/operations/secrets-mapping.md
