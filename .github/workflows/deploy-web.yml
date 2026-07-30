@@ -100,10 +100,10 @@ jobs:
         run: echo "::notice title=Cloudflare Pages deploy skipped::Set repository variable CF_PAGES_PROJECT_NAME to enable Pages deploy."
 
       - name: Deploy production to Cloudflare Pages
-        if: vars.CF_PAGES_PROJECT_NAME != '' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/principal')
+        if: vars.CF_PAGES_PROJECT_NAME != ''
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: '.'
-          command: pages deploy apps/web/dist --project-name=${{ env.PAGES_PROJECT_NAME }} --branch=${{ github.ref_name }}
+          command: pages deploy apps/web/dist --project-name=${{ env.PAGES_PROJECT_NAME }} --branch=${{ github.event.workflow_run.head_branch }}

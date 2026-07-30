@@ -3,6 +3,16 @@ import type { StrapiListResponse } from '@pdc/shared';
 import webPush, { WebPushError } from 'web-push';
 import { strapiDelete, strapiGet } from '../strapi/strapi.client.js';
 
+const envMock = vi.hoisted<{
+  WEB_PUSH_PUBLIC_KEY: string | undefined;
+  WEB_PUSH_PRIVATE_KEY: string | undefined;
+  WEB_PUSH_SUBJECT: string | undefined;
+}>(() => ({
+  WEB_PUSH_PUBLIC_KEY: 'public-key',
+  WEB_PUSH_PRIVATE_KEY: 'private-key',
+  WEB_PUSH_SUBJECT: 'mailto:ops@usepdc.com',
+}));
+
 interface TestDeviceTokenRecord {
   id: string | number;
   documentId?: string;
@@ -15,11 +25,7 @@ interface TestDeviceTokenRecord {
 }
 
 vi.mock('../../lib/env.js', () => ({
-  env: {
-    WEB_PUSH_PUBLIC_KEY: 'public-key',
-    WEB_PUSH_PRIVATE_KEY: 'private-key',
-    WEB_PUSH_SUBJECT: 'mailto:ops@usepdc.com',
-  },
+  env: envMock,
 }));
 
 vi.mock('web-push', () => ({
@@ -58,13 +64,9 @@ function listResponse<T extends { id: string | number }>(data: T[]): StrapiListR
 describe('webPushService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.doMock('../../lib/env.js', () => ({
-      env: {
-        WEB_PUSH_PUBLIC_KEY: 'public-key',
-        WEB_PUSH_PRIVATE_KEY: 'private-key',
-        WEB_PUSH_SUBJECT: 'mailto:ops@usepdc.com',
-      },
-    }));
+    envMock.WEB_PUSH_PUBLIC_KEY = 'public-key';
+    envMock.WEB_PUSH_PRIVATE_KEY = 'private-key';
+    envMock.WEB_PUSH_SUBJECT = 'mailto:ops@usepdc.com';
     vi.mocked(webPush.sendNotification).mockResolvedValue({ statusCode: 201, body: '', headers: {} });
     // Garante um módulo fresco ligado ao vi.mock(env) deste ficheiro, evitando
     // contaminação por cache de import entre ficheiros no mesmo worker vitest
@@ -214,8 +216,10 @@ describe('webPushService', () => {
   });
 
   it('retorna summary zerado quando Web Push não está configurado', async () => {
+    envMock.WEB_PUSH_PUBLIC_KEY = undefined;
+    envMock.WEB_PUSH_PRIVATE_KEY = undefined;
+    envMock.WEB_PUSH_SUBJECT = undefined;
     vi.resetModules();
-    vi.doMock('../../lib/env.js', () => ({ env: {} }));
     const { webPushService } = await import('./web-push.service.js');
 
     const result = await webPushService.enviarNotificacao('perfil-1', { title: 'Aviso', body: 'Mensagem' });
@@ -226,14 +230,10 @@ describe('webPushService', () => {
   });
 
   it('não derruba o import quando VAPID está mal configurado', async () => {
+    envMock.WEB_PUSH_PUBLIC_KEY = 'bad-public-key';
+    envMock.WEB_PUSH_PRIVATE_KEY = 'bad-private-key';
+    envMock.WEB_PUSH_SUBJECT = 'mailto:ops@usepdc.com';
     vi.resetModules();
-    vi.doMock('../../lib/env.js', () => ({
-      env: {
-        WEB_PUSH_PUBLIC_KEY: 'bad-public-key',
-        WEB_PUSH_PRIVATE_KEY: 'bad-private-key',
-        WEB_PUSH_SUBJECT: 'mailto:ops@usepdc.com',
-      },
-    }));
     vi.mocked(webPush.setVapidDetails).mockImplementationOnce(() => { throw new Error('bad vapid'); });
 
     const { webPushService } = await import('./web-push.service.js');

@@ -36,6 +36,7 @@ beforeEach(() => {
   mocks.aiChat.mockReset();
   mocks.primaryEnabled = true;
   mocks.redisGet.mockReset();
+  mocks.redisGet.mockResolvedValue(null);
   mocks.redisSet.mockReset();
   mocks.redisSet.mockResolvedValue('OK');
   mocks.warn.mockReset();
@@ -106,14 +107,18 @@ describe('cache de conhecimento Tina', () => {
     );
   });
 
-  it('continua sem chunks quando o cache primário falha', async () => {
+  it('preserva resultados válidos quando uma leitura do cache falha', async () => {
     const error = new Error('Redis indisponível');
-    mocks.redisGet.mockRejectedValueOnce(error);
+    mocks.redisGet.mockImplementation((key: string) => {
+      if (key === 'tina:kb:0') return Promise.reject(error);
+      if (key === 'tina:kb:1') return Promise.resolve(TINA_KNOWLEDGE[1]);
+      return Promise.resolve(null);
+    });
 
-    await expect(tinaService.buscarChunks('simulações')).resolves.toBe('');
+    await expect(tinaService.buscarChunks('simulações práticas')).resolves.toContain('Simulações:');
     expect(mocks.warn).toHaveBeenCalledWith(
-      { err: error },
-      'Cache de conhecimento indisponível; Tina continuará sem chunks'
+      { failedReads: 1, totalReads: TINA_KNOWLEDGE.length },
+      'Falha parcial ao consultar conhecimento da Tina'
     );
   });
 
@@ -172,6 +177,8 @@ describe('respostas externas da Tina', () => {
       mocks.aiChat.mockResolvedValue(createResponse());
 
       await expect(tinaService.gerarPerguntasDesafio('Tecnologia')).resolves.toEqual([]);
+      expect(mocks.warn).toHaveBeenLastCalledWith(expect.any(Object), expectedLogMessage);
+      mocks.warn.mockClear();
 
       mocks.aiChat.mockResolvedValue(createResponse());
       await expect(
@@ -181,6 +188,8 @@ describe('respostas externas da Tina', () => {
           respostas: ['A'],
         })
       ).resolves.toBeNull();
+      expect(mocks.warn).toHaveBeenLastCalledWith(expect.any(Object), expectedLogMessage);
+      mocks.warn.mockClear();
 
       mocks.aiChat.mockResolvedValue(createResponse());
       await expect(
@@ -191,7 +200,7 @@ describe('respostas externas da Tina', () => {
           domainId: 'TECNOLOGIA',
         })
       ).resolves.toBe('');
-      expect(mocks.warn).toHaveBeenCalledWith(expect.any(Object), expectedLogMessage);
+      expect(mocks.warn).toHaveBeenLastCalledWith(expect.any(Object), expectedLogMessage);
     }
   );
 });

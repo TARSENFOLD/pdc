@@ -15,6 +15,8 @@ function restoreEnv(): void {
 
 function setBaseEnv(nodeEnv: 'development' | 'production' | 'test' = 'production'): void {
   for (const key of [
+    'TINA_RATE_LIMIT_PER_USER',
+    'TINA_RATE_LIMIT_GLOBAL',
     'R2_ACCOUNT_ID',
     'R2_ACCESS_KEY_ID',
     'R2_SECRET_ACCESS_KEY',

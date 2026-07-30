@@ -151,17 +151,25 @@ Regras:
         .toLowerCase()
         .split(/\s+/)
         .filter((w) => w.length > 3);
+      const keys = TINA_KNOWLEDGE.map((_, index) => `tina:kb:${index.toString()}`);
+      const reads = await Promise.allSettled(keys.map((key) => redis.get<unknown>(key)));
+      const failedReads = reads.filter((result) => result.status === 'rejected');
+      if (failedReads.length > 0) {
+        log.warn(
+          { failedReads: failedReads.length, totalReads: reads.length },
+          'Falha parcial ao consultar conhecimento da Tina'
+        );
+      }
+
       const matches: string[] = [];
-
-      for (let i = 0; i < TINA_KNOWLEDGE.length; i += 1) {
-        const key = `tina:kb:${i.toString()}`;
-        const rawItem = await redis.get<unknown>(key);
-        if (rawItem === null) continue;
-
+      reads.forEach((result, index) => {
+        if (result.status === 'rejected' || result.value === null) return;
+        const key = keys[index];
+        const rawItem = result.value;
         const item = parseKnowledgeItem(rawItem);
         if (!item) {
           log.warn({ key }, 'Entrada inválida no cache de conhecimento da Tina');
-          continue;
+          return;
         }
         if (
           words.some(
@@ -171,7 +179,7 @@ Regras:
         ) {
           matches.push(`${item.titulo}: ${item.conteudo}`);
         }
-      }
+      });
 
       return matches.slice(0, 3).join(' | ');
     } catch (error: unknown) {
