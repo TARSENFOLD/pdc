@@ -118,6 +118,14 @@ const MOCK_USER_NEW = {
   onboardingCompleto: false,
 };
 
+const MOCK_LEGACY_STUDENT = {
+  id: 'user-42',
+  email: 'student@pdc.ao',
+  role: 'estudante',
+  oauthVerified: false,
+  onboardingCompleto: false,
+};
+
 const MOCK_TOKENS = { accessToken: 'at-abc', refreshToken: 'rt-xyz', refreshMaxAgeSeconds: 7_776_000 };
 const MOCK_TOKENS_FRESH = { accessToken: 'at-fresh', refreshToken: 'rt-fresh', refreshMaxAgeSeconds: 7_775_000 };
 
@@ -464,8 +472,135 @@ describe('POST /finalizar/escolher-role — OAuth role finalization without OTP'
 describe('POST /finalizar/verificar-otp — legacy role upgrade after OTP', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    featureFlagServiceMock.isEnabled.mockResolvedValue(true);
+    authServiceMock.getUserById.mockResolvedValue(MOCK_LEGACY_STUDENT);
     verificarOtpMock.mockResolvedValue(undefined);
     authSessionServiceMock.rotate.mockResolvedValue(MOCK_TOKENS_FRESH);
+  });
+
+  it('bloqueia Mentor antes de consumir OTP quando o flag está desligado', async () => {
+    featureFlagServiceMock.isEnabled.mockResolvedValue(false);
+    authServiceMock.getUserById.mockResolvedValue({
+      ...MOCK_LEGACY_STUDENT,
+      role: 'mentor',
+    });
+    const provisionalToken = await makeTestToken({
+      sub: 'user-42',
+      role: 'estudante',
+      onboardingCompleto: false,
+    });
+
+    const res = await oauthRoutes.request('/finalizar/verificar-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `access_token=${provisionalToken}; refresh_token=current-refresh`,
+      },
+      body: JSON.stringify({ otp: '123456' }),
+    });
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'O onboarding de criadores externos está temporariamente indisponível.',
+      code: 'EXTERNAL_CREATOR_ONBOARDING_TEMPORARILY_DISABLED',
+    });
+    expect(featureFlagServiceMock.isEnabled).toHaveBeenCalledWith(
+      'external_creator_onboarding_enabled',
+    );
+    expect(verificarOtpMock).not.toHaveBeenCalled();
+    expect(authSessionServiceMock.rotate).not.toHaveBeenCalled();
+    expect(setAuthCookiesMock).not.toHaveBeenCalled();
+  });
+
+  it('bloqueia Instituição antes de consumir OTP quando o flag está desligado', async () => {
+    featureFlagServiceMock.isEnabled.mockResolvedValue(false);
+    authServiceMock.getUserById.mockResolvedValue({
+      ...MOCK_LEGACY_STUDENT,
+      id: 'user-55',
+      email: 'inst@pdc.ao',
+      role: 'instituicao',
+    });
+    const provisionalToken = await makeTestToken({
+      sub: 'user-55',
+      role: 'estudante',
+      onboardingCompleto: false,
+    });
+
+    const res = await oauthRoutes.request('/finalizar/verificar-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `access_token=${provisionalToken}; refresh_token=current-refresh`,
+      },
+      body: JSON.stringify({ otp: '654321' }),
+    });
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'O onboarding de criadores externos está temporariamente indisponível.',
+      code: 'EXTERNAL_CREATOR_ONBOARDING_TEMPORARILY_DISABLED',
+    });
+    expect(verificarOtpMock).not.toHaveBeenCalled();
+    expect(authSessionServiceMock.rotate).not.toHaveBeenCalled();
+    expect(setAuthCookiesMock).not.toHaveBeenCalled();
+  });
+
+  it('falha fechado antes de consumir OTP quando o registry está indisponível', async () => {
+    featureFlagServiceMock.isEnabled.mockRejectedValue(new Error('Registry indisponível'));
+    authServiceMock.getUserById.mockResolvedValue({
+      ...MOCK_LEGACY_STUDENT,
+      role: 'mentor',
+    });
+    const provisionalToken = await makeTestToken({
+      sub: 'user-42',
+      role: 'estudante',
+      onboardingCompleto: false,
+    });
+
+    const res = await oauthRoutes.request('/finalizar/verificar-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `access_token=${provisionalToken}; refresh_token=current-refresh`,
+      },
+      body: JSON.stringify({ otp: '123456' }),
+    });
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'O onboarding de criadores externos está temporariamente indisponível.',
+      code: 'EXTERNAL_CREATOR_ONBOARDING_TEMPORARILY_DISABLED',
+    });
+    expect(verificarOtpMock).not.toHaveBeenCalled();
+    expect(authSessionServiceMock.rotate).not.toHaveBeenCalled();
+    expect(setAuthCookiesMock).not.toHaveBeenCalled();
+  });
+
+  it('mantém o fluxo legado de Estudante funcional sem consultar o flag de criador', async () => {
+    featureFlagServiceMock.isEnabled.mockResolvedValue(false);
+    const provisionalToken = await makeTestToken({
+      sub: 'user-42',
+      role: 'estudante',
+      onboardingCompleto: false,
+    });
+
+    const res = await oauthRoutes.request('/finalizar/verificar-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `access_token=${provisionalToken}; refresh_token=current-refresh`,
+      },
+      body: JSON.stringify({ otp: '123456' }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(verificarOtpMock).toHaveBeenCalledWith('user-42', '123456');
+    expect(featureFlagServiceMock.isEnabled).not.toHaveBeenCalled();
+    expect(authSessionServiceMock.rotate).toHaveBeenCalledWith(
+      'current-refresh',
+      MOCK_LEGACY_STUDENT,
+    );
+    expect(setAuthCookiesMock).toHaveBeenCalledWith(expect.anything(), MOCK_TOKENS_FRESH);
   });
 
   it('mints fresh tokens with mentor role after OTP verification', async () => {
