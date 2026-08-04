@@ -43,6 +43,8 @@ export const programasApi = {
 
   getById: (id: string) => http.get<Programa>(`/programas/${id}`),
 
+  getPreviewById: (id: string) => http.get<Programa>(`/programas/${id}?preview=true`),
+
   inscrever: (id: string) =>
     http.post<{ id: string }>(`/programas/${id}/inscricao`, {}),
 

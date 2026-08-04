@@ -90,7 +90,7 @@ describe('Catálogo público contracts', () => {
     }));
   });
 
-  it('lista conteúdos approved e published, alinhado ao pipeline canónico de moderação', async () => {
+  it('lista apenas versões publicadas que continuam approved', async () => {
     vi.mocked(strapiGet).mockResolvedValue(listResponse([
       {
         id: 'curso-approved',
@@ -105,7 +105,8 @@ describe('Catálogo público contracts', () => {
 
     expect(res.status).toBe(200);
     expect(strapiGet).toHaveBeenCalledWith('/cursos', expect.objectContaining({
-      'filters[estado][$in]': ['approved', 'published'],
+      status: 'published',
+      'filters[estado][$eq]': 'approved',
     }));
     await expect(res.json()).resolves.toMatchObject({
       data: [{ id: 'curso-approved', titulo: 'Curso aprovado' }],
@@ -123,13 +124,16 @@ describe('Catálogo público contracts', () => {
     }));
   });
 
-  it('devolve 502 sem mascarar falha de persistência do catálogo', async () => {
+  it('devolve erro canónico sem mascarar falha de persistência do catálogo', async () => {
     vi.mocked(strapiGet).mockRejectedValue(new Error('Strapi indisponível'));
 
     const res = await app.request('/catalogo/simulacoes?page=1&pageSize=12');
 
-    expect(res.status).toBe(502);
-    await expect(res.json()).resolves.toEqual({ error: 'Falha ao carregar catálogo de simulações' });
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
   });
 
   it('resolve perfil público por perfil.id numérico gerado pelo próprio catálogo', async () => {

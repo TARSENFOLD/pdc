@@ -6,6 +6,7 @@ import {
   filterVwxExperiences,
   isVwxCatalogEnabled,
 } from '../modules/feature-flags/vwx-catalog-gate.js';
+import { CONTENT_ACCESS_ERRORS } from '../modules/conteudo/content-access.service.js';
 
 export const seoRoutes = new Hono();
 
@@ -72,6 +73,6 @@ seoRoutes.get('/sitemap.xml', async (c) => {
     });
 
   } catch {
-    return c.text('Error generating sitemap', 500);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });

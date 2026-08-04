@@ -51,7 +51,7 @@ import { redis } from '../lib/redis.js';
 import { authSessionService } from '../modules/auth/auth-session.service.js';
 import { fetchCandidates, getItemStats, buildFeatures, calcRecencyScore, calcScore, mapConcurrent } from './feed.helpers.js';
 import { getWeights } from '../modules/feed/feed.weights.js';
-import type { StrapiListResponse, HomeSummary } from '@pdc/shared';
+import { HomeSummarySchema, type StrapiListResponse, type HomeSummary } from '@pdc/shared';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -147,10 +147,41 @@ describe('GET /app/home', () => {
     const res = await homeRoutes.request(authRequest());
 
     expect(res.status).toBe(200);
-    const body = await res.json() as HomeSummary;
+    const body = HomeSummarySchema.parse(await res.json());
     expect(body.personalizedMessage).toBe('cached');
     expect(strapiGet).not.toHaveBeenCalled();
     expect(fetchCandidates).not.toHaveBeenCalled();
+  });
+
+  it('não usa actividade de aprendizagem em cache sem revalidação autoritativa', async () => {
+    const cachedSummary: HomeSummary = {
+      greeting: 'Olá, Ana!',
+      personalizedMessage: 'cached-governed',
+      stats: { xp: 50, reputacao: 100, conquistasCount: 1, pendingActions: 0 },
+      nextDirective: null,
+      socialPulse: [],
+      quickActions: [],
+      recentActivitiesCursos: [{
+        inscricaoId: 'insc-1',
+        cursoId: 'curso-1',
+        cursoTitulo: 'Curso antes publicado',
+        cursoCapaUrl: null,
+        progressoPercentual: 20,
+        ultimaAtividadeEm: '2026-08-01T10:00:00.000Z',
+      }],
+      recentActivitiesSimulacoes: [],
+      onboardingVideo: null,
+      trendingComunidade: [],
+      aprenderAgora: [],
+    };
+    vi.mocked(redis.get).mockResolvedValue(cachedSummary);
+
+    const res = await homeRoutes.request(authRequest());
+
+    expect(res.status).toBe(200);
+    const body = HomeSummarySchema.parse(await res.json());
+    expect(body.personalizedMessage).not.toBe('cached-governed');
+    expect(strapiGet).toHaveBeenCalled();
   });
 
   it('cache miss: faz 4 chamadas Strapi + fetchCandidates e persiste no cache', async () => {
@@ -165,7 +196,7 @@ describe('GET /app/home', () => {
     expect(strapiGet).toHaveBeenCalledWith('/tentativas', expect.objectContaining({ 'filters[perfil][userId][$eq]': 'user-1' }));
     expect(strapiGet).toHaveBeenCalledWith('/onboarding-videos', expect.objectContaining({ 'filters[role][$eq]': 'estudante' }));
     expect(fetchCandidates).toHaveBeenCalledOnce();
-    expect(redis.set).toHaveBeenCalledWith('home:summary:user-1', expect.any(Object), { ex: 60 });
+    expect(redis.set).toHaveBeenCalledWith('home:summary:v2:user-1', expect.any(Object), { ex: 60 });
   });
 
   it('cache miss + Redis down: computa direto sem escrever cache', async () => {
@@ -178,18 +209,16 @@ describe('GET /app/home', () => {
     expect(redis.set).not.toHaveBeenCalled();
   });
 
-  it('Strapi down: degradação graceful — retorna 200 com estrutura vazia', async () => {
-    // A rota usa .catch() individuais em cada Promise.all para resiliência.
-    // Quando Strapi está inacessível, o home retorna 200 com dados vazios
-    // em vez de 502, evitando erro visível ao utilizador (graceful degradation).
+  it('Strapi down: devolve falha de dependência sem estrutura vazia falsa', async () => {
     vi.mocked(strapiGet).mockRejectedValue(new Error('Strapi 502'));
 
     const res = await homeRoutes.request(authRequest());
 
-    expect(res.status).toBe(200);
-    const body = await res.json() as Record<string, unknown>;
-    expect(body).toHaveProperty('recentActivitiesCursos');
-    expect(body).toHaveProperty('recentActivitiesSimulacoes');
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
   });
 
   it('user novo sem inscrições/tentativas: retorna 200 com arrays vazios', async () => {
@@ -287,6 +316,20 @@ describe('GET /app/home', () => {
         dataInicio: new Date().toISOString(),
         simulacao: { id: 55, titulo: 'Sim Y' },
       }]));
+      if (path === '/cursos') return Promise.resolve(listResponse([{
+        id: 99,
+        titulo: 'Curso X',
+        autorId: 'author-course',
+        estado: 'approved',
+      }]));
+      if (path === '/simulacoes') return Promise.resolve(listResponse([{
+        id: 55,
+        titulo: 'Sim Y',
+        autorId: 'author-sim',
+        estado: 'approved',
+        tipo: 2,
+        area: 'TECNOLOGIA',
+      }]));
       return Promise.resolve(emptyList());
     });
 
@@ -298,6 +341,34 @@ describe('GET /app/home', () => {
     expect(body.recentActivitiesCursos[0]?.inscricaoId).toBe('7');
     expect(body.recentActivitiesSimulacoes[0]?.tentativaId).toBe('8');
     expect(body.recentActivitiesSimulacoes[0]?.simulacaoId).toBe('55');
+  });
+
+  it('relação de actividade com curso ocultado devolve CONTENT_NOT_AVAILABLE', async () => {
+    vi.mocked(strapiGet).mockImplementation((path: string, params?: Record<string, string | string[]>) => {
+      if (path === '/perfis') return Promise.resolve(listResponse([{ id: 'perfil-1', nome: 'Ana' }]));
+      if (path === '/inscricoes') return Promise.resolve(listResponse([{
+        id: 'insc-1',
+        curso: { id: 'curso-1', titulo: 'Curso ocultado' },
+      }]));
+      if (path === '/tentativas' || path === '/onboarding-videos') return Promise.resolve(emptyList());
+      if (path === '/cursos') {
+        return Promise.resolve(listResponse([{
+          id: 'curso-1',
+          titulo: 'Curso ocultado',
+          autorId: 'author-1',
+          estado: params?.status === 'draft' ? 'hidden' : 'approved',
+        }]));
+      }
+      return Promise.resolve(emptyList());
+    });
+
+    const res = await homeRoutes.request(authRequest());
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: 'Este conteúdo já não está disponível.',
+      code: 'CONTENT_NOT_AVAILABLE',
+    });
   });
 
   it('não requer autenticação → 401', async () => {

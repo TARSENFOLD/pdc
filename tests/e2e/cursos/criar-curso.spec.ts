@@ -1,4 +1,7 @@
 import { test, expect } from '../../helpers/fixtures';
+import { z } from 'zod';
+
+const CreatedCourseSchema = z.object({ documentId: z.string().min(1) });
 
 test.describe('Criar Curso', () => {
   test('QA interno cria e reabre rascunho no RichShell', async ({ adminPage }) => {
@@ -17,12 +20,16 @@ test.describe('Criar Curso', () => {
     await adminPage.getByRole('button', { name: 'Salvar Rascunho' }).click();
     const createResponse = await createResponsePromise;
     expect(createResponse.status()).toBe(201);
-    const created = await createResponse.json() as { id: string | number };
-    if (created.id === undefined || created.id === null || created.id === '') {
-      throw new Error('Resposta de criação do curso não contém id');
-    }
+    const created = CreatedCourseSchema.parse(await createResponse.json());
 
-    await adminPage.goto(`/app/mentor/cursos/${String(created.id)}/editar`);
+    const previewResponsePromise = adminPage.waitForResponse((response) =>
+      response.url().includes(`/cursos/${created.documentId}?preview=true`)
+        && response.request().method() === 'GET',
+    );
+    await adminPage.goto(`/app/mentor/cursos/${created.documentId}/editar`);
+    const previewResponse = await previewResponsePromise;
+    const previewBody = await previewResponse.text();
+    expect(previewResponse.status(), previewBody).toBe(200);
     await expect(adminPage.locator('input[name="titulo"]')).toHaveValue(title);
     await expect(adminPage.locator('select[name="area"]')).toHaveValue('TECNOLOGIA');
   });

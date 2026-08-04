@@ -13,6 +13,11 @@ import {
   filterVwxExperiences,
   isVwxCatalogEnabled,
 } from '../modules/feature-flags/vwx-catalog-gate.js';
+import {
+  applyAuthoritativePublicContentFilter,
+  CONTENT_ACCESS_ERRORS,
+} from '../modules/conteudo/content-access.service.js';
+import { appendContentEntityIdentityFilters } from '../modules/conteudo/content-access.repository.js';
 
 type Vars = { Variables: AuthVariables };
 export const feedRoutes = new Hono<Vars>();
@@ -42,6 +47,49 @@ interface FeedExperienceVariant {
   tipoExperiencia?: 'institucional' | 'vwx';
 }
 
+interface PublishedFeedReference {
+  id: string | number;
+  documentId?: string;
+}
+
+const FEED_CONTENT_COLLECTIONS = [
+  { tipo: 'curso', collection: '/cursos' },
+  { tipo: 'simulacao', collection: '/simulacoes' },
+  { tipo: 'experiencia', collection: '/experiencias' },
+  { tipo: 'programa', collection: '/programas' },
+] as const;
+type GovernedFeedContentType = (typeof FEED_CONTENT_COLLECTIONS)[number]['tipo'];
+
+function feedReferenceKey(tipo: GovernedFeedContentType, id: string): string {
+  return `${tipo}:${id}`;
+}
+
+function isGovernedFeedContentType(tipo: FeedItemTipo): tipo is GovernedFeedContentType {
+  return FEED_CONTENT_COLLECTIONS.some((entry) => entry.tipo === tipo);
+}
+
+async function filterPublishedFeedItems(items: FeedItem[]): Promise<FeedItem[]> {
+  const visible = new Set<string>();
+  await Promise.all(FEED_CONTENT_COLLECTIONS.map(async ({ tipo, collection }) => {
+    const ids = [...new Set(items.filter((item) => item.tipo === tipo).map((item) => item.id))];
+    if (ids.length === 0) return;
+    const params: Record<string, string | string[]> = {
+      'pagination[pageSize]': String(ids.length),
+    };
+    applyAuthoritativePublicContentFilter(params);
+    appendContentEntityIdentityFilters(params, ids);
+    const response = await strapiGet<PublishedFeedReference>(collection, params);
+    for (const entity of response.data) {
+      visible.add(feedReferenceKey(tipo, String(entity.id)));
+      if (entity.documentId) visible.add(feedReferenceKey(tipo, entity.documentId));
+    }
+  }));
+  return items.filter((item) => {
+    if (!isGovernedFeedContentType(item.tipo)) return true;
+    return visible.has(feedReferenceKey(item.tipo, item.id));
+  });
+}
+
 async function filterVwxFeedItems(items: FeedItem[]): Promise<FeedItem[]> {
   const experienceIds = [...new Set(
     items.filter((item) => item.tipo === 'experiencia').map((item) => item.id),
@@ -52,24 +100,21 @@ async function filterVwxFeedItems(items: FeedItem[]): Promise<FeedItem[]> {
   const filters: Record<string, string> = {
     'pagination[pageSize]': String(experienceIds.length),
   };
-  for (const [index, id] of experienceIds.entries()) {
-    filters[`filters[$or][${String(index * 2)}][id][$eq]`] = id;
-    filters[`filters[$or][${String(index * 2 + 1)}][documentId][$eq]`] = id;
-  }
+  applyAuthoritativePublicContentFilter(filters);
+  appendContentEntityIdentityFilters(filters, experienceIds);
 
-  try {
-    const response = await strapiGet<FeedExperienceVariant>('/experiencias', filters);
-    const visibleIds = new Set(
-      filterVwxExperiences(response.data, false).flatMap((experience) => [
-        String(experience.id),
-        ...(experience.documentId ? [experience.documentId] : []),
-      ]),
-    );
-    return items.filter((item) => item.tipo !== 'experiencia' || visibleIds.has(item.id));
-  } catch (err) {
-    log.error({ err, experienceIds }, 'Falha ao classificar experiências do feed; ocultando entradas');
-    return items.filter((item) => item.tipo !== 'experiencia');
-  }
+  const response = await strapiGet<FeedExperienceVariant>('/experiencias', filters);
+  const visibleIds = new Set(
+    filterVwxExperiences(response.data, false).flatMap((experience) => [
+      String(experience.id),
+      ...(experience.documentId ? [experience.documentId] : []),
+    ]),
+  );
+  return items.filter((item) => item.tipo !== 'experiencia' || visibleIds.has(item.id));
+}
+
+async function protectFeedItems(items: FeedItem[]): Promise<FeedItem[]> {
+  return filterVwxFeedItems(await filterPublishedFeedItems(items));
 }
 
 function mapFeedEntry(entry: FeedEntryRecord): FeedItem | null {
@@ -105,10 +150,12 @@ async function readFeedEntries(
   const cacheKey = `feed:${source}:${cacheScope ?? area ?? 'all'}`;
   const cached = await redis.get<{ data: FeedItem[]; meta: FeedEntriesMeta }>(cacheKey).catch(() => null);
   if (cached) {
-    const data = await filterVwxFeedItems(cached.data);
+    const data = await protectFeedItems(cached.data);
     return { ...cached, data, meta: { ...cached.meta, total: data.length } };
   }
 
+  let mapped: FeedItem[];
+  let cacheValue: { data: FeedItem[]; meta: FeedEntriesMeta };
   try {
     const params: Record<string, string> = {
       'filters[source][$eq]': source,
@@ -121,23 +168,23 @@ async function readFeedEntries(
     const res = await strapiGet<FeedEntryRecord>('/feed-entries', params);
     if (res.data.length === 0) return null;
 
-    const mapped = res.data.flatMap((entry) => {
+    mapped = res.data.flatMap((entry) => {
       const item = mapFeedEntry(entry);
       return item ? [item] : [];
     });
     if (mapped.length === 0) return null;
-    const data = await filterVwxFeedItems(mapped);
-    const result = { data, meta: { total: data.length, fromFeedEntries: true as const, ...extraMeta } };
-    const cacheValue = {
+    cacheValue = {
       data: mapped,
       meta: { total: mapped.length, fromFeedEntries: true as const, ...extraMeta },
     };
-    await redis.set(cacheKey, cacheValue, { ex: 300 }).catch(() => undefined);
-    return result;
   } catch (err) {
     log.warn({ err, source, area, cacheScope }, 'Falha ao ler feed-entries canónicas');
     return null;
   }
+  const data = await protectFeedItems(mapped);
+  const result = { data, meta: { total: data.length, fromFeedEntries: true as const, ...extraMeta } };
+  await redis.set(cacheKey, cacheValue, { ex: 300 }).catch(() => undefined);
+  return result;
 }
 
 async function buildFeed(userId: string, weights: FeedWeights, limit = 50) {
@@ -172,7 +219,7 @@ feedRoutes.get('/', verifyJwt, async (c) => {
     if (fromEntries) return c.json(fromEntries);
     return c.json(await buildFeed(user.id, await getWeights('geral')));
   } catch {
-    return c.json({ error: 'Erro ao processar feed' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -183,7 +230,7 @@ feedRoutes.get('/geral', verifyJwt, async (c) => {
     if (fromEntries) return c.json(fromEntries);
     return c.json(await buildFeed(user.id, await getWeights('geral')));
   } catch {
-    return c.json({ error: 'Erro ao processar feed' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -198,7 +245,7 @@ feedRoutes.get('/trending', verifyJwt, async (c) => {
     const result = await buildFeed(user.id, weights);
     return c.json(result);
   } catch {
-    return c.json({ error: 'Erro ao processar feed trending' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -248,7 +295,7 @@ feedRoutes.get('/vocacional', verifyJwt, async (c) => {
     const sorted = items.sort((a: FeedItem, b: FeedItem) => (b.score || 0) - (a.score || 0));
     return c.json({ data: sorted.slice(0, 50), meta: { total: sorted.length, areaMatch } });
   } catch {
-    return c.json({ error: 'Erro ao processar feed vocacional' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -279,13 +326,15 @@ feedRoutes.get('/institucional', verifyJwt, async (c) => {
     if (fromEntries) return c.json(fromEntries);
 
     // 2. Buscar experiências da instituição (principal tipo de conteúdo B2B)
+    const experienceParams: Record<string, string | string[]> = {
+      'filters[instituicaoNome][$eq]': instituicaoNome,
+      'pagination[pageSize]': '100',
+      sort: 'publishedAt:desc',
+      populate: 'instituicao',
+    };
+    applyAuthoritativePublicContentFilter(experienceParams);
     const [experiencias, feedPosts] = await Promise.all([
-      strapiGet<StrapiEntity>('/experiencias', {
-        'filters[instituicaoNome][$eq]': instituicaoNome,
-        'pagination[pageSize]': '100',
-        sort: 'publishedAt:desc',
-        populate: 'instituicao',
-      }),
+      strapiGet<StrapiEntity>('/experiencias', experienceParams),
       strapiGet<StrapiEntity>('/feed-posts', {
         'filters[estado][$eq]': 'aprovada',
         'filters[autor][instituicao][nome][$eq]': instituicaoNome,
@@ -320,7 +369,7 @@ feedRoutes.get('/institucional', verifyJwt, async (c) => {
     const sorted = items.sort((a: FeedItem, b: FeedItem) => (b.score || 0) - (a.score || 0));
     return c.json({ data: sorted.slice(0, 50), meta: { total: sorted.length, instituicaoNome } });
   } catch {
-    return c.json({ error: 'Erro ao processar feed institucional' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 

@@ -22,6 +22,14 @@ import type {
   TrendingItem,
   FeedItemTipo,
 } from '@pdc/shared';
+import { cursosService } from '../modules/cursos/cursos.service.js';
+import { loadSimulacaoVersions } from '../modules/simulacoes/simulacao-access.repository.js';
+import {
+  CONTENT_ACCESS_ERRORS,
+  canReadResolvedPublicContent,
+  isUnavailableContentState,
+  parseContentState,
+} from '../modules/conteudo/content-access.service.js';
 
 const log = pino({ name: 'routes:home' });
 
@@ -48,6 +56,7 @@ interface InscricaoRaw {
   createdAt?: string;
   curso?: {
     id: string | number;
+    documentId?: string;
     titulo?: string;
     capaUrl?: string | null;
   };
@@ -61,6 +70,7 @@ interface TentativaRaw {
   createdAt?: string;
   simulacao?: {
     id: string | number;
+    documentId?: string;
     titulo?: string;
   };
 }
@@ -80,6 +90,24 @@ interface OnboardingVideoRaw {
 const COMMUNITY_TIPOS = new Set<FeedItemTipo>(['post', 'projeto']);
 const LEARNING_TIPOS = new Set<FeedItemTipo>(['curso', 'simulacao', 'experiencia', 'programa']);
 const HOME_TRENDING_CANDIDATE_LIMIT = 10;
+
+class HiddenContentRelationError extends Error {
+  constructor() {
+    super('Relação existente aponta para conteúdo indisponível');
+    this.name = 'HiddenContentRelationError';
+  }
+}
+
+function contentIdentifier(relation: { id: string | number; documentId?: string }): string {
+  return relation.documentId ?? String(relation.id);
+}
+
+function cachedHomeHasGovernedContent(summary: HomeSummary): boolean {
+  return summary.recentActivitiesCursos.length > 0
+    || summary.recentActivitiesSimulacoes.length > 0
+    || summary.aprenderAgora.length > 0
+    || summary.nextDirective?.type === 'learning';
+}
 
 // ── Quick Actions por role (BFF SSOT — INV-B2: 5 botões) ─────────────────────
 
@@ -129,41 +157,53 @@ async function computeHomeSummary(userId: string, role: string): Promise<HomeSum
     strapiGet<PerfilStats>('/perfis', {
       'filters[userId][$eq]': userId,
       'fields': 'xp,reputacao,conquistasCount,vinkulosCount,activeStudents,activePrograms,nome',
-    }).catch(() => ({
-      data: [] as (PerfilStats & { id: string | number })[],
-      meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
-    })),
+    }),
     strapiGet<InscricaoRaw>('/inscricoes', {
       'filters[perfil][userId][$eq]': userId,
       'sort': 'ultimaAtividadeEm:desc',
       'pagination[pageSize]': '2',
       'populate': 'curso',
-    }).catch(() => ({
-      data: [] as (InscricaoRaw & { id: string | number })[],
-      meta: { pagination: { page: 1, pageSize: 2, pageCount: 0, total: 0 } },
-    })),
+    }),
     strapiGet<TentativaRaw>('/tentativas', {
       'filters[perfil][userId][$eq]': userId,
       'sort': 'dataInicio:desc',
       'pagination[pageSize]': '2',
       'populate': 'simulacao',
-    }).catch(() => ({
-      data: [] as (TentativaRaw & { id: string | number })[],
-      meta: { pagination: { page: 1, pageSize: 2, pageCount: 0, total: 0 } },
-    })),
+    }),
     strapiGet<OnboardingVideoRaw>('/onboarding-videos', {
       'filters[role][$eq]': role,
       'pagination[pageSize]': '1',
-    }).catch(() => ({
-      data: [] as (OnboardingVideoRaw & { id: string | number })[],
-      meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
-    })),
-    fetchCandidates().catch(() => [] as Array<StrapiEntity & { tipo: FeedItemTipo }>),
+    }),
+    fetchCandidates(),
   ]);
+
+  const visibleInscricoes = (await Promise.all(inscricoesRes.data.map(async (inscricao) => {
+    if (!inscricao.curso) return undefined;
+    const versions = await cursosService.obterVersoesCurso(contentIdentifier(inscricao.curso));
+    const currentState = parseContentState((versions.current ?? versions.published)?.estado);
+    if (isUnavailableContentState(currentState)) throw new HiddenContentRelationError();
+    return canReadResolvedPublicContent({
+      currentState,
+      publishedState: parseContentState(versions.published?.estado),
+      hasPublishedVersion: versions.published !== undefined,
+    }) ? inscricao : undefined;
+  }))).filter((inscricao): inscricao is InscricaoRaw & { id: string | number } => inscricao !== undefined);
+
+  const visibleTentativas = (await Promise.all(tentativasRes.data.map(async (tentativa) => {
+    if (!tentativa.simulacao) return undefined;
+    const versions = await loadSimulacaoVersions(contentIdentifier(tentativa.simulacao));
+    const currentState = parseContentState((versions.current ?? versions.published)?.estado);
+    if (isUnavailableContentState(currentState)) throw new HiddenContentRelationError();
+    return canReadResolvedPublicContent({
+      currentState,
+      publishedState: parseContentState(versions.published?.estado),
+      hasPublishedVersion: versions.published !== undefined,
+    }) ? tentativa : undefined;
+  }))).filter((tentativa): tentativa is TentativaRaw & { id: string | number } => tentativa !== undefined);
 
   const perfil = perfilRes.data[0];
 
-  const recentActivitiesCursos: InscricaoActivity[] = inscricoesRes.data.flatMap((i) => {
+  const recentActivitiesCursos: InscricaoActivity[] = visibleInscricoes.flatMap((i) => {
     if (i.curso == null) return [];
     const curso = i.curso;
     return [{
@@ -176,7 +216,7 @@ async function computeHomeSummary(userId: string, role: string): Promise<HomeSum
     }];
   });
 
-  const recentActivitiesSimulacoes: TentativaActivity[] = tentativasRes.data.flatMap((t) => {
+  const recentActivitiesSimulacoes: TentativaActivity[] = visibleTentativas.flatMap((t) => {
     if (t.simulacao == null) return [];
     const simulacao = t.simulacao;
     return [{
@@ -245,10 +285,10 @@ async function computeHomeSummary(userId: string, role: string): Promise<HomeSum
   const nomePerfil = perfil?.nome?.split(' ')[0] ?? 'estudante';
 
   // nextDirective: contextual next action derived from user state
-  const inProgressInscricao = inscricoesRes.data.find(
+  const inProgressInscricao = visibleInscricoes.find(
     (i) => i.progressoPercentual != null && i.progressoPercentual > 0 && i.progressoPercentual < 100
   );
-  const inProgressTentativa = tentativasRes.data.find((t) => t.status === 'em_progresso');
+  const inProgressTentativa = visibleTentativas.find((t) => t.status === 'em_progresso');
   let nextDirective: HomeSummary['nextDirective'] = null;
   if (role === 'super_admin' || role === 'moderador') {
     nextDirective = { label: 'Rever conteúdos pendentes', to: '/app/moderacao/aprovacoes', type: 'review', description: 'Conteúdos aguardam moderação' };
@@ -291,12 +331,12 @@ async function computeHomeSummary(userId: string, role: string): Promise<HomeSum
 
 homeRoutes.get('/', verifyJwt, async (c) => {
   const user = c.get('user');
-  const cacheKey = `home:summary:${user.id}`;
+  const cacheKey = `home:summary:v2:${user.id}`;
 
   let redisAvailable = true;
   try {
     const cached = await redis.get<HomeSummary>(cacheKey);
-    if (cached) {
+    if (cached && !cachedHomeHasGovernedContent(cached)) {
       return c.json(cached);
     }
   } catch (err) {
@@ -309,7 +349,10 @@ homeRoutes.get('/', verifyJwt, async (c) => {
     summary = await computeHomeSummary(user.id, user.role);
   } catch (err) {
     log.warn({ err, userId: user.id }, 'home: Strapi indisponível');
-    return c.json({ error: 'Serviço temporariamente indisponível' }, 502);
+    if (err instanceof HiddenContentRelationError) {
+      return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+    }
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 
   if (redisAvailable) {

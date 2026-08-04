@@ -140,14 +140,14 @@ describe('feed helpers', () => {
           {
             id: 'exp-institucional',
             tipoExperiencia: 'institucional',
-            estado: 'published',
+            estado: 'approved',
             visibilidade: 'publico',
             createdAt: '2026-07-30T10:00:00.000Z',
           },
           {
             id: 'exp-vwx',
             tipoExperiencia: 'vwx',
-            estado: 'published',
+            estado: 'approved',
             visibilidade: 'publico',
             createdAt: '2026-07-30T10:00:00.000Z',
           },

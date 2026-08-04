@@ -1,6 +1,7 @@
-import { test as setup, expect } from '@playwright/test';
+import { test as setup, expect, type APIRequestContext } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { z } from 'zod';
 import { E2E_ACEITE_LEGAL, E2E_DATA_NASCIMENTO_ADULTO } from '../helpers/compliance';
 
 // `aluno` is a legacy fixture alias; both files authenticate the canonical estudante role.
@@ -15,6 +16,80 @@ const ESSENTIAL_COOKIE_CONSENT = JSON.stringify({
 const STRAPI_URL = process.env.STRAPI_URL ?? 'http://localhost:1337';
 const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN ?? 'test-strapi-token';
 
+const SeedEntitySchema = z.object({
+  id: z.union([z.string(), z.number()]),
+  documentId: z.string().optional(),
+});
+const SeedListResponseSchema = z.object({ data: z.array(SeedEntitySchema).optional() });
+
+interface CourseSeedPayload {
+  titulo: string;
+  slug: string;
+  descricao: string;
+  area: 'TECNOLOGIA';
+  nivel: 'basico';
+  estado: 'approved' | 'draft';
+  autorId: string;
+  gratuito: true;
+  visibilidade: 'publico';
+}
+
+interface SimulationSeedPayload {
+  titulo: string;
+  slug: string;
+  descricao: string;
+  area: 'TECNOLOGIA';
+  tipo: 3;
+  tipoSimulacao: 'tipo3';
+  tipoLab: 'sandbox';
+  estado: 'approved';
+  autorId: string;
+  validadoAcademicamente: true;
+  tentativasMaximas: 0;
+  criteriosAvaliacao: { pesos: { fluidez: 40; resiliencia: 30; foco: 30 } };
+}
+
+type CatalogSeedPayload = CourseSeedPayload | SimulationSeedPayload;
+
+async function upsertCatalogFixture(
+  request: APIRequestContext,
+  collection: 'cursos' | 'simulacoes',
+  payload: CatalogSeedPayload,
+  status: 'draft' | 'published',
+): Promise<void> {
+  const headers = {
+    Authorization: `Bearer ${STRAPI_API_TOKEN}`,
+    'Content-Type': 'application/json',
+  };
+  const find = async (requestedStatus: 'draft' | 'published') => {
+    const query = new URLSearchParams({
+      'filters[slug][$eq]': payload.slug,
+      'pagination[pageSize]': '1',
+      status: requestedStatus,
+    });
+    const response = await request.get(`${STRAPI_URL}/api/${collection}?${query.toString()}`, {
+      headers,
+    });
+    expect(response).toBeOK();
+    return SeedListResponseSchema.parse(await response.json()).data?.[0];
+  };
+
+  const existing = await find(status) ?? (status === 'published' ? await find('draft') : undefined);
+  const response = existing
+    ? await request.put(
+        `${STRAPI_URL}/api/${collection}/${existing.documentId ?? String(existing.id)}?status=${status}`,
+        { headers, data: { data: payload } },
+      )
+    : await request.post(`${STRAPI_URL}/api/${collection}?status=${status}`, {
+        headers,
+        data: { data: payload },
+      });
+  expect(response).toBeOK();
+
+  const persisted = await find(status);
+  expect(persisted, `${collection}/${payload.slug} must have a ${status} version`).toBeDefined();
+}
+
 setup.describe.configure({ mode: 'serial', timeout: 90_000 });
 
 // Ensure auth directory exists
@@ -23,69 +98,44 @@ if (!fs.existsSync(AUTH_DIR)) {
 }
 
 setup('seed canonical E2E catalog content', async ({ request }) => {
-  const headers = {
-    Authorization: `Bearer ${STRAPI_API_TOKEN}`,
-    'Content-Type': 'application/json',
-  };
-  const query = new URLSearchParams({
-    'filters[slug][$eq]': 'sim-tipo3-e2e',
-    'pagination[pageSize]': '1',
-  });
-  const existing = await request.get(`${STRAPI_URL}/api/simulacoes?${query.toString()}`, { headers });
-  expect(existing).toBeOK();
-  const existingBody = await existing.json() as { data?: unknown[] };
-  if (!Array.isArray(existingBody.data) || existingBody.data.length === 0) {
-    const created = await request.post(`${STRAPI_URL}/api/simulacoes`, {
-      headers,
-      data: {
-        data: {
-          titulo: 'Simulação Alta Fidelidade E2E',
-          slug: 'sim-tipo3-e2e',
-          descricao: 'Cenário E2E publicado para validar o player Tipo 3 e o ciclo de telemetria.',
-          area: 'TECNOLOGIA',
-          tipo: 3,
-          tipoSimulacao: 'tipo3',
-          tipoLab: 'sandbox',
-          estado: 'published',
-          autorId: 'e2e-seed',
-          validadoAcademicamente: true,
-          tentativasMaximas: 0,
-          criteriosAvaliacao: { pesos: { fluidez: 40, resiliencia: 30, foco: 30 } },
-        },
-      },
-    });
-    expect(created).toBeOK();
-  }
+  await upsertCatalogFixture(request, 'simulacoes', {
+    titulo: 'Simulação Alta Fidelidade E2E',
+    slug: 'sim-tipo3-e2e',
+    descricao: 'Cenário E2E publicado para validar o player Tipo 3 e o ciclo de telemetria.',
+    area: 'TECNOLOGIA',
+    tipo: 3,
+    tipoSimulacao: 'tipo3',
+    tipoLab: 'sandbox',
+    estado: 'approved',
+    autorId: 'e2e-seed',
+    validadoAcademicamente: true,
+    tentativasMaximas: 0,
+    criteriosAvaliacao: { pesos: { fluidez: 40, resiliencia: 30, foco: 30 } },
+  }, 'published');
 
-  const courseQuery = new URLSearchParams({
-    'filters[slug][$eq]': 'curso-programa-e2e',
-    'pagination[pageSize]': '1',
-  });
-  const existingCourse = await request.get(
-    `${STRAPI_URL}/api/cursos?${courseQuery.toString()}`,
-    { headers },
-  );
-  expect(existingCourse).toBeOK();
-  const existingCourseBody = await existingCourse.json() as { data?: unknown[] };
-  if (!Array.isArray(existingCourseBody.data) || existingCourseBody.data.length === 0) {
-    const createdCourse = await request.post(`${STRAPI_URL}/api/cursos`, {
-      headers,
-      data: {
-        data: {
-          titulo: 'Curso Publicado E2E',
-          slug: 'curso-programa-e2e',
-          descricao: 'Curso publicado para validar relações de programas.',
-          area: 'TECNOLOGIA',
-          nivel: 'basico',
-          estado: 'published',
-          autorId: 'e2e-seed',
-          gratuito: true,
-          visibilidade: 'publico',
-        },
-      },
-    });
-    expect(createdCourse).toBeOK();
-  }
+  await upsertCatalogFixture(request, 'cursos', {
+    titulo: 'Curso Publicado E2E',
+    slug: 'curso-programa-e2e',
+    descricao: 'Curso aprovado com versão publicada para validar relações de programas.',
+    area: 'TECNOLOGIA',
+    nivel: 'basico',
+    estado: 'approved',
+    autorId: 'e2e-seed',
+    gratuito: true,
+    visibilidade: 'publico',
+  }, 'published');
+
+  await upsertCatalogFixture(request, 'cursos', {
+    titulo: 'Curso Privado COR-0002 E2E',
+    slug: 'curso-nao-publicado-cor-0002-e2e',
+    descricao: 'Fixture privada para provar a contenção das rotas learner.',
+    area: 'TECNOLOGIA',
+    nivel: 'basico',
+    estado: 'draft',
+    autorId: 'e2e-private-author',
+    gratuito: true,
+    visibilidade: 'publico',
+  }, 'draft');
 });
 
 for (const role of roles) {

@@ -59,19 +59,21 @@ describe('feedRoutes', () => {
   });
 
   it('lê /feed/geral a partir de feed-entries quando collection tem dados', async () => {
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
-      id: 'entry-1',
-      entityType: 'curso',
-      entityId: 'curso-1',
-      autorId: 'perfil-autor-1',
-      titulo: 'Curso em destaque',
-      corpo: 'Conteúdo agregado pelo hook de feed.',
-      area: 'TECNOLOGIA',
-      source: 'geral',
-      score: 0.91,
-      eventId: 'event-1',
-      publicadoEm: '2026-07-05T12:00:00.000Z',
-    }]));
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{
+        id: 'entry-1',
+        entityType: 'curso',
+        entityId: 'curso-1',
+        autorId: 'perfil-autor-1',
+        titulo: 'Curso em destaque',
+        corpo: 'Conteúdo agregado pelo hook de feed.',
+        area: 'TECNOLOGIA',
+        source: 'geral',
+        score: 0.91,
+        eventId: 'event-1',
+        publicadoEm: '2026-07-05T12:00:00.000Z',
+      }]))
+      .mockResolvedValueOnce(listResponse([{ id: 'curso-1' }]));
 
     const res = await app.request('/feed/geral');
 
@@ -112,12 +114,13 @@ describe('feedRoutes', () => {
         score: 0.9,
         eventId: 'event-voc-1',
         publicadoEm: '2026-07-05T12:00:00.000Z',
-      }]));
+      }]))
+      .mockResolvedValueOnce(listResponse([{ id: 'curso-tech-1' }]));
 
     const res = await app.request('/feed/vocacional');
 
     expect(res.status).toBe(200);
-    expect(strapiGet).toHaveBeenLastCalledWith('/feed-entries', expect.objectContaining({
+    expect(strapiGet).toHaveBeenCalledWith('/feed-entries', expect.objectContaining({
       'filters[source][$eq]': 'vocacional',
       'filters[area][$eq]': 'TECNOLOGIA',
     }));
@@ -138,12 +141,13 @@ describe('feedRoutes', () => {
         score: 0.95,
         eventId: 'event-inst-1',
         publicadoEm: '2026-07-05T12:00:00.000Z',
-      }]));
+      }]))
+      .mockResolvedValueOnce(listResponse([{ id: 'exp-inst-1' }]));
 
     const res = await app.request('/feed/institucional');
 
     expect(res.status).toBe(200);
-    expect(strapiGet).toHaveBeenLastCalledWith('/feed-entries', expect.objectContaining({
+    expect(strapiGet).toHaveBeenCalledWith('/feed-entries', expect.objectContaining({
       'filters[source][$eq]': 'institucional',
       'filters[instituicaoId][$eq]': 'inst-1',
     }));
@@ -165,11 +169,57 @@ describe('feedRoutes', () => {
         id: 'exp-vwx',
         documentId: 'doc-vwx',
         tipoExperiencia: 'vwx',
+      }]))
+      .mockResolvedValueOnce(listResponse([{
+        id: 'exp-vwx',
+        documentId: 'doc-vwx',
+        tipoExperiencia: 'vwx',
       }]));
 
     const res = await app.request('/feed/geral');
 
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ data: [] });
+  });
+
+  it('não confia num item governado presente apenas no cache', async () => {
+    vi.mocked(redis.get).mockResolvedValueOnce({
+      data: [{
+        id: 'curso-oculto',
+        tipo: 'curso',
+        titulo: 'Curso ocultado',
+        userId: 'author-1',
+        createdAt: '2026-07-05T12:00:00.000Z',
+      }],
+      meta: { total: 1, fromFeedEntries: true },
+    });
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([]));
+
+    const res = await app.request('/feed/geral');
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ data: [], meta: { total: 0 } });
+  });
+
+  it('falha de revalidação autoritativa do cache devolve DEPENDENCY_UNAVAILABLE', async () => {
+    vi.mocked(redis.get).mockResolvedValueOnce({
+      data: [{
+        id: 'curso-1',
+        tipo: 'curso',
+        titulo: 'Curso',
+        userId: 'author-1',
+        createdAt: '2026-07-05T12:00:00.000Z',
+      }],
+      meta: { total: 1, fromFeedEntries: true },
+    });
+    vi.mocked(strapiGet).mockRejectedValueOnce(new Error('Strapi indisponível'));
+
+    const res = await app.request('/feed/geral');
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
   });
 });

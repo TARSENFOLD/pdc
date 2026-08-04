@@ -108,6 +108,15 @@ describe('cursoRoutes E2E contracts', () => {
     }],
   };
 
+  const approvedCourse = {
+    id: 'curso-1',
+    documentId: 'doc-curso-1',
+    titulo: 'Curso publicado',
+    descricao: 'Curso aprovado com versão publicada autoritativa.',
+    autorId: 'author-1',
+    estado: 'approved',
+  };
+
   it('conta permitida guarda curso como draft sem publicar ou submeter', async () => {
     vi.mocked(strapiPost)
       .mockResolvedValueOnce(singleResponse({
@@ -199,7 +208,11 @@ describe('cursoRoutes E2E contracts', () => {
   });
 
   it('inscreve mentor/instituição/estudante usando relação perfil+curso', async () => {
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([]));
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([approvedCourse]))
+      .mockResolvedValueOnce(listResponse([approvedCourse]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([]));
     vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({
       id: 'insc-1',
       curso: { id: 'curso-1' },
@@ -216,7 +229,7 @@ describe('cursoRoutes E2E contracts', () => {
 
     expect(res.status).toBe(201);
     expect(strapiPost).toHaveBeenCalledWith('/inscricoes', expect.objectContaining({
-      curso: 'curso-1',
+      curso: 'doc-curso-1',
       perfil: 'perfil-1',
       role: 'mentor',
       progressoPercentual: 0,
@@ -225,7 +238,11 @@ describe('cursoRoutes E2E contracts', () => {
   });
 
   it('lista progresso apenas quando existe inscrição', async () => {
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([]));
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([approvedCourse]))
+      .mockResolvedValueOnce(listResponse([approvedCourse]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([]));
 
     const res = await app.request('/cursos/curso-1/progresso', {
       headers: { 'x-test-role': 'estudante', 'x-test-perfil': 'perfil-1' },
@@ -236,6 +253,15 @@ describe('cursoRoutes E2E contracts', () => {
 
   it('marca item concluído e recalcula progresso', async () => {
     vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([approvedCourse]))
+      .mockResolvedValueOnce(listResponse([approvedCourse]))
+      .mockResolvedValueOnce(listResponse([{
+        id: 'insc-1',
+        documentId: 'doc-insc-1',
+        dataInscricao: '2026-05-15',
+        progressoPercentual: 0,
+        modulosConcluidos: [],
+      }]))
       .mockResolvedValueOnce(listResponse([{
         id: 'insc-1',
         documentId: 'doc-insc-1',
@@ -275,7 +301,7 @@ describe('cursoRoutes E2E contracts', () => {
       modulosConcluidos: [expect.objectContaining({ itemId: 'item-1', concluido: true })],
     }));
     expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.CURSO_ITEM_CONCLUIDO, {
-      cursoId: 'curso-1',
+      cursoId: 'doc-curso-1',
       itemId: 'item-1',
       estudanteId: 'user-1',
     });
@@ -359,6 +385,20 @@ describe('cursoRoutes E2E contracts', () => {
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(listResponse([{
         id: 'curso-1',
+        documentId: 'doc-curso-1',
+        titulo: 'Curso',
+        descricao: 'Descrição válida do curso.',
+        slug: 'curso',
+        autorId: 'mentor-user',
+        totalHoras: 1,
+        estado: 'draft',
+        createdAt: '2026-06-14T10:00:00.000Z',
+        updatedAt: '2026-06-14T10:00:00.000Z',
+      }]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([{
+        id: 'curso-1',
+        documentId: 'doc-curso-1',
         titulo: 'Curso',
         descricao: 'Descrição válida do curso.',
         slug: 'curso',
@@ -382,7 +422,7 @@ describe('cursoRoutes E2E contracts', () => {
         ordem: 1,
       }]));
 
-    const res = await app.request('/cursos/curso-1', {
+    const res = await app.request('/cursos/curso-1?preview=true', {
       headers: {
         'x-test-user': 'mentor-user',
         'x-test-role': 'mentor',
@@ -393,5 +433,154 @@ describe('cursoRoutes E2E contracts', () => {
     const body = await res.json() as { modulos: Array<{ id: string; itens: Array<{ id: string }> }> };
     expect(body.modulos[0]?.id).toBe('doc-mod-1');
     expect(body.modulos[0]?.itens[0]?.id).toBe('doc-item-1');
+  });
+
+  it.each(['draft', 'review', 'hidden', 'archived'] as const)(
+    'não permite inscrição quando o estado actual é %s',
+    async (estado) => {
+      vi.mocked(strapiGet)
+        .mockResolvedValueOnce(listResponse([{ ...approvedCourse, estado }]))
+        .mockResolvedValueOnce(listResponse([]))
+        .mockResolvedValueOnce(listResponse([]));
+
+      const res = await app.request('/cursos/curso-1/inscricao', {
+        method: 'POST',
+        headers: { 'x-test-role': 'estudante', 'x-test-perfil': 'perfil-1' },
+      });
+
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({
+        error: 'Conteúdo não encontrado.',
+        code: 'CONTENT_NOT_FOUND',
+      });
+      expect(strapiPost).not.toHaveBeenCalled();
+    },
+  );
+
+  it('devolve PREVIEW_ONLY antes de o autor consumir o próprio draft', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ ...approvedCourse, estado: 'draft', autorId: 'author-1' }]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([]));
+
+    const res = await app.request('/cursos/curso-1/inscricao', {
+      method: 'POST',
+      headers: {
+        'x-test-user': 'author-1',
+        'x-test-role': 'mentor',
+        'x-test-perfil': 'perfil-author',
+      },
+    });
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({
+      error: 'Este conteúdo só está disponível em pré-visualização.',
+      code: 'PREVIEW_ONLY',
+    });
+    expect(strapiPost).not.toHaveBeenCalled();
+  });
+
+  it('preview explícito do autor não cria inscrição', async () => {
+    const draft = { ...approvedCourse, estado: 'draft', autorId: 'author-1' };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([draft]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([draft]))
+      .mockResolvedValueOnce(listResponse([]));
+
+    const res = await app.request('/cursos/curso-1?preview=true', {
+      headers: { 'x-test-user': 'author-1', 'x-test-role': 'mentor' },
+    });
+
+    expect(res.status).toBe(200);
+    expect(strapiPost).not.toHaveBeenCalled();
+    expect(strapiGet).not.toHaveBeenCalledWith('/inscricoes', expect.anything());
+  });
+
+  it('relação existente para curso oculto devolve CONTENT_NOT_AVAILABLE', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ ...approvedCourse, estado: 'hidden' }]))
+      .mockResolvedValueOnce(listResponse([approvedCourse]))
+      .mockResolvedValueOnce(listResponse([{ id: 'insc-1' }]));
+
+    const res = await app.request('/cursos/curso-1/progresso', {
+      headers: { 'x-test-role': 'estudante', 'x-test-perfil': 'perfil-1' },
+    });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: 'Este conteúdo já não está disponível.',
+      code: 'CONTENT_NOT_AVAILABLE',
+    });
+  });
+
+  it('lista de inscrições também bloqueia uma relação com curso ocultado', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{
+        id: 'insc-1',
+        dataInscricao: '2026-08-01',
+        curso: { id: 'curso-1' },
+      }]))
+      .mockResolvedValueOnce(listResponse([{ ...approvedCourse, estado: 'hidden' }]))
+      .mockResolvedValueOnce(listResponse([approvedCourse]));
+
+    const res = await app.request('/cursos/me/inscricoes', {
+      headers: { 'x-test-role': 'estudante', 'x-test-perfil': 'perfil-1' },
+    });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: 'Este conteúdo já não está disponível.',
+      code: 'CONTENT_NOT_AVAILABLE',
+    });
+  });
+
+  it('o alias legado /inscrever não contorna a confirmação de publicação', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ ...approvedCourse, estado: 'review' }]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([]));
+
+    const res = await app.request('/cursos/curso-1/inscrever', {
+      method: 'POST',
+      headers: { 'x-test-role': 'estudante', 'x-test-perfil': 'perfil-1' },
+    });
+
+    expect(res.status).toBe(404);
+    expect(strapiPost).not.toHaveBeenCalled();
+  });
+
+  it('IDs inexistente e privado têm a mesma resposta pública', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([{ ...approvedCourse, estado: 'draft' }]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([]));
+
+    const headers = { 'x-test-role': 'estudante', 'x-test-perfil': 'perfil-1' };
+    const missing = await app.request('/cursos/missing/inscricao', { method: 'POST', headers });
+    const privateContent = await app.request('/cursos/private/inscricao', { method: 'POST', headers });
+
+    expect(missing.status).toBe(404);
+    expect(privateContent.status).toBe(404);
+    expect(await missing.json()).toEqual(await privateContent.json());
+  });
+
+  it('falha do Strapi não produz sucesso ou empty state falso', async () => {
+    vi.mocked(strapiGet).mockRejectedValueOnce(new Error('Strapi indisponível'));
+
+    const res = await app.request('/cursos/curso-1/inscricao', {
+      method: 'POST',
+      headers: { 'x-test-role': 'estudante', 'x-test-perfil': 'perfil-1' },
+    });
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
+    expect(strapiPost).not.toHaveBeenCalled();
   });
 });

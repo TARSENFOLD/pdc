@@ -10,6 +10,7 @@ import {
   filterVwxExperiences,
   isVwxCatalogEnabled,
 } from '../modules/feature-flags/vwx-catalog-gate.js';
+import { CONTENT_ACCESS_ERRORS } from '../modules/conteudo/content-access.service.js';
 
 export const catalogoExplorarRoutes = new Hono();
 
@@ -81,27 +82,26 @@ catalogoExplorarRoutes.get('/', async (c) => {
     : (['curso', 'simulacao', 'experiencia', 'mentor', 'instituicao'] as ExplorarItemTipo[]);
 
   const perType = Math.max(1, Math.floor(limit / types.length));
-  const vwxCatalogEnabled = await isVwxCatalogEnabled();
+  try {
+    const vwxCatalogEnabled = await isVwxCatalogEnabled();
+    const fetches = types.map(async (t): Promise<ExplorarItem[]> => {
+      const cfg = CONFIGS[t];
+      const params: Record<string, string | string[]> = {};
 
-  const fetches = types.map(async (t): Promise<ExplorarItem[]> => {
-    const cfg = CONFIGS[t];
-    const params: Record<string, string | string[]> = {};
+      if (cfg.isMentor) {
+        params['filters[role][name][$eq]'] = 'mentor';
+        params['filters[aprovado][$eq]'] = 'true';
+      } else if (cfg.isInstituicao) {
+        params['filters[estado][$eq]'] = 'verified';
+      } else {
+        applyPublicCatalogStateFilter(params);
+      }
 
-    if (cfg.isMentor) {
-      params['filters[role][name][$eq]'] = 'mentor';
-      params['filters[aprovado][$eq]'] = 'true';
-    } else if (cfg.isInstituicao) {
-      params['filters[estado][$eq]'] = 'verified';
-    } else {
-      applyPublicCatalogStateFilter(params);
-    }
+      params[`filters[${cfg.titleField}][$containsi]`] = q;
+      if (area) params[`filters[${cfg.areaField}][$eq]`] = area;
+      params['pagination[page]'] = page.toString();
+      params['pagination[pageSize]'] = perType.toString();
 
-    params[`filters[${cfg.titleField}][$containsi]`] = q;
-    if (area) params[`filters[${cfg.areaField}][$eq]`] = area;
-    params['pagination[page]'] = page.toString();
-    params['pagination[pageSize]'] = perType.toString();
-
-    try {
       const res = await strapiGet<CatalogoExplorarEntity>(cfg.endpoint, params);
       const visible = t === 'experiencia'
         ? filterVwxExperiences(res.data, vwxCatalogEnabled)
@@ -115,18 +115,18 @@ catalogoExplorarRoutes.get('/', async (c) => {
         capaUrl: fieldValue(d, cfg.capaField),
         area: fieldValue(d, cfg.areaField),
       }));
-    } catch {
-      return [];
-    }
-  });
+    });
 
-  const allResults = await Promise.all(fetches);
-  const items = allResults.flat();
+    const allResults = await Promise.all(fetches);
+    const items = allResults.flat();
 
-  const response: ExplorarResultado = {
-    data: items,
-    meta: { page, pageSize: limit, total: items.length, pageCount: 1 },
-  };
+    const response: ExplorarResultado = {
+      data: items,
+      meta: { page, pageSize: limit, total: items.length, pageCount: 1 },
+    };
 
-  return c.json(response);
+    return c.json(response);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
+  }
 });

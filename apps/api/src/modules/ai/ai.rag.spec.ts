@@ -65,7 +65,7 @@ describe('AI RAG cache', () => {
 
     await aiRag.indexarConteudo();
 
-    expect(mocks.redisSet).toHaveBeenCalledWith('rag:conteudo:v2', [
+    expect(mocks.redisSet).toHaveBeenCalledWith('rag:conteudo:v3', [
       { id: '1', titulo: 'Curso A', descricao: 'Descrição A', tipo: 'curso' },
       {
         id: '2',
@@ -76,12 +76,21 @@ describe('AI RAG cache', () => {
       },
     ]);
     expect(mocks.isEnabled).toHaveBeenCalledWith('vwx_catalog_enabled');
+    expect(mocks.strapiGet).toHaveBeenNthCalledWith(1, '/cursos', {
+      status: 'published',
+      'filters[estado][$eq]': 'approved',
+    });
+    expect(mocks.strapiGet).toHaveBeenNthCalledWith(2, '/experiencias', {
+      status: 'published',
+      'filters[estado][$eq]': 'approved',
+    });
   });
 
   it('devolve contexto apenas para itens validados', async () => {
     mocks.redisGet.mockResolvedValue([
       { id: '1', titulo: 'Engenharia de Software', descricao: 'Arquitetura de sistemas', tipo: 'curso' },
     ]);
+    mocks.strapiGet.mockResolvedValueOnce({ data: [{ id: 1 }] });
 
     await expect(aiRag.buscarContextoRelevante('arquitetura')).resolves.toContain(
       '[curso] Engenharia de Software: Arquitetura de sistemas',
@@ -97,6 +106,7 @@ describe('AI RAG cache', () => {
         tipo: 'curso',
       },
     ]));
+    mocks.strapiGet.mockResolvedValueOnce({ data: [{ id: 1 }] });
 
     await expect(aiRag.buscarContextoRelevante('arquitetura')).resolves.toContain(
       '[curso] Engenharia de Software: Arquitetura de sistemas',
@@ -139,6 +149,9 @@ describe('AI RAG cache', () => {
         tipoExperiencia: 'vwx',
       },
     ]);
+    mocks.strapiGet
+      .mockResolvedValueOnce({ data: [{ id: 'curso-1' }] })
+      .mockResolvedValueOnce({ data: [{ id: 'inst-1' }] });
 
     const context = await aiRag.buscarContextoRelevante('arquitectura');
 
@@ -157,6 +170,7 @@ describe('AI RAG cache', () => {
         tipoExperiencia: 'vwx',
       },
     ]);
+    mocks.strapiGet.mockResolvedValueOnce({ data: [{ id: 'vwx-1' }] });
 
     await expect(aiRag.buscarContextoRelevante('arquitectura')).resolves.toContain(
       '[experiencia] Experiência Imersiva',
@@ -187,6 +201,9 @@ describe('AI RAG cache', () => {
         tipoExperiencia: 'vwx',
       },
     ]);
+    mocks.strapiGet
+      .mockResolvedValueOnce({ data: [{ id: 'curso-1' }] })
+      .mockResolvedValueOnce({ data: [{ id: 'inst-1' }] });
 
     const context = await aiRag.buscarContextoRelevante('engenharia');
 
@@ -204,7 +221,7 @@ describe('AI RAG cache', () => {
 
     await expect(aiRag.buscarContextoRelevante('arquitectura')).resolves.toBe('');
     expect(mocks.redisGet).toHaveBeenCalledOnce();
-    expect(mocks.redisGet).toHaveBeenCalledWith('rag:conteudo:v2');
+    expect(mocks.redisGet).toHaveBeenCalledWith('rag:conteudo:v3');
   });
 
   it('classifica VWX apenas pelo discriminante, nunca pelo título ou conteúdo', async () => {
@@ -225,10 +242,43 @@ describe('AI RAG cache', () => {
         tipoExperiencia: 'vwx',
       },
     ]);
+    mocks.strapiGet.mockResolvedValueOnce({ data: [{ id: 'inst-vwx-title' }] });
 
     const context = await aiRag.buscarContextoRelevante('laboratório');
 
     expect(context).toContain('VWX no título institucional');
     expect(context).not.toContain('Laboratório Empresarial');
+  });
+
+  it('não devolve conteúdo de um índice anterior sem confirmação publicada actual', async () => {
+    mocks.redisGet.mockResolvedValue([
+      {
+        id: 'curso-oculto',
+        titulo: 'Curso antes publicado',
+        descricao: 'Arquitectura de sistemas',
+        tipo: 'curso',
+      },
+    ]);
+    mocks.strapiGet.mockResolvedValueOnce({ data: [] });
+
+    await expect(aiRag.buscarContextoRelevante('arquitectura')).resolves.toBe('');
+    expect(mocks.strapiGet).toHaveBeenCalledWith('/cursos', expect.objectContaining({
+      status: 'published',
+      'filters[estado][$eq]': 'approved',
+    }));
+  });
+
+  it('propaga falha da confirmação autoritativa em vez de inventar contexto vazio', async () => {
+    mocks.redisGet.mockResolvedValue([
+      {
+        id: 'curso-1',
+        titulo: 'Curso de Arquitectura',
+        descricao: 'Arquitectura de sistemas',
+        tipo: 'curso',
+      },
+    ]);
+    mocks.strapiGet.mockRejectedValueOnce(new Error('Strapi indisponível'));
+
+    await expect(aiRag.buscarContextoRelevante('arquitectura')).rejects.toThrow('Strapi indisponível');
   });
 });

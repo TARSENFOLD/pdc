@@ -25,6 +25,9 @@ export const simulacoesApi = {
   getById: (id: string) => 
     http.get<Simulacao>(`/simulacoes/${id}`),
 
+  getPreviewById: (id: string) =>
+    http.get<Simulacao>(`/simulacoes/${id}?preview=true`),
+
   getMinhas: (page?: number) =>
     http.get<{ data: SimulacaoMinha[], pagination: Pagination }>(`/simulacoes/minhas?page=${(page ?? 1).toString()}`),
 

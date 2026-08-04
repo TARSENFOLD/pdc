@@ -7,6 +7,7 @@ import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { aiService } from '../modules/ai/ai.service.js';
 import { aiRag } from '../modules/ai/ai.rag.js';
 import { ChatPayloadSchema } from '@pdc/shared';
+import { CONTENT_ACCESS_ERRORS } from '../modules/conteudo/content-access.service.js';
 
 type Vars = { Variables: AuthVariables };
 export const aiRoutes = new Hono<Vars>();
@@ -21,7 +22,12 @@ aiRoutes.post('/chat', zValidator('json', ChatPayloadSchema), async (c) => {
   if (!prompt) return c.json({ error: 'message is required' }, 400);
 
   const contexto = await aiService.buildContexto(estudanteId);
-  const ragContext = await aiRag.buscarContextoRelevante(prompt);
+  let ragContext: string;
+  try {
+    ragContext = await aiRag.buscarContextoRelevante(prompt);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
+  }
   
   const res = await aiService.chat(messages ?? [{ role: 'user', content: prompt }], `${contexto} ${ragContext}`, stream);
 
@@ -58,6 +64,10 @@ aiRoutes.post('/quiz', zValidator('json', z.object({
 
 // POST /ai/indexar
 aiRoutes.post('/indexar', checkRole(['super_admin']), async (c) => {
-  await aiRag.indexarConteudo();
-  return c.json({ status: 'ok', message: 'Conteúdo indexado para RAG' });
+  try {
+    await aiRag.indexarConteudo();
+    return c.json({ status: 'ok', message: 'Conteúdo indexado para RAG' });
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
+  }
 });

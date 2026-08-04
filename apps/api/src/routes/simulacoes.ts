@@ -12,13 +12,25 @@ import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { canPublishSimTipo, DISABLED_SIM_TIPO_RESPONSE } from '../modules/simulacoes/publish-gates.js';
 import { simulacaoTentativasRoutes } from './simulacoes-tentativas.js';
-import { applyPublicCatalogStateFilter, isPublicCatalogEstado } from './publication-state.js';
+import { applyPublicCatalogStateFilter } from './publication-state.js';
 import { toPaginatedResponse } from './pagination.js';
 import {
   disabledFeatureResponse,
   requireContentSubmissionEnabled,
   requireInternalQaCreatorAccess,
 } from '../modules/feature-flags/cor-0001-gates.js';
+import {
+  findSimulacao,
+  loadSimulacaoVersions,
+  type StrapiSimulacaoAccessRecord,
+} from '../modules/simulacoes/simulacao-access.repository.js';
+import {
+  CONTENT_ACCESS_ERRORS,
+  canPreviewContent,
+  canReadResolvedPublicContent,
+  decideLearnerAccess,
+  parseContentState,
+} from '../modules/conteudo/content-access.service.js';
 
 type Vars = { Variables: AuthVariables };
 
@@ -29,47 +41,20 @@ const simQuerySchema = z.object({
   tipo: z.coerce.number().int().min(1).max(3).optional(),
 });
 
-interface StrapiSimulacao {
-  id: string | number;
-  documentId?: string;
-  slug?: string;
-  titulo: string;
-  autorId: string;
-  estado: string;
-  tipo: number;
-  area: string;
+type StrapiSimulacao = StrapiSimulacaoAccessRecord;
+
+interface TentativaWithSimulacao extends Tentativa {
+  simulacao?: {
+    id: string | number;
+    documentId?: string;
+  };
 }
 
 export const simulacaoRoutes = new Hono<Vars>();
 
 simulacaoRoutes.use('*', verifyJwt);
 simulacaoRoutes.route('/tentativas', simulacaoTentativasRoutes);
-
-async function findSimulacao(identifier: string, params: Record<string, string> = {}): Promise<StrapiSimulacao | undefined> {
-  const bySlug = await strapiGet<StrapiSimulacao>('/simulacoes', {
-    ...params,
-    'filters[slug][$eq]': identifier,
-    'pagination[pageSize]': '1',
-  });
-  if (bySlug.data[0]) return bySlug.data[0];
-
-  const byDocumentId = await strapiGet<StrapiSimulacao>('/simulacoes', {
-    ...params,
-    'filters[documentId][$eq]': identifier,
-    'pagination[pageSize]': '1',
-  });
-  if (byDocumentId.data[0]) return byDocumentId.data[0];
-
-  if (/^\d+$/.test(identifier)) {
-    const byId = await strapiGet<StrapiSimulacao>('/simulacoes', {
-      ...params,
-      'filters[id][$eq]': identifier,
-      'pagination[pageSize]': '1',
-    });
-    return byId.data[0];
-  }
-  return undefined;
-}
+const SIMULATION_REVIEWER_ROLES = ['comite_cientifico', 'moderador'] as const;
 
 // GET /simulacoes
 simulacaoRoutes.get('/', zValidator('query', simQuerySchema), async (c) => {
@@ -85,9 +70,8 @@ simulacaoRoutes.get('/', zValidator('query', simQuerySchema), async (c) => {
   try {
     const res = await strapiGet<StrapiSimulacao>('/simulacoes', params);
     return c.json(toPaginatedResponse(res));
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    return c.json({ error: message }, 502);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -109,15 +93,33 @@ simulacaoRoutes.get('/minhas', checkRole(['mentor', 'instituicao', 'super_admin'
 simulacaoRoutes.get('/me/tentativas', async (c) => {
   const { id } = c.get('user');
   try {
-    const res = await strapiGet<Tentativa>('/tentativas', {
+    const res = await strapiGet<TentativaWithSimulacao>('/tentativas', {
       'filters[perfil][userId][$eq]': id,
       populate: 'simulacao',
       'sort': 'createdAt:desc',
     });
+    for (const attempt of res.data) {
+      const simulacaoId = attempt.simulacao ? persistedEntityId(attempt.simulacao) : undefined;
+      if (!simulacaoId) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      const versions = await loadSimulacaoVersions(simulacaoId);
+      const current = versions.current ?? versions.published;
+      const decision = decideLearnerAccess({
+        actor: c.get('user'),
+        authorId: current?.autorId,
+        reviewerRoles: SIMULATION_REVIEWER_ROLES,
+        currentState: parseContentState(current?.estado),
+        publishedState: parseContentState(versions.published?.estado),
+        hasPublishedVersion: versions.published !== undefined,
+        relationExists: true,
+        accessPolicy: 'granted',
+      });
+      if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+      if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+      if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    }
     return c.json(res);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    return c.json({ error: message }, 502);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -125,22 +127,33 @@ simulacaoRoutes.get('/me/tentativas', async (c) => {
 simulacaoRoutes.get('/:id', async (c) => {
   const simId = c.req.param('id');
   try {
-    const data = await findSimulacao(simId);
-    if (!data) return c.json({ error: 'Simulação não encontrada' }, 404);
-    
-    // Verificação de acesso
+    const versions = await loadSimulacaoVersions(simId);
+    const current = versions.current ?? versions.published;
     const user = c.get('user');
-    if (!isPublicCatalogEstado(data.estado) && data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
-      return c.json({ error: 'Acesso negado' }, 403);
+    const publicReadable = canReadResolvedPublicContent({
+      currentState: parseContentState(current?.estado),
+      publishedState: parseContentState(versions.published?.estado),
+      hasPublishedVersion: versions.published !== undefined,
+    });
+    if (!publicReadable) {
+      const previewRequested = c.req.query('preview') === 'true';
+      if (!previewRequested || !current || !canPreviewContent({
+        actor: user,
+        authorId: current.autorId,
+        reviewerRoles: SIMULATION_REVIEWER_ROLES,
+      })) {
+        return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      }
+      return c.json({ ...current, id: persistedEntityId(current) });
     }
-
+    const data = versions.published;
+    if (!data) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
     return c.json({
       ...data,
       id: persistedEntityId(data),
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    return c.json({ error: message }, 502);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 

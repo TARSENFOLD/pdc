@@ -25,6 +25,9 @@ export const cursosApi = {
   getById: (id: string) => 
     http.get<Curso>(`/cursos/${id}`),
 
+  getPreviewById: (id: string) =>
+    http.get<Curso>(`/cursos/${id}?preview=true`),
+
   getBySlug: (slug: string) => 
     http.get<Curso>(`/cursos/slug/${slug}`),
 

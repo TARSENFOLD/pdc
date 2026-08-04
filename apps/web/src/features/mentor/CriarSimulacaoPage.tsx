@@ -36,7 +36,7 @@ export function CriarSimulacaoPage() {
 
   const { data: simData, isLoading: isLoadingSim } = useQuery({
     queryKey: ['simulacoes', simulacaoId],
-    queryFn: () => simulacoesApi.getById(simulacaoId),
+    queryFn: () => simulacoesApi.getPreviewById(simulacaoId),
     enabled: isEditing,
   });
 

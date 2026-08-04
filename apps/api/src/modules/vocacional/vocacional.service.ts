@@ -15,6 +15,7 @@ import {
   filterVwxExperiences,
   isVwxCatalogEnabled,
 } from '../feature-flags/vwx-catalog-gate.js';
+import { applyAuthoritativePublicContentFilter } from '../conteudo/content-access.service.js';
 
 const log = pino({ name: 'vocacional-service' });
 
@@ -224,11 +225,13 @@ async function calcularPerfil(userId: string): Promise<PerfilVocacional> {
 async function gerarRecomendacoes(perfil: PerfilVocacional | null): Promise<Recomendacao[]> {
   if (!perfil) return [];
 
-  const res = await strapiGet<Curso>('/cursos', {
+  const params: Record<string, string | string[]> = {
     'filters[area][$eq]': perfil.areaMatch,
     'pagination[pageSize]': '3',
     'sort': 'createdAt:desc',
-  });
+  };
+  applyAuthoritativePublicContentFilter(params);
+  const res = await strapiGet<Curso>('/cursos', params);
 
   return res.data.map((curso) => {
     const diff = Math.abs(perfil.scoreGlobal - curso.rating * 20);
@@ -256,12 +259,13 @@ interface StrapiExperienciaRec {
 async function gerarRecomendacoesExperiencias(perfil: PerfilVocacional | null): Promise<Recomendacao[]> {
   if (!perfil) return [];
 
-  const res = await strapiGet<StrapiExperienciaRec>('/experiencias', {
+  const params: Record<string, string | string[]> = {
     'filters[area][$eq]': perfil.areaMatch,
-    'filters[estado][$eq]': 'published',
     'pagination[pageSize]': '4',
     'sort': 'createdAt:desc',
-  });
+  };
+  applyAuthoritativePublicContentFilter(params);
+  const res = await strapiGet<StrapiExperienciaRec>('/experiencias', params);
 
   const visible = filterVwxExperiences(res.data, await isVwxCatalogEnabled());
 

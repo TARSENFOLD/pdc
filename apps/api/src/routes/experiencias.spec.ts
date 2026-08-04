@@ -96,7 +96,7 @@ describe('experienciaRoutes E2E contracts', () => {
     area: 'SAUDE',
     nivel: 'medio',
     modalidade: 'presencial',
-    estado: 'published',
+    estado: 'approved',
     autor: { id: 'inst-1', userId: 'inst-1' },
     secoes: requiredSections,
   };
@@ -113,7 +113,8 @@ describe('experienciaRoutes E2E contracts', () => {
     expect(body.data).toHaveLength(1);
     // Verifica que o filtro de estado público é aplicado
     expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      'filters[estado][$in]': ['approved', 'published'],
+      status: 'published',
+      'filters[estado][$eq]': 'approved',
     }));
   });
 
@@ -134,7 +135,9 @@ describe('experienciaRoutes E2E contracts', () => {
   // ─── GET /:id — detalhe público ───────────────────────────────────────────
 
   it('GET /:id retorna experiência publicada sem autenticação', async () => {
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([expPublicada]));
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([expPublicada]))
+      .mockResolvedValueOnce(listResponse([expPublicada]));
 
     const res = await app.request('/experiencias/exp-1');
 
@@ -142,14 +145,14 @@ describe('experienciaRoutes E2E contracts', () => {
     // Garante que drafts não são expostos: filtro de estado é aplicado
     expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
       'filters[$or][0][documentId][$eq]': 'exp-1',
-      'filters[$or][1][id][$eq]': 'exp-1',
-      'filters[estado][$in]': ['approved', 'published'],
+      status: 'published',
     }));
   });
 
   it('GET /:id retorna 404 para experiência draft', async () => {
-    // Strapi retorna lista vazia porque o filtro de estado exclui drafts
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([]));
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ ...expPublicada, estado: 'draft' }]))
+      .mockResolvedValueOnce(listResponse([]));
 
     const res = await app.request('/experiencias/exp-draft');
 
@@ -158,19 +161,22 @@ describe('experienciaRoutes E2E contracts', () => {
 
   it('oculta VWX por documentId quando o flag está desligado', async () => {
     vi.mocked(featureFlagService.isEnabled).mockResolvedValue(false);
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
+    const vwx = {
       ...expPublicada,
       id: 'exp-vwx',
       documentId: 'doc-vwx',
-      tipoExperiencia: 'vwx',
-    }]));
+      tipoExperiencia: 'vwx' as const,
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([vwx]))
+      .mockResolvedValueOnce(listResponse([vwx]));
 
     const res = await app.request('/experiencias/doc-vwx');
 
     expect(res.status).toBe(404);
     expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
       'filters[$or][0][documentId][$eq]': 'doc-vwx',
-      'filters[$or][1][id][$eq]': 'doc-vwx',
+      status: 'published',
     }));
   });
 
@@ -211,7 +217,8 @@ describe('experienciaRoutes E2E contracts', () => {
 
     expect(res.status).toBe(200);
     expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      'filters[id][$eq]': 'exp-draft',
+      'filters[$or][0][documentId][$eq]': 'exp-draft',
+      status: 'draft',
       populate: 'autor,instituicao',
     }));
   });
@@ -338,6 +345,7 @@ describe('experienciaRoutes E2E contracts', () => {
     // 1. experiência existe e está publicada
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(listResponse([expPublicada]))
+      .mockResolvedValueOnce(listResponse([expPublicada]))
       // 2. sem duplicado
       .mockResolvedValueOnce(listResponse([]));
 
@@ -363,6 +371,7 @@ describe('experienciaRoutes E2E contracts', () => {
   it('inscrever retorna 409 se estudante já está inscrito', async () => {
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(listResponse([expPublicada]))
+      .mockResolvedValueOnce(listResponse([expPublicada]))
       .mockResolvedValueOnce(listResponse([{ id: 'part-existing', estudanteId: 'estudante-1' }]));
 
     const res = await app.request('/experiencias/exp-1/inscrever', {
@@ -376,8 +385,10 @@ describe('experienciaRoutes E2E contracts', () => {
   });
 
   it('inscrever retorna 404 para experiência draft ou inexistente', async () => {
-    // filtro de estado exclui draft → lista vazia
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([]));
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ ...expPublicada, estado: 'draft' }]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([]));
 
     const res = await app.request('/experiencias/exp-draft/inscrever', {
       method: 'POST',
@@ -385,6 +396,96 @@ describe('experienciaRoutes E2E contracts', () => {
     });
 
     expect(res.status).toBe(404);
+    expect(strapiPost).not.toHaveBeenCalled();
+  });
+
+  it.each(['draft', 'review', 'hidden', 'archived'] as const)(
+    'não permite participação quando a experiência está %s',
+    async (estado) => {
+      vi.mocked(strapiGet)
+        .mockResolvedValueOnce(listResponse([{ ...expPublicada, estado }]))
+        .mockResolvedValueOnce(listResponse([]))
+        .mockResolvedValueOnce(listResponse([]));
+
+      const res = await app.request('/experiencias/exp-1/inscrever', {
+        method: 'POST',
+        headers: { 'x-test-user': 'student-1', 'x-test-role': 'estudante' },
+      });
+
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({
+        error: 'Conteúdo não encontrado.',
+        code: 'CONTENT_NOT_FOUND',
+      });
+      expect(strapiPost).not.toHaveBeenCalled();
+    },
+  );
+
+  it('preview VWX não cria participação e a rota learner devolve PREVIEW_ONLY', async () => {
+    const draft = {
+      ...expPublicada,
+      estado: 'draft',
+      tipoExperiencia: 'vwx' as const,
+      autor: { id: 'author-profile', userId: 'author-1' },
+    };
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([draft]));
+
+    const preview = await app.request('/experiencias/minhas/exp-1', {
+      headers: { 'x-test-user': 'author-1', 'x-test-role': 'mentor' },
+    });
+
+    expect(preview.status).toBe(200);
+    expect(strapiPost).not.toHaveBeenCalled();
+    expect(strapiPut).not.toHaveBeenCalled();
+
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([draft]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([]));
+    const learner = await app.request('/experiencias/exp-1/inscrever', {
+      method: 'POST',
+      headers: { 'x-test-user': 'author-1', 'x-test-role': 'mentor' },
+    });
+
+    expect(learner.status).toBe(403);
+    expect(await learner.json()).toEqual({
+      error: 'Este conteúdo só está disponível em pré-visualização.',
+      code: 'PREVIEW_ONLY',
+    });
+    expect(strapiPost).not.toHaveBeenCalled();
+  });
+
+  it('participação existente em experiência ocultada devolve CONTENT_NOT_AVAILABLE', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ ...expPublicada, estado: 'hidden' }]))
+      .mockResolvedValueOnce(listResponse([expPublicada]))
+      .mockResolvedValueOnce(listResponse([{ id: 'part-existing' }]));
+
+    const res = await app.request('/experiencias/exp-1/inscrever', {
+      method: 'POST',
+      headers: { 'x-test-user': 'student-1', 'x-test-role': 'estudante' },
+    });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: 'Este conteúdo já não está disponível.',
+      code: 'CONTENT_NOT_AVAILABLE',
+    });
+  });
+
+  it('falha autoritativa do Strapi devolve DEPENDENCY_UNAVAILABLE', async () => {
+    vi.mocked(strapiGet).mockRejectedValueOnce(new Error('Strapi indisponível'));
+
+    const res = await app.request('/experiencias/exp-1/inscrever', {
+      method: 'POST',
+      headers: { 'x-test-user': 'student-1', 'x-test-role': 'estudante' },
+    });
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
     expect(strapiPost).not.toHaveBeenCalled();
   });
 

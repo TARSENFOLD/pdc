@@ -1,9 +1,9 @@
-const PUBLIC_CATALOG_ESTADOS = ['approved', 'published'] as const;
+import { applyAuthoritativePublicContentFilter } from '../modules/conteudo/content-access.service.js';
 
 export function applyPublicCatalogStateFilter(params: Record<string, string | string[]>): void {
-  params['filters[estado][$in]'] = [...PUBLIC_CATALOG_ESTADOS];
+  applyAuthoritativePublicContentFilter(params);
 }
 
 export function isPublicCatalogEstado(estado: string | undefined): boolean {
-  return PUBLIC_CATALOG_ESTADOS.includes(estado as (typeof PUBLIC_CATALOG_ESTADOS)[number]);
+  return estado === 'approved';
 }

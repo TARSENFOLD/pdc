@@ -29,6 +29,17 @@ import {
   isVwxCatalogEnabled,
   type ExperienceVariantCarrier,
 } from '../modules/feature-flags/vwx-catalog-gate.js';
+import {
+  contentRelationIdentityFilters,
+  loadContentVersions,
+} from '../modules/conteudo/content-access.repository.js';
+import {
+  CONTENT_ACCESS_ERRORS,
+  canPreviewContent,
+  canReadResolvedPublicContent,
+  decideLearnerAccess,
+  parseContentState,
+} from '../modules/conteudo/content-access.service.js';
 
 type Vars = { Variables: AuthVariables };
 const log = pino({ name: 'routes:experiencias' });
@@ -76,6 +87,7 @@ function normalizeExperiencia(experiencia: Experiencia): Experiencia {
 }
 
 export const experienciaRoutes = new Hono<Vars>();
+const EXPERIENCE_REVIEWER_ROLES = ['comite_cientifico', 'moderador'] as const;
 
 // BUG-011: verifyJwt é aplicado apenas nas rotas protegidas.
 // GET / e GET /:id são públicos (catálogo aberto).
@@ -101,7 +113,7 @@ experienciaRoutes.get('/', zValidator('query', experienciaQuerySchema), async (c
     const visible = filterVwxExperiences(res.data, vwxEnabled);
     return c.json(toPaginatedResponse({ ...res, data: visible.map(normalizeExperiencia) }));
   } catch {
-    return c.json({ error: 'Falha ao sincronizar o catálogo de experiências' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -120,24 +132,26 @@ experienciaRoutes.get('/minhas', verifyJwt, checkRole(['instituicao', 'mentor', 
   }
 });
 
-experienciaRoutes.get('/minhas/:id', verifyJwt, checkRole(['instituicao', 'mentor', 'super_admin']), requireInternalQaCreatorAccess(), async (c) => {
+experienciaRoutes.get('/minhas/:id', verifyJwt, checkRole(['instituicao', 'mentor', 'comite_cientifico', 'moderador', 'super_admin']), requireInternalQaCreatorAccess(), async (c) => {
   const user = c.get('user');
   const id = c.req.param('id');
   if (!id) return c.json({ error: 'Experiência não identificada' }, 400);
   try {
-    const res = await strapiGet<Experiencia & StrapiExperiencia>('/experiencias', {
-      'filters[id][$eq]': id,
-      'pagination[pageSize]': '1',
+    const experiencia = await findStrapiEntity<Experiencia & StrapiExperiencia>('experiencias', id, {
+      status: 'draft',
       populate: 'autor,instituicao',
     });
-    const experiencia = res.data[0];
-    if (!experiencia) return c.json({ error: 'Experiência não encontrada' }, 404);
-    if (experiencia.autor?.userId !== user.id && user.role !== 'super_admin') {
+    if (!experiencia) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    if (!canPreviewContent({
+      actor: user,
+      authorId: experiencia.autor?.userId,
+      reviewerRoles: EXPERIENCE_REVIEWER_ROLES,
+    })) {
       return c.json({ error: 'Autoridade insuficiente' }, 403);
     }
     return c.json(normalizeExperiencia(experiencia));
   } catch {
-    return c.json({ error: 'Falha ao carregar a experiência para edição' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -145,12 +159,13 @@ experienciaRoutes.get('/minhas/:id', verifyJwt, checkRole(['instituicao', 'mento
 experienciaRoutes.get('/stats', verifyJwt, checkRole(['instituicao', 'super_admin']), async (c) => {
   const { id: userId } = c.get('user');
   try {
+    const publishedExperienceParams: Record<string, string | string[]> = {
+      'filters[autor][userId][$eq]': userId,
+      'pagination[pageSize]': '1',
+    };
+    applyPublicCatalogStateFilter(publishedExperienceParams);
     const [experiencias, programas, inscricoes] = await Promise.all([
-      strapiGet<{ id: string }>('/experiencias', {
-        'filters[autor][userId][$eq]': userId,
-        'filters[estado][$in]': ['approved', 'published'],
-        'pagination[pageSize]': '1',
-      }),
+      strapiGet<{ id: string }>('/experiencias', publishedExperienceParams),
       strapiGet<{ id: string }>('/programas', {
         'filters[responsavel][userId][$eq]': userId,
         'filters[estado][$eq]': 'activo',
@@ -177,21 +192,27 @@ experienciaRoutes.get('/stats', verifyJwt, checkRole(['instituicao', 'super_admi
 experienciaRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
   try {
-    const params: Record<string, string> = {
-      populate: 'instituicao',
-    };
-    applyPublicCatalogStateFilter(params);
-    const exp = await findStrapiEntity<Experiencia & StrapiExperiencia>(
-      'experiencias',
-      id,
-      params,
-    );
-    if (!exp || !canExposeExperience(exp, await isVwxCatalogEnabled())) {
-      return c.json({ error: 'Experiência não encontrada' }, 404);
+    const versions = await loadContentVersions((status) => (
+      findStrapiEntity<Experiencia & StrapiExperiencia>('experiencias', id, {
+        status,
+        populate: 'instituicao,autor',
+      })
+    ));
+    const current = versions.current ?? versions.published;
+    const publicReadable = canReadResolvedPublicContent({
+      currentState: parseContentState(current?.estado),
+      publishedState: parseContentState(versions.published?.estado),
+      hasPublishedVersion: versions.published !== undefined,
+    });
+    if (!publicReadable || !versions.published || !canExposeExperience(
+      versions.published,
+      await isVwxCatalogEnabled(),
+    )) {
+      return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
     }
-    return c.json(normalizeExperiencia(exp));
+    return c.json(normalizeExperiencia(versions.published));
   } catch {
-    return c.json({ error: 'Falha ao carregar experiência' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -266,41 +287,54 @@ experienciaRoutes.post('/:id/inscrever',
     const { id: userId } = c.get('user');
 
     try {
-      // Verificar que a experiência existe e está disponível para participação
-      const expParams: Record<string, string | string[]> = {
-        'filters[id][$eq]': id,
-        'pagination[pageSize]': '1',
-      };
-      applyPublicCatalogStateFilter(expParams);
-      const resExp = await strapiGet<StrapiExperiencia>('/experiencias', expParams);
-      const exp = resExp.data[0];
-
-      if (!exp) return c.json({ error: 'Experiência não disponível para inscrição' }, 404);
-
-      // Verificar inscrição duplicada
-      const resDup = await strapiGet<{ id: string }>('/experiencia-participantes', {
-        'filters[estudanteId][$eq]': userId,
-        'filters[experiencia][id][$eq]': id,
-        'pagination[pageSize]': '1',
+      const versions = await loadContentVersions((status) => (
+        findStrapiEntity<StrapiExperiencia>('experiencias', id, {
+          status,
+          populate: 'autor',
+        })
+      ));
+      const current = versions.current ?? versions.published;
+      const reference = current ?? versions.published;
+      const resDup = reference
+        ? await strapiGet<{ id: string }>('/experiencia-participantes', {
+          'filters[estudanteId][$eq]': userId,
+          ...contentRelationIdentityFilters('experiencia', persistedEntityId(reference)),
+          'pagination[pageSize]': '1',
+        })
+        : undefined;
+      const decision = decideLearnerAccess({
+        actor: c.get('user'),
+        authorId: current?.autor?.userId,
+        reviewerRoles: EXPERIENCE_REVIEWER_ROLES,
+        currentState: parseContentState(current?.estado),
+        publishedState: parseContentState(versions.published?.estado),
+        hasPublishedVersion: versions.published !== undefined,
+        relationExists: resDup !== undefined && resDup.data.length > 0,
+        accessPolicy: current?.tipoExperiencia === 'vwx' ? 'restricted' : 'open',
       });
-      if (resDup.data.length > 0) {
+      if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+      if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+      if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      if (!versions.published) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      if (resDup && resDup.data.length > 0) {
         return c.json({ error: 'Já inscrito nesta experiência' }, 409);
       }
 
       // Criar participação com os campos reais do schema Strapi
+      const experienciaId = persistedEntityId(versions.published);
       const res = await strapiPost<{ id: string }>('/experiencia-participantes', {
         estudanteId: userId,
-        experiencia: id,
+        experiencia: experienciaId,
       });
 
       await eventBus.publishWithOutbox(DomainEventName.EXPERIENCIA_PARTICIPACAO, {
-        experienciaId: id,
+        experienciaId,
         estudanteId: userId,
       });
 
       return c.json({ id: res.data.id }, 201);
     } catch {
-      return c.json({ error: 'Falha ao processar inscrição' }, 502);
+      return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
     }
   }
 );

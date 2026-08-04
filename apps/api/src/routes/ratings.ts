@@ -1,10 +1,21 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
+import { cursosService } from '../modules/cursos/cursos.service.js';
+import { loadSimulacaoVersions } from '../modules/simulacoes/simulacao-access.repository.js';
+import { findStrapiEntity } from '../modules/strapi/strapi-entity.js';
+import { loadContentVersions, type ContentVersions } from '../modules/conteudo/content-access.repository.js';
+import {
+  CONTENT_ACCESS_ERRORS,
+  decideLearnerAccess,
+  parseContentState,
+  type ContentAccessActor,
+  type LearnerAccessDecision,
+} from '../modules/conteudo/content-access.service.js';
 
 type Vars = { Variables: AuthVariables };
 export const ratingRoutes = new Hono<Vars>();
@@ -27,6 +38,90 @@ interface StrapiInscricao {
 }
 
 const ELIGIBILITY_MIN_PROGRESS = 30;
+const RATING_REVIEWER_ROLES = ['comite_cientifico', 'moderador'] as const;
+
+interface RatingContentAccessRecord {
+  estado: string;
+  authorId: string | undefined;
+}
+
+interface RatingExperienceAccessRecord {
+  id: string | number;
+  estado: string;
+  autor?: { userId?: string };
+}
+
+function mapRatingContentVersions<T extends { estado: string; autorId?: string }>(
+  versions: ContentVersions<T>,
+): ContentVersions<RatingContentAccessRecord> {
+  return {
+    ...(versions.current ? {
+      current: { estado: versions.current.estado, authorId: versions.current.autorId },
+    } : {}),
+    ...(versions.published ? {
+      published: { estado: versions.published.estado, authorId: versions.published.autorId },
+    } : {}),
+  };
+}
+
+async function loadRatingContentVersions(
+  targetType: 'curso' | 'simulacao' | 'experiencia',
+  targetId: string,
+): Promise<ContentVersions<RatingContentAccessRecord>> {
+  if (targetType === 'curso') {
+    return mapRatingContentVersions(await cursosService.obterVersoesCurso(targetId));
+  }
+  if (targetType === 'simulacao') {
+    return mapRatingContentVersions(await loadSimulacaoVersions(targetId));
+  }
+  const versions = await loadContentVersions((status) => (
+    findStrapiEntity<RatingExperienceAccessRecord>('experiencias', targetId, {
+      status,
+      populate: 'autor',
+    })
+  ));
+  return {
+    ...(versions.current ? {
+      current: {
+        estado: versions.current.estado,
+        authorId: versions.current.autor?.userId,
+      },
+    } : {}),
+    ...(versions.published ? {
+      published: {
+        estado: versions.published.estado,
+        authorId: versions.published.autor?.userId,
+      },
+    } : {}),
+  };
+}
+
+async function ratingContentDecision(
+  actor: ContentAccessActor,
+  targetType: 'curso' | 'simulacao' | 'mentor' | 'experiencia',
+  targetId: string,
+): Promise<LearnerAccessDecision> {
+  if (targetType === 'mentor') return 'allow';
+  const versions = await loadRatingContentVersions(targetType, targetId);
+  const current = versions.current ?? versions.published;
+  return decideLearnerAccess({
+    actor,
+    authorId: current?.authorId,
+    reviewerRoles: RATING_REVIEWER_ROLES,
+    currentState: parseContentState(current?.estado),
+    publishedState: parseContentState(versions.published?.estado),
+    hasPublishedVersion: versions.published !== undefined,
+    relationExists: false,
+    accessPolicy: 'open',
+  });
+}
+
+function ratingAccessError(c: Context, decision: LearnerAccessDecision) {
+  if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+  if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+  if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+  return undefined;
+}
 
 async function resolvePerfilId(userId: string): Promise<string | undefined> {
   const resPerfil = await strapiGet<{ id: string | number }>('/perfis', {
@@ -75,6 +170,11 @@ ratingRoutes.post('/', zValidator('json', z.object({
   const { targetType, targetId, valor } = c.req.valid('json');
 
   try {
+    const accessError = ratingAccessError(
+      c,
+      await ratingContentDecision(c.get('user'), targetType, targetId),
+    );
+    if (accessError) return accessError;
     const eligible = await checkRatingEligibility(userId, targetType, targetId);
     if (!eligible) {
       return c.json({ error: `Completa pelo menos ${String(ELIGIBILITY_MIN_PROGRESS)}% para poder avaliar` }, 403);
@@ -114,7 +214,7 @@ ratingRoutes.post('/', zValidator('json', z.object({
 
     return c.json({ success: true, action: 'created' }, 201);
   } catch {
-    return c.json({ error: 'Erro ao processar avaliação' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -127,6 +227,11 @@ ratingRoutes.get('/stats', zValidator('query', z.object({
   const userId = c.get('user').id;
 
   try {
+    const accessError = ratingAccessError(
+      c,
+      await ratingContentDecision(c.get('user'), targetType, targetId),
+    );
+    if (accessError) return accessError;
     const res = await strapiGet<StrapiRating>('/ratings', {
       'filters[targetType][$eq]': targetType,
       'filters[targetId][$eq]': targetId,
@@ -152,6 +257,6 @@ ratingRoutes.get('/stats', zValidator('query', z.object({
       userRating: userRating || null,
     });
   } catch {
-    return c.json({ error: 'Erro ao carregar estatísticas de avaliação' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
