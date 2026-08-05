@@ -306,6 +306,15 @@ oauthRoutes.post('/finalizar/verificar-otp', verifyJwt, zValidator('json', verif
   const user = c.get('user');
   const { otp } = c.req.valid('json');
   try {
+    const authoritativeUser = await authService.getUserById(user.id);
+    if (authoritativeUser.role === 'mentor' || authoritativeUser.role === 'instituicao') {
+      const unavailable = await disabledFeatureResponse(
+        c,
+        'external_creator_onboarding_enabled',
+        'EXTERNAL_CREATOR_ONBOARDING_TEMPORARILY_DISABLED',
+      );
+      if (unavailable) return unavailable;
+    }
     await oauthOnboardingService.verificarOtp(user.id, otp);
     const updatedUser = await authService.getUserById(user.id);
     // Mint fresh tokens so the JWT reflects the updated role and onboardingCompleto: true

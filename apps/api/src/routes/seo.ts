@@ -2,6 +2,10 @@ import { Hono } from 'hono';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { type StrapiListResponse } from '@pdc/shared';
 import { applyPublicCatalogStateFilter } from './publication-state.js';
+import {
+  filterVwxExperiences,
+  isVwxCatalogEnabled,
+} from '../modules/feature-flags/vwx-catalog-gate.js';
 
 export const seoRoutes = new Hono();
 
@@ -11,6 +15,7 @@ interface StrapiItemAttributes {
   id: number;
   slug?: string;
   updatedAt?: string;
+  tipoExperiencia?: 'institucional' | 'vwx';
 }
 
 const STATIC_URLS = [
@@ -29,11 +34,16 @@ seoRoutes.get('/sitemap.xml', async (c) => {
     applyPublicCatalogStateFilter(simulacoesParams);
     applyPublicCatalogStateFilter(experienciasParams);
 
-    const [cursos, simulacoes, experiencias] = await Promise.all([
+    const [cursos, simulacoes, experiencias, vwxCatalogEnabled] = await Promise.all([
       strapiGet<StrapiItemAttributes>('/cursos', cursosParams),
       strapiGet<StrapiItemAttributes>('/simulacoes', simulacoesParams),
       strapiGet<StrapiItemAttributes>('/experiencias', experienciasParams),
+      isVwxCatalogEnabled(),
     ]);
+    const visibleExperiencias = {
+      ...experiencias,
+      data: filterVwxExperiences(experiencias.data, vwxCatalogEnabled),
+    };
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -53,7 +63,7 @@ seoRoutes.get('/sitemap.xml', async (c) => {
     
     processItems(cursos, 'cursos');
     processItems(simulacoes, 'simulacoes');
-    processItems(experiencias, 'experiencias');
+    processItems(visibleExperiencias, 'experiencias');
 
     xml += '</urlset>';
     return c.newResponse(xml, 200, { 
