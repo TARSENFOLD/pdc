@@ -1,4 +1,9 @@
-import type { StrapiPublicationStatus } from '@pdc/shared';
+import {
+  PreMigrationContentStateSchema,
+  type PreMigrationContentState,
+  type StrapiPublicationStatus,
+} from '@pdc/shared';
+import { z } from 'zod';
 
 import { loadContentVersions } from '../conteudo/content-access.repository.js';
 import { strapiGet } from '../strapi/strapi.client.js';
@@ -9,10 +14,21 @@ export interface StrapiSimulacaoAccessRecord {
   slug?: string;
   titulo: string;
   autorId: string;
-  estado: string;
+  estado: PreMigrationContentState;
   tipo: number;
   area: string;
 }
+
+const StrapiSimulacaoAccessRecordSchema = z.object({
+  id: z.union([z.string().min(1), z.number().int()]),
+  documentId: z.string().min(1).optional(),
+  slug: z.string().min(1).optional(),
+  titulo: z.string().min(1),
+  autorId: z.string().min(1),
+  estado: PreMigrationContentStateSchema,
+  tipo: z.number().int(),
+  area: z.string().min(1),
+}).passthrough();
 
 export async function findSimulacao(
   identifier: string,
@@ -28,7 +44,19 @@ export async function findSimulacao(
     filters['filters[$or][2][id][$eq]'] = identifier;
   }
   const response = await strapiGet<StrapiSimulacaoAccessRecord>('/simulacoes', filters);
-  return response.data[0];
+  const record = response.data[0];
+  if (record === undefined) return undefined;
+  const parsed = StrapiSimulacaoAccessRecordSchema.parse(record);
+  return {
+    id: parsed.id,
+    ...(parsed.documentId === undefined ? {} : { documentId: parsed.documentId }),
+    ...(parsed.slug === undefined ? {} : { slug: parsed.slug }),
+    titulo: parsed.titulo,
+    autorId: parsed.autorId,
+    estado: parsed.estado,
+    tipo: parsed.tipo,
+    area: parsed.area,
+  };
 }
 
 export async function loadSimulacaoVersions(identifier: string) {

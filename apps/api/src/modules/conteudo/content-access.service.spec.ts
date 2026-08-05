@@ -116,6 +116,22 @@ describe('content access service', () => {
     })).toBe('content_not_available');
   });
 
+  it.each(['hidden', 'archived'] as const)(
+    'não revela conteúdo %s sem relação existente',
+    (currentState) => {
+      expect(decideLearnerAccess({
+        actor: { id: 'student-1', role: 'estudante' },
+        authorId: 'author-1',
+        reviewerRoles: [],
+        currentState,
+        publishedState: 'approved',
+        hasPublishedVersion: true,
+        relationExists: false,
+        accessPolicy: 'open',
+      })).toBe('content_not_found');
+    },
+  );
+
   it('does not reveal whether an inaccessible content id exists', () => {
     const common = {
       actor: { id: 'student-1', role: 'estudante' as const },

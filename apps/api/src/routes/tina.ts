@@ -14,6 +14,8 @@ import { strapiGet, strapiPost } from '../modules/strapi/strapi.client.js';
 import { ChatPayloadSchema } from '@pdc/shared';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { env } from '../lib/env.js';
+import { AiContentAccessError } from '../modules/ai/ai.service.js';
+import { CONTENT_ACCESS_ERRORS } from '../modules/conteudo/content-access.service.js';
 
 const log = pino({ name: 'routes:tina' });
 
@@ -27,13 +29,38 @@ tinaRoutes.post('/chat', optionalJwt, zValidator('json', ChatPayloadSchema), asy
   const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
   
   const user = c.get('user');
-  const res = await tinaService.chat(
-    messages ?? [{ role: 'user', content: prompt }],
-    user?.id ?? null,
-    ip,
-    stream,
-    user?.role,
-  );
+  let res: Response;
+  try {
+    res = await tinaService.chat(
+      messages ?? [{ role: 'user', content: prompt }],
+      user?.id ?? null,
+      ip,
+      stream,
+      user?.role,
+    );
+  } catch (error) {
+    if (error instanceof AiContentAccessError) {
+      log.warn(
+        { decision: error.decision, userId: user?.id },
+        'Contexto pessoal da Tina bloqueado pela política de conteúdo',
+      );
+      switch (error.decision) {
+        case 'preview_only':
+          return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+        case 'content_not_available':
+          return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+        case 'content_not_found':
+          return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+        case 'dependency_unavailable':
+          return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
+      }
+    }
+    log.error(
+      { errorType: error instanceof Error ? error.name : 'non_error', userId: user?.id },
+      'Falha ao construir contexto pessoal da Tina',
+    );
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
+  }
 
   if (!res.ok) {
     const providerError: unknown = await res.json().catch(() => null);

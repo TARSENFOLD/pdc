@@ -118,8 +118,10 @@ export function decideLearnerAccess(input: {
   relationExists: boolean;
   accessPolicy: ContentAccessPolicy;
 }): LearnerAccessDecision {
-  if (input.relationExists && isUnavailableContentState(input.currentState)) {
-    return 'content_not_available';
+  if (isUnavailableContentState(input.currentState)) {
+    return input.relationExists
+      ? 'content_not_available'
+      : 'content_not_found';
   }
 
   if (canEnrollOrParticipate({

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { strapiGet } from '../strapi/strapi.client.js';
 import { tinaContextService } from './tina-context.service.js';
 import type { StrapiListResponse } from '@pdc/shared';
+import { AiContentAccessError } from '../ai/ai.service.js';
 
 const buildContextoMock = vi.hoisted(() => vi.fn());
 
@@ -9,11 +10,16 @@ vi.mock('../strapi/strapi.client.js', () => ({
   strapiGet: vi.fn(),
 }));
 
-vi.mock('../ai/ai.service.js', () => ({
-  aiService: {
-    buildContexto: buildContextoMock,
-  },
-}));
+vi.mock('../ai/ai.service.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../ai/ai.service.js')>();
+  return {
+    ...actual,
+    aiService: {
+      ...actual.aiService,
+      buildContexto: buildContextoMock,
+    },
+  };
+});
 
 describe('tinaContextService', () => {
   beforeEach(() => {
@@ -63,6 +69,14 @@ describe('tinaContextService', () => {
     const context = await tinaContextService.build('user-1', 'estudante');
     expect(context).toContain('Papel atual: Estudante');
     expect(context).toContain('Interesses: Matemática e Ciências.');
-    expect(buildContextoMock).toHaveBeenCalledWith('user-1');
+    expect(buildContextoMock).toHaveBeenCalledWith({ id: 'user-1', role: 'estudante' });
+  });
+
+  it('propaga a decisão fechada de acesso sem degradar para contexto genérico', async () => {
+    buildContextoMock.mockRejectedValue(new AiContentAccessError('content_not_available'));
+
+    await expect(tinaContextService.build('user-1', 'estudante')).rejects.toMatchObject({
+      decision: 'content_not_available',
+    });
   });
 });
