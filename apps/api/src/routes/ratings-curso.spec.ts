@@ -43,6 +43,18 @@ describe('ratingRoutes curso eligibility', () => {
 
   it('usa /inscricoes e progressoPercentual para liberar avaliação de curso', async () => {
     vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{
+        id: 'curso-1',
+        titulo: 'Curso aprovado',
+        autorId: 'mentor-1',
+        estado: 'approved',
+      }]))
+      .mockResolvedValueOnce(listResponse([{
+        id: 'curso-1',
+        titulo: 'Curso aprovado',
+        autorId: 'mentor-1',
+        estado: 'approved',
+      }]))
       .mockResolvedValueOnce(listResponse([{ id: 'insc-1', progressoPercentual: 30 }]))
       .mockResolvedValueOnce(listResponse([{ id: 'perfil-1' }]))
       .mockResolvedValueOnce(listResponse([]));
@@ -66,5 +78,28 @@ describe('ratingRoutes curso eligibility', () => {
       targetId: 'curso-1',
       estrelas: 5,
     }));
+  });
+
+  it('não aceita feedback directo para uma Experiência sem versão publicada approved', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{
+        id: 'exp-draft',
+        estado: 'draft',
+        autor: { userId: 'mentor-1' },
+      }]))
+      .mockResolvedValueOnce(listResponse([]));
+
+    const res = await app.request('/ratings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetType: 'experiencia', targetId: 'exp-draft', valor: 5 }),
+    });
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({
+      error: 'Conteúdo não encontrado.',
+      code: 'CONTENT_NOT_FOUND',
+    });
+    expect(strapiPost).not.toHaveBeenCalled();
   });
 });

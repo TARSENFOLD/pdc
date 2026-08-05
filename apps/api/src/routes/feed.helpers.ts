@@ -13,6 +13,7 @@ import {
   filterVwxExperiences,
   isVwxCatalogEnabled,
 } from '../modules/feature-flags/vwx-catalog-gate.js';
+import { applyAuthoritativePublicContentFilter } from '../modules/conteudo/content-access.service.js';
 
 // ── Strapi interfaces (Flat v5) ──────────────────────────────────────────────
 
@@ -137,33 +138,39 @@ export async function getItemStats(tipo: FeedItemTipo, id: string): Promise<Item
 }
 
 export async function fetchCandidates(): Promise<Array<StrapiEntity & { tipo: FeedItemTipo }>> {
+  const cursosParams: Record<string, string | string[]> = {
+    'pagination[pageSize]': '100',
+    sort: 'publishedAt:desc',
+    populate: 'autor',
+  };
+  const simulacoesParams: Record<string, string | string[]> = {
+    'pagination[pageSize]': '100',
+    sort: 'publishedAt:desc',
+    populate: 'autor',
+  };
+  const experienciasParams: Record<string, string | string[]> = {
+    'pagination[pageSize]': '100',
+    sort: 'publishedAt:desc',
+    populate: 'instituicao',
+  };
+  const programasParams: Record<string, string | string[]> = {
+    'pagination[pageSize]': '100',
+    sort: 'publishedAt:desc',
+    populate: 'capa,instituicao,responsavel',
+  };
+  [cursosParams, simulacoesParams, experienciasParams, programasParams]
+    .forEach(applyAuthoritativePublicContentFilter);
   const [cursos, simulacoes, experiencias, feedPosts, programas, projetos, partilhas, vwxCatalogEnabled] = await Promise.all([
-    strapiGet<StrapiEntity>('/cursos', {
-      'pagination[pageSize]': '100',
-      sort: 'publishedAt:desc',
-      populate: 'autor',
-    }),
-    strapiGet<StrapiEntity>('/simulacoes', {
-      'pagination[pageSize]': '100',
-      sort: 'publishedAt:desc',
-      populate: 'autor',
-    }),
-    strapiGet<StrapiEntity>('/experiencias', {
-      'pagination[pageSize]': '100',
-      sort: 'publishedAt:desc',
-      populate: 'instituicao',
-    }),
+    strapiGet<StrapiEntity>('/cursos', cursosParams),
+    strapiGet<StrapiEntity>('/simulacoes', simulacoesParams),
+    strapiGet<StrapiEntity>('/experiencias', experienciasParams),
     strapiGet<StrapiEntity>('/feed-posts', {
       'filters[estado][$eq]': 'aprovada',
       'pagination[pageSize]': '100',
       sort: 'createdAt:desc',
       populate: 'autor.foto',
     }),
-    strapiGet<StrapiEntity>('/programas', {
-      'pagination[pageSize]': '100',
-      sort: 'publishedAt:desc',
-      populate: 'capa,instituicao,responsavel',
-    }),
+    strapiGet<StrapiEntity>('/programas', programasParams),
     strapiGet<StrapiEntity>('/projetos', {
       'pagination[pageSize]': '100',
       sort: 'createdAt:desc',

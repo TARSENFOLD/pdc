@@ -9,7 +9,7 @@ import { strapiDelete, strapiGet, strapiPost, strapiPut } from '../modules/strap
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { CriarProgramaPayloadSchema, AtualizarProgramaEstadoSchema } from '@pdc/shared';
-import { applyPublicCatalogStateFilter, isPublicCatalogEstado } from './publication-state.js';
+import { applyPublicCatalogStateFilter } from './publication-state.js';
 import { toPaginatedResponse } from './pagination.js';
 import {
   fromStrapiPrograma,
@@ -22,7 +22,6 @@ import {
   canTransitionPrograma,
   relationId,
   resolveProgramaActor,
-  sameRelation,
 } from './programas-access.js';
 import { programaParticipationRoutes } from './programas-participation.js';
 import {
@@ -30,10 +29,18 @@ import {
   requireContentSubmissionEnabled,
   requireInternalQaCreatorAccess,
 } from '../modules/feature-flags/cor-0001-gates.js';
+import { loadContentVersions } from '../modules/conteudo/content-access.repository.js';
+import {
+  CONTENT_ACCESS_ERRORS,
+  canPreviewContent,
+  canReadResolvedPublicContent,
+  parseContentState,
+} from '../modules/conteudo/content-access.service.js';
 
 // GET / e GET /:id são públicos (optionalJwt); rotas protegidas usam verifyJwt individualmente
 type Vars = { Variables: OptionalAuthVariables };
 export const programaRoutes = new Hono<Vars>();
+const PROGRAM_REVIEWER_ROLES = ['moderador'] as const;
 
 const PROGRAMA_POPULATE = 'capa,instituicao,responsavel,cursos,experiencias,simulacoes,projetos';
 
@@ -51,7 +58,7 @@ programaRoutes.get('/', async (c) => {
       data: res.data.map(fromStrapiPrograma),
     });
   } catch {
-    return c.json({ error: 'Erro ao carregar programas' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -86,27 +93,37 @@ programaRoutes.get('/:id', optionalJwt, async (c) => {
   const id = c.req.param('id');
   if (!id) return c.json({ error: 'Id é obrigatório' }, 400);
   try {
-    const prog = await findStrapiEntity<StrapiProgramaRecord>('programas', id, {
-      populate: PROGRAMA_POPULATE,
+    const versions = await loadContentVersions((status) => (
+      findStrapiEntity<StrapiProgramaRecord>('programas', id, {
+        status,
+        populate: PROGRAMA_POPULATE,
+      })
+    ));
+    const current = versions.current ?? versions.published;
+    const publicReadable = canReadResolvedPublicContent({
+      currentState: parseContentState(current?.estado),
+      publishedState: parseContentState(versions.published?.estado),
+      hasPublishedVersion: versions.published !== undefined,
     });
-    if (!prog) return c.json({ error: 'Programa não encontrado' }, 404);
-
-    if (!isPublicCatalogEstado(prog.estado)) {
-      const user = c.get('user');
-      if (!user) return c.json({ error: 'Programa não disponível' }, 404);
-
-      // Verifica se é o criador ou moderador
-      const actor = await resolveProgramaActor(user);
-      if (!actor) return c.json({ error: 'Programa não disponível' }, 404);
-      const isCreator = sameRelation(prog.responsavel, actor.perfil)
-        || sameRelation(prog.instituicao, actor.instituicao);
-      const isModerator = ['moderador', 'super_admin'].includes(user.role);
-      if (!isCreator && !isModerator) return c.json({ error: 'Programa não disponível' }, 404);
+    if (publicReadable && versions.published) {
+      return c.json(fromStrapiPrograma(versions.published));
     }
-
-    return c.json(fromStrapiPrograma(prog));
+    const user = c.get('user');
+    if (c.req.query('preview') !== 'true' || !user || !current) {
+      return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    }
+    const actor = await resolveProgramaActor(user);
+    const authorId = actor && canManagePrograma(actor, current) ? user.id : undefined;
+    if (!canPreviewContent({
+      actor: user,
+      authorId,
+      reviewerRoles: PROGRAM_REVIEWER_ROLES,
+    })) {
+      return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    }
+    return c.json(fromStrapiPrograma(current));
   } catch {
-    return c.json({ error: 'Falha ao carregar programa' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 

@@ -1,20 +1,29 @@
-import { Hono } from 'hono';
+import { Hono, type Handler } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { verifyJwt, optionalJwt, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
+import { verifyJwt, optionalJwt, type AuthVariables, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { requireApproved } from '../middleware/requireApproved.js';
 import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { CriarCursoPayloadSchema, type CriarCursoPayload, Curso, Inscricao, BehaviorPattern } from '@pdc/shared';
 import { cursosService } from '../modules/cursos/cursos.service.js';
-import { applyPublicCatalogStateFilter, isPublicCatalogEstado } from './publication-state.js';
+import { applyPublicCatalogStateFilter } from './publication-state.js';
 import { toPaginatedResponse } from './pagination.js';
 import {
   disabledFeatureResponse,
   requireContentSubmissionEnabled,
   requireInternalQaCreatorAccess,
 } from '../modules/feature-flags/cor-0001-gates.js';
+import {
+  CONTENT_ACCESS_ERRORS,
+  canPreviewContent,
+  canReadResolvedPublicContent,
+  decideLearnerAccess,
+  isUnavailableContentState,
+  parseContentState,
+} from '../modules/conteudo/content-access.service.js';
+import { persistedEntityId } from '../modules/strapi/strapi-entity.js';
 
 // C-01: OptionalAuthVariables — GET / e GET /:id são públicos; rotas protegidas usam verifyJwt individualmente
 type Vars = { Variables: OptionalAuthVariables };
@@ -28,6 +37,14 @@ const cursoQuerySchema = z.object({
 });
 
 export const cursoRoutes = new Hono<Vars>();
+const COURSE_REVIEWER_ROLES = ['comite_cientifico', 'moderador'] as const;
+
+interface CourseEnrollmentAccess extends Omit<Inscricao, 'curso'> {
+  curso?: {
+    id: string | number;
+    documentId?: string;
+  };
+}
 
 function stripLockedItems(curso: Curso): Curso {
   return {
@@ -74,9 +91,8 @@ cursoRoutes.get('/', optionalJwt, zValidator('query', cursoQuerySchema), async (
       return c.json(toPaginatedResponse({ ...res, data: enrichedData }));
     }
     return c.json(toPaginatedResponse(res));
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    return c.json({ error: message }, 502);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -100,29 +116,75 @@ cursoRoutes.get('/me/inscricoes', verifyJwt, async (c) => {
   const user = c.get('user');
   try {
     const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
-    const res = await strapiGet<Inscricao>('/inscricoes', { 'filters[perfil][id][$eq]': perfilId, populate: 'curso' });
+    const res = await strapiGet<CourseEnrollmentAccess>('/inscricoes', {
+      'filters[perfil][id][$eq]': perfilId,
+      populate: 'curso',
+    });
+    for (const enrollment of res.data) {
+      const cursoId = enrollment.curso ? persistedEntityId(enrollment.curso) : undefined;
+      if (!cursoId) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      const versions = await cursosService.obterVersoesCurso(cursoId);
+      const current = versions.current ?? versions.published;
+      const decision = decideLearnerAccess({
+        actor: user,
+        authorId: current?.autorId,
+        reviewerRoles: COURSE_REVIEWER_ROLES,
+        currentState: parseContentState(current?.estado),
+        publishedState: parseContentState(versions.published?.estado),
+        hasPublishedVersion: versions.published !== undefined,
+        relationExists: true,
+        accessPolicy: 'granted',
+      });
+      if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+      if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+      if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    }
     return c.json(res);
-  } catch (err: unknown) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
 // GET /cursos/:id — detalhe público com controlo de acesso
 cursoRoutes.get('/:id', optionalJwt, async (c) => {
   const id = c.req.param('id');
-  if (!id) return c.json({ error: 'Curso não encontrado' }, 404);
+  if (!id) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
   try {
-    const data = await cursosService.obterCursoComModulos(id);
-    if (!data) return c.json({ error: 'Curso não encontrado' }, 404);
-
+    const versions = await cursosService.obterVersoesCurso(id);
+    const current = versions.current ?? versions.published;
+    const currentState = parseContentState(current?.estado);
+    const publishedState = parseContentState(versions.published?.estado);
     const user = c.get('user');
+    const publicReadable = canReadResolvedPublicContent({
+      currentState,
+      publishedState,
+      hasPublishedVersion: versions.published !== undefined,
+    });
 
-    if (!isPublicCatalogEstado(data.estado)) {
-      if (!user || (data.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role))) {
-        return c.json({ error: 'Acesso negado' }, 403);
+    if (!publicReadable) {
+      if (user && isUnavailableContentState(currentState)) {
+        const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
+        const reference = current ?? versions.published;
+        const existing = reference
+          ? await cursosService.buscarInscricao(persistedEntityId(reference), perfilId)
+          : undefined;
+        if (existing) return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
       }
+      const previewRequested = c.req.query('preview') === 'true';
+      if (!previewRequested || !user || !current || !canPreviewContent({
+        actor: user,
+        authorId: current.autorId,
+        reviewerRoles: COURSE_REVIEWER_ROLES,
+      })) {
+        return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      }
+      const preview = await cursosService.obterCursoComModulos(id, 'draft');
+      if (!preview) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      return c.json(preview);
     }
 
+    const data = await cursosService.obterCursoComModulos(id, 'published');
+    if (!data) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
     if (!user) return c.json(stripLockedItems(data));
 
     const canSeeFullContent = data.autorId === user.id ||
@@ -132,8 +194,8 @@ cursoRoutes.get('/:id', optionalJwt, async (c) => {
     const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
     const inscricao = await cursosService.buscarInscricao(id, perfilId);
     return c.json(inscricao ? data : stripLockedItems(data));
-  } catch (err: unknown) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -228,33 +290,50 @@ cursoRoutes.patch('/:id/estado', verifyJwt, checkRole(['mentor', 'instituicao', 
   }
 });
 
-// POST /cursos/:id/inscricao (protegido)
-cursoRoutes.post('/:id/inscricao', verifyJwt, checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']), async (c) => {
+const enrollInCourse: Handler<{ Variables: AuthVariables }> = async (c) => {
   const user = c.get('user');
   try {
     const cursoId = c.req.param('id');
     if (!cursoId) return c.json({ error: 'Id do curso é obrigatório' }, 400);
     const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
-    const res = await cursosService.inscreverUtilizador(cursoId, user.id, perfilId, user.role);
+    const versions = await cursosService.obterVersoesCurso(cursoId);
+    const current = versions.current ?? versions.published;
+    const reference = current ?? versions.published;
+    const persistedCursoId = reference ? persistedEntityId(reference) : undefined;
+    const existing = persistedCursoId
+      ? await cursosService.buscarInscricao(persistedCursoId, perfilId)
+      : undefined;
+    const decision = decideLearnerAccess({
+      actor: user,
+      authorId: current?.autorId,
+      reviewerRoles: COURSE_REVIEWER_ROLES,
+      currentState: parseContentState(current?.estado),
+      publishedState: parseContentState(versions.published?.estado),
+      hasPublishedVersion: versions.published !== undefined,
+      relationExists: existing !== undefined,
+      accessPolicy: 'open',
+    });
+    if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+    if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+    if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    if (!versions.published) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    const res = await cursosService.inscreverUtilizador(
+      persistedEntityId(versions.published),
+      user.id,
+      perfilId,
+      user.role,
+    );
     return c.json(res, 201);
-  } catch (err: unknown) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
-});
+};
+
+// POST /cursos/:id/inscricao (protegido)
+cursoRoutes.post('/:id/inscricao', verifyJwt, checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']), enrollInCourse);
 
 // POST /cursos/:id/inscrever — alias (protegido)
-cursoRoutes.post('/:id/inscrever', verifyJwt, checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']), async (c) => {
-  const user = c.get('user');
-  try {
-    const cursoId = c.req.param('id');
-    if (!cursoId) return c.json({ error: 'Id do curso é obrigatório' }, 400);
-    const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
-    const res = await cursosService.inscreverUtilizador(cursoId, user.id, perfilId, user.role);
-    return c.json(res, 201);
-  } catch (err: unknown) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
-  }
-});
+cursoRoutes.post('/:id/inscrever', verifyJwt, checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']), enrollInCourse);
 
 // GET /cursos/:id/progresso (protegido)
 cursoRoutes.get('/:id/progresso', verifyJwt, checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']), async (c) => {
@@ -263,11 +342,32 @@ cursoRoutes.get('/:id/progresso', verifyJwt, checkRole(['estudante', 'mentor', '
     const cursoId = c.req.param('id');
     if (!cursoId) return c.json({ error: 'Id do curso é obrigatório' }, 400);
     const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
-    const progresso = await cursosService.listarProgresso(cursoId, perfilId);
+    const versions = await cursosService.obterVersoesCurso(cursoId);
+    const current = versions.current ?? versions.published;
+    const reference = current ?? versions.published;
+    const persistedCursoId = reference ? persistedEntityId(reference) : undefined;
+    const existing = persistedCursoId
+      ? await cursosService.buscarInscricao(persistedCursoId, perfilId)
+      : undefined;
+    const decision = decideLearnerAccess({
+      actor: user,
+      authorId: current?.autorId,
+      reviewerRoles: COURSE_REVIEWER_ROLES,
+      currentState: parseContentState(current?.estado),
+      publishedState: parseContentState(versions.published?.estado),
+      hasPublishedVersion: versions.published !== undefined,
+      relationExists: existing !== undefined,
+      accessPolicy: 'open',
+    });
+    if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+    if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+    if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    if (!versions.published) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    const progresso = await cursosService.listarProgresso(persistedEntityId(versions.published), perfilId);
     if (progresso === null) return c.json({ error: 'Inscrição não encontrada' }, 404);
     return c.json(progresso);
-  } catch (err: unknown) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -284,12 +384,37 @@ cursoRoutes.patch(
       const itemId = c.req.param('itemId');
       if (!cursoId || !itemId) return c.json({ error: 'Id do curso e do item são obrigatórios' }, 400);
       const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
-      const item = await cursosService.marcarItem(cursoId, itemId, perfilId, user.id, c.req.valid('json').concluido);
+      const versions = await cursosService.obterVersoesCurso(cursoId);
+      const current = versions.current ?? versions.published;
+      const reference = current ?? versions.published;
+      const persistedCursoId = reference ? persistedEntityId(reference) : undefined;
+      const existing = persistedCursoId
+        ? await cursosService.buscarInscricao(persistedCursoId, perfilId)
+        : undefined;
+      const decision = decideLearnerAccess({
+        actor: user,
+        authorId: current?.autorId,
+        reviewerRoles: COURSE_REVIEWER_ROLES,
+        currentState: parseContentState(current?.estado),
+        publishedState: parseContentState(versions.published?.estado),
+        hasPublishedVersion: versions.published !== undefined,
+        relationExists: existing !== undefined,
+        accessPolicy: 'open',
+      });
+      if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+      if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+      if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      if (!versions.published) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      const item = await cursosService.marcarItem(
+        persistedEntityId(versions.published),
+        itemId,
+        perfilId,
+        user.id,
+        c.req.valid('json').concluido,
+      );
       return c.json(item);
-    } catch (err: unknown) {
-      const status = (err as { status?: number }).status;
-      if (status === 403) return c.json({ error: 'Inscrição não encontrada' }, 403);
-      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    } catch {
+      return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
     }
   },
 );

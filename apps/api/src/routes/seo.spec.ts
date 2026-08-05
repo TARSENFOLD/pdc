@@ -77,4 +77,22 @@ describe('GET /sitemap.xml — contenção VWX', () => {
     expect(xml).toContain('/experiencias/experiencia-legada');
     expect(xml).not.toContain('/experiencias/experiencia-vwx');
   });
+
+  it('exige versão publicada approved e devolve erro canónico se o Strapi falhar', async () => {
+    const ok = await seoRoutes.request('/sitemap.xml');
+
+    expect(ok.status).toBe(200);
+    expect(mocks.strapiGet).toHaveBeenCalledWith('/cursos', expect.objectContaining({
+      status: 'published',
+      'filters[estado][$eq]': 'approved',
+    }));
+
+    mocks.strapiGet.mockRejectedValueOnce(new Error('Strapi indisponível'));
+    const unavailable = await seoRoutes.request('/sitemap.xml');
+    expect(unavailable.status).toBe(503);
+    expect(await unavailable.json()).toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
+  });
 });

@@ -1,7 +1,7 @@
 import type { Role } from '@pdc/shared';
 import pino from 'pino';
 import { strapiGet } from '../strapi/strapi.client.js';
-import { aiService } from '../ai/ai.service.js';
+import { AiContentAccessError, aiService } from '../ai/ai.service.js';
 
 const log = pino({ name: 'tina-context-service' });
 
@@ -59,9 +59,10 @@ export const tinaContextService = {
     }
 
     try {
-      const vocacional = await aiService.buildContexto(userId);
+      const vocacional = await aiService.buildContexto({ id: userId, role });
       return [base, perfil, vocacional].filter(Boolean).join(' ');
     } catch (error) {
+      if (error instanceof AiContentAccessError) throw error;
       log.warn({ error, userId }, 'Contexto vocacional indisponível para a Tina');
       return [base, perfil, 'Ainda não há contexto vocacional disponível.']
         .filter(Boolean)

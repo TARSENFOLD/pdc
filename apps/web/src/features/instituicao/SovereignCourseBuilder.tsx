@@ -58,7 +58,7 @@ export function SovereignCourseBuilder() {
   const modulosArray = useFieldArray({ control, name: 'modulos' });
   const cursoQuery = useQuery({
     queryKey: ['cursos', cursoId ?? ''],
-    queryFn: () => cursosApi.getById(cursoId ?? ''),
+    queryFn: () => cursosApi.getPreviewById(cursoId ?? ''),
     enabled: isEditing,
   });
 

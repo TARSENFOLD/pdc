@@ -9,18 +9,37 @@ import {
 } from '../modules/strapi/strapi.client.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
-import { applyPublicCatalogStateFilter } from './publication-state.js';
 import { toPaginatedResponse } from './pagination.js';
 import type { StrapiProgramaRecord } from './programas.mapper.js';
+import { findStrapiEntity, persistedEntityId } from '../modules/strapi/strapi-entity.js';
+import {
+  contentRelationIdentityFilters,
+  loadContentVersions,
+} from '../modules/conteudo/content-access.repository.js';
+import {
+  CONTENT_ACCESS_ERRORS,
+  decideLearnerAccess,
+  parseContentState,
+} from '../modules/conteudo/content-access.service.js';
+import {
+  canManagePrograma,
+  relationId,
+  resolveProgramaActor,
+} from './programas-access.js';
 
 export const programaParticipationRoutes = new Hono<{ Variables: AuthVariables }>();
 const log = pino({ name: 'routes:programas:participation' });
+const PROGRAM_REVIEWER_ROLES = ['moderador'] as const;
 
 interface StrapiInscricaoPrograma {
   id: string | number;
   documentId?: string;
   concluido?: boolean;
   dataConclusao?: string | null;
+  programa?: {
+    id: string | number;
+    documentId?: string;
+  };
 }
 
 class ProgramaParticipationRollbackError extends Error {
@@ -79,53 +98,92 @@ programaParticipationRoutes.get('/meus', verifyJwt, async (c) => {
         meta: { pagination: { page, pageSize, pageCount: 0, total: 0 } },
       }));
     }
-    const response = await strapiGet<StrapiProgramaRecord>('/inscricoes-programas', {
+    const response = await strapiGet<StrapiInscricaoPrograma>('/inscricoes-programas', {
       'filters[perfil][id][$eq]': perfilId,
       'pagination[page]': String(page),
       'pagination[pageSize]': String(pageSize),
       populate: 'programa.capa,programa.instituicao',
     });
+    for (const enrollment of response.data) {
+      const programaId = enrollment.programa ? persistedEntityId(enrollment.programa) : undefined;
+      if (!programaId) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      const versions = await loadContentVersions((status) => (
+        findStrapiEntity<StrapiProgramaRecord>('programas', programaId, {
+          status,
+          populate: 'responsavel,instituicao',
+        })
+      ));
+      const current = versions.current ?? versions.published;
+      const decision = decideLearnerAccess({
+        actor: c.get('user'),
+        authorId: undefined,
+        reviewerRoles: PROGRAM_REVIEWER_ROLES,
+        currentState: parseContentState(current?.estado),
+        publishedState: parseContentState(versions.published?.estado),
+        hasPublishedVersion: versions.published !== undefined,
+        relationExists: true,
+        accessPolicy: 'granted',
+      });
+      if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+      if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+      if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    }
     return c.json(toPaginatedResponse(response));
   } catch (error) {
     log.error({ error, userId }, 'Falha ao carregar inscrições de Programa');
-    return c.json({ error: 'Erro ao carregar as tuas inscrições' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
 programaParticipationRoutes.post('/:id/inscricao', verifyJwt, async (c) => {
   const programaId = c.req.param('id');
   if (!programaId) return c.json({ error: 'Id é obrigatório' }, 400);
-  const { id: userId } = c.get('user');
+  const user = c.get('user');
+  const { id: userId } = user;
   try {
-    const perfis = await strapiGet<{ id: string }>('/perfis', {
-      'filters[userId][$eq]': userId,
-      'fields[0]': 'id',
+    const actor = await resolveProgramaActor(user);
+    if (!actor) return c.json({ error: 'Perfil não encontrado' }, 404);
+    const perfilId = relationId(actor.perfil);
+    const versions = await loadContentVersions((status) => (
+      findStrapiEntity<StrapiProgramaRecord>('programas', programaId, {
+        status,
+        populate: 'responsavel,instituicao',
+      })
+    ));
+    const current = versions.current ?? versions.published;
+    const reference = current ?? versions.published;
+    const existing = reference
+      ? await strapiGet<StrapiInscricaoPrograma>('/inscricoes-programas', {
+        'filters[perfil][id][$eq]': String(perfilId),
+        ...contentRelationIdentityFilters('programa', persistedEntityId(reference)),
+        'pagination[pageSize]': '1',
+      })
+      : undefined;
+    const authorId = current && canManagePrograma(actor, current) ? user.id : undefined;
+    const accessMode = versions.published?.modoAcesso ?? current?.modoAcesso;
+    const decision = decideLearnerAccess({
+      actor: user,
+      authorId,
+      reviewerRoles: PROGRAM_REVIEWER_ROLES,
+      currentState: parseContentState(current?.estado),
+      publishedState: parseContentState(versions.published?.estado),
+      hasPublishedVersion: versions.published !== undefined,
+      relationExists: existing !== undefined && existing.data.length > 0,
+      accessPolicy: accessMode === 'livre' || accessMode === 'misto' ? 'open' : 'restricted',
     });
-    const perfilId = perfis.data[0]?.id;
-    if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
+    if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+    if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+    if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    if (!versions.published) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    if (existing && existing.data.length > 0) return c.json({ error: 'Já inscrito neste programa' }, 409);
 
-    const programParams: Record<string, string | string[]> = {
-      'filters[id][$eq]': programaId,
-      'pagination[pageSize]': '1',
-    };
-    applyPublicCatalogStateFilter(programParams);
-    const programas = await strapiGet<StrapiProgramaRecord>('/programas', programParams);
-    if (!programas.data[0]) {
-      return c.json({ error: 'Programa não disponível para inscrição' }, 404);
-    }
-
-    const existing = await strapiGet<StrapiInscricaoPrograma>('/inscricoes-programas', {
-      'filters[perfil][id][$eq]': perfilId,
-      'filters[programa][id][$eq]': programaId,
-      'pagination[pageSize]': '1',
-    });
-    if (existing.data.length > 0) return c.json({ error: 'Já inscrito neste programa' }, 409);
+    const persistedProgramaId = persistedEntityId(versions.published);
 
     let created;
     try {
       created = await strapiPost<StrapiInscricaoPrograma>('/inscricoes-programas', {
         perfil: perfilId,
-        programa: programaId,
+        programa: persistedProgramaId,
       });
     } catch (error) {
       if (error instanceof StrapiHttpError && error.status === 409) {
@@ -135,7 +193,7 @@ programaParticipationRoutes.post('/:id/inscricao', verifyJwt, async (c) => {
     }
     try {
       await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_INSCRICAO, {
-        programaId,
+        programaId: persistedProgramaId,
         estudanteId: userId,
       });
     } catch (eventError) {
@@ -163,28 +221,51 @@ programaParticipationRoutes.post('/:id/inscricao', verifyJwt, async (c) => {
     if (error instanceof ProgramaParticipationRollbackError) {
       return c.json({ error: error.message, code: error.code }, 503);
     }
-    return c.json({ error: 'Falha ao processar inscrição' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
 programaParticipationRoutes.post('/:id/concluir', verifyJwt, async (c) => {
   const programaId = c.req.param('id');
   if (!programaId) return c.json({ error: 'Id é obrigatório' }, 400);
-  const { id: userId } = c.get('user');
+  const user = c.get('user');
+  const { id: userId } = user;
   try {
-    const perfis = await strapiGet<{ id: string }>('/perfis', {
-      'filters[userId][$eq]': userId,
-      'fields[0]': 'id',
+    const actor = await resolveProgramaActor(user);
+    if (!actor) return c.json({ error: 'Perfil não encontrado' }, 404);
+    const perfilId = relationId(actor.perfil);
+    const versions = await loadContentVersions((status) => (
+      findStrapiEntity<StrapiProgramaRecord>('programas', programaId, {
+        status,
+        populate: 'responsavel,instituicao',
+      })
+    ));
+    const current = versions.current ?? versions.published;
+    const reference = current ?? versions.published;
+    const inscricoes = reference
+      ? await strapiGet<StrapiInscricaoPrograma>('/inscricoes-programas', {
+        'filters[perfil][id][$eq]': String(perfilId),
+        ...contentRelationIdentityFilters('programa', persistedEntityId(reference)),
+        'pagination[pageSize]': '1',
+      })
+      : undefined;
+    const inscricao = inscricoes?.data[0];
+    const authorId = current && canManagePrograma(actor, current) ? user.id : undefined;
+    const decision = decideLearnerAccess({
+      actor: user,
+      authorId,
+      reviewerRoles: PROGRAM_REVIEWER_ROLES,
+      currentState: parseContentState(current?.estado),
+      publishedState: parseContentState(versions.published?.estado),
+      hasPublishedVersion: versions.published !== undefined,
+      relationExists: inscricao !== undefined,
+      accessPolicy: 'granted',
     });
-    const perfilId = perfis.data[0]?.id;
-    if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
-    const inscricoes = await strapiGet<StrapiInscricaoPrograma>('/inscricoes-programas', {
-      'filters[perfil][id][$eq]': perfilId,
-      'filters[programa][id][$eq]': programaId,
-      'pagination[pageSize]': '1',
-    });
-    const inscricao = inscricoes.data[0];
-    if (!inscricao) return c.json({ error: 'Inscrição não encontrada' }, 404);
+    if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+    if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+    if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    if (!inscricao || !versions.published) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    const persistedProgramaId = persistedEntityId(versions.published);
     if (inscricao.concluido) return c.json({ success: true, alreadyCompleted: true });
 
     const persistedId = inscricaoPersistedId(inscricao);
@@ -201,8 +282,8 @@ programaParticipationRoutes.post('/:id/concluir', verifyJwt, async (c) => {
     }
     try {
       await eventBus.publishWithOutbox(DomainEventName.PROGRAMA_CONCLUIDO, {
-        programaId,
-        perfilId,
+        programaId: persistedProgramaId,
+        perfilId: String(perfilId),
       });
     } catch (eventError) {
       try {
@@ -239,6 +320,6 @@ programaParticipationRoutes.post('/:id/concluir', verifyJwt, async (c) => {
     if (error instanceof ProgramaParticipationRollbackError) {
       return c.json({ error: error.message, code: error.code }, 503);
     }
-    return c.json({ error: 'Erro ao concluir programa' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });

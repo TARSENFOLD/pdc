@@ -7,6 +7,7 @@ export interface StrapiProgramaRecord {
   documentId?: string;
   titulo: string;
   estado: string;
+  modoAcesso?: 'livre' | 'convite' | 'misto';
   perfilId?: string;
   instituicaoId?: string;
   responsavel?: { id: string | number; documentId?: string };

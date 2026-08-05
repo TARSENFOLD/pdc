@@ -1,8 +1,12 @@
 import { strapiDelete, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
-import { Curso, Inscricao, Modulo, type CriarCursoPayload, type ItemModulo, type ProgressoItem } from '@pdc/shared';
+import { Curso, Inscricao, Modulo, type CriarCursoPayload, type ItemModulo, type ProgressoItem, type StrapiPublicationStatus } from '@pdc/shared';
 import { eventBus } from '../events/event-bus.js';
 import { DomainEventName } from '../events/types.js';
 import pino from 'pino';
+import {
+  contentRelationIdentityFilters,
+  loadContentVersions,
+} from '../conteudo/content-access.repository.js';
 
 const log = pino({ name: 'cursos-service' });
 
@@ -21,6 +25,7 @@ interface ExistingModulo extends Omit<Modulo, 'itens'> {
 
 interface CursoComModulos extends Omit<Curso, 'modulos'> {
   documentId?: string;
+  thumbnailUrl?: string;
   modulos?: ExistingModulo[];
 }
 
@@ -55,7 +60,6 @@ type CursoBasePayload = Omit<CriarCursoPayload, 'modulos' | 'regrasAcesso' | 'es
 type CursoBaseUpdatePayload = {
   [K in keyof CursoBasePayload]?: CursoBasePayload[K] | undefined;
 };
-type CursoWithThumbnail = Curso & { thumbnailUrl?: string; documentId?: string };
 type CursoPersisted = Curso & { documentId?: string };
 type CursoUpdatePayload = {
   [K in keyof CriarCursoPayload]?: CriarCursoPayload[K] | undefined;
@@ -74,6 +78,14 @@ function entityId(value: unknown): string {
   throw new Error('Identificador Strapi inválido');
 }
 
+function cursoIdentifierFilters(id: string): Record<string, string> {
+  return {
+    'filters[$or][0][documentId][$eq]': id,
+    'filters[$or][1][slug][$eq]': id,
+    ...(/^\d+$/.test(id) ? { 'filters[$or][2][id][$eq]': id } : {}),
+  };
+}
+
 function toPublicModulo(modulo: ExistingModulo): Modulo {
   return {
     ...modulo,
@@ -87,8 +99,7 @@ function toPublicModulo(modulo: ExistingModulo): Modulo {
 
 async function resolveCursoDocumentId(id: string): Promise<string> {
   const res = await strapiGet<CursoComModulos>('/cursos', {
-    'filters[$or][0][documentId][$eq]': id,
-    'filters[$or][1][id][$eq]': id,
+    ...cursoIdentifierFilters(id),
     'fields[0]': 'id',
     'fields[1]': 'documentId',
     'pagination[pageSize]': '1',
@@ -98,12 +109,15 @@ async function resolveCursoDocumentId(id: string): Promise<string> {
   return curso.documentId ?? entityId(curso.id);
 }
 
-async function resolveCursoReference(id: string): Promise<CursoComModulos | undefined> {
+async function resolveCursoReference(
+  id: string,
+  status?: StrapiPublicationStatus,
+): Promise<CursoComModulos | undefined> {
   const res = await strapiGet<CursoComModulos>('/cursos', {
-    'filters[$or][0][documentId][$eq]': id,
-    'filters[$or][1][id][$eq]': id,
+    ...cursoIdentifierFilters(id),
     populate: 'autor',
     'pagination[pageSize]': '1',
+    ...(status === undefined ? {} : { status }),
   });
   return first(res.data);
 }
@@ -178,8 +192,12 @@ function toCursoStrapiData(
 }
 
 export const cursosService = {
-  async obterCursoBase(id: string): Promise<CursoComModulos | undefined> {
-    return resolveCursoReference(id);
+  async obterCursoBase(id: string, status?: StrapiPublicationStatus): Promise<CursoComModulos | undefined> {
+    return resolveCursoReference(id, status);
+  },
+
+  async obterVersoesCurso(id: string) {
+    return loadContentVersions((status) => resolveCursoReference(id, status));
   },
 
   async resolvePerfilId(userId: string, jwtPerfilId?: string): Promise<string> {
@@ -194,8 +212,8 @@ export const cursosService = {
     return String(perfilId);
   },
 
-  async obterCursoComModulos(id: string): Promise<Curso | undefined> {
-    const curso = await resolveCursoReference(id) as CursoWithThumbnail | undefined;
+  async obterCursoComModulos(id: string, status?: StrapiPublicationStatus): Promise<Curso | undefined> {
+    const curso = await resolveCursoReference(id, status);
     if (!curso) return undefined;
     const modulos = await listarModulosCurso(entityId(curso.id), curso.documentId);
     return {
@@ -326,7 +344,7 @@ export const cursosService = {
   async buscarInscricao(cursoId: string, perfilId: string): Promise<InscricaoStrapi | undefined> {
     const res = await strapiGet<InscricaoStrapi>('/inscricoes', {
       'filters[perfil][id][$eq]': perfilId,
-      'filters[curso][id][$eq]': cursoId,
+      ...contentRelationIdentityFilters('curso', cursoId),
       'populate': 'curso,perfil',
       'pagination[pageSize]': '1',
     });

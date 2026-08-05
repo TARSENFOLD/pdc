@@ -1,9 +1,10 @@
 import { expect, test } from '../../helpers/fixtures';
+import { z } from 'zod';
 
-test.describe('Programa - criar, editar e consumir', () => {
+test.describe('Programa - criar, editar e pré-visualizar', () => {
   test.setTimeout(60_000);
 
-  test('QA interno cria com curso, edita com seleção hidratada e consome o hub', async ({
+  test('QA interno cria com curso, edita com seleção hidratada e não publica o draft', async ({
     adminPage,
   }) => {
     const titulo = `Programa E2E ${Date.now()}`;
@@ -47,8 +48,16 @@ test.describe('Programa - criar, editar e consumir', () => {
     const programaId = new URL(adminPage.url()).pathname.split('/').at(-1);
     expect(programaId).toBeTruthy();
 
-    await adminPage.goto(`/app/programas/${programaId}`);
-    await expect(adminPage.getByRole('heading', { name: titulo })).toBeVisible();
-    await expect(adminPage.getByText('Cursos (1)')).toBeVisible();
+    const previewResponse = await adminPage.request.get(`/api/programas/${programaId}?preview=true`);
+    const previewBody = z.object({ titulo: z.string() }).passthrough().parse(await previewResponse.json());
+    expect(previewResponse.status(), JSON.stringify(previewBody)).toBe(200);
+    expect(previewBody).toMatchObject({ titulo });
+
+    const learnerResponse = await adminPage.request.get(`/api/programas/${programaId}`);
+    expect(learnerResponse.status()).toBe(404);
+    await expect(learnerResponse.json()).resolves.toEqual({
+      error: 'Conteúdo não encontrado.',
+      code: 'CONTENT_NOT_FOUND',
+    });
   });
 });

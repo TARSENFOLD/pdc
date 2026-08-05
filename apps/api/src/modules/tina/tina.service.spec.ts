@@ -6,12 +6,20 @@ const mocks = vi.hoisted(() => ({
   redisGet: vi.fn(),
   redisSet: vi.fn(),
   warn: vi.fn(),
+  fallbackOllama: vi.fn(),
+  contextBuild: vi.fn(),
 }));
 
 vi.mock('../ai/ai.service.js', () => ({
   aiService: {
     chat: mocks.aiChat,
-    fallbackOllama: vi.fn(),
+    fallbackOllama: mocks.fallbackOllama,
+  },
+}));
+
+vi.mock('./tina-context.service.js', () => ({
+  tinaContextService: {
+    build: mocks.contextBuild,
   },
 }));
 
@@ -40,6 +48,9 @@ beforeEach(() => {
   mocks.redisSet.mockReset();
   mocks.redisSet.mockResolvedValue('OK');
   mocks.warn.mockReset();
+  mocks.fallbackOllama.mockReset();
+  mocks.contextBuild.mockReset();
+  mocks.contextBuild.mockResolvedValue('Contexto autorizado');
 });
 
 describe('extractJsonObject', () => {
@@ -203,4 +214,21 @@ describe('respostas externas da Tina', () => {
       expect(mocks.warn).toHaveBeenLastCalledWith(expect.any(Object), expectedLogMessage);
     }
   );
+});
+
+describe('contenção do contexto pessoal da Tina', () => {
+  it('não chama DeepSeek nem Ollama quando a validação do contexto nega acesso', async () => {
+    mocks.contextBuild.mockRejectedValue(new Error('content access denied'));
+
+    await expect(tinaService.chat(
+      [{ role: 'user', content: 'Orientação' }],
+      'student-1',
+      '127.0.0.1',
+      false,
+      'estudante',
+    )).rejects.toThrow('content access denied');
+
+    expect(mocks.aiChat).not.toHaveBeenCalled();
+    expect(mocks.fallbackOllama).not.toHaveBeenCalled();
+  });
 });

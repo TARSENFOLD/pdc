@@ -74,7 +74,7 @@ export default function CriarProgramaPage() {
 
   const { data: existingPrograma, isLoading: isLoadingPrograma } = useQuery({
     queryKey: ['programas', editId],
-    queryFn: () => programasApi.getById(editId ?? ''),
+    queryFn: () => programasApi.getPreviewById(editId ?? ''),
     enabled: isEditMode,
   });
 

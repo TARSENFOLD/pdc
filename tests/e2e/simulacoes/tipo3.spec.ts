@@ -28,7 +28,14 @@ test.describe('Simulação Tipo 3 (Alta Fidelidade)', () => {
     ).toBeVisible();
 
     // 6. Concluir (via data-testid — tolerante a copy)
+    const completionResponsePromise = alunoPage.waitForResponse((response) =>
+      response.url().includes('/simulacoes/tentativas/')
+        && response.request().method() === 'PUT',
+    );
     await alunoPage.click('[data-testid="concluir-simulacao-btn"]');
+    const completionResponse = await completionResponsePromise;
+    const completionBody = await completionResponse.text();
+    expect(completionResponse.status(), completionBody).toBe(200);
 
     // 7. Verificar redirecionamento para reputação
     await expect(alunoPage).toHaveURL(/\/app\/reputacao/);

@@ -20,6 +20,12 @@ vi.mock('../strapi/strapi.client.js', () => ({
   strapiGet: vi.fn(),
 }));
 
+vi.mock('../feature-flags/feature-flags.service.js', () => ({
+  featureFlagService: {
+    isEnabled: vi.fn().mockResolvedValue(true),
+  },
+}));
+
 describe('VocacionalService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -50,6 +56,45 @@ describe('VocacionalService', () => {
     const res = await vocacionalService.gerarRecomendacoes(perfil);
     expect(res).toHaveLength(1);
     expect(res[0]?.titulo).toBe('Curso de Teste');
+    expect(strapiGet).toHaveBeenCalledWith('/cursos', expect.objectContaining({
+      status: 'published',
+      'filters[estado][$eq]': 'approved',
+    }));
+  });
+
+  it('recomenda apenas Experiências com versão publicada e estado approved', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
+      id: 'exp-1',
+      titulo: 'Experiência Institucional',
+      tipoExperiencia: 'institucional',
+      area: 'TECNOLOGIA',
+    }]));
+    const perfil: PerfilVocacional = {
+      id: 'pat-1',
+      perfilId: 'perfil-1',
+      scoreGlobal: 80,
+      certeza: 'ALTA',
+      totalEventos: 60,
+      areaMatch: 'TECNOLOGIA',
+      aptidao: 0.8,
+      dedicacao: 0.7,
+      dimensoes: { fluidez: 7, resiliencia: 8, foco: 7 },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      modelVersion: VOCACIONAL_MODEL_VERSION,
+      heuristicsVersion: VOCACIONAL_HEURISTICS_VERSION,
+      explanationVersion: VOCACIONAL_EXPLANATION_VERSION,
+      generatedWithAiSupport: false,
+      calculationMethod: 'heuristico_deterministico',
+    };
+
+    const recommendations = await vocacionalService.gerarRecomendacoesExperiencias(perfil);
+
+    expect(recommendations).toHaveLength(1);
+    expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
+      status: 'published',
+      'filters[estado][$eq]': 'approved',
+    }));
   });
 
   it('requests only canonical profile fields when calculating a profile', async () => {

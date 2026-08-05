@@ -14,10 +14,13 @@ export async function findStrapiEntity<T extends StrapiEntityReference>(
   identifier: string,
   params: Record<string, string> = {},
 ): Promise<T | undefined> {
+  const identityFilters: Record<string, string> = {
+    'filters[$or][0][documentId][$eq]': identifier,
+    ...(/^\d+$/.test(identifier) ? { 'filters[$or][1][id][$eq]': identifier } : {}),
+  };
   const response = await strapiGet<T>(`/${collection}`, {
     ...params,
-    'filters[$or][0][documentId][$eq]': identifier,
-    'filters[$or][1][id][$eq]': identifier,
+    ...identityFilters,
     'pagination[pageSize]': '1',
   });
 

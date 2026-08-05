@@ -78,6 +78,14 @@ describe('programaRoutes contracts', () => {
     tipo: 'standard',
     cursosIds: ['curso-1', 'curso-2'],
   };
+  const approvedProgram = {
+    id: 'programa-1',
+    documentId: 'doc-programa-1',
+    titulo: payload.titulo,
+    estado: 'approved',
+    modoAcesso: 'livre' as const,
+    responsavel: { id: 'perfil-responsavel' },
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -129,15 +137,16 @@ describe('programaRoutes contracts', () => {
   });
 
   it('GET /programas/:id deriva cursosIds e mantém os cursos populados', async () => {
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
-      id: 'programa-1',
-      titulo: payload.titulo,
-      estado: 'published',
+    const published = {
+      ...approvedProgram,
       cursos: [
         { id: 'curso-1', titulo: 'Curso um' },
         { id: 2, titulo: 'Curso dois' },
       ],
-    }]));
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([published]))
+      .mockResolvedValueOnce(listResponse([published]));
 
     const response = await app.request('/programas/programa-1');
     const result = await response.json() as {
@@ -299,7 +308,8 @@ describe('programaRoutes contracts', () => {
   it('remove a inscrição quando o outbox falha durante a criação', async () => {
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(listResponse([{ id: 'perfil-1' }]))
-      .mockResolvedValueOnce(listResponse([{ id: 'programa-1', estado: 'published' }]))
+      .mockResolvedValueOnce(listResponse([approvedProgram]))
+      .mockResolvedValueOnce(listResponse([approvedProgram]))
       .mockResolvedValueOnce(listResponse([]));
     vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({
       id: 91,
@@ -313,13 +323,15 @@ describe('programaRoutes contracts', () => {
       headers: { 'x-test-user': 'student-user' },
     });
 
-    expect(response.status).toBe(502);
+    expect(response.status).toBe(503);
     expect(strapiDelete).toHaveBeenCalledWith('/inscricoes-programas/inscricao-doc-91');
   });
 
   it('trata conclusão repetida como idempotente sem publicar outro evento', async () => {
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(listResponse([{ id: 'perfil-1' }]))
+      .mockResolvedValueOnce(listResponse([approvedProgram]))
+      .mockResolvedValueOnce(listResponse([approvedProgram]))
       .mockResolvedValueOnce(listResponse([{
         id: 91,
         documentId: 'inscricao-doc-91',
@@ -340,6 +352,8 @@ describe('programaRoutes contracts', () => {
   it('publica a conclusão apenas quando a transição atómica altera a inscrição', async () => {
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(listResponse([{ id: 'perfil-1' }]))
+      .mockResolvedValueOnce(listResponse([approvedProgram]))
+      .mockResolvedValueOnce(listResponse([approvedProgram]))
       .mockResolvedValueOnce(listResponse([{
         id: 91,
         documentId: 'inscricao-doc-91',
@@ -363,6 +377,8 @@ describe('programaRoutes contracts', () => {
   it('não duplica evento quando outra conclusão vence a corrida', async () => {
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(listResponse([{ id: 'perfil-1' }]))
+      .mockResolvedValueOnce(listResponse([approvedProgram]))
+      .mockResolvedValueOnce(listResponse([approvedProgram]))
       .mockResolvedValueOnce(listResponse([{
         id: 91,
         documentId: 'inscricao-doc-91',
@@ -378,5 +394,112 @@ describe('programaRoutes contracts', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ success: true, alreadyCompleted: true });
     expect(publishWithOutboxMock).not.toHaveBeenCalled();
+  });
+
+  it.each(['draft', 'review', 'hidden', 'archived'] as const)(
+    'não permite inscrição quando o Programa está %s',
+    async (estado) => {
+      vi.mocked(strapiGet)
+        .mockResolvedValueOnce(listResponse([{ id: 'perfil-1' }]))
+        .mockResolvedValueOnce(listResponse([{ ...approvedProgram, estado }]))
+        .mockResolvedValueOnce(listResponse([]))
+        .mockResolvedValueOnce(listResponse([]));
+
+      const response = await app.request('/programas/programa-1/inscricao', {
+        method: 'POST',
+        headers: { 'x-test-user': 'student-user' },
+      });
+
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({
+        error: 'Conteúdo não encontrado.',
+        code: 'CONTENT_NOT_FOUND',
+      });
+      expect(strapiPost).not.toHaveBeenCalled();
+    },
+  );
+
+  it('relação existente para Programa ocultado devolve CONTENT_NOT_AVAILABLE', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ id: 'perfil-1' }]))
+      .mockResolvedValueOnce(listResponse([{ ...approvedProgram, estado: 'hidden' }]))
+      .mockResolvedValueOnce(listResponse([approvedProgram]))
+      .mockResolvedValueOnce(listResponse([{ id: 'inscricao-1' }]));
+
+    const response = await app.request('/programas/programa-1/concluir', {
+      method: 'POST',
+      headers: { 'x-test-user': 'student-user' },
+    });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: 'Este conteúdo já não está disponível.',
+      code: 'CONTENT_NOT_AVAILABLE',
+    });
+    expect(strapiPost).not.toHaveBeenCalled();
+  });
+
+  it('lista de inscrições bloqueia uma relação com Programa ocultado', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ id: 'perfil-1' }]))
+      .mockResolvedValueOnce(listResponse([{
+        id: 'inscricao-1',
+        programa: { id: 'programa-1' },
+      }]))
+      .mockResolvedValueOnce(listResponse([{ ...approvedProgram, estado: 'hidden' }]))
+      .mockResolvedValueOnce(listResponse([approvedProgram]));
+
+    const response = await app.request('/programas/meus', {
+      headers: { 'x-test-user': 'student-user' },
+    });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: 'Este conteúdo já não está disponível.',
+      code: 'CONTENT_NOT_AVAILABLE',
+    });
+  });
+
+  it('preview do criador é separado e não cria inscrição', async () => {
+    const draft = {
+      ...approvedProgram,
+      estado: 'draft',
+      instituicao: { id: 'instituicao-1' },
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([draft]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([{
+        id: 'perfil-inst',
+        instituicaoGerida: { id: 'instituicao-1' },
+      }]));
+
+    const response = await app.request('/programas/programa-1?preview=true', {
+      headers: {
+        'x-test-user': 'instituicao-user',
+        'x-test-role': 'instituicao',
+      },
+    });
+
+    expect(response.status).toBe(200);
+    expect(strapiPost).not.toHaveBeenCalled();
+  });
+
+  it('falha autoritativa do Strapi devolve DEPENDENCY_UNAVAILABLE sem inscrição', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ id: 'perfil-1' }]))
+      .mockRejectedValueOnce(new Error('Strapi indisponível'));
+
+    const response = await app.request('/programas/programa-1/inscricao', {
+      method: 'POST',
+      headers: { 'x-test-user': 'student-user' },
+    });
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
+    expect(strapiPost).not.toHaveBeenCalled();
   });
 });

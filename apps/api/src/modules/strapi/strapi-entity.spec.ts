@@ -39,4 +39,19 @@ describe('Strapi entity identity', () => {
       'pagination[pageSize]': '1',
     });
   });
+
+  it('does not send a non-numeric documentId to an integer id filter', async () => {
+    const response: StrapiListResponse<{ id: number; documentId?: string }> = {
+      data: [],
+      meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
+    };
+    vi.mocked(strapiGet).mockResolvedValue(response);
+
+    await findStrapiEntity('programas', 'programa-document-id');
+
+    expect(strapiGet).toHaveBeenCalledWith('/programas', {
+      'filters[$or][0][documentId][$eq]': 'programa-document-id',
+      'pagination[pageSize]': '1',
+    });
+  });
 });

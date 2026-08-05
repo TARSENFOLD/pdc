@@ -9,19 +9,24 @@ import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.clien
 import { persistedEntityId } from '../modules/strapi/strapi-entity.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
+import { loadSimulacaoVersions } from '../modules/simulacoes/simulacao-access.repository.js';
+import { contentRelationIdentityFilters } from '../modules/conteudo/content-access.repository.js';
+import {
+  CONTENT_ACCESS_ERRORS,
+  decideLearnerAccess,
+  parseContentState,
+} from '../modules/conteudo/content-access.service.js';
 
 const log = pino({ name: 'routes:simulacoes:tentativas' });
 type Vars = { Variables: AuthVariables };
 
-interface StrapiSimulacao {
+interface StrapiTentativaAccess {
   id: string | number;
   documentId?: string;
-  slug?: string;
-  titulo: string;
-  autorId: string;
-  estado: string;
-  tipo: number;
-  area: string;
+  simulacao?: {
+    id: string | number;
+    documentId?: string;
+  };
 }
 
 const iniciarSchema = z.object({
@@ -31,8 +36,6 @@ const iniciarSchema = z.object({
 const concluirSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
-
-const SIMULACAO_ALLOWED_STATES = new Set(['approved', 'published']);
 
 function parsePositiveDuration(metadata: Record<string, unknown> | undefined): number | null {
   const provided = Number(metadata?.['duracaoSegundos']);
@@ -60,55 +63,48 @@ function parsePercentMetric(value: unknown, fallback: number): number {
 }
 
 export const simulacaoTentativasRoutes = new Hono<Vars>();
-
-async function findSimulacao(identifier: string): Promise<StrapiSimulacao | undefined> {
-  const bySlug = await strapiGet<StrapiSimulacao>('/simulacoes', {
-    'filters[slug][$eq]': identifier,
-    'pagination[pageSize]': '1',
-  });
-  if (bySlug.data[0]) return bySlug.data[0];
-
-  const byDocumentId = await strapiGet<StrapiSimulacao>('/simulacoes', {
-    'filters[documentId][$eq]': identifier,
-    'pagination[pageSize]': '1',
-  });
-  if (byDocumentId.data[0]) return byDocumentId.data[0];
-
-  if (/^\d+$/.test(identifier)) {
-    const byId = await strapiGet<StrapiSimulacao>('/simulacoes', {
-      'filters[id][$eq]': identifier,
-      'pagination[pageSize]': '1',
-    });
-    return byId.data[0];
-  }
-  return undefined;
-}
+const SIMULATION_REVIEWER_ROLES = ['comite_cientifico', 'moderador'] as const;
 
 // POST /simulacoes/tentativas — iniciar tentativa (estudante apenas)
 simulacaoTentativasRoutes.post('/', checkRole(['estudante']), zValidator('json', iniciarSchema), async (c) => {
   const { id: userId } = c.get('user');
   const { simulacaoId } = c.req.valid('json');
   try {
-    const resPerfil = await strapiGet<{ id: string | number }>('/perfis', {
-      'filters[userId][$eq]': userId,
-      'fields[0]': 'id',
-    });
+    const [resPerfil, versions] = await Promise.all([
+      strapiGet<{ id: string | number }>('/perfis', {
+        'filters[userId][$eq]': userId,
+        'fields[0]': 'id',
+      }),
+      loadSimulacaoVersions(simulacaoId),
+    ]);
     const perfilId = resPerfil.data[0]?.id;
     if (!perfilId) return c.json({ error: 'Perfil não encontrado' }, 404);
     const perfilPublicId = String(perfilId);
-
-    const sim = await findSimulacao(simulacaoId);
-    if (!sim) return c.json({ error: 'Simulação não encontrada' }, 404);
-    if (!SIMULACAO_ALLOWED_STATES.has(sim.estado)) {
-      return c.json({ error: 'Simulação não está disponível' }, 403);
-    }
+    const current = versions.current ?? versions.published;
+    const reference = current ?? versions.published;
+    const prevTentativas = reference
+      ? await strapiGet<Tentativa>('/tentativas', {
+        'filters[perfil][id][$eq]': perfilPublicId,
+        ...contentRelationIdentityFilters('simulacao', persistedEntityId(reference)),
+      })
+      : undefined;
+    const decision = decideLearnerAccess({
+      actor: c.get('user'),
+      authorId: current?.autorId,
+      reviewerRoles: SIMULATION_REVIEWER_ROLES,
+      currentState: parseContentState(current?.estado),
+      publishedState: parseContentState(versions.published?.estado),
+      hasPublishedVersion: versions.published !== undefined,
+      relationExists: prevTentativas !== undefined && prevTentativas.data.length > 0,
+      accessPolicy: 'open',
+    });
+    if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+    if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+    if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    const sim = versions.published;
+    if (!sim || !prevTentativas) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
 
     const persistedSimulacaoId = persistedEntityId(sim);
-    const prevTentativas = await strapiGet<Tentativa>('/tentativas', {
-      'filters[perfil][id][$eq]': perfilPublicId,
-      'filters[$or][0][simulacao][documentId][$eq]': persistedSimulacaoId,
-      'filters[$or][1][simulacao][id][$eq]': String(sim.id),
-    });
     const tentativaNum = prevTentativas.meta.pagination.total + 1;
 
     const resPost = await strapiPost<Tentativa>('/tentativas', {
@@ -129,9 +125,8 @@ simulacaoTentativasRoutes.post('/', checkRole(['estudante']), zValidator('json',
     });
 
     return c.json({ ...resPost.data, id: tentativaPublicId }, 201);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    return c.json({ error: message }, 502);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -145,20 +140,53 @@ simulacaoTentativasRoutes.put('/:id', checkRole(['estudante']), zValidator('json
     return c.json({ error: 'duracaoSegundos deve ser positivo ou derivável de dataInicio/dataFim' }, 400);
   }
 
-  const focusStability = parsePercentMetric(metadata?.focusStability, 50);
-  const fluidityStability = parsePercentMetric(
-    metadata?.fluidityStability ?? metadata?.cognitiveFluidity ?? metadata?.phi,
-    focusStability,
-  );
-  const focusPhi = focusStability / 100;
-  const fluidityPhi = fluidityStability / 100;
-  const resFluidity = analyzeFluidity(fluidityPhi);
-  const resFocus = analyzeFocus(focusPhi);
-  const finalScore = (resFluidity.score + resFocus.score) / 2;
-  log.info({ tentativaId, finalScore, fluidityPhi, focusPhi }, 'Score Soberano derivado no BFF');
-
   try {
-    const resPut = await strapiPut<Tentativa>(`/tentativas/${tentativaId}`, {
+    const tentativaIdentityFilters: Record<string, string> = {
+      'filters[$or][0][documentId][$eq]': tentativaId,
+      ...(/^\d+$/.test(tentativaId) ? { 'filters[$or][1][id][$eq]': tentativaId } : {}),
+    };
+    const tentativaResponse = await strapiGet<StrapiTentativaAccess>('/tentativas', {
+      ...tentativaIdentityFilters,
+      'filters[perfil][userId][$eq]': user.id,
+      populate: 'simulacao',
+      'pagination[pageSize]': '1',
+    });
+    const tentativa = tentativaResponse.data[0];
+    const simulacaoIdentifier = tentativa?.simulacao?.documentId
+      ?? (tentativa?.simulacao?.id === undefined ? undefined : String(tentativa.simulacao.id));
+    if (!tentativa || !simulacaoIdentifier) {
+      return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    }
+    const versions = await loadSimulacaoVersions(simulacaoIdentifier);
+    const current = versions.current ?? versions.published;
+    const decision = decideLearnerAccess({
+      actor: user,
+      authorId: current?.autorId,
+      reviewerRoles: SIMULATION_REVIEWER_ROLES,
+      currentState: parseContentState(current?.estado),
+      publishedState: parseContentState(versions.published?.estado),
+      hasPublishedVersion: versions.published !== undefined,
+      relationExists: true,
+      accessPolicy: 'granted',
+    });
+    if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+    if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+    if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+
+    const focusStability = parsePercentMetric(metadata?.focusStability, 50);
+    const fluidityStability = parsePercentMetric(
+      metadata?.fluidityStability ?? metadata?.cognitiveFluidity ?? metadata?.phi,
+      focusStability,
+    );
+    const focusPhi = focusStability / 100;
+    const fluidityPhi = fluidityStability / 100;
+    const resFluidity = analyzeFluidity(fluidityPhi);
+    const resFocus = analyzeFocus(focusPhi);
+    const finalScore = (resFluidity.score + resFocus.score) / 2;
+    const tentativaPublicId = persistedEntityId(tentativa);
+    log.info({ tentativaId: tentativaPublicId, finalScore, fluidityPhi, focusPhi }, 'Score Soberano derivado no BFF');
+
+    const resPut = await strapiPut<Tentativa>(`/tentativas/${tentativaPublicId}`, {
       score: finalScore,
       metadata,
       status: 'concluida',
@@ -176,18 +204,17 @@ simulacaoTentativasRoutes.put('/:id', checkRole(['estudante']), zValidator('json
 
     if (perfilIdReal) {
       await eventBus.publishWithOutbox(DomainEventName.TENTATIVA_CONCLUIDA, {
-        tentativaId,
+        tentativaId: tentativaPublicId,
         score: finalScore || 0,
         perfilId: String(perfilIdReal),
         area,
       });
     } else {
-      log.warn({ tentativaId, userId: user.id }, 'Perfil ausente — TENTATIVA_CONCLUIDA não publicada');
+      log.warn({ tentativaId: tentativaPublicId, userId: user.id }, 'Perfil ausente — TENTATIVA_CONCLUIDA não publicada');
     }
 
     return c.json({ ...resPut.data, id: persistedEntityId(resPut.data) });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erro interno';
-    return c.json({ error: message }, 502);
+  } catch {
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });

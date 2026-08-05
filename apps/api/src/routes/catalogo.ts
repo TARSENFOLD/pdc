@@ -16,6 +16,7 @@ import {
   filterVwxExperiences,
   isVwxCatalogEnabled,
 } from '../modules/feature-flags/vwx-catalog-gate.js';
+import { CONTENT_ACCESS_ERRORS } from '../modules/conteudo/content-access.service.js';
 
 export const catalogoRoutes = new Hono();
 const log = pino({ name: 'catalogo' });
@@ -171,7 +172,7 @@ catalogoRoutes.get('/cursos', zValidator('query', cursoQ), async (c) => {
     return c.json({ data: res.data.map(mapCurso), meta: toMeta(res.meta) });
   } catch (err) {
     log.error({ err, params: p }, 'Failed to fetch cursos catalog');
-    return c.json({ error: 'Falha ao carregar catálogo de cursos' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -184,11 +185,11 @@ catalogoRoutes.get('/cursos/:slug', async (c) => {
   try {
     const res = await strapiGet<StrapiCurso>('/cursos', p);
     const first = res.data[0];
-    if (!first) return c.json({ error: 'Curso não encontrado' }, 404);
+    if (!first) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
     return c.json({ data: mapCurso(first) });
   } catch (err) {
     log.error({ err, slug, params: p }, 'Failed to fetch curso detail');
-    return c.json({ error: 'Falha ao carregar curso' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -221,7 +222,7 @@ catalogoRoutes.get('/simulacoes', zValidator('query', simQ), async (c) => {
     return c.json({ data: res.data.map(mapSim), meta: toMeta(res.meta) });
   } catch (err) {
     log.error({ err, params: p }, 'Failed to fetch simulacoes catalog');
-    return c.json({ error: 'Falha ao carregar catálogo de simulações' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -234,11 +235,11 @@ catalogoRoutes.get('/simulacoes/:slug', async (c) => {
   try {
     const res = await strapiGet<StrapiSimulacao>('/simulacoes', p);
     const first = res.data[0];
-    if (!first) return c.json({ error: 'Simulação não encontrada' }, 404);
+    if (!first) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
     return c.json({ data: mapSim(first) });
   } catch (err) {
     log.error({ err, slug, params: p }, 'Failed to fetch simulacao detail');
-    return c.json({ error: 'Falha ao carregar simulação' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -272,7 +273,7 @@ catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
     return c.json({ data: enriched, meta: toMeta(res.meta) });
   } catch (err) {
     log.error({ err, params: p }, 'Failed to fetch experiencias catalog');
-    return c.json({ error: 'Falha ao carregar catálogo de experiências' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 
@@ -284,8 +285,8 @@ catalogoRoutes.get('/experiencias/recomendacoes', verifyJwt, async (c) => {
     const recomendacoes = await vocacionalService.gerarRecomendacoesExperiencias(perfil);
     return c.json({ data: recomendacoes });
   } catch (err) {
-    log.warn({ err, userId: user.id }, 'Falha ao gerar recomendações de experiências — retornando lista vazia');
-    return c.json({ data: [] });
+    log.warn({ err, userId: user.id }, 'Falha ao gerar recomendações de experiências');
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 

@@ -42,5 +42,22 @@ describe('COR-0001 unified search', () => {
 
     expect(response.status).toBe(200);
     expect(body.data.map((item) => item.id)).toEqual(['exp-institucional']);
+    expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
+      status: 'published',
+      'filters[estado][$eq]': 'approved',
+    }));
+  });
+
+  it('não transforma falha do Strapi numa pesquisa vazia falsa', async () => {
+    vi.mocked(strapiGet).mockRejectedValueOnce(new Error('Strapi indisponível'));
+    const app = new Hono().route('/explorar', catalogoExplorarRoutes);
+
+    const response = await app.request('/explorar?tipo=curso&search=engenharia');
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
   });
 });

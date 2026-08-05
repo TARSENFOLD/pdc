@@ -37,7 +37,10 @@ vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
 
 vi.mock('../modules/auth/auth.middleware.js', () => ({
   verifyJwt: async (c: Context, next: Next) => {
-    c.set('user', { id: 'user-123', role: c.req.header('x-test-role') ?? 'estudante' });
+    c.set('user', {
+      id: c.req.header('x-test-user') ?? 'user-123',
+      role: c.req.header('x-test-role') ?? 'estudante',
+    });
     await next();
   },
 }));
@@ -72,6 +75,16 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
     },
     iframeUrl: 'https://labs.example.com/sim',
     materiaisLab: [],
+  };
+
+  const approvedSimulation = {
+    id: 'sim-1',
+    documentId: 'doc-sim-1',
+    titulo: 'Simulação aprovada',
+    autorId: 'mentor-1',
+    estado: 'approved',
+    tipo: 2,
+    area: 'TECNOLOGIA',
   };
 
   it('deve bloquear POST de simulação Tipo 2 quando a flag ALPHA está false', async () => {
@@ -161,7 +174,9 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
     // Mock 1: Lookup da área da simulação
     // Mock 2: Lookup do perfilId real
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce(listResponse([{ id: 'tent-1', simulacao: { area: 'SAUDE' } }]))
+      .mockResolvedValueOnce(listResponse([{ id: 'tent-1', simulacao: { id: 'sim-1' } }]))
+      .mockResolvedValueOnce(listResponse([approvedSimulation]))
+      .mockResolvedValueOnce(listResponse([approvedSimulation]))
       .mockResolvedValueOnce(listResponse([{ id: 'perf-1' }]));
 
     const res = await app.request('/simulacoes/tentativas/tent-1', {
@@ -173,6 +188,12 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
     });
 
     expect(res.status).toBe(200);
+    expect(strapiGet).toHaveBeenNthCalledWith(1, '/tentativas', {
+      'filters[$or][0][documentId][$eq]': 'tent-1',
+      'filters[perfil][userId][$eq]': 'user-123',
+      populate: 'simulacao',
+      'pagination[pageSize]': '1',
+    });
     // analyzeFluidity(0.95) -> 9.5
     // analyzeFocus(0.95) -> 10
     // (9.5 + 10) / 2 = 9.75
@@ -185,7 +206,9 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
     vi.mocked(strapiPut).mockResolvedValue(singleResponse({ id: 'tent-2', score: 4.75, status: 'concluida', perfil: 'perf-2' }));
 
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce(listResponse([{ id: 'tent-2', simulacao: { area: 'TECNOLOGIA' } }]))
+      .mockResolvedValueOnce(listResponse([{ id: 'tent-2', simulacao: { id: 'sim-1' } }]))
+      .mockResolvedValueOnce(listResponse([approvedSimulation]))
+      .mockResolvedValueOnce(listResponse([approvedSimulation]))
       .mockResolvedValueOnce(listResponse([{ id: 'perf-2' }]));
 
     const res = await app.request('/simulacoes/tentativas/tent-2', {
@@ -209,7 +232,9 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
     vi.mocked(strapiPut).mockResolvedValue(singleResponse({ id: 'tent-3', score: 7.25, status: 'concluida', perfil: 'perf-3' }));
 
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce(listResponse([{ id: 'tent-3', simulacao: { area: 'ENGENHARIA' } }]))
+      .mockResolvedValueOnce(listResponse([{ id: 'tent-3', simulacao: { id: 'sim-1' } }]))
+      .mockResolvedValueOnce(listResponse([approvedSimulation]))
+      .mockResolvedValueOnce(listResponse([approvedSimulation]))
       .mockResolvedValueOnce(listResponse([{ id: 'perf-3' }]));
 
     const res = await app.request('/simulacoes/tentativas/tent-3', {
@@ -227,5 +252,121 @@ describe('Simulações Routes - R2.T4 Score Derivation', () => {
     expect(strapiPut).toHaveBeenCalledWith('/tentativas/tent-3', expect.objectContaining({
       score: 7.25
     }));
+  });
+
+  it.each(['draft', 'review', 'hidden', 'archived'] as const)(
+    'não inicia tentativa quando a simulação está %s',
+    async (estado) => {
+      vi.mocked(strapiGet)
+        .mockResolvedValueOnce(listResponse([{ id: 'perfil-student' }]))
+        .mockResolvedValueOnce(listResponse([{ ...approvedSimulation, estado }]))
+        .mockResolvedValueOnce(listResponse([]))
+        .mockResolvedValueOnce(listResponse([]));
+
+      const res = await app.request('/simulacoes/tentativas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user': 'student-1',
+          'x-test-role': 'estudante',
+        },
+        body: JSON.stringify({ simulacaoId: 'sim-1' }),
+      });
+
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({
+        error: 'Conteúdo não encontrado.',
+        code: 'CONTENT_NOT_FOUND',
+      });
+      expect(strapiPost).not.toHaveBeenCalled();
+    },
+  );
+
+  it('autor não inicia tentativa no próprio preview', async () => {
+    const draft = { ...approvedSimulation, estado: 'draft', autorId: 'mentor-1' };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ id: 'perfil-mentor' }]))
+      .mockResolvedValueOnce(listResponse([draft]))
+      .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([]));
+
+    const res = await app.request('/simulacoes/tentativas', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-user': 'mentor-1',
+        'x-test-role': 'mentor',
+      },
+      body: JSON.stringify({ simulacaoId: 'sim-1' }),
+    });
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({
+      error: 'Este conteúdo só está disponível em pré-visualização.',
+      code: 'PREVIEW_ONLY',
+    });
+    expect(strapiPost).not.toHaveBeenCalled();
+  });
+
+  it('tentativa existente numa simulação ocultada devolve CONTENT_NOT_AVAILABLE', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{ id: 'perfil-student' }]))
+      .mockResolvedValueOnce(listResponse([{ ...approvedSimulation, estado: 'hidden' }]))
+      .mockResolvedValueOnce(listResponse([approvedSimulation]))
+      .mockResolvedValueOnce(listResponse([{ id: 'tent-existing' }]));
+
+    const res = await app.request('/simulacoes/tentativas', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-user': 'student-1',
+        'x-test-role': 'estudante',
+      },
+      body: JSON.stringify({ simulacaoId: 'sim-1' }),
+    });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: 'Este conteúdo já não está disponível.',
+      code: 'CONTENT_NOT_AVAILABLE',
+    });
+    expect(strapiPost).not.toHaveBeenCalled();
+  });
+
+  it('histórico de tentativas bloqueia relação com simulação ocultada', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([{
+        id: 'tent-1',
+        simulacao: { id: 'sim-1' },
+      }]))
+      .mockResolvedValueOnce(listResponse([{ ...approvedSimulation, estado: 'hidden' }]))
+      .mockResolvedValueOnce(listResponse([approvedSimulation]));
+
+    const res = await app.request('/simulacoes/me/tentativas', {
+      headers: { 'x-test-user': 'student-1', 'x-test-role': 'estudante' },
+    });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: 'Este conteúdo já não está disponível.',
+      code: 'CONTENT_NOT_AVAILABLE',
+    });
+  });
+
+  it('falha do Strapi ao confirmar publicação não cria tentativa', async () => {
+    vi.mocked(strapiGet).mockRejectedValueOnce(new Error('Strapi indisponível'));
+
+    const res = await app.request('/simulacoes/tentativas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ simulacaoId: 'sim-1' }),
+    });
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
+    expect(strapiPost).not.toHaveBeenCalled();
   });
 });
