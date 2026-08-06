@@ -47,6 +47,10 @@ export function InstituicaoDashboard() {
     );
   }
 
+  const formatTotal = (value: number | null | undefined): number | string => (
+    value === null || value === undefined ? 'Sem dados suficientes' : value
+  );
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -77,18 +81,18 @@ export function InstituicaoDashboard() {
             <GlassCard className="flex flex-col justify-between p-4">
               <ClipboardList size={18} className="text-accent mb-2" />
               <div>
-                <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Experiências</p>
+                <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Conteúdos</p>
                 <p className="text-3xl font-black font-mono text-ink-primary">
-                  {stats?.experienciasPublicadas ?? 0}
+                  {formatTotal(stats?.conteudosTotais)}
                 </p>
               </div>
             </GlassCard>
             <GlassCard className="flex flex-col justify-between p-4">
               <MapPin size={18} className="text-accent mb-2" />
               <div>
-                <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Programas Activos</p>
+                <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Participações</p>
                 <p className="text-3xl font-black font-mono text-ink-primary">
-                  {stats?.programasActivos ?? 0}
+                  {formatTotal(stats?.participacoesTotais)}
                 </p>
               </div>
             </GlassCard>
@@ -96,7 +100,7 @@ export function InstituicaoDashboard() {
               <div>
                 <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Inscrições Totais</p>
                 <p className="text-3xl font-black font-mono text-ink-primary">
-                  {stats?.inscricoesTotais ?? 0}
+                  {formatTotal(stats?.inscricoesTotais)}
                 </p>
               </div>
               <Building2 size={32} className="text-accent/20" />

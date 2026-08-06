@@ -145,7 +145,7 @@ export default function CriarProgramaPage() {
         } else {
           await createMutation.mutateAsync(data);
           invalidateAll();
-          toast({ title: 'Programa Materializado!', description: 'O ecossistema foi atualizado com a nova oferta.' });
+          toast({ title: 'Programa guardado com sucesso.' });
           navigate('/app/instituicao/programas');
         }
       } catch {

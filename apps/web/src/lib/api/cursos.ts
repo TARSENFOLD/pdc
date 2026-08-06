@@ -62,7 +62,4 @@ export const cursosApi = {
 
   getMinhasInscricoes: () =>
     http.get<{ data: InscricaoComCurso[] }>('/cursos/me/inscricoes'),
-
-  getCertificados: () =>
-    http.get<{ data: InscricaoComCurso[] }>('/estudante/certificados'),
 };
