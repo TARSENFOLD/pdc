@@ -1,17 +1,14 @@
 // PDC Service Worker — Production-Grade
-// Strategies: NetworkFirst (API), CacheFirst (assets), StaleWhileRevalidate (fonts/manifest)
+// Strategies: NetworkOnly (API), CacheFirst (assets), StaleWhileRevalidate (fonts/manifest)
 // Background sync for offline telemetry queue via IndexedDB
 
 const CACHE_VERSION = 'pdc-v2.3';
 const CACHES = {
   static: `pdc-static-${CACHE_VERSION}`,
   assets: `pdc-assets-${CACHE_VERSION}`,
-  api: `pdc-api-${CACHE_VERSION}`,
 };
 
 const PRECACHE_URLS = ['/manifest.webmanifest', '/offline.html'];
-const NETWORK_TIMEOUT_MS = 5000;
-
 // ─── IndexedDB for offline telemetry queue ───────────────────────────────────
 
 const IDB_NAME = 'pdc-offline';
@@ -62,6 +59,15 @@ async function clearQueue() {
   });
 }
 
+async function purgePrivateData() {
+  await Promise.all([
+    clearQueue().catch(() => undefined),
+    caches.keys().then((keys) => Promise.all(
+      keys.filter((key) => key.startsWith('pdc-api-')).map((key) => caches.delete(key)),
+    )),
+  ]);
+}
+
 async function flushTelemetryQueue() {
   try {
     const events = await peekQueue();
@@ -94,6 +100,10 @@ function parseServiceWorkerMessage(data) {
 
   if (data.type === 'SKIP_WAITING') {
     return { ok: true, type: 'SKIP_WAITING' };
+  }
+
+  if (data.type === 'PURGE_PRIVATE_DATA') {
+    return { ok: true, type: 'PURGE_PRIVATE_DATA' };
   }
 
   if (data.type === 'QUEUE_TELEMETRY') {
@@ -184,33 +194,23 @@ async function focusOrOpenClient(url) {
 
 // ─── Caching strategies ───────────────────────────────────────────────────────
 
-async function networkFirst(request, cacheName) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
-
+async function networkOnly(request) {
   try {
-    const response = await fetch(request, { signal: controller.signal });
-    clearTimeout(timeout);
-
-    if (response.ok) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, response.clone());
-    }
-    return response;
+    return await fetch(request);
   } catch {
-    clearTimeout(timeout);
-    const cached = await caches.match(request);
-    if (cached) return cached;
-
-    // Offline fallback for navigation requests
-    if (request.mode === 'navigate') {
-      const offline = await caches.match('/offline.html');
-      if (offline) return offline;
-    }
-
     return new Response(
-      JSON.stringify({ ok: false, error: 'offline', message: 'O teu progresso está guardado. Liga-te à internet para continuar.' }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        ok: false,
+        error: 'offline',
+        message: 'Este pedido precisa de ligação à internet e não foi guardado.',
+      }),
+      {
+        status: 503,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+        },
+      }
     );
   }
 }
@@ -262,7 +262,10 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => k.startsWith('pdc-') && !Object.values(CACHES).includes(k))
+          .filter((k) => (
+            k.startsWith('pdc-api-') ||
+            (k.startsWith('pdc-') && !Object.values(CACHES).includes(k))
+          ))
           .map((k) => caches.delete(k))
       )
     ).then(() => clients.claim())
@@ -280,6 +283,11 @@ self.addEventListener('message', (event) => {
 
   if (message.type === 'SKIP_WAITING') {
     self.skipWaiting();
+    return;
+  }
+
+  if (message.type === 'PURGE_PRIVATE_DATA') {
+    event.waitUntil(purgePrivateData());
     return;
   }
 
@@ -337,9 +345,9 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/node_modules/')
   ) return;
 
-  // API routes (same-origin /api/*) — NetworkFirst
+  // API routes may contain session or personal data and are never cached.
   if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request, CACHES.api));
+    event.respondWith(networkOnly(request));
     return;
   }
 
