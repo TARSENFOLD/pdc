@@ -7,6 +7,8 @@ import { Button } from '@/components/ui';
 import { AuthLeftPanel } from '@/components/auth/AuthLeftPanel';
 import { getErrorBody } from '@/lib/api/http';
 
+type DeviceTrustChoice = 'private' | 'shared';
+
 function verificationState(value: unknown): {
   canal?: 'email' | 'sms';
   from?: string;
@@ -26,7 +28,7 @@ export default function TwoFactorPage() {
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [trustDevice, setTrustDevice] = useState(false);
+  const [deviceTrustChoice, setDeviceTrustChoice] = useState<DeviceTrustChoice | null>(null);
 
   const { completeOtp } = useAuth();
   const navigate = useNavigate();
@@ -54,7 +56,11 @@ export default function TwoFactorPage() {
     setIsLoading(true);
 
     try {
-      await completeOtp(otp, canal, trustDevice);
+      if (deviceTrustChoice === null) {
+        setError('Indica se este dispositivo é privado ou partilhado.');
+        return;
+      }
+      await completeOtp(otp, canal, deviceTrustChoice === 'private');
       navigate(from, { replace: true });
     } catch (err: unknown) {
       const body = getErrorBody(err);
@@ -121,10 +127,11 @@ export default function TwoFactorPage() {
             )}
 
             <div>
-              <label className="block text-xs font-bold text-ink-tertiary uppercase tracking-[0.2em] mb-3">
+              <label htmlFor="otp-code" className="block text-xs font-bold text-ink-tertiary uppercase tracking-[0.2em] mb-3">
                 Código de Segurança
               </label>
               <input
+                id="otp-code"
                 type="text"
                 required
                 maxLength={6}
@@ -138,25 +145,49 @@ export default function TwoFactorPage() {
               />
             </div>
 
-            <label className="flex min-h-11 cursor-pointer items-start gap-3 text-sm text-ink-secondary">
-              <input
-                type="checkbox"
-                checked={trustDevice}
-                onChange={(event) => { setTrustDevice(event.target.checked); }}
-                disabled={isLoading}
-                className="mt-0.5 size-5 accent-[var(--accent-terracotta)]"
-              />
-              <span>
-                Confiar neste browser por 90 dias
-                <span className="mt-1 block text-xs text-ink-tertiary">
-                  Usa esta opção apenas num dispositivo privado.
+            <fieldset className="space-y-3">
+              <legend className="text-xs font-bold uppercase tracking-[0.2em] text-ink-tertiary">
+                Este dispositivo é
+              </legend>
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-ink-tertiary/10 p-4 text-sm text-ink-secondary">
+                <input
+                  type="radio"
+                  name="device-trust"
+                  value="private"
+                  checked={deviceTrustChoice === 'private'}
+                  onChange={() => { setDeviceTrustChoice('private'); }}
+                  disabled={isLoading}
+                  className="mt-0.5 size-5 accent-[var(--accent-terracotta)]"
+                />
+                <span>
+                  Privado — não pedir OTP neste browser por 90 dias
+                  <span className="mt-1 block text-xs text-ink-tertiary">
+                    Recomendado apenas no teu computador ou telemóvel pessoal.
+                  </span>
                 </span>
-              </span>
-            </label>
+              </label>
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-ink-tertiary/10 p-4 text-sm text-ink-secondary">
+                <input
+                  type="radio"
+                  name="device-trust"
+                  value="shared"
+                  checked={deviceTrustChoice === 'shared'}
+                  onChange={() => { setDeviceTrustChoice('shared'); }}
+                  disabled={isLoading}
+                  className="mt-0.5 size-5 accent-[var(--accent-terracotta)]"
+                />
+                <span>
+                  Partilhado — pedir OTP no próximo login
+                  <span className="mt-1 block text-xs text-ink-tertiary">
+                    Usa esta opção em computadores públicos ou de outra pessoa.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
 
             <Button
               type="submit"
-              disabled={isLoading || otp.length !== 6}
+              disabled={isLoading || otp.length !== 6 || deviceTrustChoice === null}
               className="w-full h-14 bg-ink-primary text-canvas font-black uppercase tracking-widest text-[11px] hover:bg-accent hover:text-ink-on-accent transition-all shadow-xl rounded-2xl"
             >
               {isLoading ? 'A Validar...' : 'Verificar e Aceder'}
