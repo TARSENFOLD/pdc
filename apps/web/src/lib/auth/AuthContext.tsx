@@ -4,6 +4,8 @@ import { authApi, type LoginPayload, type LoginResponse, type RegisterPayload } 
 import { ApiError } from '@/lib/api/http';
 import { telemetriaService } from '../telemetria/telemetria.service';
 import { AuthContext } from './auth-context';
+import { clearPrivateBrowserData } from './private-data-cleanup';
+import { disableWebPush } from '../push/webPushClient';
 
 function getErrorStatus(error: unknown): number | undefined {
   if (typeof error !== 'object' || error === null) return undefined;
@@ -95,12 +97,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function logout() {
     try {
+      try {
+        await disableWebPush();
+      } catch (error) {
+        console.warn('[AUTH] Falha ao remover registo remoto de Web Push; subscrição local foi invalidada', {
+          error: error instanceof Error ? error.name : 'unknown',
+        });
+      }
       await authApi.logout();
     } catch (err) {
       if (!(err instanceof ApiError) || err.status !== 401) {
         throw err;
       }
     } finally {
+      await clearPrivateBrowserData();
       queryClient.setQueryData(['auth', 'me'], null);
       await queryClient.resetQueries({ queryKey: ['auth'] });
       queryClient.clear();

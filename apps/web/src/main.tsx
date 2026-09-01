@@ -11,6 +11,7 @@ import { ThemeProvider } from './lib/theme/ThemeContext';
 import { Toaster, InstallPrompt } from './components/ui';
 import { CookieBanner } from './components/privacy/CookieBanner';
 import './index.css';
+import { clearPrivateBrowserData } from './lib/auth/private-data-cleanup';
 
 const SERVICE_WORKER_CLEANUP_VERSION_KEY = 'pdc:service-worker-cleanup:v1';
 
@@ -101,9 +102,11 @@ if (!import.meta.env.PROD && 'serviceWorker' in navigator) {
 }
 
 window.addEventListener('pdc:session-expired', () => {
-  if (window.location.pathname !== '/login') {
-    window.location.replace('/login');
-  }
+  void clearPrivateBrowserData().finally(() => {
+    if (window.location.pathname !== '/login') {
+      window.location.replace('/login');
+    }
+  });
 });
 
 const queryClient = new QueryClient({
