@@ -82,7 +82,7 @@ describe('FocusHeader', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Título registado' })).toBeDefined();
-    expect(screen.getAllByText('Etapa 2 de 4')).toHaveLength(2);
+    expect(screen.getByText('Etapa 2 de 4')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Guardar' })).toBeDefined();
   });
 

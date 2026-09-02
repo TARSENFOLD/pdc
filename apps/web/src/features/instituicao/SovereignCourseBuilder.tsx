@@ -11,6 +11,7 @@ import { CourseBaseInfo } from './components/CourseBaseInfo';
 import { CourseMeritGuard } from './components/CourseMeritGuard';
 import { CourseCurriculum } from './components/CourseCurriculum';
 import { CourseSettingsPanel } from './components/CourseSettingsPanel';
+import { CourseReviewPanel } from './components/CourseReviewPanel';
 import { RichBuilderShell, BuilderSection, BuilderActionsBar } from '@/components/builders';
 import { useAuth } from '@/lib/auth/auth-context';
 import { Spinner } from '@/components/ui';
@@ -136,6 +137,8 @@ export function SovereignCourseBuilder() {
     estadoMutation.mutate('published');
   };
 
+  const coursesPath = user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/instituicao/cursos';
+
   const submitWithState = (estado: FormValues['estado']) => {
     void handleSubmit((data) => {
       mutation.mutate({ ...data, estado });
@@ -157,12 +160,24 @@ export function SovereignCourseBuilder() {
     <form onSubmit={(event) => { event.preventDefault(); }}>
       <RichBuilderShell
         title={isEditing ? 'Editar curso' : 'Criar curso'}
-        description="Organiza a identidade, os requisitos e o currículo numa sequência clara."
+        backTo={coursesPath}
         steps={[
-          { id: 'info', label: 'Informação', description: 'Identidade e enquadramento' },
-          { id: 'merit', label: 'Acesso', description: 'Requisitos de entrada' },
+          { id: 'info', label: 'Básico', description: 'Identidade do curso' },
           { id: 'curriculum', label: 'Currículo', description: 'Módulos e conteúdos' },
+          { id: 'merit', label: 'Acesso', description: 'Público e requisitos' },
+          { id: 'review', label: 'Revisão', description: 'Verificar e submeter' },
         ]}
+        actions={(
+          <span className="rounded-full border border-[var(--chrome-border)] bg-recessed px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-secondary">
+            {!isEditing
+              ? 'Ainda não guardado'
+              : cursoQuery.data?.estado === 'review'
+                ? 'Em revisão'
+                : cursoQuery.data?.estado === 'published'
+                  ? 'Publicado'
+                  : 'Rascunho'}
+          </span>
+        )}
         settingsPanel={(
           <div className="space-y-8">
             <CourseSettingsPanel
@@ -192,8 +207,8 @@ export function SovereignCourseBuilder() {
 
         <BuilderSection
           value="merit"
-          title="Requisitos de acesso"
-          description="Define os requisitos mínimos para o estudante iniciar este curso."
+          title="Acesso e recomendações"
+          description="Define a preparação recomendada para iniciar o curso. A visibilidade e o preço ficam sempre acessíveis no painel lateral."
         >
           <CourseMeritGuard register={register} watch={watch} />
         </BuilderSection>
@@ -204,6 +219,14 @@ export function SovereignCourseBuilder() {
           description="Organiza módulos e itens na ordem em que serão consumidos."
         >
           <CourseCurriculum register={register} control={control} setValue={setValue} modulosArray={modulosArray} />
+        </BuilderSection>
+
+        <BuilderSection
+          value="review"
+          title="Rever antes de submeter"
+          description="Confirma o essencial do curso e regressa diretamente a qualquer etapa incompleta."
+        >
+          <CourseReviewPanel control={control} errors={errors} />
         </BuilderSection>
       </RichBuilderShell>
     </form>

@@ -1,7 +1,8 @@
-import { Check } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useFocusHeader } from '@/components/layout/useFocusHeader';
 import { BuilderStepContext } from './builder-step-context';
+import BuilderTopStepper from './BuilderTopStepper';
 
 export interface RichBuilderStep {
   id: string;
@@ -11,7 +12,7 @@ export interface RichBuilderStep {
 
 export interface RichBuilderShellProps {
   title: string;
-  description?: string;
+  backTo?: string;
   steps: RichBuilderStep[];
   children: ReactNode;
   settingsPanel: ReactNode;
@@ -22,7 +23,7 @@ export interface RichBuilderShellProps {
 
 export default function RichBuilderShell({
   title,
-  description,
+  backTo,
   steps,
   children,
   settingsPanel,
@@ -43,66 +44,74 @@ export default function RichBuilderShell({
   const activeIndex = steps.findIndex((step) => step.id === activeStep);
   const hasSteps = steps.length > 0;
 
-  const selectStep = (stepId: string) => {
+  const selectStep = useCallback((stepId: string) => {
     if (controlledStep === undefined) setInternalStep(stepId);
     onStepChange?.(stepId);
-  };
+  }, [controlledStep, onStepChange]);
+
+  const previousStep = activeIndex > 0 ? steps[activeIndex - 1] : undefined;
+  const nextStep = activeIndex >= 0 && activeIndex < steps.length - 1
+    ? steps[activeIndex + 1]
+    : undefined;
+
+  const focusHeader = useMemo(() => ({
+    title,
+    ...(backTo ? { backTo } : {}),
+    ...(hasSteps ? {
+      progress: (
+        <BuilderTopStepper
+          steps={steps}
+          activeStep={activeStep}
+          onStepChange={selectStep}
+        />
+      ),
+    } : {}),
+    ...(actions ? { actions } : {}),
+  }), [actions, activeStep, backTo, hasSteps, selectStep, steps, title]);
+  useFocusHeader(focusHeader);
 
   return (
-    <div className="mx-auto max-w-[1600px] pb-28">
-      <div className="border-b border-border px-4 py-6 sm:px-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-3xl">
-            <h2 className="font-display text-3xl text-ink-primary">{title}</h2>
-            {description && <p className="mt-2 text-sm leading-6 text-ink-secondary">{description}</p>}
-          </div>
-          {actions}
-        </div>
+    <div className="mx-auto max-w-[1480px] pb-24">
+      <section className="overflow-hidden rounded-xl border border-[var(--chrome-border)] bg-elevated shadow-[var(--elevation-2)]">
+        <div className="grid min-h-[620px] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <main className="min-w-0 bg-elevated px-5 py-8 sm:px-8 lg:px-10">
+            <div className="mx-auto max-w-4xl">
+              <BuilderStepContext.Provider value={{ activeSection: activeStep }}>
+                {children}
+              </BuilderStepContext.Provider>
 
-        {hasSteps && <nav className="mt-6 overflow-x-auto" aria-label="Etapas de criação">
-          <ol className="flex min-w-max items-start gap-2">
-            {steps.map((step, index) => {
-              const isActive = step.id === activeStep;
-              const isComplete = activeIndex > index;
-              return (
-                <li key={step.id} className="w-48">
+              {hasSteps ? (
+                <footer className="mt-12 flex items-center justify-between gap-4 border-t border-border pt-6">
                   <button
                     type="button"
-                    onClick={() => { selectStep(step.id); }}
-                    className={cn(
-                      'flex min-h-11 w-full items-start gap-3 rounded-lg px-3 py-2 text-left transition-colors',
-                      isActive ? 'bg-accent/10 text-accent' : 'text-ink-secondary hover:bg-recessed hover:text-ink-primary',
-                    )}
-                    aria-current={isActive ? 'step' : undefined}
+                    disabled={!previousStep}
+                    onClick={() => { if (previousStep) selectStep(previousStep.id); }}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-xs font-bold uppercase tracking-wider text-ink-secondary transition-colors hover:bg-recessed hover:text-ink-primary disabled:pointer-events-none disabled:opacity-30"
                   >
-                    <span className={cn(
-                      'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
-                      isActive || isComplete ? 'border-accent bg-accent text-ink-on-accent' : 'border-border text-ink-tertiary',
-                    )}>
-                      {isComplete ? <Check size={13} /> : index + 1}
-                    </span>
-                    <span>
-                      <span className="block text-sm font-semibold">{step.label}</span>
-                      {step.description && <span className="mt-0.5 block text-xs text-ink-tertiary">{step.description}</span>}
-                    </span>
+                    <ChevronLeft size={17} aria-hidden="true" />
+                    Anterior
                   </button>
-                </li>
-              );
-            })}
-          </ol>
-        </nav>}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <main className="min-w-0 px-4 py-8 sm:px-6 lg:px-10">
-          <BuilderStepContext.Provider value={{ activeSection: activeStep }}>
-            {children}
-          </BuilderStepContext.Provider>
-        </main>
-        <aside className="border-t border-border bg-recessed/30 p-4 lg:border-l lg:border-t-0 lg:p-6">
-          {settingsPanel}
-        </aside>
-      </div>
+                  <span className="hidden text-xs text-ink-tertiary sm:block">
+                    {steps[activeIndex]?.label}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!nextStep}
+                    onClick={() => { if (nextStep) selectStep(nextStep.id); }}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--chrome-active)] px-5 text-xs font-bold uppercase tracking-wider text-[var(--surface-canvas)] transition-colors hover:opacity-90 disabled:pointer-events-none disabled:opacity-30"
+                  >
+                    Seguinte
+                    <ChevronRight size={17} aria-hidden="true" />
+                  </button>
+                </footer>
+              ) : null}
+            </div>
+          </main>
+          <aside className="border-t border-[var(--chrome-border)] bg-recessed/55 p-5 lg:border-l lg:border-t-0 lg:p-6">
+            <div className="lg:sticky lg:top-5">{settingsPanel}</div>
+          </aside>
+        </div>
+      </section>
     </div>
   );
 }
