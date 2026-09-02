@@ -110,10 +110,22 @@ export async function enableWebPush(): Promise<WebPushSubscriptionPayload> {
 
 export async function disableWebPush(): Promise<void> {
   if (!('serviceWorker' in navigator)) return;
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await navigator.serviceWorker.getRegistration();
+  if (!registration) return;
   const subscription = await registration.pushManager.getSubscription();
   if (!subscription) return;
   const endpoint = subscription.endpoint;
-  await notificacoesApi.unregisterWebPush(endpoint);
-  await subscription.unsubscribe();
+  let unregisterError: unknown;
+  try {
+    await notificacoesApi.unregisterWebPush(endpoint);
+  } catch (error) {
+    unregisterError = error;
+  } finally {
+    await subscription.unsubscribe();
+  }
+  if (unregisterError) {
+    throw unregisterError instanceof Error
+      ? unregisterError
+      : new Error('Falha ao remover registo remoto de Web Push');
+  }
 }

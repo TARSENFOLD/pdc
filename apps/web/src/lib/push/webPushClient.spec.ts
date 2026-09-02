@@ -32,6 +32,7 @@ function installPushEnvironment(permission: NotificationPermission = 'default', 
   const ready = Promise.resolve({
     pushManager: { getSubscription, subscribe },
   });
+  const getRegistration = vi.fn().mockResolvedValue({ pushManager: { getSubscription, subscribe } });
 
   Object.defineProperty(window, 'Notification', {
     configurable: true,
@@ -41,9 +42,9 @@ function installPushEnvironment(permission: NotificationPermission = 'default', 
     },
   });
   Object.defineProperty(window, 'PushManager', { configurable: true, value: function PushManager() {} });
-  Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { ready } });
+  Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { ready, getRegistration } });
   window.localStorage.clear();
-  return { subscribe, getSubscription, existingSubscription };
+  return { subscribe, getSubscription, getRegistration, existingSubscription };
 }
 
 function installLegacyPushEnvironment(permission: NotificationPermission = 'default') {
@@ -58,6 +59,7 @@ function installLegacyPushEnvironment(permission: NotificationPermission = 'defa
   const ready = Promise.resolve({
     pushManager: { getSubscription, subscribe },
   });
+  const getRegistration = vi.fn().mockResolvedValue({ pushManager: { getSubscription, subscribe } });
 
   Object.defineProperty(window, 'Notification', {
     configurable: true,
@@ -67,7 +69,7 @@ function installLegacyPushEnvironment(permission: NotificationPermission = 'defa
     },
   });
   Object.defineProperty(window, 'PushManager', { configurable: true, value: function PushManager() {} });
-  Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { ready } });
+  Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { ready, getRegistration } });
   window.localStorage.clear();
   return { subscribe, getSubscription };
 }
@@ -129,6 +131,16 @@ describe('webPushClient', () => {
 
     expect(existing.unsubscribe).toHaveBeenCalled();
     expect(notificacoesApi.unregisterWebPush).toHaveBeenCalledWith('https://push.example.com/sub/existing');
+  });
+
+  it('invalida a subscription local mesmo se o BFF falhar', async () => {
+    const existing = makeSubscription('https://push.example.com/sub/existing');
+    installPushEnvironment('granted', existing.subscription);
+    vi.mocked(notificacoesApi.unregisterWebPush).mockRejectedValueOnce(new Error('BFF indisponível'));
+
+    await expect(disableWebPush()).rejects.toThrow('BFF indisponível');
+
+    expect(existing.unsubscribe).toHaveBeenCalled();
   });
 
   it('mantém compatibilidade com subscriptions antigas sem options', async () => {
