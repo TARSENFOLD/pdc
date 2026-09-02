@@ -4,6 +4,7 @@ import { adminApi } from '@/lib/api/admin';
 import { Spinner, Table, Badge, type BadgeVariant, Pagination, Avatar, Button, Modal, ModalHeader, ModalTitle, ModalFooter } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
 import type { Role, User } from '@pdc/shared';
+import { getErrorBody } from '@/lib/api/http';
 
 function getBadgeVariant(role: string): BadgeVariant {
   const map: Record<string, BadgeVariant> = {
@@ -66,6 +67,26 @@ export function AdminUtilizadoresPage() {
     }
   });
 
+  const repairInstitutionMutation = useMutation({
+    mutationFn: (id: string) => adminApi.repararInstituicao(id),
+    onSuccess: (result) => {
+      toast({
+        title: result.created ? 'Instituição associada' : 'Associação já estava correta',
+        description: result.created
+          ? 'O registo institucional foi criado e ligado à conta.'
+          : 'Nenhuma duplicação foi criada.',
+      });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: 'Não foi possível reparar a instituição',
+        description: getErrorBody(error)?.error ?? 'Tenta novamente e consulta a auditoria.',
+        variant: 'error',
+      });
+    },
+  });
+
   const columns = [
     { 
       header: 'Utilizador', 
@@ -119,6 +140,17 @@ export function AdminUtilizadoresPage() {
               className="h-8 px-2 text-xs"
             >
               Reativar
+            </Button>
+          ) : null}
+          {u.role === 'instituicao' && !u.instituicaoId ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => { repairInstitutionMutation.mutate(u.id); }}
+              isLoading={repairInstitutionMutation.isPending && repairInstitutionMutation.variables === u.id}
+              className="h-8 px-2 text-xs"
+            >
+              Reparar instituição
             </Button>
           ) : null}
         </div>

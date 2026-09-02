@@ -95,7 +95,6 @@ const CriarProgramaPage = React.lazy(() => import('@/features/instituicao/CriarP
 const EstudantesVinculadosPage = React.lazy(() => import('@/features/instituicao/EstudantesVinculadosPage').then(m => ({ default: m.EstudantesVinculadosPage })));
 const PropostasPage = React.lazy(() => import('@/features/instituicao/PropostasPage').then(m => ({ default: m.PropostasPage })));
 const RelatoriosInstituicaoPage = React.lazy(() => import('@/features/instituicao/RelatoriosInstituicaoPage').then(m => ({ default: m.RelatoriosInstituicaoPage })));
-const BrandingPage = React.lazy(() => import('@/features/instituicao/BrandingPage').then(m => ({ default: m.BrandingPage })));
 
 const MeusCursosPage = React.lazy(() => import('@/features/estudante/MeusCursosPage').then(m => ({ default: m.MeusCursosPage })));
 const MeusProgramasPage = React.lazy(() => import('@/features/estudante/MeusProgramasPage').then(m => ({ default: m.MeusProgramasPage })));
@@ -129,6 +128,7 @@ const InstituicaoOverviewPage = React.lazy(() => import('@/features/instituicao/
 const InstituicaoSectionPage = React.lazy(() => import('@/features/instituicao/perfil/InstituicaoSectionPage').then(m => ({ default: m.InstituicaoSectionPage })));
 const InstituicaoDocumentosPage = React.lazy(() => import('@/features/instituicao/perfil/InstituicaoDocumentosPage').then(m => ({ default: m.InstituicaoDocumentosPage })));
 const InstituicaoPreviewPage = React.lazy(() => import('@/features/instituicao/perfil/InstituicaoPreviewPage').then(m => ({ default: m.InstituicaoPreviewPage })));
+const LegacyBrandingRedirect = React.lazy(() => import('@/features/instituicao/perfil/LegacyBrandingRedirect').then(m => ({ default: m.LegacyBrandingRedirect })));
 const PerfilPublicoPage = React.lazy(() => import('@/features/catalogo/PerfilPublicoPage'));
 const ProgramasCatalogoPage = React.lazy(() => import('@/features/catalogo/ProgramasCatalogoPage'));
 const ProgramaDetailPage = React.lazy(() => import('@/features/catalogo/ProgramaDetailPage').then(m => ({ default: m.ProgramaDetailPage })));
@@ -179,7 +179,7 @@ export const router = createBrowserRouter([
       { path: 'perfil-vocacional', element: <RelatorioVocacional /> },
       
       { path: 'perfil', element: <PerfilPage /> },
-      { path: 'perfil/editar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><EditPerfilPage /></Suspense> },
+      { path: 'perfil/editar', element: <RoleGuard allowed={['estudante', 'mentor']}><Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><EditPerfilPage /></Suspense></RoleGuard> },
       { path: 'perfil/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><PerfilPublicoPage /></Suspense> },
       { path: 'configuracoes', element: <ConfiguracoesPage /> },
       { path: 'projetos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoListPage /></Suspense> },
@@ -296,7 +296,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'instituicao/branding',
-        element: <RoleGuard allowed={['instituicao', 'super_admin']}><BrandingPage /></RoleGuard>
+        element: <RoleGuard allowed={['instituicao']}><LegacyBrandingRedirect /></RoleGuard>
       },
       {
         path: 'instituicao/perfil',

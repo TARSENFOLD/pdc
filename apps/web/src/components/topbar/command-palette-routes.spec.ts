@@ -12,6 +12,7 @@ describe('command palette routes', () => {
   it.each([
     ['mentor', 'Criar Simulação', '/app/mentor/simulacoes/criar'],
     ['estudante', 'Certificados', '/app/certificados'],
+    ['instituicao', 'Perfil institucional', '/app/instituicao/perfil/identidade'],
     ['super_admin', 'LTI Plataformas', '/app/admin/lti'],
   ] satisfies Array<[Role, string, string]>)(
     'resolve o comando %s sem rota obsoleta',

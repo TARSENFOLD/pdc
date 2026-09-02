@@ -27,12 +27,15 @@ const CTAS = [
   { label: 'Criar Projeto', to: '/app/projetos/novo', icon: FolderKanban },
   { label: 'Criar Post', to: '/app/feed/criar', icon: MessageSquare },
   { label: 'Registar Marco', to: '/app/conquistas/criar', icon: Trophy },
-  { label: 'Branding', to: '/app/instituicao/branding', icon: Palette },
+  { label: 'Perfil institucional', to: '/app/instituicao/perfil/identidade', icon: Palette },
   { label: 'Match Terminal', to: '/app/instituicao/propostas', icon: Search },
 ];
 
 export function InstituicaoDashboard() {
   const { user } = useAuth();
+  const ctas = user?.role === 'instituicao'
+    ? CTAS
+    : CTAS.filter((cta) => cta.to !== '/app/instituicao/perfil/identidade');
 
   const { data: stats, isLoading, isError } = useQuery({
     queryKey: ['experiencias', 'stats'],
@@ -130,7 +133,7 @@ export function InstituicaoDashboard() {
         <BentoTile size="2x2" className="flex flex-col">
           <ContentTypeCTAGrid
             title="Criar Conteúdo"
-            ctas={CTAS}
+            ctas={ctas}
             gridCols={2}
             className="flex-1"
           />

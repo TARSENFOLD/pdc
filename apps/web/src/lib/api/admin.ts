@@ -1,4 +1,5 @@
 import { http } from './http.js';
+import { AdminRepararInstituicaoResponseSchema } from '@pdc/shared';
 import type { 
   User, 
   Role, 
@@ -63,6 +64,12 @@ export const adminApi = {
   },
 
   reativar: (id: string) => http.put(`/admin/utilizadores/${id}/reativar`, undefined),
+
+  repararInstituicao: (id: string) => http.postParsed(
+    `/admin/utilizadores/${id}/reparar-instituicao`,
+    {},
+    AdminRepararInstituicaoResponseSchema,
+  ),
 
   getTelemetria: (params: { tipo?: string; page?: number; pageSize?: number }) => {
     const q = new URLSearchParams();

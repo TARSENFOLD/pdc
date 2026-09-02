@@ -2,7 +2,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useOutletContext } from 'react-router-dom';
 import { useState } from 'react';
 import { Button, Card } from '@/components/ui';
-import { instituicoesApi, type InstituicaoEditor } from '@/lib/api/instituicoes';
+import {
+  institutionKeys,
+  instituicoesApi,
+  type InstituicaoEditor,
+} from '@/lib/api/instituicoes';
 import { toast } from '@/hooks/useToast';
 
 const DOCUMENTO_TIPOS = [
@@ -27,14 +31,14 @@ export function InstituicaoDocumentosPage() {
   const submit = useMutation({
     mutationFn: instituicoesApi.submeter,
     onSuccess: data => {
-      queryClient.setQueryData(['instituicao', 'me'], data);
+      queryClient.setQueryData(institutionKeys.me(), data);
       toast({ title: 'Instituição submetida para verificação' });
     },
   });
   async function upload(file: File) {
     try {
       const data = await instituicoesApi.addDocumento(file, tipoDocumento);
-      queryClient.setQueryData(['instituicao', 'me'], data);
+      queryClient.setQueryData(institutionKeys.me(), data);
       toast({ title: 'Documento privado carregado' });
     } catch {
       toast({ title: 'Erro ao carregar documento', variant: 'error' });

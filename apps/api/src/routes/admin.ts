@@ -10,7 +10,9 @@ import { writeAuditLog } from '../middleware/audit.js';
 import { setCanonicalUserRole } from '../modules/auth/internal-account.service.js';
 import { authService } from '../modules/auth/auth.service.js';
 import { eventBus } from '../modules/events/event-bus.js';
+import { provisionInstituicaoForUser } from '../modules/instituicoes/instituicao.provision.js';
 import pino from 'pino';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 type Vars = { Variables: AuthVariables };
 const log = pino({ name: 'admin-routes' });
@@ -30,21 +32,134 @@ export const adminRoutes = new Hono<Vars>();
 
 adminRoutes.use('*', verifyJwt);
 
-interface AdminStrapiUser {
-  id: string | number;
-  email: string;
-  username?: string;
-  nome?: string;
-  blocked?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+const strapiIdentifierSchema = z.union([
+  z.string().trim().min(1),
+  z.number().int().positive(),
+]);
+
+const adminStrapiUserSchema = z.object({
+  id: strapiIdentifierSchema,
+  email: z.string().trim().email(),
+  username: z.string().optional(),
+  nome: z.string().optional(),
+  blocked: z.boolean().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+type AdminStrapiUser = z.infer<typeof adminStrapiUserSchema>;
+
+const adminPerfilSchema = z.object({
+  id: strapiIdentifierSchema,
+  userId: z.string().trim().min(1).optional(),
+  nome: z.string().optional(),
+  tipo: z.string().optional(),
+  instituicaoGerida: z.object({
+    id: strapiIdentifierSchema,
+    documentId: z.string().trim().min(1).optional(),
+  }).nullable().optional(),
+});
+
+type AdminPerfil = z.infer<typeof adminPerfilSchema>;
+
+const adminPaginationSchema = z.object({
+  page: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+  pageCount: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+});
+
+class AdminListSafeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AdminListSafeError';
+  }
 }
 
-interface AdminPerfil {
-  id: string | number;
-  userId?: string;
-  nome?: string;
-  tipo?: string;
+function paginationFromUnknown(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null || !('meta' in value)) return undefined;
+  const meta = value.meta;
+  if (typeof meta !== 'object' || meta === null || !('pagination' in meta)) return undefined;
+  return meta.pagination;
+}
+
+const ADMIN_PERFIS_BATCH_SIZE = 100;
+const ADMIN_PERFIS_PAGE_SIZE = 100;
+const ADMIN_PERFIS_MAX_BATCHES = 100;
+const ADMIN_PERFIS_MAX_PAGES_PER_BATCH = 10;
+const ADMIN_PERFIS_BATCH_CONCURRENCY = 4;
+
+async function getAdminPerfisForUsers(userIds: string[]): Promise<AdminPerfil[]> {
+  const uniqueUserIds = [...new Set(userIds)];
+  const batchCount = Math.ceil(uniqueUserIds.length / ADMIN_PERFIS_BATCH_SIZE);
+  if (batchCount > ADMIN_PERFIS_MAX_BATCHES) {
+    throw new AdminListSafeError(
+      'Consulta administrativa de perfis excedeu o limite seguro de utilizadores',
+    );
+  }
+
+  const batches = Array.from(
+    { length: batchCount },
+    (_, index) => uniqueUserIds.slice(
+      index * ADMIN_PERFIS_BATCH_SIZE,
+      (index + 1) * ADMIN_PERFIS_BATCH_SIZE,
+    ),
+  );
+  const perfisByBatch: AdminPerfil[][] = Array.from({ length: batchCount }, () => []);
+  let nextBatchIndex = 0;
+
+  const fetchNextBatch = async (): Promise<void> => {
+    while (nextBatchIndex < batches.length) {
+      const batchIndex = nextBatchIndex;
+      nextBatchIndex++;
+      const batch = batches[batchIndex];
+      if (!batch) continue;
+
+      const batchPerfis: AdminPerfil[] = [];
+      let page = 1;
+      let pageCount = 1;
+      do {
+        const response = await strapiGet<AdminPerfil>('/perfis', {
+          'filters[userId][$in]': batch,
+          'populate[instituicaoGerida][fields][0]': 'id',
+          'populate[instituicaoGerida][fields][1]': 'documentId',
+          'pagination[page]': String(page),
+          'pagination[pageSize]': String(ADMIN_PERFIS_PAGE_SIZE),
+        });
+        const parsedPagination = adminPaginationSchema.safeParse(paginationFromUnknown(response));
+        if (!parsedPagination.success
+          || parsedPagination.data.page !== page
+          || (parsedPagination.data.pageCount > 0 && page > parsedPagination.data.pageCount)) {
+          log.error(
+            { issues: parsedPagination.success ? [] : parsedPagination.error.issues, requestedPage: page },
+            'Resposta inválida recebida na paginação de perfis administrativos',
+          );
+          throw new AdminListSafeError('Resposta inválida da paginação do serviço de perfis');
+        }
+        pageCount = parsedPagination.data.pageCount;
+        if (pageCount > ADMIN_PERFIS_MAX_PAGES_PER_BATCH) {
+          throw new AdminListSafeError(
+            'Consulta administrativa de perfis excedeu o limite seguro de páginas',
+          );
+        }
+        const parsedPerfis = z.array(adminPerfilSchema).safeParse(response.data);
+        if (!parsedPerfis.success) {
+          log.error(
+            { issues: parsedPerfis.error.issues },
+            'Resposta inválida recebida ao consultar perfis administrativos',
+          );
+          throw new AdminListSafeError('Resposta inválida do serviço de perfis');
+        }
+        batchPerfis.push(...parsedPerfis.data);
+        page++;
+      } while (page <= pageCount);
+      perfisByBatch[batchIndex] = batchPerfis;
+    }
+  };
+
+  const workerCount = Math.min(ADMIN_PERFIS_BATCH_CONCURRENCY, batchCount);
+  await Promise.all(Array.from({ length: workerCount }, fetchNextBatch));
+  return perfisByBatch.flat();
 }
 
 // GET /admin/utilizadores — super_admin
@@ -55,12 +170,19 @@ adminRoutes.get(
   async (c) => {
     const q = c.req.valid('query');
     try {
-      const [users, perfis] = await Promise.all([
-        strapiGetRaw<AdminStrapiUser[]>('/users'),
-        strapiGet<AdminPerfil>('/perfis', { 'pagination[pageSize]': '1000' }),
-      ]);
+      const usersResponse = await strapiGetRaw<unknown>('/users');
+      const parsedUsers = z.array(adminStrapiUserSchema).safeParse(usersResponse);
+      if (!parsedUsers.success) {
+        log.error(
+          { issues: parsedUsers.error.issues },
+          'Resposta inválida recebida ao consultar utilizadores administrativos',
+        );
+        throw new AdminListSafeError('Resposta inválida do serviço de utilizadores');
+      }
+      const users: AdminStrapiUser[] = parsedUsers.data;
+      const perfis = await getAdminPerfisForUsers(users.map((user) => String(user.id)));
       const perfilByUserId = new Map(
-        perfis.data
+        perfis
           .filter((perfil): perfil is AdminPerfil & { userId: string } => typeof perfil.userId === 'string')
           .map((perfil) => [perfil.userId, perfil]),
       );
@@ -73,6 +195,9 @@ adminRoutes.get(
           nome: perfil?.nome ?? user.nome ?? user.username ?? user.email,
           role: normalizeTipo(perfil?.tipo ?? 'estudante'),
           perfilId: perfil ? String(perfil.id) : null,
+          instituicaoId: perfil?.instituicaoGerida
+            ? String(perfil.instituicaoGerida.documentId ?? perfil.instituicaoGerida.id)
+            : null,
           reputacaoTier: 'BRONZE',
           xp: 0,
           reputacao: 0,
@@ -103,9 +228,85 @@ adminRoutes.get(
         pagination: { total, page, pageSize, pageCount },
       });
     } catch (err) {
-      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+      log.error(
+        { errorType: err instanceof Error ? err.name : typeof err },
+        'Falha ao consultar utilizadores administrativos',
+      );
+      const error = err instanceof AdminListSafeError
+        ? err.message
+        : 'Falha ao consultar utilizadores';
+      return c.json({ error }, 502);
     }
   }
+);
+
+// POST /admin/utilizadores/:id/reparar-instituicao — super_admin
+adminRoutes.post(
+  '/utilizadores/:id/reparar-instituicao',
+  checkRole(['super_admin']),
+  async (c) => {
+    const id = c.req.param('id');
+    if (!id) {
+      return c.json({ error: 'Identificador do utilizador obrigatório' }, 400);
+    }
+    try {
+      const target = await authService.getUserById(id);
+      if (target.role !== 'instituicao') {
+        return c.json({
+          error: 'A reparação institucional só pode ser aplicada a contas de instituição',
+          code: 'UTILIZADOR_NAO_INSTITUCIONAL',
+        }, 409);
+      }
+
+      const result = await provisionInstituicaoForUser(id, { nome: target.nome });
+      try {
+        await writeAuditLog({
+          actor: c.get('user'),
+          accao: 'admin_reparar_instituicao',
+          recurso: `/users/${id}/instituicao`,
+          ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
+          userAgent: c.req.header('user-agent'),
+          detalhes: {
+            instituicaoId: String(result.instituicao.documentId ?? result.instituicao.id),
+            created: result.created,
+          },
+        });
+      } catch (cause) {
+        log.error({ err: cause, userId: id }, 'Falha ao auditar reparação institucional');
+        throw Object.assign(
+          new Error('Associação reparada, mas auditoria pendente; tenta novamente'),
+          { status: 503, retryable: true, cause },
+        );
+      }
+
+      const response = { data: result.instituicao, created: result.created };
+      return result.created ? c.json(response, 201) : c.json(response, 200);
+    } catch (error) {
+      const err = typeof error === 'object' && error !== null ? error : {};
+      const rawStatus = 'status' in err && typeof err.status === 'number' ? err.status : 502;
+      const status = rawStatus >= 400 && rawStatus < 600 ? rawStatus : 502;
+      const retryable = 'retryable' in err && err.retryable === true;
+      const instituicaoId = 'instituicaoId' in err
+        && (typeof err.instituicaoId === 'string' || typeof err.instituicaoId === 'number')
+        ? String(err.instituicaoId)
+        : undefined;
+      log.error({
+        errorType: error instanceof Error ? error.name : typeof error,
+        userId: id,
+        status,
+        retryable,
+        ...(instituicaoId ? { instituicaoId } : {}),
+      }, 'Falha ao reparar associação institucional');
+      const canExposeMessage = status === 503
+        && retryable
+        && 'message' in err
+        && typeof err.message === 'string';
+      return c.json({
+        error: canExposeMessage ? err.message : 'Falha ao reparar associação institucional',
+        retryable,
+      }, status as ContentfulStatusCode);
+    }
+  },
 );
 
 // PUT /admin/utilizadores/:id/role — super_admin

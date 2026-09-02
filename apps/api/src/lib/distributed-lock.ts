@@ -18,10 +18,23 @@ const log = pino({ name: 'distributed-lock' });
 export interface LockHandle {
   key: string;
   fencingToken: number;
-  release: () => Promise<void>;
+  extend: (ttlMs: number) => Promise<boolean>;
+  release: () => Promise<boolean>;
 }
 
 const FENCE_PREFIX = 'lock:fence:';
+const EXTEND_IF_OWNER_SCRIPT = `
+  if redis.call('GET', KEYS[1]) == ARGV[1] then
+    return redis.call('EXPIRE', KEYS[1], ARGV[2])
+  end
+  return 0
+`;
+const RELEASE_IF_OWNER_SCRIPT = `
+  if redis.call('GET', KEYS[1]) == ARGV[1] then
+    return redis.call('DEL', KEYS[1])
+  end
+  return 0
+`;
 
 export async function acquireLock(key: string, ttlMs: number): Promise<LockHandle | null> {
   const fenceKey = `${FENCE_PREFIX}${key}`;
@@ -34,7 +47,7 @@ export async function acquireLock(key: string, ttlMs: number): Promise<LockHandl
   if (fencingToken === null) return null;
 
   const ttlSeconds = Math.ceil(ttlMs / 1000);
-  const value = String(fencingToken);
+  const value = `lock:${String(fencingToken)}`;
 
   const acquired = await redis.set(key, value, { nx: true, ex: ttlSeconds });
 
@@ -48,21 +61,43 @@ export async function acquireLock(key: string, ttlMs: number): Promise<LockHandl
   return {
     key,
     fencingToken,
-    release: async () => {
+    extend: async (extensionTtlMs: number) => {
+      const extensionSeconds = Math.ceil(extensionTtlMs / 1000);
       try {
-        const current = await redis.get<string>(key);
-        if (current === value) {
-          await redis.del(key);
-          log.debug({ key, fencingToken }, 'Lock libertado');
-        } else {
-          log.warn(
-            { key, fencingToken, current },
-            'Lock TTL expirou antes do release — stale lock write prevenido pelo fencing token',
-          );
+        const extended = await redis.eval(
+          EXTEND_IF_OWNER_SCRIPT,
+          [key],
+          [value, String(extensionSeconds)],
+        );
+        if (extended === 1) {
+          log.debug({ key, fencingToken, extensionTtlMs }, 'Lock renovado');
+          return true;
         }
+        log.warn({ key, fencingToken }, 'Lock já não pertence ao detentor durante renovação');
+        return false;
+      } catch (err) {
+        log.error({ err, key }, 'Erro ao renovar lock');
+        throw err;
+      }
+    },
+    release: async () => {
+      let released: number;
+      try {
+        const result = await redis.eval(RELEASE_IF_OWNER_SCRIPT, [key], [value]);
+        released = result === 1 ? 1 : 0;
       } catch (err) {
         log.error({ err, key }, 'Erro ao libertar lock');
+        throw err;
       }
+      if (released === 1) {
+        log.debug({ key, fencingToken }, 'Lock libertado');
+        return true;
+      }
+      log.warn(
+        { key, fencingToken },
+        'Lock já não pertence ao detentor no release (TTL expirado ou reaquisição) — escrita stale prevenida',
+      );
+      return false;
     },
   };
 }

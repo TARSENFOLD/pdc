@@ -7,6 +7,7 @@ const log = pino({ name: 'outbox-worker' });
 export const OUTBOX_WORKER_LOCK_KEY = 'outbox:worker:lock';
 export const OUTBOX_WORKER_LOCK_TTL_MS = 90_000;
 export const OUTBOX_WORKER_INTERVAL_MS = 60_000;
+const OUTBOX_WORKER_LOCK_RENEW_INTERVAL_MS = OUTBOX_WORKER_LOCK_TTL_MS / 3;
 
 export interface OutboxWorkerIterationResult {
   processed: boolean;
@@ -22,12 +23,40 @@ export async function runOutboxWorkerOnce(): Promise<OutboxWorkerIterationResult
   }
 
   log.debug({ fencingToken: lock.fencingToken }, 'Lock adquirido, a processar outbox...');
+  let renewal: Promise<void> | undefined;
+  const renewLease = (): Promise<void> => {
+    if (!renewal) {
+      renewal = lock.extend(OUTBOX_WORKER_LOCK_TTL_MS)
+        .then((extended) => {
+          if (!extended) {
+            log.warn({ fencingToken: lock.fencingToken }, 'Lease do Outbox Worker perdido durante replay');
+          }
+        })
+        .catch((err: unknown) => {
+          log.error({ err, fencingToken: lock.fencingToken }, 'Falha ao renovar lease do Outbox Worker');
+        })
+        .finally(() => {
+          renewal = undefined;
+        });
+    }
+    return renewal;
+  };
+  const renewalTimer = setInterval(() => {
+    void renewLease();
+  }, OUTBOX_WORKER_LOCK_RENEW_INTERVAL_MS);
+  renewalTimer.unref();
+
   try {
     await replayUnprocessedEvents();
     return { processed: true, fencingToken: lock.fencingToken };
   } finally {
+    clearInterval(renewalTimer);
+    if (renewal) await renewal;
     try {
-      await lock.release();
+      const released = await lock.release();
+      if (!released) {
+        log.warn({ fencingToken: lock.fencingToken }, 'Lease do Outbox Worker expirou antes do release');
+      }
     } catch (releaseErr) {
       log.error({ err: releaseErr }, 'Falha ao libertar lock do Outbox Worker');
     }

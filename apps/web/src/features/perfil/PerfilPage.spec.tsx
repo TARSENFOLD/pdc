@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { User } from '@pdc/shared';
 import PerfilPage from './PerfilPage';
@@ -59,5 +59,24 @@ describe('PerfilPage', () => {
     render(<MemoryRouter><PerfilPage /></MemoryRouter>);
 
     expect(screen.getByText('Perfil comunitário')).toBeDefined();
+  });
+
+  it('redireciona instituição para o perfil institucional canónico', () => {
+    authState.user = internalUser('instituicao');
+
+    render(
+      <MemoryRouter initialEntries={['/app/perfil']}>
+        <Routes>
+          <Route path="/app/perfil" element={<PerfilPage />} />
+          <Route
+            path="/app/instituicao/perfil/identidade"
+            element={<div>Editor institucional canónico</div>}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Editor institucional canónico')).toBeDefined();
+    expect(screen.queryByText('Perfil comunitário')).toBeNull();
   });
 });

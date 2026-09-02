@@ -20,6 +20,9 @@ function parseTimeoutEnv(envKey: 'STRAPI_TIMEOUT' | 'STRAPI_WRITE_TIMEOUT', defa
 
 const TIMEOUT = parseTimeoutEnv('STRAPI_TIMEOUT', 5000);
 const WRITE_TIMEOUT = parseTimeoutEnv('STRAPI_WRITE_TIMEOUT', 10000);
+const ERROR_BODY_TIMEOUT = 1000;
+const MAX_ERROR_BODY_BYTES = 64 * 1024;
+const ERROR_BODY_TIMED_OUT = Symbol('STRAPI_ERROR_BODY_TIMED_OUT');
 const MAX_RETRIES = 1;
 const BASE_DELAY = 300;
 
@@ -28,10 +31,79 @@ export class StrapiHttpError extends Error {
     message: string,
     public readonly status: number,
     public readonly path: string,
+    public readonly body?: unknown,
   ) {
     super(message);
     this.name = 'StrapiHttpError';
   }
+}
+
+async function createStrapiHttpError(
+  response: Response,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  path: string,
+): Promise<StrapiHttpError> {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return new StrapiHttpError(
+      `Strapi ${method} ${path} falhou: ${response.status.toString()}`,
+      response.status,
+      path,
+    );
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const readBody = (async (): Promise<unknown> => {
+    const decoder = new TextDecoder();
+    let rawBody = '';
+    let bodyBytes = 0;
+    let chunk = await reader.read();
+    while (!chunk.done) {
+      const value: unknown = chunk.value;
+      if (!(value instanceof Uint8Array)) return undefined;
+      bodyBytes += value.byteLength;
+      if (bodyBytes > MAX_ERROR_BODY_BYTES) {
+        await reader.cancel('Strapi error body size limit exceeded').catch(() => undefined);
+        return undefined;
+      }
+      rawBody += decoder.decode(value, { stream: true });
+      chunk = await reader.read();
+    }
+    rawBody += decoder.decode();
+    if (rawBody === '') return undefined;
+    try {
+      return JSON.parse(rawBody) as unknown;
+    } catch {
+      return undefined;
+    }
+  })();
+
+  const timeout = new Promise<typeof ERROR_BODY_TIMED_OUT>((resolve) => {
+    timeoutId = setTimeout(() => {
+      resolve(ERROR_BODY_TIMED_OUT);
+    }, ERROR_BODY_TIMEOUT);
+  });
+
+  let body: unknown;
+  try {
+    const bodyOrTimeout = await Promise.race([readBody.catch(() => undefined), timeout]);
+    if (bodyOrTimeout === ERROR_BODY_TIMED_OUT) {
+      await reader.cancel('Strapi error body timeout').catch(() => undefined);
+      await readBody.catch(() => undefined);
+      body = undefined;
+    } else {
+      body = bodyOrTimeout;
+    }
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+    reader.releaseLock();
+  }
+  return new StrapiHttpError(
+    `Strapi ${method} ${path} falhou: ${response.status.toString()}`,
+    response.status,
+    path,
+    body,
+  );
 }
 
 /**
@@ -135,7 +207,7 @@ export async function strapiGet<T>(
   const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() }, TIMEOUT);
   if (!res.ok) {
     log.error({ url: url.toString(), status: res.status }, `Strapi GET ${path} falhou`);
-    throw new StrapiHttpError(`Strapi GET ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'GET', path);
   }
   const json = (await res.json()) as StrapiListResponse<T>;
   return normalizeStrapiResponse(json);
@@ -148,7 +220,7 @@ export async function strapiPost<T>(path: string, body: unknown): Promise<Strapi
     body: JSON.stringify({ data: body }),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi POST ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'POST', path);
   }
   const json = (await res.json()) as StrapiSingleResponse<T>;
   return normalizeStrapiResponse(json);
@@ -161,7 +233,7 @@ export async function strapiPut<T>(path: string, body: unknown): Promise<StrapiS
     body: JSON.stringify({ data: body }),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi PUT ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'PUT', path);
   }
   const json = (await res.json()) as StrapiSingleResponse<T>;
   return normalizeStrapiResponse(json);
@@ -173,7 +245,7 @@ export async function strapiDelete(path: string): Promise<void> {
     headers: buildHeaders(),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi DELETE ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'DELETE', path);
   }
 }
 
@@ -185,7 +257,7 @@ export async function strapiPutRaw<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi PUT ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'PUT', path);
   }
   return res.json() as Promise<T>;
 }
@@ -197,7 +269,7 @@ export async function strapiPostRaw<T>(path: string, body: unknown): Promise<T> 
     body: JSON.stringify(body),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi POST ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'POST', path);
   }
   return res.json() as Promise<T>;
 }
@@ -211,7 +283,7 @@ export async function strapiGetRaw<T>(path: string, params?: Record<string, stri
   }
   const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() }, TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi GET ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'GET', path);
   }
   return res.json() as Promise<T>;
 }
@@ -222,6 +294,6 @@ export async function strapiDeleteRaw(path: string): Promise<void> {
     headers: buildHeaders(),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi DELETE ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'DELETE', path);
   }
 }

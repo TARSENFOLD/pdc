@@ -9,7 +9,18 @@ import type {
   RecursosInstituicaoSchema,
 } from '@pdc/shared';
 import type { z } from 'zod';
-import { http } from './http';
+import { ApiError, http } from './http';
+
+export const institutionKeys = {
+  all: ['instituicao'] as const,
+  me: () => [...institutionKeys.all, 'me'] as const,
+};
+
+export function isInstituicaoAssociacaoAusente(error: unknown): boolean {
+  if (!(error instanceof ApiError) || error.status !== 409) return false;
+  if (typeof error.body !== 'object' || error.body === null) return false;
+  return 'code' in error.body && error.body.code === 'INSTITUICAO_ASSOCIACAO_AUSENTE';
+}
 
 type SectionPayloads = {
   identidade: z.infer<typeof IdentidadeInstituicaoSchema>;
