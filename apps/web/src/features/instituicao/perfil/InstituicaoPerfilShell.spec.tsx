@@ -56,4 +56,26 @@ describe('InstituicaoPerfilShell', () => {
     expect(await screen.findByText('Instituição PDC')).toBeDefined();
     expect(screen.queryByText('Associação institucional pendente')).toBeNull();
   });
+
+  it('limita retries e mantém falhas operacionais no estado genérico', async () => {
+    const getMe = vi.spyOn(instituicoesApi, 'getMe').mockRejectedValue(
+      new ApiError(503, 'HTTP 503', { error: 'Serviço temporariamente indisponível' }),
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retryDelay: 0 } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <InstituicaoPerfilShell />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText('Perfil institucional indisponível')).toBeDefined();
+    expect(screen.getByText(/Não foi possível carregar o perfil institucional/)).toBeDefined();
+    expect(screen.queryByText('Associação institucional pendente')).toBeNull();
+    expect(getMe).toHaveBeenCalledTimes(3);
+  });
 });

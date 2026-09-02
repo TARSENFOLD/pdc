@@ -17,6 +17,8 @@ describe('instituicoesApi contracts', () => {
     expect(isInstituicaoAssociacaoAusente(new ApiError(409, 'HTTP 409', {
       code: 'OUTRO_CONFLITO',
     }))).toBe(false);
+    expect(isInstituicaoAssociacaoAusente(new ApiError(409, 'HTTP 409'))).toBe(false);
+    expect(isInstituicaoAssociacaoAusente(new ApiError(409, 'HTTP 409', null))).toBe(false);
     expect(isInstituicaoAssociacaoAusente(new ApiError(503, 'HTTP 503'))).toBe(false);
   });
 });

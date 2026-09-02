@@ -1,6 +1,18 @@
 import { strapiDelete, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
 import { persistedId, type StrapiInstituicao, type StrapiPerfilGestor } from './instituicao.types.js';
+import { acquireLock } from '../../lib/distributed-lock.js';
 import crypto from 'node:crypto';
+
+const PROVISION_LOCK_TTL_MS = 30_000;
+
+type ProvisionInstituicaoInput = {
+  nome: string;
+  nomeLegal?: string;
+  tipo?: string;
+  natureza?: string;
+  regiao?: string;
+  nif?: string;
+};
 
 function slugify(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -24,9 +36,9 @@ function instituicaoReference(instituicao: StrapiInstituicao): InstituicaoRefere
   };
 }
 
-export async function provisionInstituicaoForUser(
+async function provisionWhileLocked(
   userId: string,
-  input: { nome: string; nomeLegal?: string; tipo?: string; natureza?: string; regiao?: string; nif?: string },
+  input: ProvisionInstituicaoInput,
 ): Promise<ProvisionInstituicaoResult> {
   const perfis = await strapiGet<StrapiPerfilGestor>('/perfis', {
     'filters[userId][$eq]': userId,
@@ -75,4 +87,46 @@ export async function provisionInstituicaoForUser(
     });
   }
   return { instituicao: instituicaoReference(instituicao), created: true };
+}
+
+export async function provisionInstituicaoForUser(
+  userId: string,
+  input: ProvisionInstituicaoInput,
+): Promise<ProvisionInstituicaoResult> {
+  let lock;
+  try {
+    lock = await acquireLock(`instituicao:provision:${userId}`, PROVISION_LOCK_TTL_MS);
+  } catch (cause) {
+    throw Object.assign(new Error('Provisionamento institucional temporariamente indisponível'), {
+      status: 503,
+      retryable: true,
+      cause,
+    });
+  }
+  if (!lock) {
+    throw Object.assign(new Error('Provisionamento institucional em curso; tenta novamente'), {
+      status: 503,
+      retryable: true,
+    });
+  }
+
+  let result: ProvisionInstituicaoResult;
+  try {
+    result = await provisionWhileLocked(userId, input);
+  } catch (cause) {
+    await lock.release().catch(() => undefined);
+    throw cause;
+  }
+
+  try {
+    await lock.release();
+  } catch (cause) {
+    throw Object.assign(new Error('Libertação do bloqueio institucional falhou; tenta novamente'), {
+      status: 503,
+      retryable: true,
+      cause,
+    });
+  }
+
+  return result;
 }

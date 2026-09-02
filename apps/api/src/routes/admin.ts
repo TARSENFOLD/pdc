@@ -50,6 +50,28 @@ interface AdminPerfil {
   instituicaoGerida?: { id: string | number; documentId?: string } | null;
 }
 
+const ADMIN_PERFIS_PAGE_SIZE = 1000;
+
+async function getAllAdminPerfis(): Promise<AdminPerfil[]> {
+  const perfis: AdminPerfil[] = [];
+  let page = 1;
+  let pageCount = 1;
+
+  do {
+    const response = await strapiGet<AdminPerfil>('/perfis', {
+      'populate[instituicaoGerida][fields][0]': 'id',
+      'populate[instituicaoGerida][fields][1]': 'documentId',
+      'pagination[page]': String(page),
+      'pagination[pageSize]': String(ADMIN_PERFIS_PAGE_SIZE),
+    });
+    perfis.push(...response.data);
+    pageCount = response.meta.pagination.pageCount;
+    page++;
+  } while (page <= pageCount);
+
+  return perfis;
+}
+
 // GET /admin/utilizadores — super_admin
 adminRoutes.get(
   '/utilizadores',
@@ -60,14 +82,10 @@ adminRoutes.get(
     try {
       const [users, perfis] = await Promise.all([
         strapiGetRaw<AdminStrapiUser[]>('/users'),
-        strapiGet<AdminPerfil>('/perfis', {
-          'populate[instituicaoGerida][fields][0]': 'id',
-          'populate[instituicaoGerida][fields][1]': 'documentId',
-          'pagination[pageSize]': '1000',
-        }),
+        getAllAdminPerfis(),
       ]);
       const perfilByUserId = new Map(
-        perfis.data
+        perfis
           .filter((perfil): perfil is AdminPerfil & { userId: string } => typeof perfil.userId === 'string')
           .map((perfil) => [perfil.userId, perfil]),
       );
@@ -137,19 +155,25 @@ adminRoutes.post(
       }
 
       const result = await provisionInstituicaoForUser(id, { nome: target.nome });
-      await writeAuditLog({
-        actor: c.get('user'),
-        accao: 'admin_reparar_instituicao',
-        recurso: `/users/${id}/instituicao`,
-        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
-        userAgent: c.req.header('user-agent'),
-        detalhes: {
-          instituicaoId: String(result.instituicao.documentId ?? result.instituicao.id),
-          created: result.created,
-        },
-      }).catch((error: unknown) => {
-        log.error({ error, userId: id }, 'Falha ao auditar reparação institucional');
-      });
+      try {
+        await writeAuditLog({
+          actor: c.get('user'),
+          accao: 'admin_reparar_instituicao',
+          recurso: `/users/${id}/instituicao`,
+          ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
+          userAgent: c.req.header('user-agent'),
+          detalhes: {
+            instituicaoId: String(result.instituicao.documentId ?? result.instituicao.id),
+            created: result.created,
+          },
+        });
+      } catch (cause) {
+        log.error({ cause, userId: id }, 'Falha ao auditar reparação institucional');
+        throw Object.assign(
+          new Error('Associação reparada, mas auditoria pendente; tenta novamente'),
+          { status: 503, retryable: true, cause },
+        );
+      }
 
       const response = { data: result.instituicao, created: result.created };
       return result.created ? c.json(response, 201) : c.json(response, 200);

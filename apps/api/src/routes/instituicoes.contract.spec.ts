@@ -51,4 +51,17 @@ describe('instituicaoRoutes — associação institucional', () => {
       action: 'CONTACTAR_SUPER_ADMIN',
     });
   });
+
+  it('não converte uma falha operacional no erro de associação ausente', async () => {
+    vi.mocked(strapiGet<StrapiPerfilGestor>).mockRejectedValue(
+      new Error('Strapi indisponível'),
+    );
+
+    const response = await app.request('/me');
+    const body = await response.text();
+
+    expect(response.status).toBe(500);
+    expect(body).not.toContain('INSTITUICAO_ASSOCIACAO_AUSENTE');
+    expect(body).not.toContain('CONTACTAR_SUPER_ADMIN');
+  });
 });

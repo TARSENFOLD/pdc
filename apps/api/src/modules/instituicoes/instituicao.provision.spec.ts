@@ -4,11 +4,20 @@ import { provisionInstituicaoForUser } from './instituicao.provision.js';
 import { strapiDelete, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
 import type { StrapiInstituicao, StrapiPerfilGestor } from './instituicao.types.js';
 
+const lockMocks = vi.hoisted(() => ({
+  acquireLock: vi.fn(),
+  release: vi.fn(),
+}));
+
 vi.mock('../strapi/strapi.client.js', () => ({
   strapiGet: vi.fn(),
   strapiPost: vi.fn(),
   strapiPut: vi.fn(),
   strapiDelete: vi.fn(),
+}));
+
+vi.mock('../../lib/distributed-lock.js', () => ({
+  acquireLock: lockMocks.acquireLock,
 }));
 
 function listResponse<T>(data: Array<T & { id: string | number }>): StrapiListResponse<T> {
@@ -34,6 +43,12 @@ const perfil: StrapiPerfilGestor = {
 describe('provisionInstituicaoForUser', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    lockMocks.release.mockResolvedValue(undefined);
+    lockMocks.acquireLock.mockResolvedValue({
+      key: 'instituicao:provision:user-1',
+      fencingToken: 1,
+      release: lockMocks.release,
+    });
     vi.mocked(strapiPut).mockResolvedValue(singleResponse({ id: 'perfil-1' }));
     vi.mocked(strapiDelete).mockResolvedValue(undefined);
   });
@@ -44,6 +59,8 @@ describe('provisionInstituicaoForUser', () => {
     const result = await provisionInstituicaoForUser('user-1', { nome: 'Novo Nome' });
 
     expect(result).toEqual({ instituicao: { id: 'inst-1', documentId: 'doc-inst-1', nome: 'Instituto PDC' }, created: false });
+    expect(lockMocks.acquireLock).toHaveBeenCalledWith('instituicao:provision:user-1', 30_000);
+    expect(lockMocks.release).toHaveBeenCalledOnce();
     expect(strapiPost).not.toHaveBeenCalled();
     expect(strapiPut).not.toHaveBeenCalled();
   });
@@ -86,5 +103,49 @@ describe('provisionInstituicaoForUser', () => {
       instituicaoId: 'inst-1',
     });
     expect(strapiDelete).toHaveBeenCalledWith('/instituicoes/doc-inst-1');
+    expect(lockMocks.release).toHaveBeenCalledOnce();
+  });
+
+  it('impede duas reparações concorrentes de criarem instituições duplicadas', async () => {
+    lockMocks.acquireLock
+      .mockResolvedValueOnce({
+        key: 'instituicao:provision:user-1',
+        fencingToken: 1,
+        release: lockMocks.release,
+      })
+      .mockResolvedValueOnce(null);
+    vi.mocked(strapiGet).mockResolvedValue(listResponse([perfil]));
+    vi.mocked(strapiPost).mockResolvedValue(singleResponse(instituicao));
+
+    const results = await Promise.allSettled([
+      provisionInstituicaoForUser('user-1', { nome: 'Instituto PDC' }),
+      provisionInstituicaoForUser('user-1', { nome: 'Instituto PDC' }),
+    ]);
+
+    expect(results[0]).toMatchObject({
+      status: 'fulfilled',
+      value: { created: true, instituicao: { id: 'inst-1' } },
+    });
+    expect(results[1]).toMatchObject({
+      status: 'rejected',
+      reason: { status: 503, retryable: true },
+    });
+    expect(strapiPost).toHaveBeenCalledOnce();
+    expect(strapiPut).toHaveBeenCalledOnce();
+    expect(lockMocks.release).toHaveBeenCalledOnce();
+  });
+
+  it('normaliza falha ao libertar o lock depois de persistir a associação', async () => {
+    vi.mocked(strapiGet).mockResolvedValue(listResponse([perfil]));
+    vi.mocked(strapiPost).mockResolvedValue(singleResponse(instituicao));
+    lockMocks.release.mockRejectedValueOnce(new Error('Redis release failed'));
+
+    await expect(provisionInstituicaoForUser('user-1', { nome: 'Instituto PDC' })).rejects.toMatchObject({
+      status: 503,
+      retryable: true,
+    });
+    expect(strapiPost).toHaveBeenCalledOnce();
+    expect(strapiPut).toHaveBeenCalledWith('/perfis/perfil-doc-1', { instituicaoGerida: 'inst-1' });
+    expect(strapiDelete).not.toHaveBeenCalled();
   });
 });

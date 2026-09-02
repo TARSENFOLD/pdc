@@ -58,6 +58,19 @@ export const AdminUtilizadoresParamsSchema = PaginationParamsSchema.extend({
 
 export type AdminUtilizadoresParams = z.infer<typeof AdminUtilizadoresParamsSchema>;
 
+export const AdminRepararInstituicaoResponseSchema = z.object({
+  data: z.object({
+    id: z.union([z.string(), z.number()]),
+    documentId: z.string().optional(),
+    nome: z.string(),
+  }),
+  created: z.boolean(),
+});
+
+export type AdminRepararInstituicaoResponse = z.infer<
+  typeof AdminRepararInstituicaoResponseSchema
+>;
+
 export const HooksHealthResponseSchema = z.object({
   outbox: z.object({
     pendentes: z.number(),

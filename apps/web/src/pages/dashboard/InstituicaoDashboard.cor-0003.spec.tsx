@@ -62,6 +62,7 @@ describe('COR-0003 institution dashboard', () => {
     renderDashboard();
 
     expect(await screen.findByText('Criar Conteúdo')).toBeTruthy();
+    expect(await screen.findAllByRole('link', { name: 'Criar Experiência' })).not.toHaveLength(0);
     expect(screen.queryByRole('link', { name: /Perfil institucional/ })).toBeNull();
   });
 });

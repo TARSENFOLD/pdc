@@ -124,8 +124,50 @@ describe('adminRoutes internal accounts', () => {
     expect(strapiGet).toHaveBeenCalledWith('/perfis', {
       'populate[instituicaoGerida][fields][0]': 'id',
       'populate[instituicaoGerida][fields][1]': 'documentId',
+      'pagination[page]': '1',
       'pagination[pageSize]': '1000',
     });
+  });
+
+  it('encontra associação institucional além dos primeiros 1.000 perfis', async () => {
+    vi.mocked(strapiGetRaw).mockResolvedValue([
+      { id: 1001, email: 'associada@pdc.ao', createdAt: '2026-01-01T00:00:00.000Z' },
+    ]);
+    const firstPage = Array.from({ length: 1000 }, (_, index): PerfilFixture & { id: string } => ({
+      id: `perfil-${String(index + 1)}`,
+      userId: String(index + 1),
+      nome: `Perfil ${String(index + 1)}`,
+      tipo: 'estudante',
+    }));
+    vi.mocked(strapiGet<PerfilFixture>)
+      .mockResolvedValueOnce({
+        data: firstPage,
+        meta: { pagination: { page: 1, pageSize: 1000, pageCount: 2, total: 1001 } },
+      })
+      .mockResolvedValueOnce({
+        data: [{
+          id: 'perfil-1001',
+          userId: '1001',
+          nome: 'Instituição associada',
+          tipo: 'instituicao',
+          instituicaoGerida: { id: 'inst-1001', documentId: 'inst-doc-1001' },
+        }],
+        meta: { pagination: { page: 2, pageSize: 1000, pageCount: 2, total: 1001 } },
+      });
+
+    const response = await app.request('/utilizadores?page=1&pageSize=10');
+    const body = await response.json() as { data: Array<{ id: string; instituicaoId: string | null }> };
+
+    expect(response.status).toBe(200);
+    expect(body.data).toEqual([
+      expect.objectContaining({ id: '1001', instituicaoId: 'inst-doc-1001' }),
+    ]);
+    expect(strapiGet).toHaveBeenNthCalledWith(1, '/perfis', expect.objectContaining({
+      'pagination[page]': '1',
+    }));
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/perfis', expect.objectContaining({
+      'pagination[page]': '2',
+    }));
   });
 
   it.each([
@@ -204,6 +246,32 @@ describe('adminRoutes internal accounts', () => {
       retryable: true,
     });
     expect(writeAuditLog).not.toHaveBeenCalled();
+  });
+
+  it('não confirma reparação quando a auditoria durável falha', async () => {
+    serviceMocks.getUserById.mockResolvedValue({
+      id: '23',
+      email: 'instituicao@pdc.ao',
+      nome: 'Instituição PDC',
+      role: 'instituicao',
+    });
+    vi.mocked(provisionInstituicaoForUser).mockResolvedValue({
+      instituicao: { id: 'inst-23', documentId: 'inst-doc-23', nome: 'Instituição PDC' },
+      created: true,
+    });
+    vi.mocked(writeAuditLog).mockRejectedValueOnce(new Error('audit indisponível'));
+
+    const response = await app.request('/utilizadores/23/reparar-instituicao', {
+      method: 'POST',
+    });
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: 'Associação reparada, mas auditoria pendente; tenta novamente',
+      retryable: true,
+    });
+    expect(provisionInstituicaoForUser).toHaveBeenCalledOnce();
+    expect(writeAuditLog).toHaveBeenCalledOnce();
   });
 
   it('limita erros inesperados do provisionamento a uma resposta segura', async () => {
