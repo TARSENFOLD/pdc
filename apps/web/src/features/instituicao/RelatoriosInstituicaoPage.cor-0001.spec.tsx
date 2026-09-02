@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RelatoriosInstituicaoPage } from './RelatoriosInstituicaoPage';
 import { experienciasApi } from '@/lib/api/experiencias';
-import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 vi.mock('@/lib/api/experiencias', () => ({
   experienciasApi: {
@@ -12,50 +11,60 @@ vi.mock('@/lib/api/experiencias', () => ({
   },
 }));
 
-vi.mock('@/hooks/useFeatureFlags', () => ({
-  useFeatureFlags: vi.fn(),
-}));
-
-describe('COR-0001 institution reports', () => {
+describe('COR-0003 institution reports', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useFeatureFlags).mockReturnValue({
-      flags: {},
-      isEnabled: () => false,
-      isLoading: false,
-    });
     vi.mocked(experienciasApi.getStats).mockResolvedValue({
-      experienciasPublicadas: 2,
-      programasActivos: 1,
+      conteudosTotais: 2,
       inscricoesTotais: 7,
-    });
-    vi.mocked(experienciasApi.getMinhas).mockResolvedValue({
-      data: [{
-        id: 'exp-1',
-        slug: 'experiencia-real',
-        titulo: 'Experiência real',
-        descricao: 'Experiência institucional com dados persistidos.',
-        gratuito: true,
-        estado: 'published',
-        validadoAcademicamente: true,
-        inscricoesCount: 7,
-      }],
+      participacoesTotais: 3,
     });
   });
 
-  it('mostra apenas contagens reais e esconde cartões avançados', async () => {
+  function renderPage() {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    render(
+    return render(
       <QueryClientProvider client={client}>
         <RelatoriosInstituicaoPage />
       </QueryClientProvider>,
     );
+  }
 
+  it('mostra apenas as três contagens autoritativas', async () => {
+    renderPage();
     expect(await screen.findByText('Contagens disponíveis')).toBeTruthy();
-    expect(screen.getByText('Experiência real')).toBeTruthy();
+    expect(screen.getByText('Conteúdos')).toBeTruthy();
+    expect(screen.getByText('Inscrições')).toBeTruthy();
+    expect(screen.getByText('Participações')).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
+    expect(screen.getByText('7')).toBeTruthy();
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.queryByText('Exportar Relatório Executivo')).toBeNull();
     expect(screen.queryByText('Redução de Evasão')).toBeNull();
     expect(screen.queryByText('Cluster de Talentos')).toBeNull();
+  });
+
+  it('mantém null como ausência de dados e zero como contagem real', async () => {
+    vi.mocked(experienciasApi.getStats).mockResolvedValueOnce({
+      conteudosTotais: null,
+      inscricoesTotais: 0,
+      participacoesTotais: null,
+    });
+
+    renderPage();
+
+    expect((await screen.findAllByText('Sem dados suficientes'))).toHaveLength(2);
+    expect(screen.getByText('0')).toBeTruthy();
+  });
+
+  it('não transforma falha da API em métricas vazias', async () => {
+    vi.mocked(experienciasApi.getStats).mockRejectedValueOnce(new Error('dependência indisponível'));
+
+    renderPage();
+
+    expect(await screen.findByText('Não foi possível carregar os relatórios')).toBeTruthy();
+    expect(screen.queryByText('Conteúdos')).toBeNull();
   });
 });

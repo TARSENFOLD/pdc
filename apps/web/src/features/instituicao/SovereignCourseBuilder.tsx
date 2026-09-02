@@ -106,7 +106,7 @@ export function SovereignCourseBuilder() {
       : cursosApi.create(data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
-      toast({ title: 'Curso Materializado!', description: 'O impacto no ecossistema foi disparado.' });
+      toast({ title: 'Curso guardado com sucesso.' });
       navigate(user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/dashboard/instituicao');
     },
     onError: (err: unknown) => {

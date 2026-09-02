@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Button, Spinner, Badge, EmptyState, Card } from '@/components/ui';
 import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
-import { BookOpen, Lock, ShieldCheck, Zap, MessageSquare, CheckCircle } from 'lucide-react';
+import { BookOpen, Lock, Zap, MessageSquare } from 'lucide-react';
 import { cursosApi } from '@/lib/api/cursos';
 import { ratingsApi } from '@/lib/api/interactions';
 import { useTelemetry } from '@/hooks/useTelemetry';
@@ -237,14 +237,6 @@ export function CursoDetailPage() {
                         </div>
                       </div>
                     ) : null}
-                    <div className="flex items-center justify-between">
-                       <span className="text-[10px] font-black uppercase text-ink-tertiary">Aptidão Validada</span>
-                       <ShieldCheck size={16} className="text-accent" />
-                    </div>
-                    <div className="flex items-center justify-between text-xs font-bold text-ink-secondary">
-                       <span>Certificado Digital</span>
-                       <CheckCircle size={14} className="text-accent" />
-                    </div>
                     <div className="space-y-2 border-t border-ink-tertiary/10 pt-4">
                       <span className="text-[10px] font-black uppercase text-ink-tertiary">Avaliação</span>
                       <RatingStars targetType="curso" targetId={id} stats={ratingStats} readOnly={!isEnrolled || progressoPercentual < 30} />

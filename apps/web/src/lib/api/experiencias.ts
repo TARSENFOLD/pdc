@@ -1,5 +1,13 @@
 import { http } from './http';
-import type { Experiencia, ExperienciaMinha, CriarExperienciaPayload, PaginationParams, InstituicaoStats, MutationResult } from '@pdc/shared';
+import {
+  InstituicaoStatsSchema,
+  type Experiencia,
+  type ExperienciaMinha,
+  type CriarExperienciaPayload,
+  type PaginationParams,
+  type InstituicaoStats,
+  type MutationResult,
+} from '@pdc/shared';
 
 export const experienciasApi = {
   list: (params?: PaginationParams) => {
@@ -23,7 +31,7 @@ export const experienciasApi = {
     http.get<Experiencia[]>(`/experiencias/instituicao/${instituicaoId}`),
 
   getStats: () =>
-    http.get<InstituicaoStats>('/experiencias/stats'),
+    http.getParsed<InstituicaoStats>('/experiencias/stats', InstituicaoStatsSchema),
 
   getMinhas: () =>
     http.get<{ data: ExperienciaMinha[] }>('/experiencias/minhas'),

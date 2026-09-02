@@ -48,20 +48,16 @@ test.describe('COR-0001 — contenção externa', () => {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        experienciasPublicadas: 2,
-        programasActivos: 1,
+        conteudosTotais: 2,
         inscricoesTotais: 7,
+        participacoesTotais: 3,
       }),
-    }));
-    await instituicaoPage.route('**/api/experiencias/minhas', (route) => route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: [] }),
     }));
 
     await instituicaoPage.goto('/app/instituicao/relatorios');
 
     await expect(instituicaoPage.getByText('Contagens disponíveis')).toBeVisible();
+    await expect(instituicaoPage.getByText('Participações')).toBeVisible();
     await expect(instituicaoPage.getByText('Redução de Evasão')).toHaveCount(0);
     await expect(instituicaoPage.getByText('Cluster de Talentos')).toHaveCount(0);
   });

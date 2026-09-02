@@ -54,12 +54,9 @@ export const MentorStatsSchema = z.object({
 export type MentorStats = z.infer<typeof MentorStatsSchema>;
 
 export const InstituicaoStatsSchema = z.object({
-  experienciasPublicadas: z.number(),
-  inscricoesTotais: z.number(),
-  programasActivos: z.number(),
-  taxaPresenca: z.number().optional(),
-  avaliacaoMedia: z.number().optional(),
-  estudantesVinculados: z.number().optional(),
+  conteudosTotais: z.number().int().nonnegative().nullable(),
+  inscricoesTotais: z.number().int().nonnegative().nullable(),
+  participacoesTotais: z.number().int().nonnegative().nullable(),
 });
 
 export type InstituicaoStats = z.infer<typeof InstituicaoStatsSchema>;

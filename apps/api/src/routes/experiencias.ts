@@ -159,31 +159,60 @@ experienciaRoutes.get('/minhas/:id', verifyJwt, checkRole(['instituicao', 'mento
 experienciaRoutes.get('/stats', verifyJwt, checkRole(['instituicao', 'super_admin']), async (c) => {
   const { id: userId } = c.get('user');
   try {
-    const publishedExperienceParams: Record<string, string | string[]> = {
+    const contentParams: Record<string, string | string[]> = {
       'filters[autor][userId][$eq]': userId,
       'pagination[pageSize]': '1',
     };
-    applyPublicCatalogStateFilter(publishedExperienceParams);
-    const [experiencias, programas, inscricoes] = await Promise.all([
-      strapiGet<{ id: string }>('/experiencias', publishedExperienceParams),
+    const [experiencias, cursos, simulacoes, programas, inscricoes, participacoes] = await Promise.all([
+      strapiGet<{ id: string }>('/experiencias', contentParams),
+      strapiGet<{ id: string }>('/cursos', {
+        'filters[autorId][$eq]': userId,
+        'pagination[pageSize]': '1',
+      }),
+      strapiGet<{ id: string }>('/simulacoes', {
+        'filters[autorId][$eq]': userId,
+        'pagination[pageSize]': '1',
+      }),
       strapiGet<{ id: string }>('/programas', {
         'filters[responsavel][userId][$eq]': userId,
-        'filters[estado][$eq]': 'activo',
         'pagination[pageSize]': '1',
       }),
       strapiGet<{ id: string }>('/inscricoes', {
+        'filters[curso][autorId][$eq]': userId,
+        'pagination[pageSize]': '1',
+      }),
+      strapiGet<{ id: string }>('/experiencia-participantes', {
         'filters[experiencia][autor][userId][$eq]': userId,
         'pagination[pageSize]': '1',
       }),
     ]);
 
+    const totals = {
+      experiencias: experiencias.meta.pagination.total,
+      cursos: cursos.meta.pagination.total,
+      simulacoes: simulacoes.meta.pagination.total,
+      programas: programas.meta.pagination.total,
+      inscricoes: inscricoes.meta.pagination.total,
+      participacoes: participacoes.meta.pagination.total,
+    };
+    const hasInvalidTotal = Object.values(totals).some(
+      (total) => !Number.isInteger(total) || total < 0,
+    );
+    if (hasInvalidTotal) {
+      return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
+    }
+
     return c.json({
-      experienciasPublicadas: experiencias.meta.pagination.total,
-      programasActivos: programas.meta.pagination.total,
-      inscricoesTotais: inscricoes.meta.pagination.total,
+      conteudosTotais:
+        totals.experiencias
+        + totals.cursos
+        + totals.simulacoes
+        + totals.programas,
+      inscricoesTotais: totals.inscricoes,
+      participacoesTotais: totals.participacoes,
     });
   } catch {
-    return c.json({ error: 'Falha ao obter estatísticas institucionais' }, 502);
+    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
   }
 });
 

@@ -2,7 +2,7 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { experienciasApi } from '@/lib/api/experiencias';
-import { Spinner, BentoGrid, BentoTile, GlassCard, AsymmetricButton } from '@/components/ui';
+import { Spinner, BentoGrid, BentoTile, GlassCard, AsymmetricButton, EmptyState } from '@/components/ui';
 import ContentTypeCTAGrid from '@/components/dashboard/ContentTypeCTAGrid';
 import {
   Building2,
@@ -34,7 +34,7 @@ const CTAS = [
 export function InstituicaoDashboard() {
   const { user } = useAuth();
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, isError } = useQuery({
     queryKey: ['experiencias', 'stats'],
     queryFn: () => experienciasApi.getStats(),
   });
@@ -46,6 +46,23 @@ export function InstituicaoDashboard() {
       </div>
     );
   }
+
+  if (isError) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center px-6">
+        <EmptyState
+          icon={Building2}
+          variant="error"
+          title="Não foi possível carregar as métricas"
+          description="Tenta novamente mais tarde."
+        />
+      </div>
+    );
+  }
+
+  const formatTotal = (value: number | null | undefined): number | string => (
+    value === null || value === undefined ? 'Sem dados suficientes' : value
+  );
 
   return (
     <motion.div
@@ -77,18 +94,18 @@ export function InstituicaoDashboard() {
             <GlassCard className="flex flex-col justify-between p-4">
               <ClipboardList size={18} className="text-accent mb-2" />
               <div>
-                <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Experiências</p>
+                <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Conteúdos</p>
                 <p className="text-3xl font-black font-mono text-ink-primary">
-                  {stats?.experienciasPublicadas ?? 0}
+                  {formatTotal(stats?.conteudosTotais)}
                 </p>
               </div>
             </GlassCard>
             <GlassCard className="flex flex-col justify-between p-4">
               <MapPin size={18} className="text-accent mb-2" />
               <div>
-                <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Programas Activos</p>
+                <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Participações</p>
                 <p className="text-3xl font-black font-mono text-ink-primary">
-                  {stats?.programasActivos ?? 0}
+                  {formatTotal(stats?.participacoesTotais)}
                 </p>
               </div>
             </GlassCard>
@@ -96,7 +113,7 @@ export function InstituicaoDashboard() {
               <div>
                 <p className="text-[9px] font-black text-ink-tertiary uppercase tracking-widest">Inscrições Totais</p>
                 <p className="text-3xl font-black font-mono text-ink-primary">
-                  {stats?.inscricoesTotais ?? 0}
+                  {formatTotal(stats?.inscricoesTotais)}
                 </p>
               </div>
               <Building2 size={32} className="text-accent/20" />

@@ -19,6 +19,13 @@ function singleResponse<T>(data: T & { id: string | number }): StrapiSingleRespo
   return { data, meta: {} };
 }
 
+function countResponse(total: number): StrapiListResponse<{ id: string }> {
+  return {
+    data: [],
+    meta: { pagination: { page: 1, pageSize: 1, pageCount: total === 0 ? 0 : 1, total } },
+  };
+}
+
 vi.mock('../modules/strapi/strapi.client.js', () => ({
   strapiGet: vi.fn(),
   strapiPost: vi.fn(),
@@ -203,6 +210,93 @@ describe('experienciaRoutes E2E contracts', () => {
       'filters[autor][userId][$eq]': 'inst-1',
     }));
   });
+
+  it('GET /stats devolve apenas contagens autoritativas de conteúdos, inscrições e participações', async () => {
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(countResponse(2))
+      .mockResolvedValueOnce(countResponse(3))
+      .mockResolvedValueOnce(countResponse(1))
+      .mockResolvedValueOnce(countResponse(4))
+      .mockResolvedValueOnce(countResponse(5))
+      .mockResolvedValueOnce(countResponse(6));
+
+    const res = await app.request('/experiencias/stats', {
+      headers: { 'x-test-user': 'inst-1', 'x-test-role': 'instituicao' },
+    });
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      conteudosTotais: 10,
+      inscricoesTotais: 5,
+      participacoesTotais: 6,
+    });
+    expect(strapiGet).toHaveBeenNthCalledWith(1, '/experiencias', {
+      'filters[autor][userId][$eq]': 'inst-1',
+      'pagination[pageSize]': '1',
+    });
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/cursos', {
+      'filters[autorId][$eq]': 'inst-1',
+      'pagination[pageSize]': '1',
+    });
+    expect(strapiGet).toHaveBeenNthCalledWith(3, '/simulacoes', {
+      'filters[autorId][$eq]': 'inst-1',
+      'pagination[pageSize]': '1',
+    });
+    expect(strapiGet).toHaveBeenNthCalledWith(4, '/programas', {
+      'filters[responsavel][userId][$eq]': 'inst-1',
+      'pagination[pageSize]': '1',
+    });
+    expect(strapiGet).toHaveBeenNthCalledWith(5, '/inscricoes', {
+      'filters[curso][autorId][$eq]': 'inst-1',
+      'pagination[pageSize]': '1',
+    });
+    expect(strapiGet).toHaveBeenNthCalledWith(6, '/experiencia-participantes', {
+      'filters[experiencia][autor][userId][$eq]': 'inst-1',
+      'pagination[pageSize]': '1',
+    });
+  });
+
+  it('GET /stats devolve erro canónico quando a origem autoritativa falha', async () => {
+    vi.mocked(strapiGet).mockRejectedValueOnce(new Error('Strapi indisponível'));
+
+    const res = await app.request('/experiencias/stats', {
+      headers: { 'x-test-role': 'instituicao' },
+    });
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
+  });
+
+  it.each([
+    ['experiencias', 0],
+    ['cursos', 1],
+    ['simulacoes', 2],
+    ['programas', 3],
+    ['inscricoes', 4],
+    ['participacoes', 5],
+  ] as const)(
+    'GET /stats rejeita total inválido vindo de %s',
+    async (_source, invalidIndex) => {
+      const responses = [2, 3, 1, 4, 5, 6].map(countResponse);
+      responses[invalidIndex] = countResponse(-1);
+      for (const response of responses) {
+        vi.mocked(strapiGet).mockResolvedValueOnce(response);
+      }
+
+      const res = await app.request('/experiencias/stats', {
+        headers: { 'x-test-user': 'inst-1', 'x-test-role': 'instituicao' },
+      });
+
+      expect(res.status).toBe(503);
+      await expect(res.json()).resolves.toEqual({
+        error: 'O serviço de conteúdos está temporariamente indisponível.',
+        code: 'DEPENDENCY_UNAVAILABLE',
+      });
+    },
+  );
 
   it('GET /minhas/:id permite ao autor reabrir um draft para edição', async () => {
     vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
