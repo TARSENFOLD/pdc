@@ -8,6 +8,11 @@ const INITIAL_FLAGS = [
   { domain: 'REPUTATION_VISIBLE', description: 'Mostrar pontuação de reputação nos perfis' },
   { domain: 'PROFILE_V2_PUBLIC', description: 'Ativar novo layout de perfil público (v2)' },
   { domain: 'AUTO_ACHIEVEMENTS', description: 'Desbloquear conquistas automaticamente' },
+  {
+    domain: 'APPROVAL_ENFORCEMENT_ENABLED',
+    description: 'Exigir aprovação do perfil antes da criação de conteúdos',
+    enabled: true,
+  },
   { domain: 'external_creator_onboarding_enabled', description: 'Permitir onboarding de criadores externos' },
   { domain: 'content_submission_enabled', description: 'Permitir submissão de conteúdos para revisão' },
   { domain: 'certificates_enabled', description: 'Disponibilizar certificados' },
@@ -36,15 +41,18 @@ export default {
       });
 
       if (existing.length === 0) {
+        const initialEnabled = 'enabled' in flag ? flag.enabled : false;
         await strapi.documents('api::feature-flag.feature-flag').create({
           data: {
             domain: flag.domain,
-            enabled: false,
+            enabled: initialEnabled,
             description: flag.description,
             overrides: [],
           },
         });
-        strapi.log.info(`[seed] Feature flag "${flag.domain}" created (enabled: false)`);
+        strapi.log.info(
+          `[seed] Feature flag "${flag.domain}" created (enabled: ${String(initialEnabled)})`,
+        );
       }
     }
 

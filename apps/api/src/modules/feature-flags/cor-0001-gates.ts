@@ -51,8 +51,21 @@ export async function disabledFeatureResponse(
   c: Context,
   flag: FeatureKey,
   code: FeatureUnavailableCode,
+  instituicaoId?: number,
 ): Promise<Response | null> {
-  return await isFeatureEnabledFailClosed(flag)
+  let enabled = false;
+  try {
+    enabled = instituicaoId === undefined
+      ? await featureFlagService.isEnabled(flag)
+      : await featureFlagService.isEnabled(flag, instituicaoId);
+  } catch (err) {
+    log.error(
+      { err, flag, instituicaoId },
+      'Feature flag unavailable; protected capability remains disabled',
+    );
+  }
+
+  return enabled
     ? null
     : featureUnavailable(c, code);
 }
@@ -71,7 +84,8 @@ export function requireExternalCreatorOnboarding(): MiddlewareHandler {
 
 export function requireInternalQaCreatorAccess(): ProtectedGate {
   return async (c, next) => {
-    if (['super_admin', 'moderador', 'comite_cientifico'].includes(c.get('user').role)) {
+    const user = c.get('user');
+    if (['super_admin', 'moderador', 'comite_cientifico'].includes(user.role)) {
       await next();
       return;
     }
@@ -79,6 +93,7 @@ export function requireInternalQaCreatorAccess(): ProtectedGate {
       c,
       'external_creator_onboarding_enabled',
       'EXTERNAL_CREATOR_ACCESS_TEMPORARILY_DISABLED',
+      user.instituicaoId,
     );
     if (unavailable) return unavailable;
     await next();
@@ -87,10 +102,12 @@ export function requireInternalQaCreatorAccess(): ProtectedGate {
 
 export function requireContentSubmissionEnabled(): ProtectedGate {
   return async (c, next) => {
+    const user = c.get('user');
     const unavailable = await disabledFeatureResponse(
       c,
       'content_submission_enabled',
       'CONTENT_SUBMISSION_TEMPORARILY_DISABLED',
+      user.instituicaoId,
     );
     if (unavailable) return unavailable;
     await next();
@@ -99,10 +116,12 @@ export function requireContentSubmissionEnabled(): ProtectedGate {
 
 export function requireCertificatesEnabled(): ProtectedGate {
   return async (c, next) => {
+    const user = c.get('user');
     const unavailable = await disabledFeatureResponse(
       c,
       'certificates_enabled',
       'CERTIFICATES_TEMPORARILY_DISABLED',
+      user.instituicaoId,
     );
     if (unavailable) return unavailable;
     await next();
@@ -111,7 +130,8 @@ export function requireCertificatesEnabled(): ProtectedGate {
 
 export function requireExternalProjectPublication(): ProtectedGate {
   return async (c, next) => {
-    if (c.get('user').role === 'super_admin') {
+    const user = c.get('user');
+    if (user.role === 'super_admin') {
       await next();
       return;
     }
@@ -119,6 +139,7 @@ export function requireExternalProjectPublication(): ProtectedGate {
       c,
       'external_project_publication_enabled',
       'EXTERNAL_PROJECT_PUBLICATION_TEMPORARILY_DISABLED',
+      user.instituicaoId,
     );
     if (unavailable) return unavailable;
     await next();

@@ -101,15 +101,20 @@ export function requireApproved() {
     }
 
     try {
-      const flags = await featureFlagService.getEffectiveFlags(undefined);
-      if (!flags['APPROVAL_ENFORCEMENT_ENABLED']) {
+      const approvalEnforcementEnabled = await featureFlagService.isEnabled(
+        'APPROVAL_ENFORCEMENT_ENABLED',
+        user.instituicaoId,
+      );
+      if (!approvalEnforcementEnabled) {
         await next();
         return;
       }
     } catch (err) {
-      log.error({ err }, '[requireApproved] falha ao ler feature flags — permitindo acesso (fail-open)');
-      await next();
-      return;
+      log.error(
+        { err, userId: user.id },
+        '[requireApproved] falha ao ler feature flags — bloqueando criação',
+      );
+      return c.json({ error: 'Serviço de verificação de perfil indisponível' }, 503);
     }
 
     try {

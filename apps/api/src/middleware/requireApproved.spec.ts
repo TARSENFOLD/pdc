@@ -8,7 +8,7 @@ const redisMock = vi.hoisted(() => ({
 }));
 
 const strapiGetMock = vi.hoisted(() => vi.fn());
-const getEffectiveFlagsMock = vi.hoisted(() => vi.fn());
+const isEnabledMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../lib/env.js', () => ({
   env: {
@@ -29,7 +29,7 @@ vi.mock('../modules/strapi/strapi.client.js', () => ({
 
 vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
   featureFlagService: {
-    getEffectiveFlags: getEffectiveFlagsMock,
+    isEnabled: isEnabledMock,
   },
 }));
 
@@ -44,10 +44,14 @@ import type { AuthVariables } from '../modules/auth/auth.middleware.js';
 
 type Vars = { Variables: AuthVariables };
 
-function buildApp(role: string) {
+function buildApp(role: string, instituicaoId?: number) {
   const app = new Hono<Vars>();
   app.use('*', async (c: Context<Vars>, next) => {
-    c.set('user', { id: 'user-1', role: role as AuthVariables['user']['role'] });
+    c.set('user', {
+      id: 'user-1',
+      role: role as AuthVariables['user']['role'],
+      instituicaoId,
+    });
     await next();
   });
   app.post('/content', requireApproved(), (c) => c.json({ ok: true }, 201));
@@ -55,11 +59,11 @@ function buildApp(role: string) {
 }
 
 function mockFlagOn() {
-  getEffectiveFlagsMock.mockResolvedValue({ APPROVAL_ENFORCEMENT_ENABLED: true });
+  isEnabledMock.mockResolvedValue(true);
 }
 
 function mockFlagOff() {
-  getEffectiveFlagsMock.mockResolvedValue({ APPROVAL_ENFORCEMENT_ENABLED: false });
+  isEnabledMock.mockResolvedValue(false);
 }
 
 function mockPerfil(aprovado: boolean) {
@@ -199,6 +203,28 @@ describe('requireApproved — instituicao (flag ON)', () => {
     strapiGetMock.mockRejectedValue(new Error('Strapi down'));
     const res = await post(buildApp('instituicao'));
     expect(res.status).toBe(503);
+  });
+});
+
+describe('requireApproved — dependência da flag indisponível', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isEnabledMock.mockRejectedValue(new Error('Strapi down'));
+  });
+
+  it('bloqueia mentor em vez de permitir criação sem verificar aprovação', async () => {
+    const res = await post(buildApp('mentor'));
+
+    expect(res.status).toBe(503);
+    expect(strapiGetMock).not.toHaveBeenCalled();
+  });
+
+  it('mantém o escopo institucional ao falhar e não consulta o perfil', async () => {
+    const res = await post(buildApp('instituicao', 42));
+
+    expect(res.status).toBe(503);
+    expect(isEnabledMock).toHaveBeenCalledWith('APPROVAL_ENFORCEMENT_ENABLED', 42);
+    expect(strapiGetMock).not.toHaveBeenCalled();
   });
 });
 
