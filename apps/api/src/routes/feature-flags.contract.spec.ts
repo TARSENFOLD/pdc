@@ -100,16 +100,46 @@ describe('Feature Flags Contract', () => {
     expect(featureFlagService.setInstitutionOverride).not.toHaveBeenCalled();
   });
 
-  it('rejeita ID institucional inválido antes de alterar o rollout', async () => {
-    const res = await app.request('/institutions/not-an-id/external_creator_onboarding_enabled', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: true }),
+  it.each(['not-an-id', '0', '1.5'])(
+    'rejeita ID institucional inválido (%s) antes de alterar o rollout',
+    async (instituicaoId) => {
+      const res = await app.request(
+        `/institutions/${instituicaoId}/external_creator_onboarding_enabled`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: true }),
+        }
+      );
+
+      expect(res.status).toBe(400);
+      expect(featureFlagService.setInstitutionOverride).not.toHaveBeenCalled();
+    }
+  );
+
+  it('instituição não pode remover o próprio override de rollout', async () => {
+    authUser.role = 'instituicao';
+
+    const res = await app.request('/institutions/1/external_creator_onboarding_enabled', {
+      method: 'DELETE',
     });
 
-    expect(res.status).toBe(400);
-    expect(featureFlagService.setInstitutionOverride).not.toHaveBeenCalled();
+    expect(res.status).toBe(403);
+    expect(featureFlagService.removeInstitutionOverride).not.toHaveBeenCalled();
   });
+
+  it.each(['not-an-id', '0', '1.5'])(
+    'rejeita ID institucional inválido (%s) antes de remover o rollout',
+    async (instituicaoId) => {
+      const res = await app.request(
+        `/institutions/${instituicaoId}/external_creator_onboarding_enabled`,
+        { method: 'DELETE' }
+      );
+
+      expect(res.status).toBe(400);
+      expect(featureFlagService.removeInstitutionOverride).not.toHaveBeenCalled();
+    }
+  );
 
   it('DELETE /institutions/:id/:domain deve retornar 404 para domínio inexistente', async () => {
     vi.mocked(featureFlagService.removeInstitutionOverride).mockResolvedValue(null);

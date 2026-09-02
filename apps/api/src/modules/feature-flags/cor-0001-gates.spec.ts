@@ -133,6 +133,35 @@ describe('COR-0001 BFF feature gates', () => {
     );
   });
 
+  it.each([
+    {
+      flag: 'certificates_enabled' as const,
+      gate: requireCertificatesEnabled(),
+    },
+    {
+      flag: 'external_project_publication_enabled' as const,
+      gate: requireExternalProjectPublication(),
+    },
+  ])('mantém $flag fail-closed no contexto institucional', async ({ flag, gate }) => {
+    vi.mocked(featureFlagService.isEnabled).mockImplementation(
+      (receivedFlag, instituicaoId) => {
+        if (receivedFlag === flag && instituicaoId === 42) {
+          return Promise.reject(new Error('Strapi indisponível'));
+        }
+        return Promise.resolve(false);
+      },
+    );
+
+    const res = await protectedApp(
+      'instituicao',
+      gate,
+      42,
+    ).request('/action', { method: 'POST' });
+
+    expect(res.status).toBe(503);
+    expect(featureFlagService.isEnabled).toHaveBeenCalledWith(flag, 42);
+  });
+
   it('bloqueia a API de certificados enquanto a rota mostra o empty state', async () => {
     const res = await protectedApp(
       'estudante',

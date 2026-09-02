@@ -41,15 +41,18 @@ export default {
       });
 
       if (existing.length === 0) {
+        const initialEnabled = 'enabled' in flag ? flag.enabled : false;
         await strapi.documents('api::feature-flag.feature-flag').create({
           data: {
             domain: flag.domain,
-            enabled: 'enabled' in flag ? flag.enabled : false,
+            enabled: initialEnabled,
             description: flag.description,
             overrides: [],
           },
         });
-        strapi.log.info(`[seed] Feature flag "${flag.domain}" created (enabled: false)`);
+        strapi.log.info(
+          `[seed] Feature flag "${flag.domain}" created (enabled: ${String(initialEnabled)})`,
+        );
       }
     }
 

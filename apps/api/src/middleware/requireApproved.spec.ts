@@ -44,10 +44,14 @@ import type { AuthVariables } from '../modules/auth/auth.middleware.js';
 
 type Vars = { Variables: AuthVariables };
 
-function buildApp(role: string) {
+function buildApp(role: string, instituicaoId?: number) {
   const app = new Hono<Vars>();
   app.use('*', async (c: Context<Vars>, next) => {
-    c.set('user', { id: 'user-1', role: role as AuthVariables['user']['role'] });
+    c.set('user', {
+      id: 'user-1',
+      role: role as AuthVariables['user']['role'],
+      instituicaoId,
+    });
     await next();
   });
   app.post('/content', requireApproved(), (c) => c.json({ ok: true }, 201));
@@ -212,6 +216,14 @@ describe('requireApproved — dependência da flag indisponível', () => {
     const res = await post(buildApp('mentor'));
 
     expect(res.status).toBe(503);
+    expect(strapiGetMock).not.toHaveBeenCalled();
+  });
+
+  it('mantém o escopo institucional ao falhar e não consulta o perfil', async () => {
+    const res = await post(buildApp('instituicao', 42));
+
+    expect(res.status).toBe(503);
+    expect(isEnabledMock).toHaveBeenCalledWith('APPROVAL_ENFORCEMENT_ENABLED', 42);
     expect(strapiGetMock).not.toHaveBeenCalled();
   });
 });
