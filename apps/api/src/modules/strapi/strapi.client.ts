@@ -20,6 +20,9 @@ function parseTimeoutEnv(envKey: 'STRAPI_TIMEOUT' | 'STRAPI_WRITE_TIMEOUT', defa
 
 const TIMEOUT = parseTimeoutEnv('STRAPI_TIMEOUT', 5000);
 const WRITE_TIMEOUT = parseTimeoutEnv('STRAPI_WRITE_TIMEOUT', 10000);
+const ERROR_BODY_TIMEOUT = 1000;
+const MAX_ERROR_BODY_BYTES = 64 * 1024;
+const ERROR_BODY_TIMED_OUT = Symbol('STRAPI_ERROR_BODY_TIMED_OUT');
 const MAX_RETRIES = 1;
 const BASE_DELAY = 300;
 
@@ -40,7 +43,61 @@ async function createStrapiHttpError(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
 ): Promise<StrapiHttpError> {
-  const body: unknown = await response.json().catch(() => undefined);
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return new StrapiHttpError(
+      `Strapi ${method} ${path} falhou: ${response.status.toString()}`,
+      response.status,
+      path,
+    );
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const readBody = (async (): Promise<unknown> => {
+    const decoder = new TextDecoder();
+    let rawBody = '';
+    let bodyBytes = 0;
+    let chunk = await reader.read();
+    while (!chunk.done) {
+      const value: unknown = chunk.value;
+      if (!(value instanceof Uint8Array)) return undefined;
+      bodyBytes += value.byteLength;
+      if (bodyBytes > MAX_ERROR_BODY_BYTES) {
+        await reader.cancel('Strapi error body size limit exceeded').catch(() => undefined);
+        return undefined;
+      }
+      rawBody += decoder.decode(value, { stream: true });
+      chunk = await reader.read();
+    }
+    rawBody += decoder.decode();
+    if (rawBody === '') return undefined;
+    try {
+      return JSON.parse(rawBody) as unknown;
+    } catch {
+      return undefined;
+    }
+  })();
+
+  const timeout = new Promise<typeof ERROR_BODY_TIMED_OUT>((resolve) => {
+    timeoutId = setTimeout(() => {
+      resolve(ERROR_BODY_TIMED_OUT);
+    }, ERROR_BODY_TIMEOUT);
+  });
+
+  let body: unknown;
+  try {
+    const bodyOrTimeout = await Promise.race([readBody.catch(() => undefined), timeout]);
+    if (bodyOrTimeout === ERROR_BODY_TIMED_OUT) {
+      await reader.cancel('Strapi error body timeout').catch(() => undefined);
+      await readBody.catch(() => undefined);
+      body = undefined;
+    } else {
+      body = bodyOrTimeout;
+    }
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+    reader.releaseLock();
+  }
   return new StrapiHttpError(
     `Strapi ${method} ${path} falhou: ${response.status.toString()}`,
     response.status,

@@ -67,7 +67,7 @@ export async function acquireLock(key: string, ttlMs: number): Promise<LockHandl
         const extended = await redis.eval(
           EXTEND_IF_OWNER_SCRIPT,
           [key],
-          [value, extensionSeconds],
+          [value, String(extensionSeconds)],
         );
         if (extended === 1) {
           log.debug({ key, fencingToken, extensionTtlMs }, 'Lock renovado');

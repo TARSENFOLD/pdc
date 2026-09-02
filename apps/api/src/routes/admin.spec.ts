@@ -122,38 +122,28 @@ describe('adminRoutes internal accounts', () => {
       expect.objectContaining({ id: '8', instituicaoId: 'inst-doc-8' }),
     ]));
     expect(strapiGet).toHaveBeenCalledWith('/perfis', {
+      'filters[userId][$in]': ['7', '8'],
       'populate[instituicaoGerida][fields][0]': 'id',
       'populate[instituicaoGerida][fields][1]': 'documentId',
       'pagination[page]': '1',
-      'pagination[pageSize]': '1000',
+      'pagination[pageSize]': '100',
     });
   });
 
-  it('encontra associação institucional além dos primeiros 1.000 perfis', async () => {
+  it('consulta a associação pelos utilizadores listados sem varrer todos os perfis', async () => {
     vi.mocked(strapiGetRaw).mockResolvedValue([
       { id: 1001, email: 'associada@pdc.ao', createdAt: '2026-01-01T00:00:00.000Z' },
     ]);
-    const firstPage = Array.from({ length: 1000 }, (_, index): PerfilFixture & { id: string } => ({
-      id: `perfil-${String(index + 1)}`,
-      userId: String(index + 1),
-      nome: `Perfil ${String(index + 1)}`,
-      tipo: 'estudante',
-    }));
-    vi.mocked(strapiGet<PerfilFixture>)
-      .mockResolvedValueOnce({
-        data: firstPage,
-        meta: { pagination: { page: 1, pageSize: 1000, pageCount: 2, total: 1001 } },
-      })
-      .mockResolvedValueOnce({
-        data: [{
-          id: 'perfil-1001',
-          userId: '1001',
-          nome: 'Instituição associada',
-          tipo: 'instituicao',
-          instituicaoGerida: { id: 'inst-1001', documentId: 'inst-doc-1001' },
-        }],
-        meta: { pagination: { page: 2, pageSize: 1000, pageCount: 2, total: 1001 } },
-      });
+    vi.mocked(strapiGet<PerfilFixture>).mockResolvedValue({
+      data: [{
+        id: 'perfil-1001',
+        userId: '1001',
+        nome: 'Instituição associada',
+        tipo: 'instituicao',
+        instituicaoGerida: { id: 'inst-1001', documentId: 'inst-doc-1001' },
+      }],
+      meta: { pagination: { page: 1, pageSize: 100, pageCount: 1, total: 1 } },
+    });
 
     const response = await app.request('/utilizadores?page=1&pageSize=10');
     const body = await response.json() as { data: Array<{ id: string; instituicaoId: string | null }> };
@@ -162,12 +152,142 @@ describe('adminRoutes internal accounts', () => {
     expect(body.data).toEqual([
       expect.objectContaining({ id: '1001', instituicaoId: 'inst-doc-1001' }),
     ]);
-    expect(strapiGet).toHaveBeenNthCalledWith(1, '/perfis', expect.objectContaining({
+    expect(strapiGet).toHaveBeenCalledOnce();
+    expect(strapiGet).toHaveBeenCalledWith('/perfis', expect.objectContaining({
+      'filters[userId][$in]': ['1001'],
       'pagination[page]': '1',
     }));
-    expect(strapiGet).toHaveBeenNthCalledWith(2, '/perfis', expect.objectContaining({
-      'pagination[page]': '2',
-    }));
+  });
+
+  it('falha de forma explícita quando a consulta de perfis excede o limite de páginas', async () => {
+    vi.mocked(strapiGetRaw).mockResolvedValue([
+      { id: 7, email: 'instituicao@pdc.ao', createdAt: '2026-01-01T00:00:00.000Z' },
+    ]);
+    vi.mocked(strapiGet<PerfilFixture>).mockResolvedValue({
+      data: [],
+      meta: { pagination: { page: 1, pageSize: 100, pageCount: 11, total: 1001 } },
+    });
+
+    const response = await app.request('/utilizadores?page=1&pageSize=10');
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: 'Consulta administrativa de perfis excedeu o limite seguro de páginas',
+    });
+    expect(strapiGet).toHaveBeenCalledOnce();
+  });
+
+  it('rejeita identificador institucional inválido recebido do Strapi', async () => {
+    vi.mocked(strapiGetRaw).mockResolvedValue([
+      { id: 7, email: 'instituicao@pdc.ao', createdAt: '2026-01-01T00:00:00.000Z' },
+    ]);
+    vi.mocked(strapiGet<PerfilFixture>).mockResolvedValue({
+      data: [{
+        id: 'perfil-7',
+        userId: '7',
+        nome: 'Instituição inválida',
+        tipo: 'instituicao',
+        instituicaoGerida: { id: '' },
+      }],
+      meta: { pagination: { page: 1, pageSize: 100, pageCount: 1, total: 1 } },
+    });
+
+    const response = await app.request('/utilizadores?page=1&pageSize=10');
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: 'Resposta inválida do serviço de perfis',
+    });
+  });
+
+  it('rejeita metadados de paginação inválidos recebidos do Strapi', async () => {
+    vi.mocked(strapiGetRaw).mockResolvedValue([
+      { id: 7, email: 'instituicao@pdc.ao', createdAt: '2026-01-01T00:00:00.000Z' },
+    ]);
+    const invalidPagination = {
+      data: [],
+      meta: { pagination: { page: 1, pageSize: 100, pageCount: 1, total: 0 } },
+    };
+    Reflect.set(invalidPagination.meta.pagination, 'pageCount', null);
+    vi.mocked(strapiGet<PerfilFixture>).mockResolvedValue(invalidPagination);
+
+    const response = await app.request('/utilizadores?page=1&pageSize=10');
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: 'Resposta inválida da paginação do serviço de perfis',
+    });
+  });
+
+  it('rejeita utilizador inválido recebido do Strapi antes de consultar perfis', async () => {
+    const invalidUser = { id: 7, email: 'instituicao@pdc.ao' };
+    Reflect.set(invalidUser, 'email', null);
+    vi.mocked(strapiGetRaw).mockResolvedValue([invalidUser]);
+
+    const response = await app.request('/utilizadores?search=instituicao');
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: 'Resposta inválida do serviço de utilizadores',
+    });
+    expect(strapiGet).not.toHaveBeenCalled();
+  });
+
+  it('não expõe mensagens internas quando a consulta administrativa falha', async () => {
+    vi.mocked(strapiGetRaw).mockRejectedValue(new Error('postgres://admin:secret@internal-db/pdc'));
+
+    const response = await app.request('/utilizadores?page=1&pageSize=10');
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: 'Falha ao consultar utilizadores',
+    });
+  });
+
+  it('falha antes de consultar perfis quando excede o limite seguro de utilizadores', async () => {
+    vi.mocked(strapiGetRaw).mockResolvedValue(Array.from({ length: 10_001 }, (_, index) => ({
+      id: index + 1,
+      email: `user-${String(index + 1)}@pdc.ao`,
+    })));
+
+    const response = await app.request('/utilizadores?page=1&pageSize=10');
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: 'Consulta administrativa de perfis excedeu o limite seguro de utilizadores',
+    });
+    expect(strapiGet).not.toHaveBeenCalled();
+  });
+
+  it('limita a quatro as consultas simultâneas de lotes de perfis', async () => {
+    vi.mocked(strapiGetRaw).mockResolvedValue(Array.from({ length: 500 }, (_, index) => ({
+      id: index + 1,
+      email: `user-${String(index + 1)}@pdc.ao`,
+    })));
+    let activeRequests = 0;
+    let maxActiveRequests = 0;
+    const releases: Array<() => void> = [];
+    vi.mocked(strapiGet).mockImplementation(async () => {
+      activeRequests++;
+      maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+      await new Promise<void>((resolve) => { releases.push(resolve); });
+      activeRequests--;
+      return {
+        data: [],
+        meta: { pagination: { page: 1, pageSize: 100, pageCount: 1, total: 0 } },
+      };
+    });
+
+    const responsePromise = app.request('/utilizadores?page=1&pageSize=10');
+    await vi.waitFor(() => { expect(strapiGet).toHaveBeenCalledTimes(4); });
+    expect(maxActiveRequests).toBe(4);
+    releases.splice(0).forEach((release) => { release(); });
+    await vi.waitFor(() => { expect(strapiGet).toHaveBeenCalledTimes(5); });
+    releases.splice(0).forEach((release) => { release(); });
+
+    const response = await responsePromise;
+    expect(response.status).toBe(200);
+    expect(maxActiveRequests).toBe(4);
   });
 
   it.each([
@@ -288,6 +408,29 @@ describe('adminRoutes internal accounts', () => {
     });
 
     expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: 'Falha ao reparar associação institucional',
+      retryable: false,
+    });
+  });
+
+  it('não expõe mensagens internas de falhas permanentes do provisionamento', async () => {
+    serviceMocks.getUserById.mockResolvedValue({
+      id: '23',
+      email: 'instituicao@pdc.ao',
+      nome: 'Instituição PDC',
+      role: 'instituicao',
+    });
+    vi.mocked(provisionInstituicaoForUser).mockRejectedValue(Object.assign(
+      new Error('postgres://admin:secret@internal-db/pdc'),
+      { status: 400, retryable: false },
+    ));
+
+    const response = await app.request('/utilizadores/23/reparar-instituicao', {
+      method: 'POST',
+    });
+
+    expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       error: 'Falha ao reparar associação institucional',
       retryable: false,

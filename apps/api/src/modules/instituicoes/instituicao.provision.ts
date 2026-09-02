@@ -12,7 +12,7 @@ const PROVISION_LOCK_TTL_MS = 30_000;
 const PROVISION_LOCK_RENEW_INTERVAL_MS = PROVISION_LOCK_TTL_MS / 3;
 const log = pino({ name: 'instituicao-provision' });
 
-type ProvisionInstituicaoInput = {
+export type ProvisionInstituicaoInput = {
   nome: string;
   nomeLegal?: string;
   tipo?: string;
@@ -105,17 +105,23 @@ function confirmsUniqueConstraint(body: unknown): boolean {
   if (typeof body !== 'object' || body === null || !('error' in body)) return false;
   const error = body.error;
   if (typeof error !== 'object' || error === null) return false;
-  if ('message' in error && typeof error.message === 'string' && /unique/i.test(error.message)) {
-    return true;
-  }
+  const errorMessage = 'message' in error && typeof error.message === 'string'
+    ? error.message
+    : '';
   if (!('details' in error) || typeof error.details !== 'object' || error.details === null) {
     return false;
   }
   if (!('errors' in error.details) || !Array.isArray(error.details.errors)) return false;
   return error.details.errors.some((entry: unknown) => {
     if (typeof entry !== 'object' || entry === null || !('path' in entry)) return false;
-    if (Array.isArray(entry.path)) return entry.path.some((part: unknown) => part === 'slug');
-    return entry.path === 'slug';
+    const isSlugPath = Array.isArray(entry.path)
+      ? entry.path.some((part: unknown) => part === 'slug')
+      : entry.path === 'slug';
+    if (!isSlugPath) return false;
+    const entryMessage = 'message' in entry && typeof entry.message === 'string'
+      ? entry.message
+      : '';
+    return /unique/i.test(errorMessage) || /unique/i.test(entryMessage);
   });
 }
 
@@ -140,8 +146,8 @@ async function createOrGetInstituicao(
     return { instituicao: created.data, created: true };
   } catch (error) {
     const isUniqueConflict = error instanceof StrapiHttpError
-      && (error.status === 409
-        || (error.status === 400 && confirmsUniqueConstraint(error.body)));
+      && (error.status === 400 || error.status === 409)
+      && confirmsUniqueConstraint(error.body);
     if (!isUniqueConflict) throw error;
     const existing = await strapiGet<StrapiInstituicao>('/instituicoes', {
       'filters[slug][$eq]': slug,
@@ -198,7 +204,7 @@ export async function provisionInstituicaoForUser(
   userId: string,
   input: ProvisionInstituicaoInput,
 ): Promise<ProvisionInstituicaoResult> {
-  let lock;
+  let lock: LockHandle | null;
   try {
     lock = await acquireLock(`instituicao:provision:${userId}`, PROVISION_LOCK_TTL_MS);
   } catch (cause) {

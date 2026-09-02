@@ -150,6 +150,29 @@ describe('provisionInstituicaoForUser', () => {
     expect(strapiPut).not.toHaveBeenCalled();
   });
 
+  it('não mascara conflito de unicidade de outro campo como conflito do slug', async () => {
+    vi.mocked(strapiGet).mockResolvedValue(listResponse([perfil]));
+    const uniqueFieldError = new StrapiHttpError(
+      'valor duplicado',
+      400,
+      '/instituicoes',
+      {
+        error: {
+          message: 'This attribute must be unique',
+          details: { errors: [{ path: ['nif'], message: 'nif must be unique' }] },
+        },
+      },
+    );
+    vi.mocked(strapiPost).mockRejectedValueOnce(uniqueFieldError);
+
+    await expect(provisionInstituicaoForUser('user-1', {
+      nome: 'Instituto PDC',
+      nif: '5001234567',
+    })).rejects.toBe(uniqueFieldError);
+    expect(strapiGet).toHaveBeenCalledOnce();
+    expect(strapiPut).not.toHaveBeenCalled();
+  });
+
   it('impede duas reparações concorrentes de criarem instituições duplicadas', async () => {
     lockMocks.acquireLock
       .mockResolvedValueOnce({
@@ -178,6 +201,21 @@ describe('provisionInstituicaoForUser', () => {
     expect(strapiPost).toHaveBeenCalledOnce();
     expect(strapiPut).toHaveBeenCalledOnce();
     expect(lockMocks.release).toHaveBeenCalledOnce();
+  });
+
+  it('devolve 503 retryable quando a aquisição do lock falha', async () => {
+    lockMocks.acquireLock.mockRejectedValueOnce(new Error('Redis unavailable'));
+
+    await expect(
+      provisionInstituicaoForUser('user-1', { nome: 'Instituto PDC' }),
+    ).rejects.toMatchObject({
+      status: 503,
+      retryable: true,
+    });
+    expect(strapiGet).not.toHaveBeenCalled();
+    expect(strapiPost).not.toHaveBeenCalled();
+    expect(strapiPut).not.toHaveBeenCalled();
+    expect(lockMocks.release).not.toHaveBeenCalled();
   });
 
   it('renova o lease durante uma leitura longa e impede uma segunda criação', async () => {
@@ -277,7 +315,7 @@ describe('provisionInstituicaoForUser', () => {
         {
           error: {
             message: 'Validation error',
-            details: { errors: [{ path: ['slug'] }] },
+            details: { errors: [{ path: ['slug'], message: 'slug must be unique' }] },
           },
         },
       ));

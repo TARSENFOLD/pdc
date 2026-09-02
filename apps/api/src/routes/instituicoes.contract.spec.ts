@@ -31,6 +31,7 @@ vi.mock('../modules/media/file-type-guard.js', () => ({
 
 describe('instituicaoRoutes — associação institucional', () => {
   const app = new Hono().route('/', instituicaoRoutes);
+  app.onError((_error, c) => c.json({ error: 'Internal Server Error' }, 500));
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -52,16 +53,32 @@ describe('instituicaoRoutes — associação institucional', () => {
     });
   });
 
+  it('devolve a mesma recuperação quando o perfil institucional não existe', async () => {
+    vi.mocked(strapiGet<StrapiPerfilGestor>).mockResolvedValue({
+      data: [],
+      meta: { pagination: { page: 1, pageSize: 1, pageCount: 0, total: 0 } },
+    });
+
+    const response = await app.request('/me');
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: 'O perfil institucional não está associado a uma instituição',
+      code: 'INSTITUICAO_ASSOCIACAO_AUSENTE',
+      action: 'CONTACTAR_SUPER_ADMIN',
+    });
+  });
+
   it('não converte uma falha operacional no erro de associação ausente', async () => {
     vi.mocked(strapiGet<StrapiPerfilGestor>).mockRejectedValue(
       new Error('Strapi indisponível'),
     );
 
     const response = await app.request('/me');
-    const body = await response.text();
+    const body = await response.json() as { code?: string; action?: string };
 
     expect(response.status).toBe(500);
-    expect(body).not.toContain('INSTITUICAO_ASSOCIACAO_AUSENTE');
-    expect(body).not.toContain('CONTACTAR_SUPER_ADMIN');
+    expect(body.code).toBeUndefined();
+    expect(body.action).toBeUndefined();
   });
 });

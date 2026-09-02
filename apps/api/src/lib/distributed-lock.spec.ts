@@ -29,7 +29,7 @@ describe('distributed lock', () => {
       1,
       expect.stringContaining("redis.call('EXPIRE'"),
       ['institution:23'],
-      ['lock:7', 30],
+      ['lock:7', '30'],
     );
     expect(redisMocks.eval).toHaveBeenNthCalledWith(
       2,
