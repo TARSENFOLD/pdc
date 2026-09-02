@@ -23,10 +23,14 @@ vi.mock('./feature-flags.service.js', () => ({
 type Vars = { Variables: AuthVariables };
 type Role = AuthVariables['user']['role'];
 
-function protectedApp(role: Role, gate: MiddlewareHandler<Vars>) {
+function protectedApp(
+  role: Role,
+  gate: MiddlewareHandler<Vars>,
+  instituicaoId?: number,
+) {
   const app = new Hono<Vars>();
   app.use('*', async (c, next) => {
-    c.set('user', { id: 'actor-1', role });
+    c.set('user', { id: 'actor-1', role, instituicaoId });
     await next();
   });
   app.post('/action', gate, (c) => c.json({ ok: true }));
@@ -87,6 +91,46 @@ describe('COR-0001 BFF feature gates', () => {
 
     expect(creator.status).toBe(503);
     expect(project.status).toBe(503);
+  });
+
+  it('aplica o override da instituição no acesso ao builder', async () => {
+    vi.mocked(featureFlagService.isEnabled).mockImplementation(
+      (flag, instituicaoId) => Promise.resolve(
+        flag === 'external_creator_onboarding_enabled' && instituicaoId === 42
+      ),
+    );
+
+    const res = await protectedApp(
+      'instituicao',
+      requireInternalQaCreatorAccess(),
+      42,
+    ).request('/action', { method: 'POST' });
+
+    expect(res.status).toBe(200);
+    expect(featureFlagService.isEnabled).toHaveBeenCalledWith(
+      'external_creator_onboarding_enabled',
+      42,
+    );
+  });
+
+  it('aplica o override da instituição na submissão de conteúdo', async () => {
+    vi.mocked(featureFlagService.isEnabled).mockImplementation(
+      (flag, instituicaoId) => Promise.resolve(
+        flag === 'content_submission_enabled' && instituicaoId === 42
+      ),
+    );
+
+    const res = await protectedApp(
+      'instituicao',
+      requireContentSubmissionEnabled(),
+      42,
+    ).request('/action', { method: 'POST' });
+
+    expect(res.status).toBe(200);
+    expect(featureFlagService.isEnabled).toHaveBeenCalledWith(
+      'content_submission_enabled',
+      42,
+    );
   });
 
   it('bloqueia a API de certificados enquanto a rota mostra o empty state', async () => {

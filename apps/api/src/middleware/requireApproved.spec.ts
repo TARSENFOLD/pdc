@@ -8,7 +8,7 @@ const redisMock = vi.hoisted(() => ({
 }));
 
 const strapiGetMock = vi.hoisted(() => vi.fn());
-const getEffectiveFlagsMock = vi.hoisted(() => vi.fn());
+const isEnabledMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../lib/env.js', () => ({
   env: {
@@ -29,7 +29,7 @@ vi.mock('../modules/strapi/strapi.client.js', () => ({
 
 vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
   featureFlagService: {
-    getEffectiveFlags: getEffectiveFlagsMock,
+    isEnabled: isEnabledMock,
   },
 }));
 
@@ -55,11 +55,11 @@ function buildApp(role: string) {
 }
 
 function mockFlagOn() {
-  getEffectiveFlagsMock.mockResolvedValue({ APPROVAL_ENFORCEMENT_ENABLED: true });
+  isEnabledMock.mockResolvedValue(true);
 }
 
 function mockFlagOff() {
-  getEffectiveFlagsMock.mockResolvedValue({ APPROVAL_ENFORCEMENT_ENABLED: false });
+  isEnabledMock.mockResolvedValue(false);
 }
 
 function mockPerfil(aprovado: boolean) {
@@ -199,6 +199,20 @@ describe('requireApproved — instituicao (flag ON)', () => {
     strapiGetMock.mockRejectedValue(new Error('Strapi down'));
     const res = await post(buildApp('instituicao'));
     expect(res.status).toBe(503);
+  });
+});
+
+describe('requireApproved — dependência da flag indisponível', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    isEnabledMock.mockRejectedValue(new Error('Strapi down'));
+  });
+
+  it('bloqueia mentor em vez de permitir criação sem verificar aprovação', async () => {
+    const res = await post(buildApp('mentor'));
+
+    expect(res.status).toBe(503);
+    expect(strapiGetMock).not.toHaveBeenCalled();
   });
 });
 

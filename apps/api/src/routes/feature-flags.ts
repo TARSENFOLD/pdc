@@ -6,6 +6,7 @@ import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
 type Vars = { Variables: AuthVariables };
+const InstitutionIdSchema = z.coerce.number().int().positive();
 
 export const featureFlagsRoutes = new Hono<Vars>();
 
@@ -39,7 +40,7 @@ featureFlagsRoutes.put(
 // PUT /feature-flags/institutions/:instituicaoId/:domain
 featureFlagsRoutes.put(
   '/institutions/:instituicaoId/:domain',
-  checkRole(['instituicao', 'super_admin']),
+  checkRole(['super_admin']),
   zValidator('json', z.object({ enabled: z.boolean() })),
   async (c) => {
     const domain = c.req.param('domain');
@@ -49,13 +50,12 @@ featureFlagsRoutes.put(
       return c.json({ error: 'Parâmetros inválidos' }, 400);
     }
 
-    const instituicaoId = parseInt(instituicaoIdParam, 10);
-    const { enabled } = c.req.valid('json');
-
-    const user = c.get('user');
-    if (user.role === 'instituicao' && user.id !== instituicaoIdParam) {
-      return c.json({ error: 'Sem permissão' }, 403);
+    const parsedInstituicaoId = InstitutionIdSchema.safeParse(instituicaoIdParam);
+    if (!parsedInstituicaoId.success) {
+      return c.json({ error: 'ID da instituição inválido' }, 400);
     }
+    const instituicaoId = parsedInstituicaoId.data;
+    const { enabled } = c.req.valid('json');
 
     const flag = await featureFlagService.setInstitutionOverride(domain, instituicaoId, enabled);
     if (!flag) {
@@ -69,7 +69,7 @@ featureFlagsRoutes.put(
 // DELETE /feature-flags/institutions/:instituicaoId/:domain
 featureFlagsRoutes.delete(
   '/institutions/:instituicaoId/:domain',
-  checkRole(['instituicao', 'super_admin']),
+  checkRole(['super_admin']),
   async (c) => {
     const domain = c.req.param('domain');
     const instituicaoIdParam = c.req.param('instituicaoId');
@@ -78,12 +78,11 @@ featureFlagsRoutes.delete(
       return c.json({ error: 'Parâmetros inválidos' }, 400);
     }
 
-    const instituicaoId = parseInt(instituicaoIdParam, 10);
-
-    const user = c.get('user');
-    if (user.role === 'instituicao' && user.id !== instituicaoIdParam) {
-      return c.json({ error: 'Sem permissão' }, 403);
+    const parsedInstituicaoId = InstitutionIdSchema.safeParse(instituicaoIdParam);
+    if (!parsedInstituicaoId.success) {
+      return c.json({ error: 'ID da instituição inválido' }, 400);
     }
+    const instituicaoId = parsedInstituicaoId.data;
 
     const flag = await featureFlagService.removeInstitutionOverride(domain, instituicaoId);
     if (!flag) {
