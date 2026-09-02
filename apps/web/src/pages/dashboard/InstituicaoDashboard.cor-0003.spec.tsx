@@ -11,15 +11,20 @@ vi.mock('@/lib/api/experiencias', () => ({
   },
 }));
 
+const authState = vi.hoisted(() => ({
+  role: 'instituicao',
+}));
+
 vi.mock('@/lib/auth/auth-context', () => ({
   useAuth: () => ({
-    user: { nome: 'Instituição de QA' },
+    user: { nome: 'Instituição de QA', role: authState.role },
   }),
 }));
 
 describe('COR-0003 institution dashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authState.role = 'instituicao';
   });
 
   function renderDashboard() {
@@ -44,5 +49,19 @@ describe('COR-0003 institution dashboard', () => {
     expect(await screen.findByText('Não foi possível carregar as métricas')).toBeTruthy();
     expect(screen.queryByText('Métricas de Impacto')).toBeNull();
     expect(screen.queryByText('Sem dados suficientes')).toBeNull();
+  });
+
+  it('não mostra o editor institucional no modo de inspeção do Super Admin', async () => {
+    authState.role = 'super_admin';
+    vi.mocked(experienciasApi.getStats).mockResolvedValue({
+      conteudosTotais: 0,
+      participacoesTotais: 0,
+      inscricoesTotais: 0,
+    });
+
+    renderDashboard();
+
+    expect(await screen.findByText('Criar Conteúdo')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: /Perfil institucional/ })).toBeNull();
   });
 });

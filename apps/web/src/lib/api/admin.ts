@@ -64,6 +64,11 @@ export const adminApi = {
 
   reativar: (id: string) => http.put(`/admin/utilizadores/${id}/reativar`, undefined),
 
+  repararInstituicao: (id: string) => http.post<{
+    data: { id: string | number; documentId?: string; nome: string };
+    created: boolean;
+  }>(`/admin/utilizadores/${id}/reparar-instituicao`, {}),
+
   getTelemetria: (params: { tipo?: string; page?: number; pageSize?: number }) => {
     const q = new URLSearchParams();
     if (params.tipo) q.set('tipo', params.tipo);

@@ -11,6 +11,16 @@ const POPULATE = [
   'politicas', 'documentosLegais',
 ];
 
+export class InstituicaoAssociacaoAusenteError extends Error {
+  readonly status = 409;
+  readonly code = 'INSTITUICAO_ASSOCIACAO_AUSENTE';
+
+  constructor() {
+    super('O perfil institucional não está associado a uma instituição');
+    this.name = 'InstituicaoAssociacaoAusenteError';
+  }
+}
+
 async function findManaged(userId: string): Promise<StrapiInstituicao> {
   const res = await strapiGet<StrapiPerfilGestor>('/perfis', {
     'filters[userId][$eq]': userId,
@@ -18,7 +28,7 @@ async function findManaged(userId: string): Promise<StrapiInstituicao> {
     'pagination[pageSize]': '1',
   });
   const instituicao = res.data[0]?.instituicaoGerida;
-  if (!instituicao) throw Object.assign(new Error('Instituição associada não encontrada'), { status: 404 });
+  if (!instituicao) throw new InstituicaoAssociacaoAusenteError();
   return instituicao;
 }
 

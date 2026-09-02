@@ -13,7 +13,10 @@ import {
 } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
-import { instituicaoService } from '../modules/instituicoes/instituicao.service.js';
+import {
+  InstituicaoAssociacaoAusenteError,
+  instituicaoService,
+} from '../modules/instituicoes/instituicao.service.js';
 import { provisionInstituicaoForUser } from '../modules/instituicoes/instituicao.provision.js';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
 import { uploadToR2 } from '../modules/media/r2.service.js';
@@ -66,7 +69,18 @@ instituicaoRoutes.post('/me/provisionar', async (c) => {
 });
 
 instituicaoRoutes.get('/me', async (c) => {
-  return c.json({ data: await instituicaoService.minha(c.get('user').id) });
+  try {
+    return c.json({ data: await instituicaoService.minha(c.get('user').id) });
+  } catch (error) {
+    if (error instanceof InstituicaoAssociacaoAusenteError) {
+      return c.json({
+        error: error.message,
+        code: error.code,
+        action: 'CONTACTAR_SUPER_ADMIN',
+      }, 409);
+    }
+    throw error;
+  }
 });
 
 instituicaoRoutes.patch('/me/identidade', zValidator('json', IdentidadeInstituicaoSchema), async (c) => {

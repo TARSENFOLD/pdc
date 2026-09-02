@@ -1,5 +1,5 @@
 import type React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { ShieldCheck, UserRound } from 'lucide-react';
 import { Avatar } from '@/components/ui';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -82,6 +82,10 @@ function InternalAccountPage(): React.JSX.Element | null {
 
 export default function PerfilPage(): React.JSX.Element {
   const { user } = useAuth();
+
+  if (user?.role === 'instituicao') {
+    return <Navigate to="/app/instituicao/perfil/identidade" replace />;
+  }
 
   if (user?.role === 'moderador' || user?.role === 'comite_cientifico' || user?.role === 'super_admin') {
     return <InternalAccountPage />;

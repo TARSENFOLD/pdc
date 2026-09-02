@@ -10,7 +10,9 @@ import { writeAuditLog } from '../middleware/audit.js';
 import { setCanonicalUserRole } from '../modules/auth/internal-account.service.js';
 import { authService } from '../modules/auth/auth.service.js';
 import { eventBus } from '../modules/events/event-bus.js';
+import { provisionInstituicaoForUser } from '../modules/instituicoes/instituicao.provision.js';
 import pino from 'pino';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 type Vars = { Variables: AuthVariables };
 const log = pino({ name: 'admin-routes' });
@@ -45,6 +47,7 @@ interface AdminPerfil {
   userId?: string;
   nome?: string;
   tipo?: string;
+  instituicaoGerida?: { id: string | number; documentId?: string } | null;
 }
 
 // GET /admin/utilizadores — super_admin
@@ -57,7 +60,11 @@ adminRoutes.get(
     try {
       const [users, perfis] = await Promise.all([
         strapiGetRaw<AdminStrapiUser[]>('/users'),
-        strapiGet<AdminPerfil>('/perfis', { 'pagination[pageSize]': '1000' }),
+        strapiGet<AdminPerfil>('/perfis', {
+          'populate[instituicaoGerida][fields][0]': 'id',
+          'populate[instituicaoGerida][fields][1]': 'documentId',
+          'pagination[pageSize]': '1000',
+        }),
       ]);
       const perfilByUserId = new Map(
         perfis.data
@@ -73,6 +80,9 @@ adminRoutes.get(
           nome: perfil?.nome ?? user.nome ?? user.username ?? user.email,
           role: normalizeTipo(perfil?.tipo ?? 'estudante'),
           perfilId: perfil ? String(perfil.id) : null,
+          instituicaoId: perfil?.instituicaoGerida
+            ? String(perfil.instituicaoGerida.documentId ?? perfil.instituicaoGerida.id)
+            : null,
           reputacaoTier: 'BRONZE',
           xp: 0,
           reputacao: 0,
@@ -106,6 +116,55 @@ adminRoutes.get(
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
   }
+);
+
+// POST /admin/utilizadores/:id/reparar-instituicao — super_admin
+adminRoutes.post(
+  '/utilizadores/:id/reparar-instituicao',
+  checkRole(['super_admin']),
+  async (c) => {
+    const id = c.req.param('id');
+    if (!id) {
+      return c.json({ error: 'Identificador do utilizador obrigatório' }, 400);
+    }
+    try {
+      const target = await authService.getUserById(id);
+      if (target.role !== 'instituicao') {
+        return c.json({
+          error: 'A reparação institucional só pode ser aplicada a contas de instituição',
+          code: 'UTILIZADOR_NAO_INSTITUCIONAL',
+        }, 409);
+      }
+
+      const result = await provisionInstituicaoForUser(id, { nome: target.nome });
+      await writeAuditLog({
+        actor: c.get('user'),
+        accao: 'admin_reparar_instituicao',
+        recurso: `/users/${id}/instituicao`,
+        ip: c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown',
+        userAgent: c.req.header('user-agent'),
+        detalhes: {
+          instituicaoId: String(result.instituicao.documentId ?? result.instituicao.id),
+          created: result.created,
+        },
+      }).catch((error: unknown) => {
+        log.error({ error, userId: id }, 'Falha ao auditar reparação institucional');
+      });
+
+      const response = { data: result.instituicao, created: result.created };
+      return result.created ? c.json(response, 201) : c.json(response, 200);
+    } catch (error) {
+      const err = typeof error === 'object' && error !== null ? error : {};
+      const rawStatus = 'status' in err && typeof err.status === 'number' ? err.status : 502;
+      const status = rawStatus >= 400 && rawStatus < 600 ? rawStatus : 502;
+      return c.json({
+        error: 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'Falha ao reparar associação institucional',
+        retryable: 'retryable' in err && err.retryable === true,
+      }, status as ContentfulStatusCode);
+    }
+  },
 );
 
 // PUT /admin/utilizadores/:id/role — super_admin

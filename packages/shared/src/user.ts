@@ -103,6 +103,7 @@ const UserObjectSchema = z.object({
   nome: z.string(),
   role: RoleSchema,
   perfilId: z.string().optional().nullable(),
+  instituicaoId: z.string().optional().nullable(),
   avatarUrl: z.string().url().optional().nullable(),
   bannerUrl: z.string().url().optional().nullable(),
   reputacaoTier: ReputacaoTierSchema.optional().default('BRONZE'),

@@ -6,6 +6,12 @@ import { adminRoutes } from './admin.js';
 import { strapiGet, strapiGetRaw, strapiPutRaw } from '../modules/strapi/strapi.client.js';
 import { setCanonicalUserRole } from '../modules/auth/internal-account.service.js';
 import { writeAuditLog } from '../middleware/audit.js';
+import { provisionInstituicaoForUser } from '../modules/instituicoes/instituicao.provision.js';
+
+const authUser = vi.hoisted(() => ({
+  id: 'admin-1',
+  role: 'super_admin',
+}));
 
 const serviceMocks = vi.hoisted(() => ({
   getUserById: vi.fn(),
@@ -17,7 +23,7 @@ vi.mock('../modules/auth/auth.middleware.js', () => ({
     c: { set: (key: string, value: unknown) => void },
     next: () => Promise<void>,
   ) => {
-    c.set('user', { id: 'admin-1', role: 'super_admin' });
+    c.set('user', { ...authUser });
     await next();
   },
 }));
@@ -30,6 +36,10 @@ vi.mock('../modules/strapi/strapi.client.js', () => ({
 
 vi.mock('../modules/auth/internal-account.service.js', () => ({
   setCanonicalUserRole: vi.fn(),
+}));
+
+vi.mock('../modules/instituicoes/instituicao.provision.js', () => ({
+  provisionInstituicaoForUser: vi.fn(),
 }));
 
 vi.mock('../modules/auth/auth.service.js', () => ({
@@ -53,6 +63,7 @@ interface PerfilFixture {
   userId: string;
   nome: string;
   tipo: string;
+  instituicaoGerida?: { id: string; documentId?: string } | null;
 }
 
 const SuspenderPayloadSchema = z.object({
@@ -65,6 +76,8 @@ describe('adminRoutes internal accounts', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    authUser.id = 'admin-1';
+    authUser.role = 'super_admin';
     vi.mocked(writeAuditLog).mockResolvedValue();
     serviceMocks.publishWithOutbox.mockResolvedValue({
       id: 'event-1',
@@ -73,6 +86,156 @@ describe('adminRoutes internal accounts', () => {
       timestamp: '2026-01-01T00:00:00.000Z',
       correlationId: 'event-1',
     });
+  });
+
+  it('expõe a ausência ou presença da associação institucional', async () => {
+    vi.mocked(strapiGetRaw).mockResolvedValue([
+      { id: 7, email: 'sem-associacao@pdc.ao', createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 8, email: 'associada@pdc.ao', createdAt: '2026-01-01T00:00:00.000Z' },
+    ]);
+    vi.mocked(strapiGet<PerfilFixture>).mockResolvedValue({
+      data: [
+        {
+          id: 'perfil-7',
+          userId: '7',
+          nome: 'Instituição sem associação',
+          tipo: 'instituicao',
+          instituicaoGerida: null,
+        },
+        {
+          id: 'perfil-8',
+          userId: '8',
+          nome: 'Instituição associada',
+          tipo: 'instituicao',
+          instituicaoGerida: { id: 'inst-8', documentId: 'inst-doc-8' },
+        },
+      ],
+      meta: { pagination: { page: 1, pageSize: 1000, pageCount: 1, total: 2 } },
+    });
+
+    const response = await app.request('/utilizadores?page=1&pageSize=10');
+    const body = await response.json() as { data: Array<{ id: string; instituicaoId: string | null }> };
+
+    expect(response.status).toBe(200);
+    expect(body.data).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: '7', instituicaoId: null }),
+      expect.objectContaining({ id: '8', instituicaoId: 'inst-doc-8' }),
+    ]));
+    expect(strapiGet).toHaveBeenCalledWith('/perfis', {
+      'populate[instituicaoGerida][fields][0]': 'id',
+      'populate[instituicaoGerida][fields][1]': 'documentId',
+      'pagination[pageSize]': '1000',
+    });
+  });
+
+  it.each([
+    { created: true, expectedStatus: 201 },
+    { created: false, expectedStatus: 200 },
+  ])(
+    'repara associação institucional de forma idempotente (created=$created)',
+    async ({ created, expectedStatus }) => {
+      serviceMocks.getUserById.mockResolvedValue({
+        id: '23',
+        email: 'instituicao@pdc.ao',
+        nome: 'Instituição PDC',
+        role: 'instituicao',
+      });
+      vi.mocked(provisionInstituicaoForUser).mockResolvedValue({
+        instituicao: { id: 'inst-23', documentId: 'inst-doc-23', nome: 'Instituição PDC' },
+        created,
+      });
+
+      const response = await app.request('/utilizadores/23/reparar-instituicao', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.10',
+          'user-agent': 'vitest',
+        },
+      });
+
+      expect(response.status).toBe(expectedStatus);
+      expect(provisionInstituicaoForUser).toHaveBeenCalledWith('23', {
+        nome: 'Instituição PDC',
+      });
+      expect(writeAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+        accao: 'admin_reparar_instituicao',
+        recurso: '/users/23/instituicao',
+        detalhes: { instituicaoId: 'inst-doc-23', created },
+      }));
+    },
+  );
+
+  it('rejeita reparação de utilizador não institucional', async () => {
+    serviceMocks.getUserById.mockResolvedValue({
+      id: '9',
+      email: 'mentor@pdc.ao',
+      nome: 'Mentor PDC',
+      role: 'mentor',
+    });
+
+    const response = await app.request('/utilizadores/9/reparar-instituicao', {
+      method: 'POST',
+    });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ code: 'UTILIZADOR_NAO_INSTITUCIONAL' });
+    expect(provisionInstituicaoForUser).not.toHaveBeenCalled();
+  });
+
+  it('preserva falha controlada e retryable do provisionamento', async () => {
+    serviceMocks.getUserById.mockResolvedValue({
+      id: '23',
+      email: 'instituicao@pdc.ao',
+      nome: 'Instituição PDC',
+      role: 'instituicao',
+    });
+    vi.mocked(provisionInstituicaoForUser).mockRejectedValue(Object.assign(
+      new Error('Instituição criada, mas ligação ao gestor pendente de retry'),
+      { status: 503, retryable: true },
+    ));
+
+    const response = await app.request('/utilizadores/23/reparar-instituicao', {
+      method: 'POST',
+    });
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: 'Instituição criada, mas ligação ao gestor pendente de retry',
+      retryable: true,
+    });
+    expect(writeAuditLog).not.toHaveBeenCalled();
+  });
+
+  it('limita erros inesperados do provisionamento a uma resposta segura', async () => {
+    serviceMocks.getUserById.mockResolvedValue({
+      id: '23',
+      email: 'instituicao@pdc.ao',
+      nome: 'Instituição PDC',
+      role: 'instituicao',
+    });
+    vi.mocked(provisionInstituicaoForUser).mockRejectedValue('falha não estruturada');
+
+    const response = await app.request('/utilizadores/23/reparar-instituicao', {
+      method: 'POST',
+    });
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: 'Falha ao reparar associação institucional',
+      retryable: false,
+    });
+  });
+
+  it('impede instituição de usar a ferramenta administrativa de reparação', async () => {
+    authUser.role = 'instituicao';
+
+    const response = await app.request('/utilizadores/23/reparar-instituicao', {
+      method: 'POST',
+    });
+
+    expect(response.status).toBe(403);
+    expect(serviceMocks.getUserById).not.toHaveBeenCalled();
+    expect(provisionInstituicaoForUser).not.toHaveBeenCalled();
   });
 
   it('lista utilizadores usando perfil.tipo como role canónica', async () => {

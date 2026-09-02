@@ -1,8 +1,12 @@
-import { Building2, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Building2, ChevronRight } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { instituicoesApi } from '@/lib/api/instituicoes';
-import { Spinner } from '@/components/ui';
+import {
+  institutionKeys,
+  instituicoesApi,
+  isInstituicaoAssociacaoAusente,
+} from '@/lib/api/instituicoes';
+import { EmptyState, Spinner } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 const steps = [
@@ -18,9 +22,32 @@ const steps = [
 ] as const;
 
 export function InstituicaoPerfilShell() {
-  const query = useQuery({ queryKey: ['instituicao', 'me'], queryFn: instituicoesApi.getMe });
+  const query = useQuery({
+    queryKey: institutionKeys.me(),
+    queryFn: instituicoesApi.getMe,
+    retry: (failureCount, error) => (
+      !isInstituicaoAssociacaoAusente(error) && failureCount < 2
+    ),
+  });
   if (query.isLoading) return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
-  if (!query.data) return <p className="text-error">Não foi possível carregar a instituição associada.</p>;
+  if (query.isError || !query.data) {
+    const associationMissing = isInstituicaoAssociacaoAusente(query.error);
+    return (
+      <div className="mx-auto max-w-3xl py-10">
+        <EmptyState
+          icon={associationMissing ? AlertTriangle : Building2}
+          variant="error"
+          title={associationMissing ? 'Associação institucional pendente' : 'Perfil institucional indisponível'}
+          description={associationMissing
+            ? 'A conta existe, mas ainda não está ligada ao registo da instituição. Contacta um Super Admin e indica o email desta conta para concluir a reparação.'
+            : 'Não foi possível carregar o perfil institucional. Tenta novamente; se o problema continuar, contacta o suporte.'}
+          ctaLabel="Contactar suporte"
+          ctaTo="/app/ajuda"
+          onRetry={() => { void query.refetch(); }}
+        />
+      </div>
+    );
+  }
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <header className="rounded-xl border border-[var(--card-border)] bg-canvas p-5">

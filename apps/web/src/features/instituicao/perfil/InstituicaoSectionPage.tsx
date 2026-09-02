@@ -3,7 +3,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useOutletContext } from 'react-router-dom';
 import { Button, Card, Input } from '@/components/ui';
 import { toast } from '@/hooks/useToast';
-import { instituicoesApi, type InstituicaoEditor } from '@/lib/api/instituicoes';
+import {
+  institutionKeys,
+  instituicoesApi,
+  type InstituicaoEditor,
+} from '@/lib/api/instituicoes';
 import { EnderecoAngolaSchema, OfertaInstituicaoSchema } from '@pdc/shared';
 
 type Section = 'identidade' | 'localizacao-contactos' | 'oferta' | 'recursos' | 'qualidade' | 'multimedia';
@@ -20,7 +24,7 @@ export function InstituicaoSectionPage({ section }: { section: Section }) {
   const mutation = useMutation({
     mutationFn: () => saveSection(section, form, instituicao),
     onSuccess: data => {
-      queryClient.setQueryData(['instituicao', 'me'], data);
+      queryClient.setQueryData(institutionKeys.me(), data);
       toast({ title: 'Rascunho guardado' });
     },
     onError: () => toast({ title: 'Não foi possível guardar', variant: 'error' }),

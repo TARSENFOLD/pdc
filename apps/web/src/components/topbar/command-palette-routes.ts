@@ -29,7 +29,10 @@ export function getNavCommands(role: Role | undefined): NavCommand[] {
     { label: 'Feed', to: '/app/feed' },
     { label: 'Simulações', to: '/app/simulacoes' },
     { label: 'Reputação', to: '/app/reputacao' },
-    { label: 'Perfil', to: '/app/perfil' },
+    {
+      label: role === 'instituicao' ? 'Perfil institucional' : 'Perfil',
+      to: role === 'instituicao' ? '/app/instituicao/perfil/identidade' : '/app/perfil',
+    },
     { label: 'Configurações', to: '/app/configuracoes' },
   ];
 

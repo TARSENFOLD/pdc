@@ -83,11 +83,16 @@ export function RoleChipMenu() {
 
           <div className="p-2 space-y-1">
             <button
-              onClick={() => { setOpen(false); navigate('/app/perfil'); }}
+              onClick={() => {
+                setOpen(false);
+                navigate(user.role === 'instituicao'
+                  ? '/app/instituicao/perfil/identidade'
+                  : '/app/perfil');
+              }}
               className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:text-[var(--ink-primary)] hover:bg-[var(--surface-recessed)] rounded-xl transition-colors"
             >
               <UserCircle size={16} className="text-[var(--accent-terracotta)]" /> 
-              <span>O meu Perfil</span>
+              <span>{user.role === 'instituicao' ? 'Perfil institucional' : 'O meu Perfil'}</span>
             </button>
             
           </div>
