@@ -1,9 +1,16 @@
-import { strapiDelete, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
+import {
+  StrapiHttpError,
+  strapiGet,
+  strapiPost,
+  strapiPut,
+} from '../strapi/strapi.client.js';
 import { persistedId, type StrapiInstituicao, type StrapiPerfilGestor } from './instituicao.types.js';
-import { acquireLock } from '../../lib/distributed-lock.js';
-import crypto from 'node:crypto';
+import { acquireLock, type LockHandle } from '../../lib/distributed-lock.js';
+import pino from 'pino';
 
 const PROVISION_LOCK_TTL_MS = 30_000;
+const PROVISION_LOCK_RENEW_INTERVAL_MS = PROVISION_LOCK_TTL_MS / 3;
+const log = pino({ name: 'instituicao-provision' });
 
 type ProvisionInstituicaoInput = {
   nome: string;
@@ -13,6 +20,64 @@ type ProvisionInstituicaoInput = {
   regiao?: string;
   nif?: string;
 };
+
+function provisionLeaseError(cause?: unknown): Error {
+  return Object.assign(new Error('Lease do provisionamento institucional expirou; tenta novamente'), {
+    status: 503,
+    retryable: true,
+    cause,
+  });
+}
+
+function startProvisionLease(lock: LockHandle): {
+  assertActive: () => Promise<void>;
+  stop: () => Promise<void>;
+} {
+  let leaseLost = false;
+  let lostCause: unknown;
+  let renewal: Promise<void> | undefined;
+
+  const ensureRenewal = (): Promise<void> => {
+    if (!renewal) {
+      renewal = lock.extend(PROVISION_LOCK_TTL_MS)
+        .then((extended) => {
+          if (!extended) {
+            leaseLost = true;
+            lostCause = new Error('Lock ownership lost');
+          }
+        })
+        .catch((cause: unknown) => {
+          leaseLost = true;
+          lostCause = cause;
+        })
+        .finally(() => {
+          renewal = undefined;
+        });
+    }
+    return renewal;
+  };
+
+  const timer = setInterval(() => {
+    void ensureRenewal();
+  }, PROVISION_LOCK_RENEW_INTERVAL_MS);
+  timer.unref();
+
+  const assertNotLost = (): void => {
+    if (leaseLost) throw provisionLeaseError(lostCause);
+  };
+
+  return {
+    assertActive: async () => {
+      assertNotLost();
+      await ensureRenewal();
+      assertNotLost();
+    },
+    stop: async () => {
+      clearInterval(timer);
+      if (renewal) await renewal;
+    },
+  };
+}
 
 function slugify(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -36,9 +101,62 @@ function instituicaoReference(instituicao: StrapiInstituicao): InstituicaoRefere
   };
 }
 
+function confirmsUniqueConstraint(body: unknown): boolean {
+  if (typeof body !== 'object' || body === null || !('error' in body)) return false;
+  const error = body.error;
+  if (typeof error !== 'object' || error === null) return false;
+  if ('message' in error && typeof error.message === 'string' && /unique/i.test(error.message)) {
+    return true;
+  }
+  if (!('details' in error) || typeof error.details !== 'object' || error.details === null) {
+    return false;
+  }
+  if (!('errors' in error.details) || !Array.isArray(error.details.errors)) return false;
+  return error.details.errors.some((entry: unknown) => {
+    if (typeof entry !== 'object' || entry === null || !('path' in entry)) return false;
+    if (Array.isArray(entry.path)) return entry.path.some((part: unknown) => part === 'slug');
+    return entry.path === 'slug';
+  });
+}
+
+async function createOrGetInstituicao(
+  slug: string,
+  input: ProvisionInstituicaoInput,
+): Promise<{ instituicao: StrapiInstituicao; created: boolean }> {
+  try {
+    const created = await strapiPost<StrapiInstituicao>('/instituicoes', {
+      nome: input.nome,
+      nomeLegal: input.nomeLegal ?? input.nome,
+      slug,
+      tipo: input.tipo ?? 'outro',
+      natureza: input.natureza,
+      regiao: input.regiao,
+      nif: input.nif,
+      estado: 'draft',
+      aprovada: false,
+      documentosLegais: [],
+      branding: {},
+    });
+    return { instituicao: created.data, created: true };
+  } catch (error) {
+    const isUniqueConflict = error instanceof StrapiHttpError
+      && (error.status === 409
+        || (error.status === 400 && confirmsUniqueConstraint(error.body)));
+    if (!isUniqueConflict) throw error;
+    const existing = await strapiGet<StrapiInstituicao>('/instituicoes', {
+      'filters[slug][$eq]': slug,
+      'pagination[pageSize]': '1',
+    });
+    const instituicao = existing.data[0];
+    if (!instituicao) throw error;
+    return { instituicao, created: false };
+  }
+}
+
 async function provisionWhileLocked(
   userId: string,
   input: ProvisionInstituicaoInput,
+  assertLeaseActive: () => Promise<void>,
 ): Promise<ProvisionInstituicaoResult> {
   const perfis = await strapiGet<StrapiPerfilGestor>('/perfis', {
     'filters[userId][$eq]': userId,
@@ -53,40 +171,27 @@ async function provisionWhileLocked(
     return { instituicao: instituicaoReference(perfil.instituicaoGerida), created: false };
   }
 
-  const baseSlug = slugify(input.nome) || `instituicao-${userId}`;
-  const slug = `${baseSlug}-${userId}-${crypto.randomUUID().slice(0, 8)}`;
-  const created = await strapiPost<StrapiInstituicao>('/instituicoes', {
-    nome: input.nome,
-    nomeLegal: input.nomeLegal ?? input.nome,
-    slug,
-    tipo: input.tipo ?? 'outro',
-    natureza: input.natureza,
-    regiao: input.regiao,
-    nif: input.nif,
-    estado: 'draft',
-    aprovada: false,
-    documentosLegais: [],
-    branding: {},
-  });
-  const instituicao = created.data;
+  await assertLeaseActive();
+  const slug = `instituicao-gestor-${slugify(userId)}`;
+  const provisioned = await createOrGetInstituicao(slug, input);
+  const instituicao = provisioned.instituicao;
   try {
+    await assertLeaseActive();
     await strapiPut(`/perfis/${persistedId(perfil)}`, { instituicaoGerida: instituicao.id });
   } catch (error) {
-    let rollbackError: unknown;
-    try {
-      await strapiDelete(`/instituicoes/${persistedId(instituicao)}`);
-    } catch (caught) {
-      rollbackError = caught;
-    }
-    throw Object.assign(new Error('Instituição criada, mas ligação ao gestor pendente de retry'), {
-      status: 503,
-      retryable: true,
+    const upstreamStatus = error instanceof StrapiHttpError ? error.status : undefined;
+    const retryable = upstreamStatus === undefined || upstreamStatus === 429 || upstreamStatus >= 500;
+    const message = retryable
+      ? 'Instituição criada, mas ligação ao gestor pendente de retry'
+      : 'Instituição criada, mas a associação ao gestor foi rejeitada';
+    throw Object.assign(new Error(message), {
+      status: retryable ? 503 : upstreamStatus,
+      retryable,
       instituicaoId: instituicao.id,
       cause: error,
-      ...(rollbackError ? { rollbackError } : {}),
     });
   }
-  return { instituicao: instituicaoReference(instituicao), created: true };
+  return { instituicao: instituicaoReference(instituicao), created: provisioned.created };
 }
 
 export async function provisionInstituicaoForUser(
@@ -110,22 +215,35 @@ export async function provisionInstituicaoForUser(
     });
   }
 
+  const lease = startProvisionLease(lock);
   let result: ProvisionInstituicaoResult;
   try {
-    result = await provisionWhileLocked(userId, input);
+    result = await provisionWhileLocked(userId, input, lease.assertActive);
   } catch (cause) {
-    await lock.release().catch(() => undefined);
+    await lease.stop();
+    await lock.release().catch((releaseErr: unknown) => {
+      log.error(
+        { err: releaseErr, userId, cause },
+        'Falha ao libertar o lease institucional após erro de provisionamento',
+      );
+    });
     throw cause;
   }
 
+  await lease.stop();
   try {
-    await lock.release();
-  } catch (cause) {
-    throw Object.assign(new Error('Libertação do bloqueio institucional falhou; tenta novamente'), {
-      status: 503,
-      retryable: true,
-      cause,
-    });
+    const released = await lock.release();
+    if (!released) {
+      log.warn(
+        { userId, fencingToken: lock.fencingToken },
+        'Reparação terminou depois da expiração do lease; resultado idempotente preservado',
+      );
+    }
+  } catch (releaseErr) {
+    log.error(
+      { err: releaseErr, userId, fencingToken: lock.fencingToken },
+      'Falha ao libertar o lease institucional após provisionamento concluído',
+    );
   }
 
   return result;

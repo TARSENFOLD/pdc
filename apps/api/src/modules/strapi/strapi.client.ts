@@ -28,10 +28,25 @@ export class StrapiHttpError extends Error {
     message: string,
     public readonly status: number,
     public readonly path: string,
+    public readonly body?: unknown,
   ) {
     super(message);
     this.name = 'StrapiHttpError';
   }
+}
+
+async function createStrapiHttpError(
+  response: Response,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  path: string,
+): Promise<StrapiHttpError> {
+  const body: unknown = await response.json().catch(() => undefined);
+  return new StrapiHttpError(
+    `Strapi ${method} ${path} falhou: ${response.status.toString()}`,
+    response.status,
+    path,
+    body,
+  );
 }
 
 /**
@@ -135,7 +150,7 @@ export async function strapiGet<T>(
   const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() }, TIMEOUT);
   if (!res.ok) {
     log.error({ url: url.toString(), status: res.status }, `Strapi GET ${path} falhou`);
-    throw new StrapiHttpError(`Strapi GET ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'GET', path);
   }
   const json = (await res.json()) as StrapiListResponse<T>;
   return normalizeStrapiResponse(json);
@@ -148,7 +163,7 @@ export async function strapiPost<T>(path: string, body: unknown): Promise<Strapi
     body: JSON.stringify({ data: body }),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi POST ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'POST', path);
   }
   const json = (await res.json()) as StrapiSingleResponse<T>;
   return normalizeStrapiResponse(json);
@@ -161,7 +176,7 @@ export async function strapiPut<T>(path: string, body: unknown): Promise<StrapiS
     body: JSON.stringify({ data: body }),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi PUT ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'PUT', path);
   }
   const json = (await res.json()) as StrapiSingleResponse<T>;
   return normalizeStrapiResponse(json);
@@ -173,7 +188,7 @@ export async function strapiDelete(path: string): Promise<void> {
     headers: buildHeaders(),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi DELETE ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'DELETE', path);
   }
 }
 
@@ -185,7 +200,7 @@ export async function strapiPutRaw<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi PUT ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'PUT', path);
   }
   return res.json() as Promise<T>;
 }
@@ -197,7 +212,7 @@ export async function strapiPostRaw<T>(path: string, body: unknown): Promise<T> 
     body: JSON.stringify(body),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi POST ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'POST', path);
   }
   return res.json() as Promise<T>;
 }
@@ -211,7 +226,7 @@ export async function strapiGetRaw<T>(path: string, params?: Record<string, stri
   }
   const res = await fetchWithRetry(url.toString(), { headers: buildHeaders() }, TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi GET ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'GET', path);
   }
   return res.json() as Promise<T>;
 }
@@ -222,6 +237,6 @@ export async function strapiDeleteRaw(path: string): Promise<void> {
     headers: buildHeaders(),
   }, WRITE_TIMEOUT);
   if (!res.ok) {
-    throw new StrapiHttpError(`Strapi DELETE ${path} falhou: ${res.status.toString()}`, res.status, path);
+    throw await createStrapiHttpError(res, 'DELETE', path);
   }
 }

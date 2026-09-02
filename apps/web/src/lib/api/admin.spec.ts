@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { adminApi } from './admin';
 
-function jsonResponse(body: unknown): Response {
+function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
-    status: 200,
+    status,
     headers: { 'Content-Type': 'application/json' },
   });
 }
@@ -45,6 +45,36 @@ describe('adminApi.repararInstituicao', () => {
     await expect(adminApi.repararInstituicao('23')).rejects.toMatchObject({
       name: 'ApiError',
       status: 0,
+    });
+  });
+
+  it('preserva o conflito semântico devolvido pela reparação', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({
+      error: 'A reparação institucional só pode ser aplicada a contas de instituição',
+      code: 'UTILIZADOR_NAO_INSTITUCIONAL',
+    }, 409)));
+
+    await expect(adminApi.repararInstituicao('23')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 409,
+      body: {
+        code: 'UTILIZADOR_NAO_INSTITUCIONAL',
+      },
+    });
+  });
+
+  it('preserva retryable quando a reparação está temporariamente indisponível', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({
+      error: 'Provisionamento institucional em curso; tenta novamente',
+      retryable: true,
+    }, 503)));
+
+    await expect(adminApi.repararInstituicao('23')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 503,
+      body: {
+        retryable: true,
+      },
     });
   });
 });

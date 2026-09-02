@@ -43,8 +43,8 @@ describe('InstituicaoPerfilShell', () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText('Associação institucional pendente')).toBeDefined();
-    expect(screen.getByText(/Contacta um Super Admin/)).toBeDefined();
+    expect(await screen.findByText('Associação institucional pendente')).toBeVisible();
+    expect(screen.getByText(/Contacta um Super Admin/)).toBeVisible();
     expect(screen.getByRole('link', { name: 'Contactar suporte' }).getAttribute('href')).toBe(
       '/app/ajuda',
     );
@@ -53,7 +53,7 @@ describe('InstituicaoPerfilShell', () => {
     await waitFor(() => {
       expect(getMe).toHaveBeenCalledTimes(2);
     });
-    expect(await screen.findByText('Instituição PDC')).toBeDefined();
+    expect(await screen.findByText('Instituição PDC')).toBeVisible();
     expect(screen.queryByText('Associação institucional pendente')).toBeNull();
   });
 
@@ -73,8 +73,8 @@ describe('InstituicaoPerfilShell', () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText('Perfil institucional indisponível')).toBeDefined();
-    expect(screen.getByText(/Não foi possível carregar o perfil institucional/)).toBeDefined();
+    expect(await screen.findByText('Perfil institucional indisponível')).toBeVisible();
+    expect(screen.getByText(/Não foi possível carregar o perfil institucional/)).toBeVisible();
     expect(screen.queryByText('Associação institucional pendente')).toBeNull();
     expect(getMe).toHaveBeenCalledTimes(3);
   });

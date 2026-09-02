@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { normalizeStrapiResponse, strapiDelete, strapiDeleteRaw } from './strapi.client.js';
+import {
+  normalizeStrapiResponse,
+  strapiDelete,
+  strapiDeleteRaw,
+  strapiGet,
+  strapiPost,
+  strapiPut,
+} from './strapi.client.js';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -76,5 +83,32 @@ describe('normalizeStrapiResponse', () => {
 
     await expect(strapiDeleteRaw('/itens/1')).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['GET', () => strapiGet('/itens')],
+    ['POST', () => strapiPost('/itens', {})],
+    ['PUT', () => strapiPut('/itens/1', {})],
+    ['DELETE', () => strapiDelete('/itens/1')],
+  ])('preserva o corpo estruturado em erros %s', async (_method, request) => {
+    const body = { error: { message: 'This attribute must be unique' } };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), {
+      status: 409,
+      headers: { 'Content-Type': 'application/json' },
+    })));
+
+    await expect(request()).rejects.toMatchObject({ status: 409, body });
+  });
+
+  it('preserva status e omite body quando a resposta de erro não é JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<h1>Bad gateway</h1>', {
+      status: 502,
+      headers: { 'Content-Type': 'text/html' },
+    })));
+
+    await expect(strapiGet('/itens')).rejects.toMatchObject({
+      status: 502,
+      body: undefined,
+    });
   });
 });

@@ -31,9 +31,15 @@ provisionamento canónico já fosse idempotente.
 6. A ausência de `perfil.instituicaoGerida` devolve um erro semântico e uma
    ação de recuperação, em vez de “instituição não encontrada”.
 7. Apenas Super Admin pode executar a reparação. A operação valida a role da
-   conta alvo, reutiliza o provisionamento idempotente protegido por lock Redis
-   único por utilizador e escreve audit trail. A API só confirma sucesso depois
-   da persistência desse registo de auditoria.
+   conta alvo, reutiliza o provisionamento idempotente protegido por lease Redis
+   único e renovável por utilizador e escreve audit trail. Renovação e release
+   verificam atomicamente a posse do lock. O slug determinístico por gestor,
+   protegido pelo índice único do Strapi, garante que workers concorrentes ou
+   expirados convergem para a mesma instituição. Uma associação interrompida é
+   recuperada no retry sem apagar esse registo canónico; essa recuperação
+   depende da classificação do erro de unicidade devolvido pelo Strapi, pelo
+   que uma alteração desse contrato de erro é incompatível. A API só confirma
+   sucesso depois da persistência do registo de auditoria.
 8. A reparação cria uma instituição em estado `draft`; não aprova a instituição
    nem ativa automaticamente qualquer feature flag.
 
