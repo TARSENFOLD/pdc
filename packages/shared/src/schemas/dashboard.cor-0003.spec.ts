@@ -14,9 +14,17 @@ describe('COR-0003 institution report contract', () => {
     });
   });
 
-  it('recusa percentagens e totais negativos fora do contrato', () => {
+  it('recusa um total negativo quando os restantes campos são válidos', () => {
     expect(InstituicaoStatsSchema.safeParse({
       conteudosTotais: -1,
+      inscricoesTotais: 1,
+      participacoesTotais: 0,
+    }).success).toBe(false);
+  });
+
+  it('recusa um total fracionário quando os restantes campos são válidos', () => {
+    expect(InstituicaoStatsSchema.safeParse({
+      conteudosTotais: 1,
       inscricoesTotais: 1.5,
       participacoesTotais: 0,
     }).success).toBe(false);

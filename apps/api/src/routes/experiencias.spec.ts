@@ -234,6 +234,18 @@ describe('experienciaRoutes E2E contracts', () => {
       'filters[autor][userId][$eq]': 'inst-1',
       'pagination[pageSize]': '1',
     });
+    expect(strapiGet).toHaveBeenNthCalledWith(2, '/cursos', {
+      'filters[autorId][$eq]': 'inst-1',
+      'pagination[pageSize]': '1',
+    });
+    expect(strapiGet).toHaveBeenNthCalledWith(3, '/simulacoes', {
+      'filters[autorId][$eq]': 'inst-1',
+      'pagination[pageSize]': '1',
+    });
+    expect(strapiGet).toHaveBeenNthCalledWith(4, '/programas', {
+      'filters[responsavel][userId][$eq]': 'inst-1',
+      'pagination[pageSize]': '1',
+    });
     expect(strapiGet).toHaveBeenNthCalledWith(5, '/inscricoes', {
       'filters[curso][autorId][$eq]': 'inst-1',
       'pagination[pageSize]': '1',
@@ -257,6 +269,34 @@ describe('experienciaRoutes E2E contracts', () => {
       code: 'DEPENDENCY_UNAVAILABLE',
     });
   });
+
+  it.each([
+    ['experiencias', 0],
+    ['cursos', 1],
+    ['simulacoes', 2],
+    ['programas', 3],
+    ['inscricoes', 4],
+    ['participacoes', 5],
+  ] as const)(
+    'GET /stats rejeita total inválido vindo de %s',
+    async (_source, invalidIndex) => {
+      const responses = [2, 3, 1, 4, 5, 6].map(countResponse);
+      responses[invalidIndex] = countResponse(-1);
+      for (const response of responses) {
+        vi.mocked(strapiGet).mockResolvedValueOnce(response);
+      }
+
+      const res = await app.request('/experiencias/stats', {
+        headers: { 'x-test-user': 'inst-1', 'x-test-role': 'instituicao' },
+      });
+
+      expect(res.status).toBe(503);
+      await expect(res.json()).resolves.toEqual({
+        error: 'O serviço de conteúdos está temporariamente indisponível.',
+        code: 'DEPENDENCY_UNAVAILABLE',
+      });
+    },
+  );
 
   it('GET /minhas/:id permite ao autor reabrir um draft para edição', async () => {
     vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{

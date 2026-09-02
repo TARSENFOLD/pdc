@@ -2,7 +2,7 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { experienciasApi } from '@/lib/api/experiencias';
-import { Spinner, BentoGrid, BentoTile, GlassCard, AsymmetricButton } from '@/components/ui';
+import { Spinner, BentoGrid, BentoTile, GlassCard, AsymmetricButton, EmptyState } from '@/components/ui';
 import ContentTypeCTAGrid from '@/components/dashboard/ContentTypeCTAGrid';
 import {
   Building2,
@@ -34,7 +34,7 @@ const CTAS = [
 export function InstituicaoDashboard() {
   const { user } = useAuth();
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, isError } = useQuery({
     queryKey: ['experiencias', 'stats'],
     queryFn: () => experienciasApi.getStats(),
   });
@@ -43,6 +43,19 @@ export function InstituicaoDashboard() {
     return (
       <div className="flex h-screen items-center justify-center bg-canvas">
         <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center px-6">
+        <EmptyState
+          icon={Building2}
+          variant="error"
+          title="Não foi possível carregar as métricas"
+          description="Tenta novamente mais tarde."
+        />
       </div>
     );
   }

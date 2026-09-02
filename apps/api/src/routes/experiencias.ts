@@ -187,14 +187,29 @@ experienciaRoutes.get('/stats', verifyJwt, checkRole(['instituicao', 'super_admi
       }),
     ]);
 
+    const totals = {
+      experiencias: experiencias.meta.pagination.total,
+      cursos: cursos.meta.pagination.total,
+      simulacoes: simulacoes.meta.pagination.total,
+      programas: programas.meta.pagination.total,
+      inscricoes: inscricoes.meta.pagination.total,
+      participacoes: participacoes.meta.pagination.total,
+    };
+    const hasInvalidTotal = Object.values(totals).some(
+      (total) => !Number.isInteger(total) || total < 0,
+    );
+    if (hasInvalidTotal) {
+      return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
+    }
+
     return c.json({
       conteudosTotais:
-        experiencias.meta.pagination.total
-        + cursos.meta.pagination.total
-        + simulacoes.meta.pagination.total
-        + programas.meta.pagination.total,
-      inscricoesTotais: inscricoes.meta.pagination.total,
-      participacoesTotais: participacoes.meta.pagination.total,
+        totals.experiencias
+        + totals.cursos
+        + totals.simulacoes
+        + totals.programas,
+      inscricoesTotais: totals.inscricoes,
+      participacoesTotais: totals.participacoes,
     });
   } catch {
     return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
