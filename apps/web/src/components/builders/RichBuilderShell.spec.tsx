@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import FocusHeader from '@/components/layout/FocusHeader';
@@ -28,7 +28,7 @@ describe('RichBuilderShell', () => {
             </BuilderSection>
           </RichBuilderShell>
         </FocusModeProvider>
-      </MemoryRouter>,
+      </MemoryRouter>
     );
 
     expect(await screen.findByRole('navigation', { name: 'Etapas de criação' })).toBeTruthy();
@@ -52,11 +52,41 @@ describe('RichBuilderShell', () => {
         settingsPanel={<div>Definições disponíveis</div>}
       >
         <div>Conteúdo disponível</div>
-      </RichBuilderShell>,
+      </RichBuilderShell>
     );
 
     expect(screen.queryByRole('navigation', { name: 'Etapas de criação' })).toBeNull();
     expect(screen.queryByText('Conteúdo disponível')).toBeTruthy();
     expect(screen.queryByText('Definições disponíveis')).toBeTruthy();
+  });
+
+  it('não infere etapas concluídas quando completedSteps é fornecido vazio', async () => {
+    render(
+      <MemoryRouter>
+        <FocusModeProvider>
+          <FocusHeader />
+          <RichBuilderShell
+            title="Criar conteúdo"
+            activeStep="conteudo"
+            completedSteps={[]}
+            steps={[
+              { id: 'identidade', label: 'Identidade' },
+              { id: 'conteudo', label: 'Conteúdo' },
+            ]}
+            settingsPanel={<div>Definições editoriais</div>}
+          >
+            <BuilderSection value="identidade" title="Identidade" description="Dados principais">
+              <div>Editor de identidade</div>
+            </BuilderSection>
+            <BuilderSection value="conteudo" title="Conteúdo" description="Estrutura">
+              <div>Editor de conteúdo</div>
+            </BuilderSection>
+          </RichBuilderShell>
+        </FocusModeProvider>
+      </MemoryRouter>
+    );
+
+    const firstStep = await screen.findByRole('button', { name: /Identidade/ });
+    expect(within(firstStep).getByText('1')).toBeVisible();
   });
 });

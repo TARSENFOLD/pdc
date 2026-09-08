@@ -195,6 +195,37 @@ describe('authService.mapStrapiUser — new fields', () => {
     expect(user.role).toBe('estudante');
     expect(user.perfilId).toBe('perfil-1');
   });
+
+  it('mapeia a instituição gerida para permitir rollout institucional', () => {
+    const user = authService.mapStrapiUser(BASE_USER, {
+      ...BASE_PERFIL,
+      tipo: 'instituicao',
+      instituicaoGerida: { id: 42, documentId: 'instituicao-doc-42' },
+    });
+
+    expect(user.instituicaoId).toBe('42');
+  });
+
+  it('mapeia a instituição associada de um mentor para o mesmo rollout', () => {
+    const user = authService.mapStrapiUser(BASE_USER, {
+      ...BASE_PERFIL,
+      tipo: 'mentor',
+      instituicao: { id: 84, documentId: 'instituicao-doc-84' },
+    });
+
+    expect(user.instituicaoId).toBe('84');
+  });
+
+  it('prefere a instituição gerida quando ambas as relações existem', () => {
+    const user = authService.mapStrapiUser(BASE_USER, {
+      ...BASE_PERFIL,
+      tipo: 'instituicao',
+      instituicaoGerida: { id: 42 },
+      instituicao: { id: 84 },
+    });
+
+    expect(user.instituicaoId).toBe('42');
+  });
 });
 
 describe('authSessionService access claims', () => {
@@ -216,6 +247,17 @@ describe('authSessionService access claims', () => {
 
     expect(user.perfilId).toBe('42');
     expect(decodeJwt(accessToken)).toMatchObject({ perfilId: '42' });
+  });
+
+  it('inclui a instituição no access token usado pelos feature gates', async () => {
+    const user = authService.mapStrapiUser(BASE_USER, {
+      ...BASE_PERFIL,
+      tipo: 'instituicao',
+      instituicaoGerida: { id: 42 },
+    });
+    const { accessToken } = await authSessionService.issue(user);
+
+    expect(decodeJwt(accessToken)).toMatchObject({ instituicaoId: '42' });
   });
 });
 

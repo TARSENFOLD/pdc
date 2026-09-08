@@ -213,8 +213,18 @@ export async function strapiGet<T>(
   return normalizeStrapiResponse(json);
 }
 
-export async function strapiPost<T>(path: string, body: unknown): Promise<StrapiSingleResponse<T>> {
-  const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
+export async function strapiPost<T>(
+  path: string,
+  body: unknown,
+  params?: Record<string, string>,
+): Promise<StrapiSingleResponse<T>> {
+  const url = new URL(`${STRAPI_URL}/api${path}`);
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value);
+    }
+  }
+  const res = await fetchWithRetry(url.toString(), {
     method: 'POST',
     headers: buildHeaders(),
     body: JSON.stringify({ data: body }),
@@ -226,8 +236,18 @@ export async function strapiPost<T>(path: string, body: unknown): Promise<Strapi
   return normalizeStrapiResponse(json);
 }
 
-export async function strapiPut<T>(path: string, body: unknown): Promise<StrapiSingleResponse<T>> {
-  const res = await fetchWithRetry(`${STRAPI_URL}/api${path}`, {
+export async function strapiPut<T>(
+  path: string,
+  body: unknown,
+  params?: Record<string, string>,
+): Promise<StrapiSingleResponse<T>> {
+  const url = new URL(`${STRAPI_URL}/api${path}`);
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value);
+    }
+  }
+  const res = await fetchWithRetry(url.toString(), {
     method: 'PUT',
     headers: buildHeaders(),
     body: JSON.stringify({ data: body }),

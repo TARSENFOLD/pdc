@@ -8,7 +8,11 @@ interface BuilderActionsBarProps {
   state?: string;
   userRole?: string;
   onSubmitReview?: () => void;
+  submitReviewLabel?: string;
   onPublish?: () => void;
+  isReady?: boolean;
+  pendingRequirements?: number;
+  onResolveRequirements?: () => void;
 }
 
 export default function BuilderActionsBar({ 
@@ -16,8 +20,13 @@ export default function BuilderActionsBar({
   onSaveDraft, 
   state,
   onSubmitReview,
-  onPublish
+  submitReviewLabel = 'Submeter para revisão',
+  onPublish,
+  isReady,
+  pendingRequirements = 0,
+  onResolveRequirements,
 }: BuilderActionsBarProps): React.ReactElement {
+  const actionsAllowed = isReady !== false;
   return (
     <div className="space-y-5 rounded-lg border border-[var(--chrome-border)] bg-canvas p-5 shadow-[var(--elevation-1)]">
       <div className="flex items-start justify-between gap-4">
@@ -29,6 +38,7 @@ export default function BuilderActionsBar({
       </div>
       <div className="space-y-2">
         <Button 
+          type="button"
           disabled={isSubmitting} 
           onClick={onSaveDraft}
           className="h-11 w-full gap-2 rounded-md font-semibold"
@@ -39,19 +49,21 @@ export default function BuilderActionsBar({
 
         {state === 'draft' && onSubmitReview && (
           <Button 
+            type="button"
             variant="outline"
-            disabled={isSubmitting} 
+            disabled={isSubmitting || !actionsAllowed}
             onClick={onSubmitReview}
             className="h-11 w-full gap-2 rounded-md font-semibold text-accent hover:bg-accent/10"
           >
             <Send size={14} aria-hidden="true" />
-            Submeter para revisão
+            {submitReviewLabel}
           </Button>
         )}
 
         {state === 'approved' && onPublish && (
           <Button 
-            disabled={isSubmitting} 
+            type="button"
+            disabled={isSubmitting || !actionsAllowed}
             onClick={onPublish}
             className="h-11 w-full rounded-sm font-semibold bg-accent text-white"
           >
@@ -59,6 +71,27 @@ export default function BuilderActionsBar({
           </Button>
         )}
       </div>
+      {isReady === false ? (
+        <div className="rounded-md border border-[var(--accent-warning)]/30 bg-[var(--accent-warning)]/10 p-3">
+          <p className="text-xs font-semibold text-ink-primary">
+            {pendingRequirements > 0
+              ? `${String(pendingRequirements)} ${pendingRequirements === 1 ? 'requisito pendente' : 'requisitos pendentes'}`
+              : 'Curso ainda incompleto'}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-ink-tertiary">
+            Podes guardar o rascunho, mas só poderás submeter ou publicar depois de completar o essencial.
+          </p>
+          {onResolveRequirements ? (
+            <button
+              type="button"
+              onClick={onResolveRequirements}
+              className="mt-2 text-xs font-bold uppercase tracking-wider text-accent hover:underline"
+            >
+              Resolver pendências
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,9 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CriarCursoPayloadSchema } from '@pdc/shared';
-import type { z } from 'zod';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { avaliarProntidaoCurso, CriarCursoPayloadSchema, type CursoReadinessStep } from '@pdc/shared';
+import { useForm, useFieldArray, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { cursosApi } from '@/lib/api/cursos';
 import { toast } from '@/hooks/useToast';
@@ -15,47 +14,72 @@ import { CourseReviewPanel } from './components/CourseReviewPanel';
 import { RichBuilderShell, BuilderSection, BuilderActionsBar } from '@/components/builders';
 import { useAuth } from '@/lib/auth/auth-context';
 import { Spinner } from '@/components/ui';
+import { CourseStepReadiness } from './components/CourseStepReadiness';
+import {
+  cumulativeCompletedReadinessSteps,
+  findBlockingReadinessStep,
+} from './components/course-studio/course-readiness-navigation';
+import {
+  CourseDraftSubmissionError,
+  saveAndSubmitCourse,
+} from './components/course-studio/course-editorial-submit';
+import {
+  COURSE_BUILDER_STEPS,
+  COURSE_FORM_DEFAULTS,
+  COURSE_READINESS_STEPS,
+  courseFieldLabel,
+  courseToFormValues,
+  firstCourseFormErrorMessage,
+  type CourseFormValues,
+} from './components/course-studio/course-builder-config';
 
-type FormValues = z.infer<typeof CriarCursoPayloadSchema>;
-type EditableCursoState = NonNullable<FormValues['estado']>;
-type CursoVisibilidade = NonNullable<FormValues['visibilidade']>;
-
-function toEditableState(state: string | undefined): EditableCursoState | undefined {
-  return state === 'draft' || state === 'review' || state === 'published' ? state : undefined;
-}
-
-function resolveCursoVisibilidade(curso: unknown): CursoVisibilidade {
-  if (!curso || typeof curso !== 'object' || !('visibilidade' in curso)) return 'publico';
-  const value = (curso as Record<string, unknown>).visibilidade;
-  return value === 'publico' || value === 'privado' || value === 'institucional'
-    ? value
-    : 'publico';
-}
-
+type FormValues = CourseFormValues;
 export function SovereignCourseBuilder() {
   const navigate = useNavigate();
   const { id: cursoId } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isEditing = Boolean(cursoId);
-
+  const coursesPath = user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/instituicao/cursos';
+  const [activeStep, setActiveStep] = useState<string>('info');
   const form = useForm<FormValues>({
-    resolver: zodResolver(CriarCursoPayloadSchema) as never,
-    defaultValues: {
-      titulo: '',
-      descricao: '',
-      area: 'TECNOLOGIA',
-      nivel: 'medio',
-      visibilidade: 'publico',
-      gratuito: true,
-      preco: 0,
-      moeda: 'AOA',
-      regrasAcesso: { minFluidez: 0, minResiliencia: 0, minFoco: 0 },
-      modulos: [{ titulo: 'Módulo 1: Introdução', ordem: 1, itens: [{ titulo: 'Bem-vindo', tipo: 'texto', ordem: 1 }] }]
-    }
+    resolver: zodResolver(CriarCursoPayloadSchema),
+    defaultValues: COURSE_FORM_DEFAULTS,
   });
-
-  const { register, control, watch, setValue, handleSubmit, formState: { errors } } = form;
+  const { register, control, watch, setValue, trigger, handleSubmit, formState: { errors } } = form;
+  const titulo = useWatch({ control, name: 'titulo' });
+  const descricao = useWatch({ control, name: 'descricao' });
+  const area = useWatch({ control, name: 'area' });
+  const nivel = useWatch({ control, name: 'nivel' });
+  const capaUrl = useWatch({ control, name: 'capaUrl' });
+  const visibilidade = useWatch({ control, name: 'visibilidade' });
+  const gratuito = useWatch({ control, name: 'gratuito' });
+  const preco = useWatch({ control, name: 'preco' });
+  const moeda = useWatch({ control, name: 'moeda' });
+  const modulos = useWatch({ control, name: 'modulos' });
+  const readiness = useMemo(() => avaliarProntidaoCurso({
+    titulo,
+    descricao,
+    area,
+    nivel,
+    capaUrl,
+    visibilidade,
+    gratuito,
+    preco,
+    moeda,
+    modulos,
+  }, { allowLocalHttp: import.meta.env.DEV }), [
+    titulo,
+    descricao,
+    area,
+    nivel,
+    capaUrl,
+    visibilidade,
+    gratuito,
+    preco,
+    moeda,
+    modulos,
+  ]);
   const modulosArray = useFieldArray({ control, name: 'modulos' });
   const cursoQuery = useQuery({
     queryKey: ['cursos', cursoId ?? ''],
@@ -66,39 +90,7 @@ export function SovereignCourseBuilder() {
   useEffect(() => {
     const curso = cursoQuery.data;
     if (!curso) return;
-
-    form.reset({
-      titulo: curso.titulo,
-      descricao: curso.descricao,
-      area: curso.area ?? 'TECNOLOGIA',
-      nivel: curso.nivel === 'basico' || curso.nivel === 'medio' || curso.nivel === 'avancado' ? curso.nivel : 'medio',
-      capaUrl: curso.capaUrl ?? undefined,
-      visibilidade: resolveCursoVisibilidade(curso),
-      gratuito: curso.gratuito ?? true,
-      preco: curso.preco ?? 0,
-      moeda: curso.moeda ?? 'AOA',
-      estado: toEditableState(curso.estado),
-      regrasAcesso: {
-        minFluidez: curso.regrasAcesso?.minFluidez ?? 0,
-        minResiliencia: curso.regrasAcesso?.minResiliencia ?? 0,
-        minFoco: curso.regrasAcesso?.minFoco ?? 0,
-      },
-      modulos: curso.modulos?.length
-        ? curso.modulos.map((modulo, moduloIndex) => ({
-          persistedId: modulo.id,
-          titulo: modulo.titulo,
-          ordem: modulo.ordem || moduloIndex + 1,
-          itens: modulo.itens.map((item, itemIndex) => ({
-            persistedId: item.id,
-            titulo: item.titulo,
-            tipo: item.tipo,
-            conteudo: item.conteudo ?? undefined,
-            url: item.url ?? undefined,
-            ordem: item.ordem || itemIndex + 1,
-          })),
-        }))
-        : [{ titulo: 'Módulo 1: Introdução', ordem: 1, itens: [{ titulo: 'Bem-vindo', tipo: 'texto', ordem: 1 }] }],
-    });
+    form.reset(courseToFormValues(curso));
   }, [cursoQuery.data, form]);
 
   const mutation = useMutation({
@@ -108,7 +100,7 @@ export function SovereignCourseBuilder() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
       toast({ title: 'Curso guardado com sucesso.' });
-      navigate(user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/dashboard/instituicao');
+      navigate(coursesPath);
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -121,34 +113,101 @@ export function SovereignCourseBuilder() {
   });
 
   const estadoMutation = useMutation({
-    mutationFn: (estado: 'draft' | 'review' | 'published' | 'archived') =>
-      cursosApi.updateEstado(cursoId ?? '', estado),
-    onSuccess: (_, estado) => {
-      void queryClient.invalidateQueries({ queryKey: ['cursos', cursoId ?? ''] });
-      void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
-      toast({ title: estado === 'published' ? 'Curso publicado!' : 'Estado atualizado.' });
-      navigate(user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/dashboard/instituicao');
+    mutationFn: async ({ estado, data }: { estado: 'review' | 'published'; data: FormValues }) => {
+      if (estado === 'review') {
+        return saveAndSubmitCourse({
+          api: cursosApi,
+          payload: data,
+          ...(cursoId ? { courseId: cursoId } : {}),
+        });
+      }
+      if (!cursoId) throw new Error('Guarda primeiro o curso como rascunho.');
+      await cursosApi.update(cursoId, data);
+      await cursosApi.updateEstado(cursoId, estado);
+      return cursoId;
     },
-    onError: () => { toast({ title: 'Falha na transição de estado', variant: 'error' }); },
+    onSuccess: (savedCourseId, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['cursos', savedCourseId] });
+      void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
+      toast({ title: variables.estado === 'published' ? 'Curso publicado!' : 'Curso submetido para revisão.' });
+      navigate(coursesPath);
+    },
+    onError: (err: unknown) => {
+      if (err instanceof CourseDraftSubmissionError) {
+        toast({ title: err.message, description: err.reason, variant: 'error' });
+        navigate(`${coursesPath}/${err.draftId}/editar`);
+        return;
+      }
+      toast({
+        title: 'Falha na transição de estado',
+        description: err instanceof Error ? err.message : 'Erro desconhecido',
+        variant: 'error',
+      });
+    },
   });
 
-  const handlePublish = () => {
-    if (!cursoId) return;
-    estadoMutation.mutate('published');
+  const firstIncompleteStep = COURSE_READINESS_STEPS.find((step) => !readiness.byStep[step].complete);
+  const completedSteps = cumulativeCompletedReadinessSteps(COURSE_READINESS_STEPS, readiness);
+
+  const showIncompleteStep = (step: CursoReadinessStep) => {
+    setActiveStep(step);
+    const firstIssue = readiness.byStep[step].issues[0];
+    toast({
+      title: 'Completa esta etapa para continuar',
+      ...(firstIssue ? { description: firstIssue.message } : {}),
+      variant: 'error',
+    });
+    if (step === 'info') void trigger(['titulo', 'descricao', 'capaUrl']);
+    if (step === 'curriculum') void trigger('modulos');
+    if (step === 'merit') void trigger(['visibilidade', 'gratuito', 'preco', 'moeda']);
   };
 
-  const coursesPath = user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/instituicao/cursos';
+  const handleStepChange = (targetStep: string) => {
+    const targetIndex = COURSE_BUILDER_STEPS.findIndex((step) => step.id === targetStep);
+    if (targetIndex < 0) return;
+    const blockingStep = findBlockingReadinessStep({
+      activeStep,
+      targetStep,
+      steps: COURSE_BUILDER_STEPS,
+      readinessSteps: COURSE_READINESS_STEPS,
+      readiness,
+    });
+    if (blockingStep) {
+      showIncompleteStep(blockingStep);
+      return;
+    }
+    setActiveStep(targetStep);
+  };
+
+  const showFormErrors = (validationErrors: FieldErrors<FormValues>) => {
+    const invalidLabels = Object.keys(validationErrors).map(courseFieldLabel);
+    const specificMessage = firstCourseFormErrorMessage(validationErrors);
+    toast({
+      title: 'Revê os campos do curso',
+      description: specificMessage ?? `Verifica: ${[...new Set(invalidLabels)].join(', ')}.`,
+      variant: 'error',
+    });
+  };
+
+  const transitionWhenReady = (estado: 'review' | 'published') => {
+    if (!readiness.ready) {
+      if (firstIncompleteStep) showIncompleteStep(firstIncompleteStep);
+      return;
+    }
+    if (estado === 'published' && !cursoId) {
+      toast({ title: 'Guarda primeiro o curso como rascunho.', variant: 'error' });
+      return;
+    }
+    void handleSubmit(
+      (data) => { estadoMutation.mutate({ estado, data }); },
+      showFormErrors,
+    )();
+  };
 
   const submitWithState = (estado: FormValues['estado']) => {
     void handleSubmit((data) => {
       mutation.mutate({ ...data, estado });
-    }, (validationErrors) => {
-      toast({
-        title: 'Revê os campos do curso',
-        description: `Campos inválidos: ${Object.keys(validationErrors).join(', ')}`,
-        variant: 'error',
-      });
-    })();
+    }, showFormErrors)();
   };
 
   if (isEditing && cursoQuery.isLoading) {
@@ -161,12 +220,10 @@ export function SovereignCourseBuilder() {
       <RichBuilderShell
         title={isEditing ? 'Editar curso' : 'Criar curso'}
         backTo={coursesPath}
-        steps={[
-          { id: 'info', label: 'Básico', description: 'Identidade do curso' },
-          { id: 'curriculum', label: 'Currículo', description: 'Módulos e conteúdos' },
-          { id: 'merit', label: 'Acesso', description: 'Público e requisitos' },
-          { id: 'review', label: 'Revisão', description: 'Verificar e submeter' },
-        ]}
+        steps={COURSE_BUILDER_STEPS.map((step) => ({ ...step }))}
+        activeStep={activeStep}
+        onStepChange={handleStepChange}
+        completedSteps={completedSteps}
         actions={(
           <span className="rounded-full border border-[var(--chrome-border)] bg-recessed px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-secondary">
             {!isEditing
@@ -185,14 +242,19 @@ export function SovereignCourseBuilder() {
               watch={watch}
               setValue={setValue}
               errors={errors}
+              coverRequired={!readiness.byStep.info.complete}
             />
             <BuilderActionsBar
               state={cursoQuery.data?.estado ?? 'draft'}
               userRole={user?.role || 'instituicao'}
               onSaveDraft={() => { submitWithState('draft'); }}
-              onSubmitReview={() => { submitWithState('review'); }}
-              onPublish={handlePublish}
+              onSubmitReview={() => { transitionWhenReady('review'); }}
+              submitReviewLabel={isEditing ? 'Submeter para revisão' : 'Guardar e submeter para revisão'}
+              onPublish={() => { transitionWhenReady('published'); }}
               isSubmitting={mutation.isPending || estadoMutation.isPending}
+              isReady={readiness.ready}
+              pendingRequirements={readiness.issues.length}
+              onResolveRequirements={() => { if (firstIncompleteStep) showIncompleteStep(firstIncompleteStep); }}
             />
           </div>
         )}
@@ -202,7 +264,8 @@ export function SovereignCourseBuilder() {
           title="Informação do curso"
           description="Define o título, a descrição, a área vocacional e o nível."
         >
-          <CourseBaseInfo register={register} errors={errors} />
+          <CourseBaseInfo control={control} register={register} errors={errors} />
+          <CourseStepReadiness step="info" readiness={readiness} />
         </BuilderSection>
 
         <BuilderSection
@@ -211,6 +274,7 @@ export function SovereignCourseBuilder() {
           description="Define a preparação recomendada para iniciar o curso. A visibilidade e o preço ficam sempre acessíveis no painel lateral."
         >
           <CourseMeritGuard register={register} watch={watch} />
+          <CourseStepReadiness step="merit" readiness={readiness} />
         </BuilderSection>
 
         <BuilderSection
@@ -218,7 +282,8 @@ export function SovereignCourseBuilder() {
           title="Currículo"
           description="Organiza módulos e itens na ordem em que serão consumidos."
         >
-          <CourseCurriculum register={register} control={control} setValue={setValue} modulosArray={modulosArray} />
+          <CourseCurriculum register={register} control={control} setValue={setValue} trigger={trigger} modulosArray={modulosArray} />
+          <CourseStepReadiness step="curriculum" readiness={readiness} />
         </BuilderSection>
 
         <BuilderSection
@@ -226,7 +291,16 @@ export function SovereignCourseBuilder() {
           title="Rever antes de submeter"
           description="Confirma o essencial do curso e regressa diretamente a qualquer etapa incompleta."
         >
-          <CourseReviewPanel control={control} errors={errors} />
+          <CourseReviewPanel
+            values={{ titulo, area, nivel, modulos }}
+            readiness={readiness}
+            onResolve={showIncompleteStep}
+            {...((cursoQuery.data?.estado ?? 'draft') === 'draft' ? {
+              submitLabel: isEditing ? 'Submeter para revisão' : 'Guardar e submeter para revisão',
+              onSubmit: () => { transitionWhenReady('review'); },
+              submitDisabled: !readiness.ready || mutation.isPending || estadoMutation.isPending,
+            } : {})}
+          />
         </BuilderSection>
       </RichBuilderShell>
     </form>

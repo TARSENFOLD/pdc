@@ -8,11 +8,23 @@ test.describe('Admin - Configurações', () => {
 
   test('admin can toggle feature flags', async ({ adminPage }) => {
     await adminPage.goto('/app/admin/feature-flags');
-    const toggle = adminPage.locator('button[role="switch"], input[type="checkbox"]').first();
-    if (await toggle.isVisible()) {
-      const initialState = await toggle.getAttribute('aria-checked');
+    const flagRow = adminPage.getByTestId('feature-flag-DISCUSSIONS_ENABLED');
+    const toggle = flagRow.getByRole('button', { name: /^(Ligar|Desligar)$/ });
+    await expect(toggle).toBeVisible();
+
+    const initialLabel = (await toggle.textContent())?.trim();
+    expect(initialLabel === 'Ligar' || initialLabel === 'Desligar').toBeTruthy();
+    const toggledLabel = initialLabel === 'Ligar' ? 'Desligar' : 'Ligar';
+
+    try {
       await toggle.click();
-      await expect(toggle).not.toHaveAttribute('aria-checked', initialState === 'true' ? 'true' : 'false', { timeout: 5_000 });
+      await expect(toggle).toHaveText(toggledLabel, { timeout: 5_000 });
+    } finally {
+      const currentLabel = (await toggle.textContent())?.trim();
+      if (currentLabel !== initialLabel) {
+        await toggle.click();
+        await expect(toggle).toHaveText(initialLabel ?? '', { timeout: 5_000 });
+      }
     }
   });
 });

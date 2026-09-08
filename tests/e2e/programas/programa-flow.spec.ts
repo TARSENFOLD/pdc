@@ -30,7 +30,7 @@ test.describe('Programa - criar, editar e pré-visualizar', () => {
     const createResponsePromise = adminPage.waitForResponse((response) =>
       response.url().endsWith('/programas') && response.request().method() === 'POST'
     );
-    await adminPage.getByRole('button', { name: /salvar rascunho/i }).click();
+    await adminPage.getByRole('button', { name: /guardar rascunho/i }).click();
     const createResponse = await createResponsePromise;
     const createBody = await createResponse.text();
     expect(createResponse.status(), createBody).toBe(201);

@@ -1,15 +1,31 @@
 import { z } from 'zod';
 import { AreaVocacionalSchema, EstadoEditorialSchema } from './schemas/enums.js';
+import { inspectCourseModulePlacement } from './cursos-placement.js';
+import { CursoItemImagemSchema } from './cursos-media.js';
 
-const OptionalUrlSchema = z.preprocess(
-  (value) => value === '' ? undefined : value,
-  z.string().url().optional(),
-);
+export * from './cursos-readiness.js';
+export {
+  CURSO_ITEM_IMAGEM_ALT_MAX_LENGTH,
+  CURSO_ITEM_IMAGEM_ALT_MIN_LENGTH,
+  CursoItemImagemSchema,
+  CursoItemImagensSchema,
+} from './cursos-media.js';
+export type { CursoItemImagem } from './cursos-media.js';
 
-const OptionalNullableUrlSchema = z.preprocess(
-  (value) => value === '' ? undefined : value,
-  z.string().url().optional().nullable(),
-);
+export const CURSO_DESCRICAO_MAX_LENGTH = 2_000;
+
+const OptionalUrlSchema = z.union([
+  z.literal(''),
+  z.string().url(),
+  z.undefined(),
+]);
+
+const OptionalNullableUrlSchema = z.union([
+  z.literal(''),
+  z.string().url(),
+  z.null(),
+  z.undefined(),
+]);
 
 export const ItemModuloSchema = z.object({
   id: z.string(),
@@ -18,6 +34,7 @@ export const ItemModuloSchema = z.object({
   conteudo: z.string().optional(),
   url: OptionalNullableUrlSchema,
   videoId: z.string().optional(),
+  imagens: z.array(CursoItemImagemSchema).optional().nullable(),
   ordem: z.number(),
   duracaoMinutos: z.number().optional(),
 });
@@ -46,6 +63,7 @@ export const CursoSchema = z.object({
   preco: z.number().optional(),
   moeda: z.string().optional(),
   capaUrl: OptionalUrlSchema,
+  visibilidade: z.enum(['publico', 'privado', 'institucional']).optional(),
   autorId: z.string(),
   totalHoras: z.number(),
   estado: EstadoEditorialSchema.optional().default('draft'),
@@ -71,53 +89,111 @@ export const CursoSchema = z.object({
 
 export type Curso = z.infer<typeof CursoSchema>;
 
-export const CriarCursoPayloadSchema = z.object({
-  titulo: z.string().min(3).max(120),
-  descricao: z.string().min(10).max(2000),
+const CriarCursoItemPayloadSchema = z.object({
+  persistedId: z.string().optional(),
+  titulo: z.string().min(3),
+  tipo: z.enum(['video', 'pdf', 'texto', 'quiz', 'tarefa', 'iframe']),
+  conteudo: z.string().optional(),
+  url: OptionalUrlSchema,
+  videoId: z.string().optional(),
+  imagens: z.array(CursoItemImagemSchema).optional(),
+  ordem: z.number().int().nonnegative(),
+});
+
+const CriarCursoModuloPayloadSchema = z.object({
+  persistedId: z.string().optional(),
+  titulo: z.string().min(3),
+  ordem: z.number().int().nonnegative(),
+  itens: z.array(CriarCursoItemPayloadSchema),
+}).superRefine((modulo, context) => {
+  const placement = inspectCourseModulePlacement(modulo.itens);
+  placement.duplicateOrderIndexes.forEach((index) => {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['itens', index, 'ordem'],
+      message: 'Cada aula deve ter uma posição única no módulo.',
+    });
+  });
+  if (placement.videoIndexes.length > 1) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['itens'],
+      message: 'Cada módulo pode ter no máximo um vídeo.',
+    });
+  }
+  if (placement.misplacedVideoIndex !== undefined) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['itens', placement.misplacedVideoIndex],
+      message: 'O vídeo deve ser o primeiro conteúdo do módulo.',
+    });
+  }
+});
+
+export const CriarCursoPayloadBaseSchema = z.object({
+  titulo: z.string()
+    .min(3, 'Adiciona um título com pelo menos 3 caracteres.')
+    .max(120, 'O título pode ter no máximo 120 caracteres.'),
+  descricao: z.string()
+    .min(10, 'Escreve uma descrição com pelo menos 10 caracteres.')
+    .max(CURSO_DESCRICAO_MAX_LENGTH, `A descrição pode ter no máximo ${String(CURSO_DESCRICAO_MAX_LENGTH)} caracteres.`),
   area: AreaVocacionalSchema,
   nivel: z.enum(['basico', 'medio', 'avancado']),
   thumbnailUrl: OptionalUrlSchema,
   capaUrl: OptionalUrlSchema,
-  visibilidade: z.enum(['publico', 'privado', 'institucional']).optional().default('publico'),
+  visibilidade: z.enum(['publico', 'privado', 'institucional']).optional(),
 
   // Pricing (Passo 4 do Wizard)
-  gratuito: z.boolean().optional().default(true),
-  preco: z.number().min(0).optional().default(0),
+  gratuito: z.boolean().optional(),
+  preco: z.number().min(0).optional(),
   moeda: z.string().min(3).max(3).optional(),
-  comissao: z.number().min(0).max(100).optional().default(0),
+  comissao: z.number().min(0).max(100).optional(),
   estado: z.enum(['draft', 'review', 'published']).optional(),
 
   // Comité Científico (opt-in)
-  requerValidacaoComite: z.boolean().optional().default(false),
+  requerValidacaoComite: z.boolean().optional(),
 
   // Regras de Match Soberano (Mandatário para E2E)
   regrasAcesso: z.object({
-    minFluidez: z.number().min(0).max(10).optional().default(0),
-    minResiliencia: z.number().min(0).max(10).optional().default(0),
-    minFoco: z.number().min(0).max(10).optional().default(0),
+    minFluidez: z.number().min(0).max(10).optional(),
+    minResiliencia: z.number().min(0).max(10).optional(),
+    minFoco: z.number().min(0).max(10).optional(),
   }),
 
   // Estrutura em Cascata (Mandatário para E2E)
-  modulos: z.array(z.object({
-    persistedId: z.string().optional(),
-    titulo: z.string().min(3),
-    ordem: z.number(),
-    itens: z.array(z.object({
-      persistedId: z.string().optional(),
-      titulo: z.string().min(3),
-      tipo: z.enum(['video', 'pdf', 'texto', 'quiz', 'tarefa', 'iframe']),
-      conteudo: z.string().optional(),
-      url: OptionalUrlSchema,
-      videoId: z.string().optional(),
-      ordem: z.number(),
-    })).min(1),
-  })).min(1),
+  modulos: z.array(CriarCursoModuloPayloadSchema).min(1),
+});
+
+function validateUniqueModuleOrders(
+  modulos: readonly { ordem: number }[] | undefined,
+  context: z.RefinementCtx,
+): void {
+  const seenOrders = new Set<number>();
+  modulos?.forEach((modulo, index) => {
+    if (seenOrders.has(modulo.ordem)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['modulos', index, 'ordem'],
+        message: 'Cada módulo deve ter uma posição única no curso.',
+      });
+    }
+    seenOrders.add(modulo.ordem);
+  });
+}
+
+export const CriarCursoPayloadSchema = CriarCursoPayloadBaseSchema.superRefine((curso, context) => {
+  validateUniqueModuleOrders(curso.modulos, context);
+});
+
+export const AtualizarCursoPayloadSchema = CriarCursoPayloadBaseSchema.partial().superRefine((curso, context) => {
+  validateUniqueModuleOrders(curso.modulos, context);
 });
 
 export type CriarCursoPayload = z.infer<typeof CriarCursoPayloadSchema>;
 
 export const CursoMeuSchema = z.object({
   id: z.string(),
+  documentId: z.string().optional(),
   slug: z.string(),
   titulo: z.string(),
   descricao: z.string(),

@@ -1,12 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono, type Context, type Next } from 'hono';
+import { z } from 'zod';
 import { cursoRoutes } from './cursos.js';
 import { strapiDelete, strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
 import { DomainEventName } from '../modules/events/types.js';
-import type { StrapiListResponse, StrapiSingleResponse } from '@pdc/shared';
+import {
+  CursoReadinessIssueSchema,
+  type StrapiListResponse,
+  type StrapiSingleResponse,
+} from '@pdc/shared';
 import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
 const publishWithOutboxMock = vi.hoisted(() => vi.fn().mockResolvedValue({ id: 'evt-1' }));
+const CourseNotReadyResponseSchema = z.object({
+  code: z.literal('COURSE_NOT_READY'),
+  issues: z.array(CursoReadinessIssueSchema),
+});
+const LockedCourseResponseSchema = z
+  .object({
+    modulos: z
+      .array(
+        z
+          .object({
+            itens: z.array(z.object({ id: z.string() }).passthrough()).min(1),
+          })
+          .passthrough()
+      )
+      .min(1),
+  })
+  .passthrough();
 
 function listResponse<T>(data: Array<T & { id: string | number }>): StrapiListResponse<T> {
   return {
@@ -91,6 +113,321 @@ describe('cursoRoutes E2E contracts', () => {
     expect(strapiGet).not.toHaveBeenCalled();
   });
 
+  it('não submete para revisão um curso sem capa, currículo e conteúdo completos', async () => {
+    const incompleteCourse = {
+      id: 'curso-1',
+      documentId: 'doc-curso-1',
+      titulo: 'Curso incompleto',
+      descricao: 'Ainda faltam elementos obrigatórios.',
+      autorId: 'mentor-1',
+      estado: 'draft',
+      visibilidade: 'publico',
+      gratuito: true,
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([incompleteCourse]))
+      .mockResolvedValueOnce(listResponse([incompleteCourse]))
+      .mockResolvedValueOnce(listResponse([]));
+
+    const res = await app.request('/cursos/curso-1/submeter', {
+      method: 'POST',
+      headers: { 'x-test-user': 'mentor-1', 'x-test-role': 'mentor' },
+    });
+
+    expect(res.status).toBe(422);
+    const body = CourseNotReadyResponseSchema.parse(await res.json());
+    expect(body.code).toBe('COURSE_NOT_READY');
+    expect(body.issues.map((issue) => issue.path)).toEqual(
+      expect.arrayContaining(['capaUrl', 'modulos'])
+    );
+    expect(strapiPut).not.toHaveBeenCalled();
+  });
+
+  it('não submete quando a aula existe mas ainda não tem conteúdo', async () => {
+    const incompleteLessonCourse = {
+      id: 'curso-1',
+      documentId: 'doc-curso-1',
+      titulo: 'Curso quase completo',
+      descricao: 'A identidade está pronta mas a aula continua vazia.',
+      area: 'ENGENHARIA',
+      nivel: 'medio',
+      thumbnailUrl: 'https://cdn.example.com/capa.webp',
+      autorId: 'mentor-1',
+      estado: 'draft',
+      visibilidade: 'publico',
+      gratuito: true,
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([incompleteLessonCourse]))
+      .mockResolvedValueOnce(listResponse([incompleteLessonCourse]))
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'mod-1',
+            documentId: 'doc-mod-1',
+            titulo: 'Fundamentos',
+            ordem: 1,
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'item-1',
+            documentId: 'doc-item-1',
+            titulo: 'Primeira aula',
+            tipo: 'texto',
+            ordem: 1,
+          },
+        ])
+      );
+
+    const res = await app.request('/cursos/curso-1/submeter', {
+      method: 'POST',
+      headers: { 'x-test-user': 'mentor-1', 'x-test-role': 'mentor' },
+    });
+
+    expect(res.status).toBe(422);
+    const body = CourseNotReadyResponseSchema.parse(await res.json());
+    expect(body.issues.map((issue) => issue.path)).toContain('modulos.0.itens.0.conteudo');
+    expect(strapiPut).not.toHaveBeenCalled();
+  });
+
+  it('nem super_admin publica um curso aprovado mas incompleto', async () => {
+    const incompleteApprovedCourse = {
+      id: 'curso-1',
+      documentId: 'doc-curso-1',
+      titulo: 'Curso incompleto',
+      descricao: 'Ainda faltam elementos obrigatórios.',
+      autorId: 'mentor-1',
+      estado: 'approved',
+      visibilidade: 'publico',
+      gratuito: true,
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([incompleteApprovedCourse]))
+      .mockResolvedValueOnce(listResponse([incompleteApprovedCourse]))
+      .mockResolvedValueOnce(listResponse([]));
+
+    const res = await app.request('/cursos/curso-1/estado', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-user': 'admin-1',
+        'x-test-role': 'super_admin',
+      },
+      body: JSON.stringify({ estado: 'published' }),
+    });
+
+    expect(res.status).toBe(422);
+    const body = CourseNotReadyResponseSchema.parse(await res.json());
+    expect(body.issues.map((issue) => issue.path)).toEqual(
+      expect.arrayContaining(['capaUrl', 'modulos'])
+    );
+    expect(strapiPut).not.toHaveBeenCalled();
+  });
+
+  it('bloqueia também a transição PATCH direta de draft para review', async () => {
+    const incompleteDraft = {
+      id: 'curso-1',
+      documentId: 'doc-curso-1',
+      titulo: 'Curso incompleto',
+      descricao: 'Ainda faltam elementos obrigatórios.',
+      autorId: 'mentor-1',
+      estado: 'draft',
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([incompleteDraft]))
+      .mockResolvedValueOnce(listResponse([incompleteDraft]))
+      .mockResolvedValueOnce(listResponse([]));
+
+    const res = await app.request('/cursos/curso-1/estado', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-user': 'mentor-1',
+        'x-test-role': 'mentor',
+      },
+      body: JSON.stringify({ estado: 'review' }),
+    });
+
+    expect(res.status).toBe(422);
+    const body = CourseNotReadyResponseSchema.parse(await res.json());
+    expect(body.issues.map((issue) => issue.path)).toEqual(
+      expect.arrayContaining(['capaUrl', 'modulos'])
+    );
+    expect(strapiPut).not.toHaveBeenCalled();
+  });
+
+  it('recusa a transição para review quando o curso já não está em draft', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce(
+      listResponse([
+        {
+          id: 'curso-1',
+          documentId: 'doc-curso-1',
+          titulo: 'Curso já submetido',
+          descricao: 'Curso que já saiu do estado de rascunho.',
+          autorId: 'mentor-1',
+          estado: 'approved',
+        },
+      ])
+    );
+
+    const res = await app.request('/cursos/curso-1/estado', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-user': 'mentor-1',
+        'x-test-role': 'mentor',
+      },
+      body: JSON.stringify({ estado: 'review' }),
+    });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'Transição inválida de approved para review' });
+    expect(strapiPut).not.toHaveBeenCalled();
+  });
+
+  it('submete para revisão quando todos os critérios estão completos', async () => {
+    const completeDraft = {
+      id: 'curso-1',
+      documentId: 'doc-curso-1',
+      titulo: 'Curso completo',
+      descricao: 'Curso pronto para a validação editorial.',
+      area: 'ENGENHARIA',
+      nivel: 'medio',
+      thumbnailUrl: 'https://cdn.example.com/capa.webp',
+      autorId: 'mentor-1',
+      estado: 'draft',
+      visibilidade: 'publico',
+      gratuito: true,
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([completeDraft]))
+      .mockResolvedValueOnce(listResponse([completeDraft]))
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'mod-1',
+            documentId: 'doc-mod-1',
+            titulo: 'Fundamentos',
+            ordem: 1,
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'item-1',
+            documentId: 'doc-item-1',
+            titulo: 'Primeira aula',
+            tipo: 'texto',
+            conteudo: 'Conteúdo completo da primeira aula.',
+            ordem: 1,
+          },
+        ])
+      )
+      .mockResolvedValueOnce(listResponse([completeDraft]));
+    vi.mocked(strapiPut).mockResolvedValueOnce(singleResponse({ id: 'curso-1', estado: 'review' }));
+
+    const res = await app.request('/cursos/curso-1/submeter', {
+      method: 'POST',
+      headers: { 'x-test-user': 'mentor-1', 'x-test-role': 'mentor' },
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true });
+    expect(strapiPut).toHaveBeenCalledWith(
+      '/cursos/doc-curso-1',
+      { estado: 'review' },
+      { status: 'draft' }
+    );
+  });
+
+  it('publica a versão Strapi quando o curso aprovado está completo', async () => {
+    const completeApproved = {
+      id: 'curso-1',
+      documentId: 'doc-curso-1',
+      titulo: 'Curso completo',
+      descricao: 'Curso aprovado e pronto para ficar disponível no catálogo.',
+      area: 'ENGENHARIA',
+      nivel: 'medio',
+      thumbnailUrl: 'https://cdn.example.com/capa.webp',
+      autorId: 'mentor-1',
+      estado: 'approved',
+      visibilidade: 'publico',
+      gratuito: true,
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([completeApproved]))
+      .mockResolvedValueOnce(listResponse([completeApproved]))
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'mod-1',
+            documentId: 'doc-mod-1',
+            titulo: 'Fundamentos',
+            ordem: 1,
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'item-1',
+            documentId: 'doc-item-1',
+            titulo: 'Primeira aula',
+            tipo: 'texto',
+            conteudo: 'Conteúdo completo da primeira aula.',
+            ordem: 1,
+          },
+        ])
+      )
+      .mockResolvedValueOnce(listResponse([completeApproved]));
+    vi.mocked(strapiPut)
+      .mockResolvedValueOnce(
+        singleResponse({
+          ...completeApproved,
+          estado: 'approved',
+        })
+      )
+      .mockResolvedValueOnce(
+        singleResponse({
+          ...completeApproved,
+          estado: 'published',
+        })
+      );
+
+    const res = await app.request('/cursos/curso-1/estado', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-user': 'mentor-1',
+        'x-test-role': 'mentor',
+      },
+      body: JSON.stringify({ estado: 'published' }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(strapiPut).toHaveBeenCalledWith(
+      '/cursos/doc-curso-1',
+      { estado: 'published' },
+      { status: 'draft' }
+    );
+    expect(strapiPut).toHaveBeenCalledWith(
+      '/cursos/doc-curso-1',
+      { estado: 'approved' },
+      { status: 'published' }
+    );
+    const putOrder = vi.mocked(strapiPut).mock.invocationCallOrder;
+    expect(putOrder).toHaveLength(2);
+    expect(putOrder[0]).toBeLessThan(putOrder[1] as number);
+    expect(publishWithOutboxMock).toHaveBeenCalledWith(
+      DomainEventName.CURSO_PUBLICADO,
+      expect.objectContaining({ cursoId: 'curso-1', autorId: 'mentor-1' })
+    );
+  });
+
   const payload = {
     titulo: 'Curso de Engenharia Aplicada',
     descricao: 'Percurso prático com teoria e laboratório suficientes para validação.',
@@ -101,11 +438,26 @@ describe('cursoRoutes E2E contracts', () => {
     preco: 0,
     regrasAcesso: { minFluidez: 0, minResiliencia: 0, minFoco: 0 },
     estado: 'review',
-    modulos: [{
-      titulo: 'Módulo Inicial',
-      ordem: 1,
-      itens: [{ titulo: 'Aula de abertura', tipo: 'texto', conteudo: 'Bem-vindo', ordem: 1 }],
-    }],
+    modulos: [
+      {
+        titulo: 'Módulo Inicial',
+        ordem: 1,
+        itens: [
+          {
+            titulo: 'Aula de abertura',
+            tipo: 'texto',
+            conteudo: 'Bem-vindo',
+            imagens: [
+              {
+                url: 'https://cdn.example.com/abertura.webp',
+                alt: 'Estudantes reunidos numa aula',
+              },
+            ],
+            ordem: 1,
+          },
+        ],
+      },
+    ],
   };
 
   const approvedCourse = {
@@ -119,21 +471,27 @@ describe('cursoRoutes E2E contracts', () => {
 
   it('conta permitida guarda curso como draft sem publicar ou submeter', async () => {
     vi.mocked(strapiPost)
-      .mockResolvedValueOnce(singleResponse({
-        id: 'curso-1',
-        documentId: 'doc-curso-1',
-        ...payload,
-        autorId: 'inst-user',
-        estado: 'draft',
-      }))
-      .mockResolvedValueOnce(singleResponse({
-        id: 'mod-1',
-        documentId: 'doc-mod-1',
-        titulo: 'Módulo Inicial',
-        ordem: 1,
-        itens: [],
-      }))
-      .mockResolvedValueOnce(singleResponse({ id: 'item-1', titulo: 'Aula de abertura', tipo: 'texto', ordem: 1 }));
+      .mockResolvedValueOnce(
+        singleResponse({
+          id: 'curso-1',
+          documentId: 'doc-curso-1',
+          ...payload,
+          autorId: 'inst-user',
+          estado: 'draft',
+        })
+      )
+      .mockResolvedValueOnce(
+        singleResponse({
+          id: 'mod-1',
+          documentId: 'doc-mod-1',
+          titulo: 'Módulo Inicial',
+          ordem: 1,
+          itens: [],
+        })
+      )
+      .mockResolvedValueOnce(
+        singleResponse({ id: 'item-1', titulo: 'Aula de abertura', tipo: 'texto', ordem: 1 })
+      );
 
     const res = await app.request('/cursos', {
       method: 'POST',
@@ -147,47 +505,69 @@ describe('cursoRoutes E2E contracts', () => {
     });
 
     expect(res.status).toBe(201);
-    expect(strapiPost).toHaveBeenCalledWith('/cursos', expect.objectContaining({
-      autorId: 'inst-user',
-      autor: 'perfil-inst',
-      estado: 'draft',
-    }));
-    expect(strapiPost).toHaveBeenCalledWith('/modulos', expect.objectContaining({
-      curso: 'doc-curso-1',
-    }));
-    expect(strapiPost).toHaveBeenCalledWith('/modulo-items', expect.objectContaining({
-      modulo: 'doc-mod-1',
-    }));
+    expect(strapiPost).toHaveBeenCalledWith(
+      '/cursos',
+      expect.objectContaining({
+        autorId: 'inst-user',
+        autor: 'perfil-inst',
+        estado: 'draft',
+      }),
+      { status: 'draft' }
+    );
+    expect(strapiPost).toHaveBeenCalledWith(
+      '/modulos',
+      expect.objectContaining({
+        curso: 'doc-curso-1',
+      })
+    );
+    expect(strapiPost).toHaveBeenCalledWith(
+      '/modulo-items',
+      expect.objectContaining({
+        modulo: 'doc-mod-1',
+        imagens: [
+          { url: 'https://cdn.example.com/abertura.webp', alt: 'Estudantes reunidos numa aula' },
+        ],
+      })
+    );
     expect(publishWithOutboxMock).not.toHaveBeenCalledWith(
       DomainEventName.CURSO_SUBMETIDO_COMITE,
-      expect.anything(),
+      expect.anything()
     );
-    expect(publishWithOutboxMock).not.toHaveBeenCalledWith(DomainEventName.CURSO_PUBLICADO, expect.anything());
+    expect(publishWithOutboxMock).not.toHaveBeenCalledWith(
+      DomainEventName.CURSO_PUBLICADO,
+      expect.anything()
+    );
   });
 
   it('QA interno guarda draft mesmo com onboarding externo desligado', async () => {
     vi.mocked(featureFlagService.isEnabled).mockResolvedValue(false);
     vi.mocked(strapiPost)
-      .mockResolvedValueOnce(singleResponse({
-        id: 'curso-qa',
-        documentId: 'doc-curso-qa',
-        ...payload,
-        autorId: 'qa-user',
-        estado: 'draft',
-      }))
-      .mockResolvedValueOnce(singleResponse({
-        id: 'mod-qa',
-        documentId: 'doc-mod-qa',
-        titulo: 'Módulo Inicial',
-        ordem: 1,
-        itens: [],
-      }))
-      .mockResolvedValueOnce(singleResponse({
-        id: 'item-qa',
-        titulo: 'Aula de abertura',
-        tipo: 'texto',
-        ordem: 1,
-      }));
+      .mockResolvedValueOnce(
+        singleResponse({
+          id: 'curso-qa',
+          documentId: 'doc-curso-qa',
+          ...payload,
+          autorId: 'qa-user',
+          estado: 'draft',
+        })
+      )
+      .mockResolvedValueOnce(
+        singleResponse({
+          id: 'mod-qa',
+          documentId: 'doc-mod-qa',
+          titulo: 'Módulo Inicial',
+          ordem: 1,
+          itens: [],
+        })
+      )
+      .mockResolvedValueOnce(
+        singleResponse({
+          id: 'item-qa',
+          titulo: 'Aula de abertura',
+          tipo: 'texto',
+          ordem: 1,
+        })
+      );
 
     const res = await app.request('/cursos', {
       method: 'POST',
@@ -201,10 +581,14 @@ describe('cursoRoutes E2E contracts', () => {
     });
 
     expect(res.status).toBe(201);
-    expect(strapiPost).toHaveBeenCalledWith('/cursos', expect.objectContaining({
-      autorId: 'qa-user',
-      estado: 'draft',
-    }));
+    expect(strapiPost).toHaveBeenCalledWith(
+      '/cursos',
+      expect.objectContaining({
+        autorId: 'qa-user',
+        estado: 'draft',
+      }),
+      { status: 'draft' }
+    );
   });
 
   it('inscreve mentor/instituição/estudante usando relação perfil+curso', async () => {
@@ -213,14 +597,16 @@ describe('cursoRoutes E2E contracts', () => {
       .mockResolvedValueOnce(listResponse([approvedCourse]))
       .mockResolvedValueOnce(listResponse([]))
       .mockResolvedValueOnce(listResponse([]));
-    vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({
-      id: 'insc-1',
-      curso: { id: 'curso-1' },
-      perfil: { id: 'perfil-1' },
-      dataInscricao: '2026-05-15',
-      progressoPercentual: 0,
-      modulosConcluidos: [],
-    }));
+    vi.mocked(strapiPost).mockResolvedValueOnce(
+      singleResponse({
+        id: 'insc-1',
+        curso: { id: 'curso-1' },
+        perfil: { id: 'perfil-1' },
+        dataInscricao: '2026-05-15',
+        progressoPercentual: 0,
+        modulosConcluidos: [],
+      })
+    );
 
     const res = await app.request('/cursos/curso-1/inscricao', {
       method: 'POST',
@@ -228,13 +614,16 @@ describe('cursoRoutes E2E contracts', () => {
     });
 
     expect(res.status).toBe(201);
-    expect(strapiPost).toHaveBeenCalledWith('/inscricoes', expect.objectContaining({
-      curso: 'doc-curso-1',
-      perfil: 'perfil-1',
-      role: 'mentor',
-      progressoPercentual: 0,
-      modulosConcluidos: [],
-    }));
+    expect(strapiPost).toHaveBeenCalledWith(
+      '/inscricoes',
+      expect.objectContaining({
+        curso: 'doc-curso-1',
+        perfil: 'perfil-1',
+        role: 'mentor',
+        progressoPercentual: 0,
+        modulosConcluidos: [],
+      })
+    );
   });
 
   it('lista progresso apenas quando existe inscrição', async () => {
@@ -255,34 +644,51 @@ describe('cursoRoutes E2E contracts', () => {
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(listResponse([approvedCourse]))
       .mockResolvedValueOnce(listResponse([approvedCourse]))
-      .mockResolvedValueOnce(listResponse([{
-        id: 'insc-1',
-        documentId: 'doc-insc-1',
-        dataInscricao: '2026-05-15',
-        progressoPercentual: 0,
-        modulosConcluidos: [],
-      }]))
-      .mockResolvedValueOnce(listResponse([{
-        id: 'insc-1',
-        documentId: 'doc-insc-1',
-        dataInscricao: '2026-05-15',
-        progressoPercentual: 0,
-        modulosConcluidos: [],
-      }]))
-      .mockResolvedValueOnce(listResponse([{
-        id: 'mod-1',
-        titulo: 'M',
-        ordem: 1,
-      }]))
-      .mockResolvedValueOnce(listResponse([{
-        id: 'item-1',
-        titulo: 'Item 1',
-        ordem: 1,
-      }, {
-        id: 'item-2',
-        titulo: 'Item 2',
-        ordem: 2,
-      }]));
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'insc-1',
+            documentId: 'doc-insc-1',
+            dataInscricao: '2026-05-15',
+            progressoPercentual: 0,
+            modulosConcluidos: [],
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'insc-1',
+            documentId: 'doc-insc-1',
+            dataInscricao: '2026-05-15',
+            progressoPercentual: 0,
+            modulosConcluidos: [],
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'mod-1',
+            titulo: 'M',
+            ordem: 1,
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'item-1',
+            titulo: 'Item 1',
+            ordem: 1,
+          },
+          {
+            id: 'item-2',
+            titulo: 'Item 2',
+            ordem: 2,
+          },
+        ])
+      );
     vi.mocked(strapiPut).mockResolvedValueOnce(singleResponse({ id: 'insc-1' }));
 
     const res = await app.request('/cursos/curso-1/progresso/item-1', {
@@ -296,10 +702,18 @@ describe('cursoRoutes E2E contracts', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(strapiPut).toHaveBeenCalledWith('/inscricoes/doc-insc-1', expect.objectContaining({
-      progressoPercentual: 50,
-      modulosConcluidos: [expect.objectContaining({ itemId: 'item-1', concluido: true })],
-    }));
+    expect(strapiPut).toHaveBeenCalledWith(
+      '/inscricoes/doc-insc-1',
+      expect.objectContaining({
+        progressoPercentual: 50,
+        modulosConcluidos: [expect.objectContaining({ itemId: 'item-1', concluido: true })],
+      })
+    );
+    expect(strapiGet).toHaveBeenCalledWith('/modulos', {
+      'filters[$or][0][curso][documentId][$eq]': 'doc-curso-1',
+      sort: 'ordem:asc',
+      'pagination[pageSize]': '100',
+    });
     expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.CURSO_ITEM_CONCLUIDO, {
       cursoId: 'doc-curso-1',
       itemId: 'item-1',
@@ -309,37 +723,51 @@ describe('cursoRoutes E2E contracts', () => {
 
   it('sincroniza módulos e itens ao editar curso existente', async () => {
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce(listResponse([{
-        id: 'curso-1',
-        titulo: 'Curso antigo',
-        autorId: 'mentor-user',
-      }]))
-      .mockResolvedValueOnce(listResponse([{
-        id: 'curso-1',
-        documentId: 'doc-curso-1',
-      }]))
-      .mockResolvedValueOnce(listResponse([{
-        id: 'mod-1',
-        documentId: 'doc-mod-1',
-        titulo: 'Módulo existente',
-        ordem: 1,
-      }]))
-      .mockResolvedValueOnce(listResponse([
-        {
-          id: 'item-1',
-          documentId: 'doc-item-1',
-          titulo: 'Item existente',
-          tipo: 'texto',
-          ordem: 1,
-        },
-        {
-          id: 'item-removido',
-          documentId: 'doc-item-removido',
-          titulo: 'Item removido',
-          tipo: 'texto',
-          ordem: 2,
-        },
-      ]));
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'curso-1',
+            titulo: 'Curso antigo',
+            autorId: 'mentor-user',
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'curso-1',
+            documentId: 'doc-curso-1',
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'mod-1',
+            documentId: 'doc-mod-1',
+            titulo: 'Módulo existente',
+            ordem: 1,
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'item-1',
+            documentId: 'doc-item-1',
+            titulo: 'Item existente',
+            tipo: 'texto',
+            ordem: 1,
+          },
+          {
+            id: 'item-removido',
+            documentId: 'doc-item-removido',
+            titulo: 'Item removido',
+            tipo: 'texto',
+            ordem: 2,
+          },
+        ])
+      );
     vi.mocked(strapiPut)
       .mockResolvedValueOnce(singleResponse({ id: 'curso-1' }))
       .mockResolvedValueOnce(singleResponse({ id: 'mod-1' }))
@@ -357,24 +785,45 @@ describe('cursoRoutes E2E contracts', () => {
       },
       body: JSON.stringify({
         titulo: 'Curso editado',
-        modulos: [{
-          persistedId: 'doc-mod-1',
-          titulo: 'Módulo editado',
-          ordem: 1,
-          itens: [
-            { persistedId: 'doc-item-1', titulo: 'Item editado', tipo: 'texto', conteudo: 'Atualizado', ordem: 1 },
-            { titulo: 'Item novo', tipo: 'texto', conteudo: 'Novo', ordem: 2 },
-          ],
-        }],
+        modulos: [
+          {
+            persistedId: 'doc-mod-1',
+            titulo: 'Módulo editado',
+            ordem: 1,
+            itens: [
+              {
+                persistedId: 'doc-item-1',
+                titulo: 'Item editado',
+                tipo: 'texto',
+                conteudo: 'Atualizado',
+                ordem: 1,
+              },
+              { titulo: 'Item novo', tipo: 'texto', conteudo: 'Novo', ordem: 2 },
+            ],
+          },
+        ],
       }),
     });
 
     expect(res.status).toBe(200);
-    expect(strapiPut).toHaveBeenCalledWith('/cursos/doc-curso-1', expect.objectContaining({ titulo: 'Curso editado' }));
+    expect(strapiPut).toHaveBeenCalledWith(
+      '/cursos/doc-curso-1',
+      expect.objectContaining({ titulo: 'Curso editado' }),
+      { status: 'draft' }
+    );
     expect(strapiDelete).toHaveBeenCalledWith('/modulo-items/doc-item-removido');
-    expect(strapiPut).toHaveBeenCalledWith('/modulos/doc-mod-1', expect.objectContaining({ titulo: 'Módulo editado' }));
-    expect(strapiPut).toHaveBeenCalledWith('/modulo-items/doc-item-1', expect.objectContaining({ titulo: 'Item editado' }));
-    expect(strapiPost).toHaveBeenCalledWith('/modulo-items', expect.objectContaining({ titulo: 'Item novo' }));
+    expect(strapiPut).toHaveBeenCalledWith(
+      '/modulos/doc-mod-1',
+      expect.objectContaining({ titulo: 'Módulo editado' })
+    );
+    expect(strapiPut).toHaveBeenCalledWith(
+      '/modulo-items/doc-item-1',
+      expect.objectContaining({ titulo: 'Item editado' })
+    );
+    expect(strapiPost).toHaveBeenCalledWith(
+      '/modulo-items',
+      expect.objectContaining({ titulo: 'Item novo' })
+    );
     expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.CURSO_ATUALIZADO, {
       cursoId: 'curso-1',
       autorId: 'mentor-user',
@@ -383,44 +832,60 @@ describe('cursoRoutes E2E contracts', () => {
 
   it('expõe documentId como identidade persistente de módulos e itens', async () => {
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce(listResponse([{
-        id: 'curso-1',
-        documentId: 'doc-curso-1',
-        titulo: 'Curso',
-        descricao: 'Descrição válida do curso.',
-        slug: 'curso',
-        autorId: 'mentor-user',
-        totalHoras: 1,
-        estado: 'draft',
-        createdAt: '2026-06-14T10:00:00.000Z',
-        updatedAt: '2026-06-14T10:00:00.000Z',
-      }]))
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'curso-1',
+            documentId: 'doc-curso-1',
+            titulo: 'Curso',
+            descricao: 'Descrição válida do curso.',
+            slug: 'curso',
+            autorId: 'mentor-user',
+            totalHoras: 1,
+            estado: 'draft',
+            createdAt: '2026-06-14T10:00:00.000Z',
+            updatedAt: '2026-06-14T10:00:00.000Z',
+          },
+        ])
+      )
       .mockResolvedValueOnce(listResponse([]))
-      .mockResolvedValueOnce(listResponse([{
-        id: 'curso-1',
-        documentId: 'doc-curso-1',
-        titulo: 'Curso',
-        descricao: 'Descrição válida do curso.',
-        slug: 'curso',
-        autorId: 'mentor-user',
-        totalHoras: 1,
-        estado: 'draft',
-        createdAt: '2026-06-14T10:00:00.000Z',
-        updatedAt: '2026-06-14T10:00:00.000Z',
-      }]))
-      .mockResolvedValueOnce(listResponse([{
-        id: 'mod-1',
-        documentId: 'doc-mod-1',
-        titulo: 'Módulo',
-        ordem: 1,
-      }]))
-      .mockResolvedValueOnce(listResponse([{
-        id: 'item-1',
-        documentId: 'doc-item-1',
-        titulo: 'Item',
-        tipo: 'texto',
-        ordem: 1,
-      }]));
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'curso-1',
+            documentId: 'doc-curso-1',
+            titulo: 'Curso',
+            descricao: 'Descrição válida do curso.',
+            slug: 'curso',
+            autorId: 'mentor-user',
+            totalHoras: 1,
+            estado: 'draft',
+            createdAt: '2026-06-14T10:00:00.000Z',
+            updatedAt: '2026-06-14T10:00:00.000Z',
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'mod-1',
+            documentId: 'doc-mod-1',
+            titulo: 'Módulo',
+            ordem: 1,
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'item-1',
+            documentId: 'doc-item-1',
+            titulo: 'Item',
+            tipo: 'texto',
+            ordem: 1,
+          },
+        ])
+      );
 
     const res = await app.request('/cursos/curso-1?preview=true', {
       headers: {
@@ -430,9 +895,49 @@ describe('cursoRoutes E2E contracts', () => {
     });
 
     expect(res.status).toBe(200);
-    const body = await res.json() as { modulos: Array<{ id: string; itens: Array<{ id: string }> }> };
+    const body = (await res.json()) as {
+      modulos: Array<{ id: string; itens: Array<{ id: string }> }>;
+    };
     expect(body.modulos[0]?.id).toBe('doc-mod-1');
     expect(body.modulos[0]?.itens[0]?.id).toBe('doc-item-1');
+  });
+
+  it('não expõe a galeria da aula no detalhe público bloqueado', async () => {
+    const published = {
+      ...approvedCourse,
+      slug: 'curso-publicado',
+      totalHoras: 1,
+      createdAt: '2026-09-03T10:00:00.000Z',
+      updatedAt: '2026-09-03T10:00:00.000Z',
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([published]))
+      .mockResolvedValueOnce(listResponse([published]))
+      .mockResolvedValueOnce(listResponse([published]))
+      .mockResolvedValueOnce(listResponse([{ id: 'mod-1', titulo: 'Módulo', ordem: 1 }]))
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'item-1',
+            titulo: 'Aula protegida',
+            tipo: 'texto',
+            ordem: 1,
+            conteudo: 'Corpo protegido',
+            imagens: [{ url: 'https://cdn.example.com/protegida.webp', alt: 'Imagem protegida' }],
+          },
+        ])
+      );
+
+    const res = await app.request('/cursos/curso-1');
+
+    expect(res.status).toBe(200);
+    const body = LockedCourseResponseSchema.parse(await res.json());
+    const firstModule = body.modulos[0];
+    if (!firstModule) throw new Error('Resposta pública sem módulo');
+    const firstItem = firstModule.itens[0];
+    if (!firstItem) throw new Error('Resposta pública sem aula');
+    expect(firstItem).not.toHaveProperty('conteudo');
+    expect(firstItem).not.toHaveProperty('imagens');
   });
 
   it.each(['draft', 'review', 'hidden', 'archived'] as const)(
@@ -454,12 +959,14 @@ describe('cursoRoutes E2E contracts', () => {
         code: 'CONTENT_NOT_FOUND',
       });
       expect(strapiPost).not.toHaveBeenCalled();
-    },
+    }
   );
 
   it('devolve PREVIEW_ONLY antes de o autor consumir o próprio draft', async () => {
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce(listResponse([{ ...approvedCourse, estado: 'draft', autorId: 'author-1' }]))
+      .mockResolvedValueOnce(
+        listResponse([{ ...approvedCourse, estado: 'draft', autorId: 'author-1' }])
+      )
       .mockResolvedValueOnce(listResponse([]))
       .mockResolvedValueOnce(listResponse([]));
 
@@ -516,11 +1023,15 @@ describe('cursoRoutes E2E contracts', () => {
 
   it('lista de inscrições também bloqueia uma relação com curso ocultado', async () => {
     vi.mocked(strapiGet)
-      .mockResolvedValueOnce(listResponse([{
-        id: 'insc-1',
-        dataInscricao: '2026-08-01',
-        curso: { id: 'curso-1' },
-      }]))
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'insc-1',
+            dataInscricao: '2026-08-01',
+            curso: { id: 'curso-1' },
+          },
+        ])
+      )
       .mockResolvedValueOnce(listResponse([{ ...approvedCourse, estado: 'hidden' }]))
       .mockResolvedValueOnce(listResponse([approvedCourse]));
 
@@ -561,7 +1072,10 @@ describe('cursoRoutes E2E contracts', () => {
 
     const headers = { 'x-test-role': 'estudante', 'x-test-perfil': 'perfil-1' };
     const missing = await app.request('/cursos/missing/inscricao', { method: 'POST', headers });
-    const privateContent = await app.request('/cursos/private/inscricao', { method: 'POST', headers });
+    const privateContent = await app.request('/cursos/private/inscricao', {
+      method: 'POST',
+      headers,
+    });
 
     expect(missing.status).toBe(404);
     expect(privateContent.status).toBe(404);

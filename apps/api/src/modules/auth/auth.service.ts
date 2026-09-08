@@ -148,7 +148,7 @@ export const authService = {
 
     const resPerfil = await strapiGet<StrapiPerfilData>('/perfis', {
       'filters[userId][$eq]': id,
-      'populate': ['foto', 'capa', 'conquistas'],
+      'populate': ['foto', 'capa', 'conquistas', 'instituicao', 'instituicaoGerida'],
     });
 
     const perfilData = resPerfil.data[0] ?? null;
@@ -224,6 +224,7 @@ export const authService = {
 
   mapStrapiUser(u: StrapiUser, perfil: StrapiPerfilData | null, reputationScore = 0): User {
     const oauthProvider = perfil?.oauthProvider;
+    const instituicao = perfil?.instituicaoGerida ?? perfil?.instituicao;
     const consentsResult = ConsentStateSchema.safeParse(perfil?.consents);
     const estadoMenoridade = perfil?.estadoMenoridade ?? resolveEstadoMenoridade(perfil?.dataNascimento ?? undefined);
     return {
@@ -232,6 +233,7 @@ export const authService = {
       nome: perfil?.nome ?? u.nome ?? u.username,
       role: resolveRole(u.role?.name, perfil?.tipo),
       perfilId: perfil?.id === undefined ? undefined : String(perfil.id),
+      instituicaoId: instituicao?.id === undefined ? undefined : String(instituicao.id),
       avatarUrl: resolvePerfilAvatar(perfil?.avatarUrl, perfil?.foto, u.avatar?.url),
       bannerUrl: perfil?.bannerUrl ?? undefined,
       reputacaoTier: getTier(reputationScore),

@@ -12,6 +12,7 @@ import { toast } from '@/hooks/useToast';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ProgressoItem, Curso, Modulo, ItemModulo } from '@pdc/shared';
 import { RatingStars } from '@/components/ui/RatingStars';
+import { countCurrentCompletedItems, isEnrollmentRequiredError } from './course-progress';
 
 export function CursoDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -68,13 +69,19 @@ export function CursoDetailPage() {
     return <div className="flex min-h-screen items-center justify-center bg-canvas p-4"><EmptyState icon={BookOpen} variant="error" title="Erro ao carregar o curso" description="Não foi possível carregar os dados deste curso." /></div>;
   }
 
+  const enrollmentRequired = progressoQuery.isError
+    && isEnrollmentRequiredError(progressoQuery.error);
+  const progressUnavailable = progressoQuery.isError && !enrollmentRequired;
   const isEnrolled = progressoQuery.data !== undefined;
   const isBlockedByMerit = curso.bloqueado;
   const motivoBloqueio = curso.motivoBloqueio;
   const isPaid = !curso.gratuito;
   const modulos = curso.modulos ?? [];
   const totalItems = modulos.reduce((total, modulo) => total + modulo.itens.length, 0);
-  const completedItems = progresso.filter((item) => item.concluido).length;
+  const completedItems = countCurrentCompletedItems(
+    modulos.flatMap((modulo) => modulo.itens.map((item) => String(item.id))),
+    progresso,
+  );
   const progressoPercentual = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   const handleEnrollClick = () => {
@@ -212,14 +219,28 @@ export function CursoDetailPage() {
                           </div>
                           <Button variant="ghost" onClick={() => { setShowPayInfo(false); }} className="w-full text-ink-tertiary text-[9px] font-black uppercase">Voltar</Button>
                        </motion.div>
+                     ) : progressoQuery.isPending ? (
+                       <div className="flex h-16 items-center justify-center"><Spinner /></div>
+                     ) : progressUnavailable ? (
+                       <div className="space-y-3 rounded-2xl border border-error/20 bg-error/5 p-5 text-center">
+                         <p className="text-sm text-error">Não foi possível verificar a tua inscrição.</p>
+                         <Button type="button" variant="outline" onClick={() => { void progressoQuery.refetch(); }}>
+                           Tentar novamente
+                         </Button>
+                       </div>
+                     ) : isEnrolled ? (
+                       <Link to={`/app/cursos/${id}/interior`} className="block">
+                         <Button className="w-full h-16 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs hover:scale-[1.02] shadow-xl shadow-accent/20">
+                           {completedItems > 0 ? 'Continuar curso' : 'Entrar no curso'}
+                         </Button>
+                       </Link>
                      ) : (
                        <Button 
                          onClick={handleEnrollClick}
                          isLoading={inscricaoMutation.isPending}
-                         disabled={isEnrolled}
                          className="w-full h-16 rounded-2xl bg-accent text-white font-black uppercase tracking-widest text-xs hover:scale-[1.02] shadow-xl shadow-accent/20"
                        >
-                         {isEnrolled ? 'Já fazes parte da Trilha' : 'Iniciar Percurso Soberano'}
+                         Iniciar Percurso Soberano
                        </Button>
                      )}
                    </AnimatePresence>

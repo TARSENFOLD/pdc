@@ -20,6 +20,7 @@ export * from './ecosystem-hook.js';
 export * from './home.js';
 export * from './strapi.js';
 export * from './content-access.js';
+export * from './safe-url.js';
 
 // Schemas Modulares
 export * from './schemas/subscricoes.js';

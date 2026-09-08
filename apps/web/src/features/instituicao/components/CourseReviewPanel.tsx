@@ -1,20 +1,31 @@
-import { Check, CircleAlert, FileText, Layers3 } from 'lucide-react';
-import { useWatch, type Control, type FieldErrors } from 'react-hook-form';
-import type { CriarCursoPayload } from '@pdc/shared';
+import { Check, ChevronRight, CircleAlert, FileText, Layers3, Send } from 'lucide-react';
+import { CursoReadinessStepSchema, type CursoReadinessResult, type CursoReadinessStep, type CriarCursoPayload } from '@pdc/shared';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui';
 
 interface CourseReviewPanelProps {
-  control: Control<CriarCursoPayload>;
-  errors: FieldErrors<CriarCursoPayload>;
+  values: Pick<CriarCursoPayload, 'titulo' | 'area' | 'nivel' | 'modulos'>;
+  readiness: CursoReadinessResult;
+  onResolve: (step: CursoReadinessStep) => void;
+  submitLabel?: string;
+  onSubmit?: () => void;
+  submitDisabled?: boolean;
 }
 
 interface CheckItemProps {
   complete: boolean;
   label: string;
   detail: string;
+  onResolve?: () => void;
 }
 
-function CheckItem({ complete, label, detail }: CheckItemProps): React.JSX.Element {
+const CHECK_COPY: Record<CursoReadinessStep, { label: string; okDetail: string }> = {
+  info: { label: 'Informação básica', okDetail: 'Título, descrição e capa estão prontos.' },
+  curriculum: { label: 'Currículo', okDetail: 'Todos os módulos têm aulas com conteúdo real.' },
+  merit: { label: 'Acesso e preço', okDetail: 'Visibilidade e modalidade de acesso estão coerentes.' },
+};
+
+function CheckItem({ complete, label, detail, onResolve }: CheckItemProps): React.JSX.Element {
   return (
     <li className="flex items-start gap-3 border-b border-border py-4 last:border-b-0">
       <span className={cn(
@@ -25,24 +36,36 @@ function CheckItem({ complete, label, detail }: CheckItemProps): React.JSX.Eleme
       )}>
         {complete ? <Check size={14} aria-hidden="true" /> : <CircleAlert size={14} aria-hidden="true" />}
       </span>
-      <span>
+      <span className="min-w-0 flex-1">
         <span className="block text-sm font-bold text-ink-primary">{label}</span>
         <span className="mt-0.5 block text-xs leading-5 text-ink-tertiary">{detail}</span>
       </span>
+      {!complete && onResolve ? (
+        <button type="button" onClick={onResolve} className="inline-flex min-h-9 shrink-0 items-center gap-1 text-xs font-bold text-accent hover:underline">
+          Corrigir <ChevronRight size={14} aria-hidden="true" />
+        </button>
+      ) : null}
     </li>
   );
 }
 
-export function CourseReviewPanel({ control, errors }: CourseReviewPanelProps): React.JSX.Element {
-  const values = useWatch({ control });
+export function CourseReviewPanel({
+  values,
+  readiness,
+  onResolve,
+  submitLabel,
+  onSubmit,
+  submitDisabled,
+}: CourseReviewPanelProps): React.JSX.Element {
   const modules = values.modulos ?? [];
   const itemCount = modules.reduce((total, module) => total + (module?.itens?.length ?? 0), 0);
-  const identityComplete = Boolean(values.titulo?.trim() && values.descricao?.trim());
-  const curriculumComplete = modules.length > 0 && itemCount > 0;
-  const pricingComplete = values.gratuito === true || Number(values.preco) > 0;
-  const hasValidationErrors = Object.keys(errors).length > 0;
-  const completedChecks = [identityComplete, curriculumComplete, pricingComplete, !hasValidationErrors]
-    .filter(Boolean).length;
+  const checks = CursoReadinessStepSchema.options.map((step) => ({
+    id: step,
+    result: readiness.byStep[step],
+    copy: CHECK_COPY[step],
+  }));
+  const completedChecks = checks.filter(({ result }) => result.complete).length;
+  const totalChecks = checks.length;
 
   return (
     <div className="space-y-6">
@@ -65,7 +88,7 @@ export function CourseReviewPanel({ control, errors }: CourseReviewPanelProps): 
             {modules.length} {modules.length === 1 ? 'módulo' : 'módulos'}
           </p>
           <p className="mt-2 text-xs text-ink-secondary">
-            {itemCount} {itemCount === 1 ? 'conteúdo preparado' : 'conteúdos preparados'}
+            {itemCount} {itemCount === 1 ? 'aula preparada' : 'aulas preparadas'}
           </p>
         </article>
       </div>
@@ -77,16 +100,28 @@ export function CourseReviewPanel({ control, errors }: CourseReviewPanelProps): 
             <p className="mt-1 text-xs text-ink-tertiary">Verificações essenciais deste rascunho.</p>
           </div>
           <span className="rounded-full bg-recessed px-3 py-1 text-xs font-bold text-ink-secondary">
-            {completedChecks}/4
+            {completedChecks}/{totalChecks}
           </span>
         </div>
         <ul>
-          <CheckItem complete={identityComplete} label="Informação básica" detail="Título e descrição identificam claramente o curso." />
-          <CheckItem complete={curriculumComplete} label="Currículo" detail="Existe pelo menos um módulo com conteúdo." />
-          <CheckItem complete={pricingComplete} label="Acesso e preço" detail="A modalidade gratuita ou o preço estão coerentes." />
-          <CheckItem complete={!hasValidationErrors} label="Validação" detail="O formulário não apresenta campos inválidos conhecidos." />
+          {checks.map(({ id, result, copy }) => (
+            <CheckItem
+              key={id}
+              complete={result.complete}
+              label={copy.label}
+              detail={result.issues[0]?.message ?? copy.okDetail}
+              onResolve={() => { onResolve(id); }}
+            />
+          ))}
         </ul>
       </div>
+      {submitLabel && onSubmit ? (
+        <div className="flex justify-end border-t border-border pt-6">
+          <Button type="button" disabled={submitDisabled} onClick={onSubmit} className="gap-2">
+            <Send size={15} aria-hidden="true" /> {submitLabel}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

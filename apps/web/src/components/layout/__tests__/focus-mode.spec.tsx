@@ -29,6 +29,7 @@ describe('focus mode routes', () => {
     '/app/projetos/projeto-1/editar',
     '/app/mentor/cursos/criar',
     '/app/instituicao/simulacoes/sim-1/editar',
+    '/app/cursos/curso-1/interior',
   ])('ativa focus mode para %s', (pathname) => {
     expect(isFocusMode(pathname)).toBe(true);
   });

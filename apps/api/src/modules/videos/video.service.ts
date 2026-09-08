@@ -3,8 +3,10 @@ import {
   ConfirmVideoUploadPayloadSchema,
   CreateExternalVideoPayloadSchema,
   CreateR2VideoPayloadSchema,
+  QuickR2VideoResponseSchema,
   VideoPlaybackResponseSchema,
   VideoSchema,
+  VIDEO_QUICK_UPLOAD_MAX_BYTES,
   type ConfirmVideoUploadPayload,
   type CreateExternalVideoPayload,
   type CreateR2VideoPayload,
@@ -13,22 +15,35 @@ import {
   type VideoPlaybackResponse,
 } from '@pdc/shared';
 import { strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
-import { generatePresignedReadUrl, generatePresignedUrl, getPublicUrl } from '../media/r2.service.js';
-import { ALLOWED_MEDIA_MIME_TYPES } from '../media/file-type-guard.js';
+import {
+  generatePresignedReadUrl,
+  generatePresignedUrl,
+  getPublicUrl,
+  isR2Configured,
+  uploadToR2,
+} from '../media/r2.service.js';
+import { ALLOWED_MEDIA_MIME_TYPES, validateMagicBytes } from '../media/file-type-guard.js';
 import { eventBus } from '../events/event-bus.js';
 import { DomainEventName } from '../events/types.js';
 import { cursosService } from '../cursos/cursos.service.js';
 import type { AuthVariables } from '../auth/auth.middleware.js';
+import { env } from '../../lib/env.js';
+import { videoMultipartService } from './video-multipart.service.js';
 
-const QUICK_VIDEO_LIMIT_BYTES = 50 * 1024 * 1024;
 const SIGNED_PLAYBACK_TTL_SECONDS = 15 * 60;
 
-interface VideoRecord extends Omit<Video, 'id'> {
+interface VideoRecord {
   id: string | number;
   documentId?: string;
+  [key: string]: unknown;
 }
 
 type AuthUser = AuthVariables['user'];
+
+export interface DirectVideoUploadAuthorization {
+  key: string;
+  mimeType: string;
+}
 
 function first<T>(data: T | T[] | undefined): T | undefined {
   return Array.isArray(data) ? data[0] : data;
@@ -38,10 +53,31 @@ function persistedId(video: VideoRecord): string {
   return video.documentId ?? String(video.id);
 }
 
+function nullableToUndefined(value: unknown): unknown {
+  return value === null ? undefined : value;
+}
+
+function strapiBigIntegerToNumber(value: unknown): unknown {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) return value;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : value;
+}
+
 function toVideo(record: VideoRecord): Video {
   return VideoSchema.parse({
     ...record,
     id: persistedId(record),
+    durationSeconds: nullableToUndefined(record.durationSeconds),
+    sizeBytes: strapiBigIntegerToNumber(record.sizeBytes),
+    mimeType: nullableToUndefined(record.mimeType),
+    thumbnailUrl: nullableToUndefined(record.thumbnailUrl),
+    originalKey: nullableToUndefined(record.originalKey),
+    streamUrl: nullableToUndefined(record.streamUrl),
+    externalUrl: nullableToUndefined(record.externalUrl),
+    chapters: nullableToUndefined(record.chapters),
+    subtitles: nullableToUndefined(record.subtitles),
+    failureReason: nullableToUndefined(record.failureReason),
   });
 }
 
@@ -50,9 +86,11 @@ function safeFilename(filename: string): string {
 }
 
 async function getVideoRecord(id: string): Promise<VideoRecord | undefined> {
+  const filters = /^\d+$/.test(id)
+    ? { 'filters[id][$eq]': id }
+    : { 'filters[documentId][$eq]': id };
   const res = await strapiGet<VideoRecord>('/videos', {
-    'filters[$or][0][documentId][$eq]': id,
-    'filters[$or][1][id][$eq]': id,
+    ...filters,
     'pagination[pageSize]': '1',
   });
   return first(res.data);
@@ -63,12 +101,54 @@ function ensureOwnerOrStaff(video: Video, user: AuthUser): void {
   throw Object.assign(new Error('Sem permissão para gerir este vídeo'), { status: 403 });
 }
 
+async function authorizeDirectContentUpload(
+  videoId: string,
+  mimeType: string,
+  user: AuthUser,
+): Promise<DirectVideoUploadAuthorization> {
+  const record = await getVideoRecord(videoId);
+  if (!record) throw Object.assign(new Error('Vídeo não encontrado'), { status: 404 });
+  const video = toVideo(record);
+  ensureOwnerOrStaff(video, user);
+  if (
+    video.provider !== 'r2'
+    || video.mode !== 'quick_upload'
+    || video.status !== 'pending_upload'
+    || !video.originalKey
+  ) {
+    throw Object.assign(new Error('Este vídeo não aceita upload de conteúdo'), { status: 409 });
+  }
+  if (mimeType !== video.mimeType || !ALLOWED_MEDIA_MIME_TYPES.has(mimeType) || !mimeType.startsWith('video/')) {
+    throw Object.assign(new Error('Tipo de vídeo não permitido pelo ecossistema.'), { status: 415 });
+  }
+  return { key: video.originalKey, mimeType };
+}
+
+async function storeAuthorizedContent(
+  authorization: DirectVideoUploadAuthorization,
+  body: Uint8Array,
+): Promise<void> {
+  if (body.byteLength === 0) {
+    throw Object.assign(new Error('O vídeo enviado está vazio.'), { status: 400 });
+  }
+  if (body.byteLength > VIDEO_QUICK_UPLOAD_MAX_BYTES) {
+    throw Object.assign(new Error('Upload rápido de vídeo limitado a 50MB.'), { status: 413 });
+  }
+
+  const buffer = Buffer.from(body.buffer, body.byteOffset, body.byteLength);
+  const magicBytes = await validateMagicBytes(buffer, authorization.mimeType);
+  if (!magicBytes.ok) {
+    throw Object.assign(new Error(magicBytes.reason), { status: 415 });
+  }
+  await uploadToR2(authorization.key, buffer, authorization.mimeType);
+}
+
 async function canAccessProtected(video: Video, user: AuthUser, courseId?: string): Promise<boolean> {
   if (video.ownerId === user.id || ['comite_cientifico', 'moderador', 'super_admin'].includes(user.role)) {
     return true;
   }
   if (!courseId) return false;
-  const curso = await cursosService.obterCursoComModulos(courseId);
+  const curso = await cursosService.obterCursoComModulos(courseId, 'published');
   if (!curso) return false;
   if (curso.autorId === user.id) return true;
   const hasVideo = curso.modulos?.some((modulo) =>
@@ -98,18 +178,22 @@ export const videoService = {
 
   async createR2(rawPayload: CreateR2VideoPayload, user: AuthUser): Promise<CreateR2VideoResponse> {
     const payload = CreateR2VideoPayloadSchema.parse(rawPayload);
-    if (payload.mode === 'professional_upload') {
-      throw Object.assign(new Error('Upload profissional requer multipart e worker dedicado.'), { status: 501 });
-    }
     if (!ALLOWED_MEDIA_MIME_TYPES.has(payload.mimeType) || !payload.mimeType.startsWith('video/')) {
       throw Object.assign(new Error('Tipo de vídeo não permitido pelo ecossistema.'), { status: 415 });
     }
-    if (payload.sizeBytes > QUICK_VIDEO_LIMIT_BYTES) {
+    if (payload.mode === 'professional_upload') {
+      return videoMultipartService.create(payload, user);
+    }
+    if (payload.sizeBytes > VIDEO_QUICK_UPLOAD_MAX_BYTES) {
       throw Object.assign(new Error('Upload rápido de vídeo limitado a 50MB.'), { status: 413 });
     }
 
     const seedId = crypto.randomUUID();
     const key = `videos/${user.id}/${seedId}-${safeFilename(payload.filename)}`;
+    const uploadMethod = isR2Configured() ? 'presigned' : 'direct';
+    const presignedUploadUrl = uploadMethod === 'presigned'
+      ? await generatePresignedUrl(key, payload.mimeType)
+      : undefined;
     const res = await strapiPost<VideoRecord>('/videos', {
       provider: 'r2',
       mode: payload.mode,
@@ -122,11 +206,32 @@ export const videoService = {
       sizeBytes: payload.sizeBytes,
     });
     const video = toVideo(res.data);
-    return {
+    return QuickR2VideoResponseSchema.parse({
       video,
-      uploadUrl: await generatePresignedUrl(key, payload.mimeType),
+      uploadUrl: presignedUploadUrl ?? `${env.API_URL}/videos/${video.id}/content`,
+      uploadMethod,
       key,
-    };
+    });
+  },
+
+  async authorizeContentUpload(
+    videoId: string,
+    mimeType: string,
+    user: AuthUser,
+  ): Promise<DirectVideoUploadAuthorization> {
+    return authorizeDirectContentUpload(videoId, mimeType, user);
+  },
+
+  async uploadAuthorizedContent(
+    authorization: DirectVideoUploadAuthorization,
+    body: Uint8Array,
+  ): Promise<void> {
+    await storeAuthorizedContent(authorization, body);
+  },
+
+  async uploadContent(videoId: string, body: Uint8Array, mimeType: string, user: AuthUser): Promise<void> {
+    const authorization = await authorizeDirectContentUpload(videoId, mimeType, user);
+    await storeAuthorizedContent(authorization, body);
   },
 
   async confirmUpload(videoId: string, rawPayload: ConfirmVideoUploadPayload, user: AuthUser): Promise<Video> {
@@ -135,7 +240,7 @@ export const videoService = {
     if (!record) throw Object.assign(new Error('Vídeo não encontrado'), { status: 404 });
     const video = toVideo(record);
     ensureOwnerOrStaff(video, user);
-    if (video.provider !== 'r2' || video.originalKey !== payload.key) {
+    if (video.provider !== 'r2' || video.mode !== 'quick_upload' || video.originalKey !== payload.key) {
       throw Object.assign(new Error('Chave de vídeo inválida'), { status: 409 });
     }
     const publicUrl = getPublicUrl(payload.key);

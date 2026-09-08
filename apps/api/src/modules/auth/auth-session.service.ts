@@ -169,6 +169,7 @@ function hashToken(token: string): string {
 function accessClaims(user: User, authEpoch: number): Record<string, unknown> {
   const claims: Record<string, unknown> = { sub: user.id, role: user.role, ver: authEpoch };
   if (user.perfilId) claims.perfilId = user.perfilId;
+  if (user.instituicaoId) claims.instituicaoId = user.instituicaoId;
   if (user.onboardingCompleto != null) claims.onboardingCompleto = user.onboardingCompleto;
   if (user.estadoMenoridade != null) claims.estadoMenoridade = user.estadoMenoridade;
   if (user.consentimentoEstado != null) claims.consentimentoEstado = user.consentimentoEstado;

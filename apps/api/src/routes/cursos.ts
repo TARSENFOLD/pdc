@@ -1,12 +1,25 @@
 import { Hono, type Handler } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { verifyJwt, optionalJwt, type AuthVariables, type OptionalAuthVariables } from '../modules/auth/auth.middleware.js';
+import {
+  verifyJwt,
+  optionalJwt,
+  type AuthVariables,
+  type OptionalAuthVariables,
+} from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { requireApproved } from '../middleware/requireApproved.js';
 import { rateLimitContentCreate } from '../middleware/rateLimit.js';
 import { strapiGet } from '../modules/strapi/strapi.client.js';
-import { CriarCursoPayloadSchema, type CriarCursoPayload, Curso, Inscricao, BehaviorPattern } from '@pdc/shared';
+import {
+  AtualizarCursoPayloadSchema,
+  avaliarProntidaoCurso,
+  CriarCursoPayloadSchema,
+  type CriarCursoPayload,
+  Curso,
+  Inscricao,
+  BehaviorPattern,
+} from '@pdc/shared';
 import { cursosService } from '../modules/cursos/cursos.service.js';
 import { applyPublicCatalogStateFilter } from './publication-state.js';
 import { toPaginatedResponse } from './pagination.js';
@@ -24,6 +37,7 @@ import {
   parseContentState,
 } from '../modules/conteudo/content-access.service.js';
 import { persistedEntityId } from '../modules/strapi/strapi-entity.js';
+import { env } from '../lib/env.js';
 
 // C-01: OptionalAuthVariables — GET / e GET /:id são públicos; rotas protegidas usam verifyJwt individualmente
 type Vars = { Variables: OptionalAuthVariables };
@@ -55,6 +69,7 @@ function stripLockedItems(curso: Curso): Curso {
         ...item,
         conteudo: undefined,
         url: undefined,
+        imagens: undefined,
       })),
     })),
   };
@@ -75,7 +90,9 @@ cursoRoutes.get('/', optionalJwt, zValidator('query', cursoQuerySchema), async (
     const res = await strapiGet<Curso>('/cursos', params);
 
     if (user?.role === 'estudante') {
-      const patternsRes = await strapiGet<BehaviorPattern>('/behavior-patterns', { 'filters[perfil][userId][$eq]': user.id });
+      const patternsRes = await strapiGet<BehaviorPattern>('/behavior-patterns', {
+        'filters[perfil][userId][$eq]': user.id,
+      });
       const pattern = patternsRes.data[0];
 
       const enrichedData = res.data.map((curso) => {
@@ -83,8 +100,22 @@ cursoRoutes.get('/', optionalJwt, zValidator('query', cursoQuerySchema), async (
         let blocked = false;
         let reason = '';
         if (rules && pattern) {
-          if (rules.minFluidez && Number.isFinite(pattern.cognitiveFluidity) && pattern.cognitiveFluidity < rules.minFluidez) { blocked = true; reason = 'Fluidez insuficiente'; }
-          if (rules.minResiliencia && Number.isFinite(pattern.resilienceIndex) && pattern.resilienceIndex < rules.minResiliencia) { blocked = true; reason = 'Resiliência insuficiente'; }
+          if (
+            rules.minFluidez &&
+            Number.isFinite(pattern.cognitiveFluidity) &&
+            pattern.cognitiveFluidity < rules.minFluidez
+          ) {
+            blocked = true;
+            reason = 'Fluidez insuficiente';
+          }
+          if (
+            rules.minResiliencia &&
+            Number.isFinite(pattern.resilienceIndex) &&
+            pattern.resilienceIndex < rules.minResiliencia
+          ) {
+            blocked = true;
+            reason = 'Resiliência insuficiente';
+          }
         }
         return { ...curso, bloqueado: blocked, motivoBloqueio: reason };
       });
@@ -97,19 +128,25 @@ cursoRoutes.get('/', optionalJwt, zValidator('query', cursoQuerySchema), async (
 });
 
 // GET /cursos/meus — cursos do criador (protegido)
-cursoRoutes.get('/meus', verifyJwt, checkRole(['mentor', 'instituicao', 'super_admin']), async (c) => {
-  const user = c.get('user');
-  try {
-    const res = await strapiGet<Curso>('/cursos', {
-      'filters[autorId][$eq]': user.id,
-      populate: 'autor',
-      'pagination[page]': c.req.query('page') || '1',
-    });
-    return c.json(toPaginatedResponse(res));
-  } catch (err: unknown) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+cursoRoutes.get(
+  '/meus',
+  verifyJwt,
+  checkRole(['mentor', 'instituicao', 'super_admin']),
+  async (c) => {
+    const user = c.get('user');
+    try {
+      const res = await strapiGet<Curso>('/cursos', {
+        'filters[autorId][$eq]': user.id,
+        populate: 'autor',
+        'pagination[page]': c.req.query('page') || '1',
+        status: 'draft',
+      });
+      return c.json(toPaginatedResponse(res));
+    } catch (err: unknown) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    }
   }
-});
+);
 
 // GET /cursos/me/inscricoes — inscrições do utilizador (protegido)
 cursoRoutes.get('/me/inscricoes', verifyJwt, async (c) => {
@@ -136,8 +173,10 @@ cursoRoutes.get('/me/inscricoes', verifyJwt, async (c) => {
         accessPolicy: 'granted',
       });
       if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
-      if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
-      if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      if (decision === 'content_not_available')
+        return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+      if (decision === 'content_not_found')
+        return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
     }
     return c.json(res);
   } catch {
@@ -171,11 +210,16 @@ cursoRoutes.get('/:id', optionalJwt, async (c) => {
         if (existing) return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
       }
       const previewRequested = c.req.query('preview') === 'true';
-      if (!previewRequested || !user || !current || !canPreviewContent({
-        actor: user,
-        authorId: current.autorId,
-        reviewerRoles: COURSE_REVIEWER_ROLES,
-      })) {
+      if (
+        !previewRequested ||
+        !user ||
+        !current ||
+        !canPreviewContent({
+          actor: user,
+          authorId: current.autorId,
+          reviewerRoles: COURSE_REVIEWER_ROLES,
+        })
+      ) {
         return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
       }
       const preview = await cursosService.obterCursoComModulos(id, 'draft');
@@ -187,7 +231,8 @@ cursoRoutes.get('/:id', optionalJwt, async (c) => {
     if (!data) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
     if (!user) return c.json(stripLockedItems(data));
 
-    const canSeeFullContent = data.autorId === user.id ||
+    const canSeeFullContent =
+      data.autorId === user.id ||
       ['comite_cientifico', 'moderador', 'super_admin'].includes(user.role);
     if (canSeeFullContent) return c.json(data);
 
@@ -200,42 +245,54 @@ cursoRoutes.get('/:id', optionalJwt, async (c) => {
 });
 
 // POST /cursos — criar curso (protegido)
-cursoRoutes.post('/', verifyJwt, checkRole(['mentor', 'instituicao', 'super_admin']), requireInternalQaCreatorAccess(), requireApproved(), rateLimitContentCreate, zValidator('json', CriarCursoPayloadSchema), async (c) => {
-  const user = c.get('user');
-  try {
-    const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
-    const draftPayload = {
-      ...c.req.valid('json'),
-      estado: 'draft',
-    } satisfies CriarCursoPayload;
-    const curso = await cursosService.criarCursoCompleto(
-      draftPayload,
-      user.id,
-      perfilId,
-    );
-    return c.json(curso, 201);
-  } catch (err: unknown) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+cursoRoutes.post(
+  '/',
+  verifyJwt,
+  checkRole(['mentor', 'instituicao', 'super_admin']),
+  requireInternalQaCreatorAccess(),
+  requireApproved(),
+  rateLimitContentCreate,
+  zValidator('json', CriarCursoPayloadSchema),
+  async (c) => {
+    const user = c.get('user');
+    try {
+      const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
+      const draftPayload = {
+        ...c.req.valid('json'),
+        estado: 'draft',
+      } satisfies CriarCursoPayload;
+      const curso = await cursosService.criarCursoCompleto(draftPayload, user.id, perfilId);
+      return c.json(curso, 201);
+    } catch (err: unknown) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
+    }
   }
-});
+);
 
 // PUT /cursos/:id — atualizar curso (protegido)
-cursoRoutes.put('/:id', verifyJwt, checkRole(['mentor', 'instituicao', 'super_admin']), requireInternalQaCreatorAccess(), zValidator('json', CriarCursoPayloadSchema.partial()), async (c) => {
-  const user = c.get('user');
-  try {
-    const curso = await cursosService.obterCursoBase(c.req.param('id'));
-    if (!curso) return c.json({ error: 'Curso não encontrado' }, 404);
-    if (curso.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
-      return c.json({ error: 'Não tem permissão' }, 403);
+cursoRoutes.put(
+  '/:id',
+  verifyJwt,
+  checkRole(['mentor', 'instituicao', 'super_admin']),
+  requireInternalQaCreatorAccess(),
+  zValidator('json', AtualizarCursoPayloadSchema),
+  async (c) => {
+    const user = c.get('user');
+    try {
+      const curso = await cursosService.obterCursoBase(c.req.param('id'));
+      if (!curso) return c.json({ error: 'Curso não encontrado' }, 404);
+      if (curso.autorId !== user.id && !['moderador', 'super_admin'].includes(user.role)) {
+        return c.json({ error: 'Não tem permissão' }, 403);
+      }
+      const { estado: _requestedState, ...draftChanges } = c.req.valid('json');
+      void _requestedState;
+      const resPut = await cursosService.atualizarCurso(c.req.param('id'), draftChanges, user.id);
+      return c.json(resPut);
+    } catch (err: unknown) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
-    const { estado: _requestedState, ...draftChanges } = c.req.valid('json');
-    void _requestedState;
-    const resPut = await cursosService.atualizarCurso(c.req.param('id'), draftChanges, user.id);
-    return c.json(resPut);
-  } catch (err: unknown) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
   }
-});
+);
 
 // POST /cursos/:id/submeter — submissão canónica para revisão
 cursoRoutes.post(
@@ -255,40 +312,90 @@ cursoRoutes.post(
       if (curso.estado !== 'draft') {
         return c.json({ error: `Transição inválida de ${curso.estado} para review` }, 409);
       }
-      await cursosService.alterarEstado(c.req.param('id'), 'review', curso.autorId, curso);
+      const completeCourse = await cursosService.obterCursoComModulos(c.req.param('id'), 'draft');
+      if (!completeCourse) return c.json({ error: 'Curso não encontrado' }, 404);
+      const readiness = avaliarProntidaoCurso(completeCourse, {
+        allowLocalHttp: env.NODE_ENV !== 'production',
+      });
+      if (!readiness.ready) {
+        return c.json(
+          {
+            error: 'O curso ainda não cumpre os critérios para revisão.',
+            code: 'COURSE_NOT_READY',
+            issues: readiness.issues,
+          },
+          422
+        );
+      }
+      await cursosService.alterarEstado(c.req.param('id'), 'review', curso.autorId, completeCourse);
       return c.json({ success: true });
     } catch (err: unknown) {
       return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
-  },
+  }
 );
 
 // PATCH /cursos/:id/estado (protegido)
-cursoRoutes.patch('/:id/estado', verifyJwt, checkRole(['mentor', 'instituicao', 'moderador', 'super_admin']), requireInternalQaCreatorAccess(), zValidator('json', z.object({ estado: z.enum(['draft', 'review', 'published', 'archived']) })), async (c) => {
-  const user = c.get('user');
-  try {
-    const nextState = c.req.valid('json').estado;
-    if (nextState === 'review') {
-      const unavailable = await disabledFeatureResponse(
-        c,
-        'content_submission_enabled',
-        'CONTENT_SUBMISSION_TEMPORARILY_DISABLED',
+cursoRoutes.patch(
+  '/:id/estado',
+  verifyJwt,
+  checkRole(['mentor', 'instituicao', 'moderador', 'super_admin']),
+  requireInternalQaCreatorAccess(),
+  zValidator('json', z.object({ estado: z.enum(['draft', 'review', 'published', 'archived']) })),
+  async (c) => {
+    const user = c.get('user');
+    try {
+      const nextState = c.req.valid('json').estado;
+      if (nextState === 'review') {
+        const unavailable = await disabledFeatureResponse(
+          c,
+          'content_submission_enabled',
+          'CONTENT_SUBMISSION_TEMPORARILY_DISABLED'
+        );
+        if (unavailable) return unavailable;
+      }
+      const curso = await cursosService.obterCursoBase(c.req.param('id'));
+      if (!curso) return c.json({ error: 'Curso não encontrado' }, 404);
+      const podeEditar =
+        user.id === curso.autorId || ['moderador', 'super_admin'].includes(user.role);
+      if (!podeEditar) return c.json({ error: 'Sem permissão' }, 403);
+      if (nextState === 'review' && curso.estado !== 'draft') {
+        return c.json({ error: `Transição inválida de ${curso.estado} para review` }, 409);
+      }
+      if (nextState === 'published' && curso.estado !== 'approved' && user.role !== 'super_admin') {
+        return c.json({ error: 'Curso precisa estar aprovado antes da publicação' }, 409);
+      }
+      let transitionCourse: Curso = curso;
+      if (nextState === 'review' || nextState === 'published') {
+        const completeCourse = await cursosService.obterCursoComModulos(c.req.param('id'), 'draft');
+        if (!completeCourse) return c.json({ error: 'Curso não encontrado' }, 404);
+        const readiness = avaliarProntidaoCurso(completeCourse, {
+          allowLocalHttp: env.NODE_ENV !== 'production',
+        });
+        if (!readiness.ready) {
+          return c.json(
+            {
+              error: 'O curso ainda não cumpre os critérios editoriais.',
+              code: 'COURSE_NOT_READY',
+              issues: readiness.issues,
+            },
+            422
+          );
+        }
+        transitionCourse = completeCourse;
+      }
+      await cursosService.alterarEstado(
+        c.req.param('id'),
+        nextState,
+        curso.autorId,
+        transitionCourse
       );
-      if (unavailable) return unavailable;
+      return c.json({ success: true });
+    } catch (err: unknown) {
+      return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
     }
-    const curso = await cursosService.obterCursoBase(c.req.param('id'));
-    if (!curso) return c.json({ error: 'Curso não encontrado' }, 404);
-    const podeEditar = user.id === curso.autorId || ['moderador', 'super_admin'].includes(user.role);
-    if (!podeEditar) return c.json({ error: 'Sem permissão' }, 403);
-    if (nextState === 'published' && curso.estado !== 'approved' && user.role !== 'super_admin') {
-      return c.json({ error: 'Curso precisa estar aprovado antes da publicação' }, 409);
-    }
-    await cursosService.alterarEstado(c.req.param('id'), nextState, curso.autorId, curso);
-    return c.json({ success: true });
-  } catch (err: unknown) {
-    return c.json({ error: err instanceof Error ? err.message : 'Erro interno' }, 502);
   }
-});
+);
 
 const enrollInCourse: Handler<{ Variables: AuthVariables }> = async (c) => {
   const user = c.get('user');
@@ -314,14 +421,16 @@ const enrollInCourse: Handler<{ Variables: AuthVariables }> = async (c) => {
       accessPolicy: 'open',
     });
     if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
-    if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
-    if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+    if (decision === 'content_not_available')
+      return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+    if (decision === 'content_not_found')
+      return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
     if (!versions.published) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
     const res = await cursosService.inscreverUtilizador(
       persistedEntityId(versions.published),
       user.id,
       perfilId,
-      user.role,
+      user.role
     );
     return c.json(res, 201);
   } catch {
@@ -330,59 +439,31 @@ const enrollInCourse: Handler<{ Variables: AuthVariables }> = async (c) => {
 };
 
 // POST /cursos/:id/inscricao (protegido)
-cursoRoutes.post('/:id/inscricao', verifyJwt, checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']), enrollInCourse);
-
-// POST /cursos/:id/inscrever — alias (protegido)
-cursoRoutes.post('/:id/inscrever', verifyJwt, checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']), enrollInCourse);
-
-// GET /cursos/:id/progresso (protegido)
-cursoRoutes.get('/:id/progresso', verifyJwt, checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']), async (c) => {
-  const user = c.get('user');
-  try {
-    const cursoId = c.req.param('id');
-    if (!cursoId) return c.json({ error: 'Id do curso é obrigatório' }, 400);
-    const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
-    const versions = await cursosService.obterVersoesCurso(cursoId);
-    const current = versions.current ?? versions.published;
-    const reference = current ?? versions.published;
-    const persistedCursoId = reference ? persistedEntityId(reference) : undefined;
-    const existing = persistedCursoId
-      ? await cursosService.buscarInscricao(persistedCursoId, perfilId)
-      : undefined;
-    const decision = decideLearnerAccess({
-      actor: user,
-      authorId: current?.autorId,
-      reviewerRoles: COURSE_REVIEWER_ROLES,
-      currentState: parseContentState(current?.estado),
-      publishedState: parseContentState(versions.published?.estado),
-      hasPublishedVersion: versions.published !== undefined,
-      relationExists: existing !== undefined,
-      accessPolicy: 'open',
-    });
-    if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
-    if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
-    if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
-    if (!versions.published) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
-    const progresso = await cursosService.listarProgresso(persistedEntityId(versions.published), perfilId);
-    if (progresso === null) return c.json({ error: 'Inscrição não encontrada' }, 404);
-    return c.json(progresso);
-  } catch {
-    return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
-  }
-});
-
-// PATCH /cursos/:id/progresso/:itemId (protegido)
-cursoRoutes.patch(
-  '/:id/progresso/:itemId',
+cursoRoutes.post(
+  '/:id/inscricao',
   verifyJwt,
   checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
-  zValidator('json', z.object({ concluido: z.boolean() })),
+  enrollInCourse
+);
+
+// POST /cursos/:id/inscrever — alias (protegido)
+cursoRoutes.post(
+  '/:id/inscrever',
+  verifyJwt,
+  checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
+  enrollInCourse
+);
+
+// GET /cursos/:id/progresso (protegido)
+cursoRoutes.get(
+  '/:id/progresso',
+  verifyJwt,
+  checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
   async (c) => {
     const user = c.get('user');
     try {
       const cursoId = c.req.param('id');
-      const itemId = c.req.param('itemId');
-      if (!cursoId || !itemId) return c.json({ error: 'Id do curso e do item são obrigatórios' }, 400);
+      if (!cursoId) return c.json({ error: 'Id do curso é obrigatório' }, 400);
       const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
       const versions = await cursosService.obterVersoesCurso(cursoId);
       const current = versions.current ?? versions.published;
@@ -402,19 +483,70 @@ cursoRoutes.patch(
         accessPolicy: 'open',
       });
       if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
-      if (decision === 'content_not_available') return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
-      if (decision === 'content_not_found') return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      if (decision === 'content_not_available')
+        return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+      if (decision === 'content_not_found')
+        return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      if (!versions.published) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
+      const progresso = await cursosService.listarProgresso(
+        persistedEntityId(versions.published),
+        perfilId
+      );
+      if (progresso === null) return c.json({ error: 'Inscrição não encontrada' }, 404);
+      return c.json(progresso);
+    } catch {
+      return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
+    }
+  }
+);
+
+// PATCH /cursos/:id/progresso/:itemId (protegido)
+cursoRoutes.patch(
+  '/:id/progresso/:itemId',
+  verifyJwt,
+  checkRole(['estudante', 'mentor', 'instituicao', 'super_admin']),
+  zValidator('json', z.object({ concluido: z.boolean() })),
+  async (c) => {
+    const user = c.get('user');
+    try {
+      const cursoId = c.req.param('id');
+      const itemId = c.req.param('itemId');
+      if (!cursoId || !itemId)
+        return c.json({ error: 'Id do curso e do item são obrigatórios' }, 400);
+      const perfilId = await cursosService.resolvePerfilId(user.id, user.perfilId);
+      const versions = await cursosService.obterVersoesCurso(cursoId);
+      const current = versions.current ?? versions.published;
+      const reference = current ?? versions.published;
+      const persistedCursoId = reference ? persistedEntityId(reference) : undefined;
+      const existing = persistedCursoId
+        ? await cursosService.buscarInscricao(persistedCursoId, perfilId)
+        : undefined;
+      const decision = decideLearnerAccess({
+        actor: user,
+        authorId: current?.autorId,
+        reviewerRoles: COURSE_REVIEWER_ROLES,
+        currentState: parseContentState(current?.estado),
+        publishedState: parseContentState(versions.published?.estado),
+        hasPublishedVersion: versions.published !== undefined,
+        relationExists: existing !== undefined,
+        accessPolicy: 'open',
+      });
+      if (decision === 'preview_only') return c.json(CONTENT_ACCESS_ERRORS.preview_only, 403);
+      if (decision === 'content_not_available')
+        return c.json(CONTENT_ACCESS_ERRORS.content_not_available, 409);
+      if (decision === 'content_not_found')
+        return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
       if (!versions.published) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
       const item = await cursosService.marcarItem(
         persistedEntityId(versions.published),
         itemId,
         perfilId,
         user.id,
-        c.req.valid('json').concluido,
+        c.req.valid('json').concluido
       );
       return c.json(item);
     } catch {
       return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
     }
-  },
+  }
 );

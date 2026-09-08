@@ -12,6 +12,7 @@ const envMock = vi.hoisted(() => ({
   R2_BUCKET: 'pdc-media',
   R2_PUBLIC_URL: 'https://media.example.com',
 }));
+const signedUrlMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@aws-sdk/client-s3', () => ({
   S3Client: class S3Client {
@@ -26,16 +27,31 @@ vi.mock('@aws-sdk/client-s3', () => ({
   GetObjectCommand: class GetObjectCommand {
     constructor(readonly input: unknown) {}
   },
+  HeadObjectCommand: class HeadObjectCommand {
+    constructor(readonly input: unknown) {}
+  },
   DeleteObjectCommand: class DeleteObjectCommand {
     constructor(readonly input: unknown) {}
   },
   PutObjectCommand: class PutObjectCommand {
     constructor(readonly input: unknown) {}
   },
+  CreateMultipartUploadCommand: class CreateMultipartUploadCommand {
+    constructor(readonly input: unknown) {}
+  },
+  UploadPartCommand: class UploadPartCommand {
+    constructor(readonly input: unknown) {}
+  },
+  CompleteMultipartUploadCommand: class CompleteMultipartUploadCommand {
+    constructor(readonly input: unknown) {}
+  },
+  AbortMultipartUploadCommand: class AbortMultipartUploadCommand {
+    constructor(readonly input: unknown) {}
+  },
 }));
 
 vi.mock('@aws-sdk/s3-request-presigner', () => ({
-  getSignedUrl: vi.fn(),
+  getSignedUrl: signedUrlMock,
 }));
 
 vi.mock('../../lib/env.js', () => ({
@@ -49,6 +65,7 @@ describe('r2 service', () => {
     s3Mock.send.mockReset();
     s3Mock.config = undefined;
     envMock.R2_BUCKET = 'pdc-media';
+    signedUrlMock.mockReset();
   });
 
   afterEach(() => {
@@ -83,6 +100,18 @@ describe('r2 service', () => {
 
     expect(isR2Configured()).toBe(false);
     expect(s3Mock.send).not.toHaveBeenCalled();
+  });
+
+  it('distingue objetos concluídos de chaves ausentes no R2', async () => {
+    const { r2ObjectExists } = await import('./r2.service.js');
+    s3Mock.send
+      .mockResolvedValueOnce({ $metadata: { httpStatusCode: 200 } })
+      .mockRejectedValueOnce(Object.assign(new Error('Not Found'), {
+        $metadata: { httpStatusCode: 404 },
+      }));
+
+    await expect(r2ObjectExists('videos/institution-1/ready.mp4')).resolves.toBe(true);
+    await expect(r2ObjectExists('videos/institution-1/missing.mp4')).resolves.toBe(false);
   });
 
   it('usa o bucket configurado no probe de escrita e remoção', async () => {
@@ -192,6 +221,7 @@ describe('r2 service', () => {
     await expect(isR2Ready()).resolves.toBe(false);
     expect(s3Mock.send).toHaveBeenCalledTimes(3);
   });
+
 });
 
 function commandBucket(command: unknown): string | undefined {

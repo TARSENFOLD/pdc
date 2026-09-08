@@ -82,6 +82,42 @@ describe('normalizeStrapiResponse', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('envia status=published ao atualizar e publicar um documento', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: { id: 1, documentId: 'curso-1', estado: 'published' },
+      meta: {},
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await strapiPut('/cursos/curso-1', { estado: 'published' }, { status: 'published' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/cursos/curso-1?status=published'),
+      expect.objectContaining({ method: 'PUT' }),
+    );
+  });
+
+  it('envia status=draft ao criar sem publicar um documento', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: { id: 1, documentId: 'curso-1', estado: 'draft', publishedAt: null },
+      meta: {},
+    }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await strapiPost('/cursos', { titulo: 'Rascunho' }, { status: 'draft' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/cursos?status=draft'),
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
   it('aceita DELETE 204 sem corpo no wrapper raw', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);

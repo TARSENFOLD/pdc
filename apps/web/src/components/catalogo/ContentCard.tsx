@@ -9,6 +9,7 @@ import type { CatalogoLinkType } from './catalogoLinks';
 interface ContentCardProps {
   title: string;
   subtitle?: string | undefined;
+  description?: string | undefined;
   image?: string | undefined;
   href: string;
   type?: CatalogoLinkType | undefined;
@@ -36,6 +37,7 @@ const TYPE_LABELS: Partial<Record<CatalogoLinkType, string>> = {
 export default function ContentCard({
   title,
   subtitle,
+  description,
   image,
   href,
   type,
@@ -105,6 +107,9 @@ export default function ContentCard({
             <div>
               <h3 className="font-semibold text-ink-primary line-clamp-2 mb-1 group-hover:text-[var(--chrome-active)]">{title}</h3>
               <p className="text-xs text-ink-tertiary line-clamp-2">{subtitle || 'PDC'}</p>
+              {description ? (
+                <p className="mt-3 line-clamp-3 text-sm leading-5 text-ink-secondary">{description}</p>
+              ) : null}
             </div>
             {footerInfo && footerInfo.length > 0 && (
               <div className="mt-4 flex items-center justify-between border-t border-[var(--chrome-border)] pt-4">

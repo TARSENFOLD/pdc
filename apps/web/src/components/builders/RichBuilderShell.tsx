@@ -19,6 +19,7 @@ export interface RichBuilderShellProps {
   actions?: ReactNode;
   activeStep?: string;
   onStepChange?: (stepId: string) => void;
+  completedSteps?: readonly string[];
 }
 
 export default function RichBuilderShell({
@@ -30,6 +31,7 @@ export default function RichBuilderShell({
   actions,
   activeStep: controlledStep,
   onStepChange,
+  completedSteps,
 }: RichBuilderShellProps): React.JSX.Element {
   const [internalStep, setInternalStep] = useState(steps[0]?.id ?? null);
   useEffect(() => {
@@ -63,11 +65,12 @@ export default function RichBuilderShell({
           steps={steps}
           activeStep={activeStep}
           onStepChange={selectStep}
+          {...(completedSteps ? { completedSteps } : {})}
         />
       ),
     } : {}),
     ...(actions ? { actions } : {}),
-  }), [actions, activeStep, backTo, hasSteps, selectStep, steps, title]);
+  }), [actions, activeStep, backTo, completedSteps, hasSteps, selectStep, steps, title]);
   useFocusHeader(focusHeader);
 
   return (

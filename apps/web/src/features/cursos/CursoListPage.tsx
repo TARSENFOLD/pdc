@@ -84,6 +84,7 @@ export function CursoListPage() {
             <ContentCard
               title={c.titulo}
               subtitle={c.instituicaoNome || c.instituicao?.nome || 'PDC Partner'}
+              description={c.descricao}
               image={c.capaUrl || undefined}
               href={`/app/cursos/${c.id}`}
               badges={[{ label: 'Certificação PDC', variant: 'accent' }]}

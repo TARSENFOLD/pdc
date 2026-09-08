@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -10,10 +10,12 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, leftIcon, rightIcon, id, ...props }, ref) => {
+    const generatedId = useId();
+    const inputId = id ?? generatedId;
     return (
       <div className="w-full space-y-1.5">
         {label ? (
-          <label htmlFor={id} className="text-sm font-medium text-ink-secondary">
+          <label htmlFor={inputId} className="text-sm font-medium text-ink-secondary">
             {label}
           </label>
         ) : null}
@@ -25,7 +27,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           ) : null}
           <input
             ref={ref}
-            id={id}
+            id={inputId}
             className={cn(
               'flex h-11 w-full rounded-md border border-ink-tertiary/20 bg-recessed px-3 py-2 text-sm text-ink-primary ring-offset-canvas file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-ink-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-all touch-target',
               leftIcon && 'pl-10',

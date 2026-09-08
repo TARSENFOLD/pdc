@@ -5,49 +5,80 @@ import { Button, Spinner } from '@/components/ui';
 import { cursosApi } from '@/lib/api/cursos';
 import { aiApi } from '@/lib/api/ai';
 import { QuizPlayer } from '@/features/ai/QuizPlayer';
-import type { ItemModulo } from '@pdc/shared';
-import { Check, ChevronLeft, ChevronRight, Circle } from 'lucide-react';
+import { safeRenderableUrl, type ItemModulo } from '@pdc/shared';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
 import { ItemPlayerHeader } from './ItemPlayerHeader';
 import { CourseVideoPlayer } from './CourseVideoPlayer';
+import { CourseItemGallery } from './CourseItemGallery';
+import { CoursePlayerShell } from './CoursePlayerShell';
+import { countCurrentCompletedItems, isEnrollmentRequiredError } from './course-progress';
 
-function ExternalLink({ url, label }: { url: string; label: string }) {
+function ItemText({ content }: { content: string | undefined }): ReactElement | null {
+  if (!content) return null;
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex h-10 items-center rounded-md bg-accent px-6 text-sm font-semibold text-background hover:bg-accent-terracotta-soft"
-    >
-      {label} →
-    </a>
+    <div className="rounded-lg border border-ink-tertiary/10 bg-elevated p-6 text-ink-secondary leading-relaxed whitespace-pre-wrap">
+      {content}
+    </div>
   );
 }
 
+function ItemTextOrLink({ content, url }: { content: string | undefined; url: string }): ReactElement {
+  if (content) return <ItemText content={content} />;
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex min-h-11 items-center rounded-sm border border-border px-4 text-sm font-semibold text-accent hover:border-accent"
+      >
+        Abrir material da aula
+      </a>
+    );
+  }
+  return <p className="text-sm text-ink-tertiary">Esta aula ainda não tem conteúdo disponível.</p>;
+}
+
 function renderItem(item: ItemModulo, courseId: string): ReactElement {
-  const url = item.url ?? item.conteudo ?? '';
+  const url = safeRenderableUrl(item.url, { allowLocalHttp: import.meta.env.DEV }) ?? '';
   switch (item.tipo) {
-    case 'video':
+    case 'video': {
       return (
-        <div className="aspect-video w-full overflow-hidden rounded-lg">
-          <CourseVideoPlayer src={url} {...(item.videoId ? { videoId: item.videoId } : {})} courseId={courseId} />
+        <div className="space-y-6">
+          {item.videoId || url ? (
+            <div className="aspect-video w-full overflow-hidden rounded-lg">
+              <CourseVideoPlayer src={url} {...(item.videoId ? { videoId: item.videoId } : {})} courseId={courseId} />
+            </div>
+          ) : (
+            <p className="text-sm text-ink-tertiary">O vídeo desta aula não tem um endereço seguro disponível.</p>
+          )}
+          <CourseItemGallery images={item.imagens ?? []} />
+          <ItemText content={item.conteudo} />
         </div>
       );
+    }
     case 'pdf':
-      return <iframe src={url} className="h-[70vh] w-full rounded-lg border-0" title="PDF" />;
-    case 'texto':
       return (
-        <div className="rounded-lg border border-ink-tertiary/10 bg-elevated p-6 text-ink-secondary leading-relaxed whitespace-pre-wrap">
-          {item.conteudo}
+        <div className="space-y-6">
+          {url ? (
+            <iframe src={url} className="h-[70vh] w-full rounded-lg border-0" title="PDF" />
+          ) : (
+            <p className="text-sm text-ink-tertiary">O documento desta aula não tem um endereço seguro disponível.</p>
+          )}
+          <ItemText content={item.conteudo} />
         </div>
       );
+    case 'texto':
+      return <ItemTextOrLink content={item.conteudo} url={url} />;
     case 'iframe':
-      return <iframe src={url} className="h-[70vh] w-full rounded-lg border-0" title="Conteúdo" />;
+      return url
+        ? <iframe src={url} className="h-[70vh] w-full rounded-lg border-0" title="Conteúdo" />
+        : <p className="text-sm text-ink-tertiary">O conteúdo externo não tem um endereço seguro disponível.</p>;
     case 'quiz':
       return <></>;
     case 'tarefa':
-      return <ExternalLink url={url} label="Abrir Tarefa" />;
+      return <ItemTextOrLink content={item.conteudo} url={url} />;
   }
 }
 
@@ -60,6 +91,7 @@ export function ItemPlayer() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [curriculumOpen, setCurriculumOpen] = useState(false);
+  const [curriculumCollapsed, setCurriculumCollapsed] = useState(false);
 
   const { data: curso, isLoading } = useQuery({
     queryKey: ['cursos', cursoId ?? ''],
@@ -67,12 +99,13 @@ export function ItemPlayer() {
     enabled: !!cursoId,
   });
 
-  const { data: progresso = [], isError: progressoError } = useQuery({
+  const progressoQuery = useQuery({
     queryKey: ['cursos', cursoId ?? '', 'progresso'],
     queryFn: () => cursosApi.getProgresso(cursoId ?? ''),
     enabled: !!cursoId,
     retry: false,
   });
+  const progresso = progressoQuery.data ?? [];
 
   const marcarMutation = useMutation({
     mutationFn: () => cursosApi.updateProgresso(cursoId ?? '', itemId ?? '', true),
@@ -94,8 +127,11 @@ export function ItemPlayer() {
   if (!curso) {
     return <p className="py-12 text-center text-error">Curso não encontrado.</p>;
   }
-  if (progressoError) {
+  if (progressoQuery.isError && isEnrollmentRequiredError(progressoQuery.error)) {
     return <p className="py-12 text-center text-error">Inscreve-te no curso para aceder ao player.</p>;
+  }
+  if (progressoQuery.isError) {
+    return <p className="py-12 text-center text-error">Não foi possível carregar o progresso. Tenta novamente.</p>;
   }
 
   const item = curso.modulos?.flatMap((m) => m.itens).find((i) => routeId(i.id) === itemId);
@@ -111,7 +147,10 @@ export function ItemPlayer() {
   const currentIndex = allItems.findIndex(({ item: moduleItem }) => routeId(moduleItem.id) === itemId);
   const previousItem = currentIndex > 0 ? allItems[currentIndex - 1]?.item : undefined;
   const nextItem = currentIndex >= 0 ? allItems[currentIndex + 1]?.item : undefined;
-  const completedCount = progresso.filter((entry) => entry.concluido).length;
+  const completedCount = countCurrentCompletedItems(
+    allItems.map(({ item: moduleItem }) => routeId(moduleItem.id)),
+    progresso,
+  );
   const progressPercent = allItems.length > 0 ? Math.round((completedCount / allItems.length) * 100) : 0;
 
   const openItem = (targetId: string | number) => {
@@ -119,8 +158,24 @@ export function ItemPlayer() {
     navigate(`/app/cursos/${cursoId}/itens/${routeId(targetId)}`);
   };
 
+  const openOverview = () => {
+    setCurriculumOpen(false);
+    navigate(`/app/cursos/${cursoId}/interior`);
+  };
+
   return (
-    <div className="relative flex min-h-[calc(100vh-64px)] bg-canvas">
+    <CoursePlayerShell
+      curso={curso}
+      progresso={progresso}
+      activeItemId={itemId}
+      mobileOpen={curriculumOpen}
+      collapsed={curriculumCollapsed}
+      onCloseMobile={() => { setCurriculumOpen(false); }}
+      onCollapse={() => { setCurriculumCollapsed(true); }}
+      onExpand={() => { setCurriculumCollapsed(false); }}
+      onOpenOverview={openOverview}
+      onOpenItem={openItem}
+    >
       <ItemPlayerHeader
         cursoId={cursoId}
         title={item.titulo}
@@ -132,61 +187,6 @@ export function ItemPlayer() {
         onOpenCurriculum={() => { setCurriculumOpen(true); }}
         onComplete={() => { marcarMutation.mutate(); }}
       />
-      <aside className={cn(
-        'absolute inset-y-0 left-0 z-30 w-[300px] border-r border-border bg-recessed transition-transform lg:relative lg:translate-x-0',
-        curriculumOpen ? 'translate-x-0' : '-translate-x-full',
-      )}>
-        <div className="border-b border-border px-5 py-6">
-          <h2 className="line-clamp-2 font-semibold text-ink-primary">{curso.titulo}</h2>
-          <div className="mt-4 flex items-center justify-between text-xs text-ink-secondary">
-            <span>{completedCount} de {allItems.length} concluídos</span>
-            <span>{progressPercent}%</span>
-          </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border">
-            <div className="h-full bg-accent transition-all" style={{ width: `${String(progressPercent)}%` }} />
-          </div>
-        </div>
-
-        <nav className="h-[calc(100vh-180px)] overflow-y-auto p-3" aria-label="Currículo do curso">
-          {curso.modulos?.map((module, moduleIndex) => (
-            <section key={module.id} className="mb-5">
-              <div className="px-3 pb-2">
-                <p className="text-xs font-semibold text-ink-primary">Módulo {moduleIndex + 1}</p>
-                <p className="mt-1 text-xs text-ink-tertiary">{module.titulo}</p>
-              </div>
-              <div className="space-y-1">
-                {module.itens.map((moduleItem, itemIndex) => {
-                  const moduleItemId = routeId(moduleItem.id);
-                  const isCurrent = moduleItemId === itemId;
-                  const isComplete = progresso.some((entry) => entry.itemId === moduleItemId && entry.concluido);
-                  return (
-                    <button
-                      key={moduleItemId}
-                      type="button"
-                      onClick={() => { openItem(moduleItem.id); }}
-                      className={cn(
-                        'flex min-h-12 w-full items-start gap-3 rounded-sm px-3 py-2 text-left transition-colors',
-                        isCurrent ? 'bg-accent/10 text-accent' : 'text-ink-secondary hover:bg-elevated hover:text-ink-primary',
-                      )}
-                    >
-                      {isComplete ? <Check className="mt-0.5 h-4 w-4 shrink-0" /> : <Circle className="mt-0.5 h-4 w-4 shrink-0" />}
-                      <span>
-                        <span className="block text-xs text-ink-tertiary">{moduleIndex + 1}.{itemIndex + 1} · {moduleItem.tipo}</span>
-                        <span className="mt-0.5 block text-sm font-medium">{moduleItem.titulo}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </nav>
-      </aside>
-
-      {curriculumOpen && (
-        <button type="button" aria-label="Fechar currículo" className="absolute inset-0 z-20 bg-black/50 lg:hidden" onClick={() => { setCurriculumOpen(false); }} />
-      )}
-
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex-1 overflow-y-auto">
           <article className="mx-auto w-full max-w-5xl px-4 py-8 md:px-10 md:py-12">
@@ -194,10 +194,13 @@ export function ItemPlayer() {
               <p className="text-xs font-semibold uppercase text-accent">{item.tipo}</p>
               <h2 className="mt-2 font-display text-2xl text-ink-primary">{item.titulo}</h2>
             </div>
-            {item.tipo === 'quiz' ? (
-              <QuizSection cursoId={cursoId} moduloId={moduloId ?? ''} />
-            ) : (
-              renderItem(item, cursoId)
+            {item.tipo === 'video' ? renderItem(item, cursoId) : (
+              <div className="space-y-6">
+                <CourseItemGallery images={item.imagens ?? []} />
+                {item.tipo === 'quiz'
+                  ? <QuizSection cursoId={cursoId} moduloId={moduloId ?? ''} />
+                  : renderItem(item, cursoId)}
+              </div>
             )}
           </article>
         </div>
@@ -216,7 +219,7 @@ export function ItemPlayer() {
           </Button>
         </footer>
       </main>
-    </div>
+    </CoursePlayerShell>
   );
 }
 
