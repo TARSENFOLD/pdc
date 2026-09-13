@@ -7,6 +7,11 @@ const strapiMock = vi.hoisted(() => ({
   put: vi.fn(),
 }));
 const publishWithOutboxMock = vi.hoisted(() => vi.fn());
+const transitionLockMock = vi.hoisted(() => ({
+  acquire: vi.fn(),
+  extend: vi.fn(),
+  release: vi.fn(),
+}));
 
 vi.mock('../strapi/strapi.client.js', () => ({
   strapiGet: strapiMock.get,
@@ -16,6 +21,9 @@ vi.mock('../strapi/strapi.client.js', () => ({
 }));
 vi.mock('../events/event-bus.js', () => ({
   eventBus: { publishWithOutbox: publishWithOutboxMock },
+}));
+vi.mock('../../lib/distributed-lock.js', () => ({
+  acquireLock: transitionLockMock.acquire,
 }));
 
 import { cursosService } from './cursos.service.js';
@@ -37,8 +45,16 @@ const approvedCourse: Curso = {
 describe('course dual-state publication', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    transitionLockMock.extend.mockResolvedValue(true);
+    transitionLockMock.release.mockResolvedValue(true);
+    transitionLockMock.acquire.mockResolvedValue({
+      key: 'curso:transition:curso-1',
+      fencingToken: 1,
+      extend: transitionLockMock.extend,
+      release: transitionLockMock.release,
+    });
     strapiMock.get.mockResolvedValue({
-      data: [{ id: 'curso-1', documentId: 'doc-curso-1', estado: 'approved' }],
+      data: [{ ...approvedCourse, documentId: 'doc-curso-1' }],
       meta: { pagination: { page: 1, pageSize: 1, pageCount: 1, total: 1 } },
     });
   });
@@ -55,6 +71,17 @@ describe('course dual-state publication', () => {
       ['/cursos/doc-curso-1', { estado: 'approved' }, { status: 'published' }],
     ]);
     expect(publishWithOutboxMock).toHaveBeenCalledOnce();
+    expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.CURSO_PUBLICADO, {
+      cursoId: 'curso-1',
+      autorId: 'mentor-1',
+      titulo: 'Curso completo',
+      area: undefined,
+      regrasAcesso: undefined,
+    });
+    expect(publishWithOutboxMock.mock.invocationCallOrder[0]).toBeGreaterThan(
+      strapiMock.put.mock.invocationCallOrder[1] ?? 0
+    );
+    expect(transitionLockMock.extend).toHaveBeenCalledTimes(2);
   });
 
   it('não publica nem emite evento quando a primeira escrita falha', async () => {
@@ -66,6 +93,17 @@ describe('course dual-state publication', () => {
 
     expect(strapiMock.put).toHaveBeenCalledOnce();
     expect(publishWithOutboxMock).not.toHaveBeenCalled();
+  });
+
+  it('recusa uma segunda transição enquanto o curso está bloqueado', async () => {
+    transitionLockMock.acquire.mockResolvedValueOnce(null);
+
+    await expect(
+      cursosService.alterarEstado('curso-1', 'published', 'mentor-1', approvedCourse)
+    ).rejects.toMatchObject({ status: 409, retryable: true });
+
+    expect(strapiMock.get).not.toHaveBeenCalled();
+    expect(strapiMock.put).not.toHaveBeenCalled();
   });
 
   it('recusa publicar quando o draft atual já não existe', async () => {
@@ -133,6 +171,24 @@ describe('course dual-state publication', () => {
     expect(publishWithOutboxMock).not.toHaveBeenCalled();
   });
 
+  it('não restaura estado obsoleto quando perde o lease antes da compensação', async () => {
+    transitionLockMock.extend
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+    strapiMock.put
+      .mockResolvedValueOnce({ data: approvedCourse })
+      .mockRejectedValueOnce(new Error('snapshot indisponível'));
+
+    await expect(
+      cursosService.alterarEstado('curso-1', 'published', 'mentor-1', approvedCourse)
+    ).rejects.toThrow('precisa de reconciliação');
+
+    expect(strapiMock.put).toHaveBeenCalledTimes(2);
+    expect(publishWithOutboxMock).not.toHaveBeenCalled();
+    expect(transitionLockMock.release).toHaveBeenCalledOnce();
+  });
+
   it('arquiva o draft e o snapshot publicado antes de emitir o evento', async () => {
     strapiMock.put.mockResolvedValue({ data: { ...approvedCourse, estado: 'archived' } });
 
@@ -148,6 +204,9 @@ describe('course dual-state publication', () => {
       cursoId: 'curso-1',
       autorId: 'mentor-1',
     });
+    expect(publishWithOutboxMock.mock.invocationCallOrder[0]).toBeGreaterThan(
+      strapiMock.put.mock.invocationCallOrder[1] ?? 0
+    );
   });
 
   it('repõe o estado anterior quando o arquivamento do snapshot falha', async () => {

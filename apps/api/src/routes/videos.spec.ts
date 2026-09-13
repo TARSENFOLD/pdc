@@ -36,6 +36,11 @@ vi.mock('../modules/videos/video.service.js', () => ({
 vi.mock('../modules/videos/video-multipart.service.js', () => ({
   videoMultipartService: videoMultipartServiceMock,
 }));
+vi.mock('../middleware/rateLimit.js', () => ({
+  rateLimitContentCreate: async (_c: Context, next: Next) => {
+    await next();
+  },
+}));
 
 describe('videoRoutes', () => {
   const app = new Hono().route('/videos', videoRoutes);
@@ -124,6 +129,21 @@ describe('videoRoutes', () => {
     expect(videoServiceMock.uploadAuthorizedContent).toHaveBeenCalledWith(
       { key: 'videos/mentor-1/aula.mp4', mimeType: 'video/mp4' },
       expect.any(Uint8Array)
+    );
+  });
+
+  it('normalizes the declared MIME type before authorization', async () => {
+    const res = await app.request('/videos/video-1/content', {
+      method: 'PUT',
+      body: new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112]),
+      headers: { 'Content-Type': 'VIDEO/MP4; Charset=binary' },
+    });
+
+    expect(res.status).toBe(204);
+    expect(videoServiceMock.authorizeContentUpload).toHaveBeenCalledWith(
+      'video-1',
+      'video/mp4',
+      user
     );
   });
 

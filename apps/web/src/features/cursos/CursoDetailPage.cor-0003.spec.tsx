@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { Curso } from '@pdc/shared';
 import { CursoDetailPage } from './CursoDetailPage';
 import { cursosApi } from '@/lib/api/cursos';
 import { ratingsApi } from '@/lib/api/interactions';
+import { ApiError } from '@/lib/api/http';
+
+const toastMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api/cursos', () => ({
   cursosApi: {
@@ -22,6 +25,8 @@ vi.mock('@/lib/api/interactions', () => ({
 vi.mock('@/hooks/useTelemetry', () => ({
   useTelemetry: () => ({ track: vi.fn() }),
 }));
+
+vi.mock('@/hooks/useToast', () => ({ toast: toastMock }));
 
 const curso: Curso = {
   id: 'curso-1',
@@ -41,7 +46,7 @@ const curso: Curso = {
   updatedAt: '2026-08-06T00:00:00.000Z',
 };
 
-describe('COR-0003 course certificate claims', () => {
+describe('CursoDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(cursosApi.getById).mockResolvedValue(curso);
@@ -61,7 +66,7 @@ describe('COR-0003 course certificate claims', () => {
             <Route path="/app/cursos/:id" element={<CursoDetailPage />} />
           </Routes>
         </MemoryRouter>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
 
     expect(await screen.findByText('Curso de Teste')).toBeTruthy();
@@ -69,5 +74,36 @@ describe('COR-0003 course certificate claims', () => {
     expect(screen.queryByText('Certificado Digital')).toBeNull();
     expect(screen.queryByText('Certificado disponível após conclusão')).toBeNull();
     expect(screen.queryByText('Certificado emitido')).toBeNull();
+  });
+
+  it('reconcilia uma inscrição já existente sem mostrar um erro genérico', async () => {
+    vi.mocked(cursosApi.getProgresso).mockRejectedValueOnce(
+      new ApiError(404, 'Inscrição não encontrada')
+    );
+    vi.mocked(cursosApi.inscrever).mockRejectedValueOnce(
+      new ApiError(409, 'Inscrição já existente')
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateQueries = vi.spyOn(client, 'invalidateQueries');
+
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/app/cursos/curso-1']}>
+          <Routes>
+            <Route path="/app/cursos/:id" element={<CursoDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Percurso Soberano' }));
+
+    await waitFor(() => {
+      expect(cursosApi.inscrever).toHaveBeenCalledWith('curso-1');
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['cursos', 'curso-1', 'progresso'],
+    });
+    expect(toastMock).not.toHaveBeenCalled();
   });
 });

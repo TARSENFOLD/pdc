@@ -268,6 +268,7 @@ export async function abortMultipartUpload(key: string, uploadId: string): Promi
       })
     );
   } catch (err) {
+    if (errorStatus(err) === 404) return;
     if (err instanceof MediaStorageError) throw err;
     throw mediaStorageError(err);
   }

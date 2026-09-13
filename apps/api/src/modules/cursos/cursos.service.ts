@@ -17,6 +17,7 @@ import {
   entityId,
   first,
   listarModulosCurso,
+  listarVersoesCursos,
   matchesId,
   normalizeProgress,
   persistedId,
@@ -31,11 +32,75 @@ import {
   type ExistingModulo,
   type InscricaoStrapi,
 } from './cursos.repository.js';
+import { alterarEstadoCurso } from './curso-publication.service.js';
+import { acquireLock, type LockHandle } from '../../lib/distributed-lock.js';
 
 const log = pino({ name: 'cursos-service' });
+const COURSE_PROGRESS_LOCK_TTL_MS = 30_000;
 
 interface StrapiPerfilRef {
   id: string | number;
+}
+
+async function applyProgressUpdate({
+  cursoId,
+  itemId,
+  userId,
+  concluido,
+  inscricao,
+  lock,
+}: {
+  cursoId: string;
+  itemId: string;
+  userId: string;
+  concluido: boolean;
+  inscricao: InscricaoStrapi;
+  lock: LockHandle;
+}): Promise<ProgressoItem> {
+  const current = normalizeProgress(inscricao.modulosConcluidos);
+  const existingItem = current.find((item) => item.itemId === itemId);
+  if (existingItem?.concluido === concluido) return existingItem;
+
+  const now = new Date().toISOString();
+  const nextItem: ProgressoItem = concluido
+    ? { itemId, concluido: true, dataConclusao: now }
+    : { itemId, concluido: false };
+  const next = [...current.filter((item) => item.itemId !== itemId), nextItem];
+  const modulos = await listarModulosCurso(cursoId);
+  const totalItems = modulos.reduce((total, modulo) => total + modulo.itens.length, 0);
+  const completedItems = next.filter((item) => item.concluido).length;
+  const progressoPercentual =
+    totalItems > 0 ? Math.min(100, Math.round((completedItems / totalItems) * 100)) : 0;
+  const leaseActive = await lock.extend(COURSE_PROGRESS_LOCK_TTL_MS);
+  if (!leaseActive) {
+    throw Object.assign(new Error('A atualização de progresso perdeu a exclusividade.'), {
+      status: 503,
+      retryable: true,
+    });
+  }
+
+  await strapiPut(`/inscricoes/${persistedId(inscricao)}`, {
+    modulosConcluidos: next,
+    progressoPercentual,
+    ultimaAtividadeEm: now,
+    concluidoEm: progressoPercentual === 100 ? now : null,
+  });
+
+  if (concluido) {
+    await eventBus.publishWithOutbox(DomainEventName.CURSO_ITEM_CONCLUIDO, {
+      cursoId,
+      itemId,
+      estudanteId: userId,
+    });
+    if (progressoPercentual === 100) {
+      await eventBus.publishWithOutbox(DomainEventName.CURSO_CONCLUIDO, {
+        cursoId,
+        estudanteId: userId,
+      });
+    }
+  }
+
+  return nextItem;
 }
 
 export const cursosService = {
@@ -48,6 +113,10 @@ export const cursosService = {
 
   async obterVersoesCurso(id: string) {
     return loadContentVersions((status) => resolveCursoReference(id, status));
+  },
+
+  async obterVersoesCursos(ids: string[]) {
+    return listarVersoesCursos(ids);
   },
 
   async resolvePerfilId(userId: string, jwtPerfilId?: string): Promise<string> {
@@ -200,98 +269,7 @@ export const cursosService = {
   },
 
   async alterarEstado(id: string, estado: string, autorId: string, curso?: Curso): Promise<void> {
-    if (estado === 'published') {
-      const currentDraft = await resolveCursoReference(id, 'draft');
-      if (!currentDraft) throw Object.assign(new Error('Curso não encontrado'), { status: 404 });
-      const cursoDocumentId = persistedId(currentDraft);
-      const previousDraftState = currentDraft.estado;
-      // Public access is governed by two independent dimensions during D-02:
-      // the immutable Strapi snapshot must be published and remain editorially approved,
-      // while the current draft records that the creator completed the publish action.
-      await strapiPut(`/cursos/${cursoDocumentId}`, { estado: 'published' }, { status: 'draft' });
-      try {
-        await strapiPut(
-          `/cursos/${cursoDocumentId}`,
-          { estado: 'approved' },
-          { status: 'published' }
-        );
-      } catch (publishError) {
-        try {
-          await strapiPut(
-            `/cursos/${cursoDocumentId}`,
-            { estado: previousDraftState },
-            { status: 'draft' }
-          );
-        } catch (compensationError) {
-          log.error(
-            {
-              compensationError,
-              publishError,
-              cursoId: id,
-              previousDraftState,
-            },
-            'Falha crítica ao compensar transição de publicação do curso'
-          );
-          throw new AggregateError(
-            [publishError, compensationError],
-            'Publicação falhou e o estado editorial precisa de reconciliação.'
-          );
-        }
-        throw publishError;
-      }
-      await eventBus.publishWithOutbox(DomainEventName.CURSO_PUBLICADO, {
-        cursoId: id,
-        autorId,
-        titulo: curso?.titulo ?? '',
-        area: curso?.area,
-        regrasAcesso: curso?.regrasAcesso,
-      });
-    } else if (estado === 'archived') {
-      const currentDraft = await resolveCursoReference(id, 'draft');
-      if (!currentDraft) throw Object.assign(new Error('Curso não encontrado'), { status: 404 });
-      const cursoDocumentId = persistedId(currentDraft);
-      const previousDraftState = currentDraft.estado;
-      await strapiPut(`/cursos/${cursoDocumentId}`, { estado: 'archived' }, { status: 'draft' });
-      try {
-        await strapiPut(
-          `/cursos/${cursoDocumentId}`,
-          { estado: 'archived' },
-          { status: 'published' }
-        );
-      } catch (archiveError) {
-        try {
-          await strapiPut(
-            `/cursos/${cursoDocumentId}`,
-            { estado: previousDraftState },
-            { status: 'draft' }
-          );
-        } catch (compensationError) {
-          log.error(
-            {
-              compensationError,
-              archiveError,
-              cursoId: id,
-              previousDraftState,
-            },
-            'Falha crítica ao compensar arquivamento do curso'
-          );
-          throw new AggregateError(
-            [archiveError, compensationError],
-            'Arquivamento falhou e o estado editorial precisa de reconciliação.'
-          );
-        }
-        throw archiveError;
-      }
-    } else {
-      const cursoDocumentId = await resolveCursoDocumentId(id);
-      await strapiPut(`/cursos/${cursoDocumentId}`, { estado }, { status: 'draft' });
-    }
-    if (estado === 'archived') {
-      await eventBus.publishWithOutbox(DomainEventName.CURSO_ARQUIVADO, {
-        cursoId: id,
-        autorId,
-      });
-    }
+    await alterarEstadoCurso(id, estado, autorId, curso);
   },
 
   async buscarInscricao(cursoId: string, perfilId: string): Promise<InscricaoStrapi | undefined> {
@@ -343,42 +321,35 @@ export const cursosService = {
   ): Promise<ProgressoItem> {
     const inscricao = await this.buscarInscricao(cursoId, perfilId);
     if (!inscricao) throw Object.assign(new Error('Inscrição não encontrada'), { status: 403 });
-
-    const current = normalizeProgress(inscricao.modulosConcluidos);
-    const now = new Date().toISOString();
-    const nextItem: ProgressoItem = concluido
-      ? { itemId, concluido: true, dataConclusao: now }
-      : { itemId, concluido: false };
-    const next = [...current.filter((item) => item.itemId !== itemId), nextItem];
-
-    const modulos = await listarModulosCurso(cursoId);
-    const totalItems = modulos.reduce((total, modulo) => total + modulo.itens.length, 0);
-    const completedItems = next.filter((item) => item.concluido).length;
-    const progressoPercentual =
-      totalItems > 0 ? Math.min(100, Math.round((completedItems / totalItems) * 100)) : 0;
     const inscricaoId = inscricao.documentId ?? inscricao.id;
-
-    await strapiPut(`/inscricoes/${inscricaoId}`, {
-      modulosConcluidos: next,
-      progressoPercentual,
-      ultimaAtividadeEm: now,
-      ...(progressoPercentual === 100 ? { concluidoEm: now } : {}),
-    });
-
-    if (concluido) {
-      await eventBus.publishWithOutbox(DomainEventName.CURSO_ITEM_CONCLUIDO, {
-        cursoId,
-        itemId,
-        estudanteId: userId,
+    const lock = await acquireLock(`inscricao:${inscricaoId}`, COURSE_PROGRESS_LOCK_TTL_MS);
+    if (!lock) {
+      throw Object.assign(new Error('Outra atualização de progresso está em curso.'), {
+        status: 409,
+        retryable: true,
       });
-      if (progressoPercentual === 100) {
-        await eventBus.publishWithOutbox(DomainEventName.CURSO_CONCLUIDO, {
-          cursoId,
-          estudanteId: userId,
-        });
-      }
     }
 
-    return nextItem;
+    try {
+      const latest = await this.buscarInscricao(cursoId, perfilId);
+      if (!latest || persistedId(latest) !== inscricaoId) {
+        throw Object.assign(new Error('Inscrição não encontrada'), { status: 403 });
+      }
+      return await applyProgressUpdate({
+        cursoId,
+        itemId,
+        userId,
+        concluido,
+        inscricao: latest,
+        lock,
+      });
+    } finally {
+      await lock.release().catch((releaseError: unknown) => {
+        log.error(
+          { releaseError, cursoId, inscricaoId },
+          'Falha ao libertar lock de progresso do curso'
+        );
+      });
+    }
   },
 };

@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { avaliarProntidaoCurso, CriarCursoPayloadSchema, type CursoReadinessStep } from '@pdc/shared';
+import {
+  avaliarProntidaoCurso,
+  CriarCursoPayloadSchema,
+  type CursoReadinessStep,
+} from '@pdc/shared';
 import { useForm, useFieldArray, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { cursosApi } from '@/lib/api/cursos';
@@ -27,12 +31,12 @@ import {
   COURSE_BUILDER_STEPS,
   COURSE_FORM_DEFAULTS,
   COURSE_READINESS_STEPS,
+  courseEditorialStatusLabel,
   courseFieldLabel,
   courseToFormValues,
   firstCourseFormErrorMessage,
   type CourseFormValues,
 } from './components/course-studio/course-builder-config';
-
 type FormValues = CourseFormValues;
 export function SovereignCourseBuilder() {
   const navigate = useNavigate();
@@ -46,7 +50,15 @@ export function SovereignCourseBuilder() {
     resolver: zodResolver(CriarCursoPayloadSchema),
     defaultValues: COURSE_FORM_DEFAULTS,
   });
-  const { register, control, watch, setValue, trigger, handleSubmit, formState: { errors } } = form;
+  const {
+    register,
+    control,
+    watch,
+    setValue,
+    trigger,
+    handleSubmit,
+    formState: { errors },
+  } = form;
   const titulo = useWatch({ control, name: 'titulo' });
   const descricao = useWatch({ control, name: 'descricao' });
   const area = useWatch({ control, name: 'area' });
@@ -57,29 +69,25 @@ export function SovereignCourseBuilder() {
   const preco = useWatch({ control, name: 'preco' });
   const moeda = useWatch({ control, name: 'moeda' });
   const modulos = useWatch({ control, name: 'modulos' });
-  const readiness = useMemo(() => avaliarProntidaoCurso({
-    titulo,
-    descricao,
-    area,
-    nivel,
-    capaUrl,
-    visibilidade,
-    gratuito,
-    preco,
-    moeda,
-    modulos,
-  }, { allowLocalHttp: import.meta.env.DEV }), [
-    titulo,
-    descricao,
-    area,
-    nivel,
-    capaUrl,
-    visibilidade,
-    gratuito,
-    preco,
-    moeda,
-    modulos,
-  ]);
+  const readiness = useMemo(
+    () =>
+      avaliarProntidaoCurso(
+        {
+          titulo,
+          descricao,
+          area,
+          nivel,
+          capaUrl,
+          visibilidade,
+          gratuito,
+          preco,
+          moeda,
+          modulos,
+        },
+        { allowLocalHttp: import.meta.env.DEV }
+      ),
+    [titulo, descricao, area, nivel, capaUrl, visibilidade, gratuito, preco, moeda, modulos]
+  );
   const modulosArray = useFieldArray({ control, name: 'modulos' });
   const cursoQuery = useQuery({
     queryKey: ['cursos', cursoId ?? ''],
@@ -94,9 +102,8 @@ export function SovereignCourseBuilder() {
   }, [cursoQuery.data, form]);
 
   const mutation = useMutation({
-    mutationFn: (data: FormValues) => isEditing && cursoId
-      ? cursosApi.update(cursoId, data)
-      : cursosApi.create(data),
+    mutationFn: (data: FormValues) =>
+      isEditing && cursoId ? cursosApi.update(cursoId, data) : cursosApi.create(data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
       toast({ title: 'Curso guardado com sucesso.' });
@@ -107,9 +114,9 @@ export function SovereignCourseBuilder() {
       toast({
         title: 'Falha ao guardar',
         description: message,
-        variant: 'error'
+        variant: 'error',
       });
-    }
+    },
   });
 
   const estadoMutation = useMutation({
@@ -129,7 +136,10 @@ export function SovereignCourseBuilder() {
     onSuccess: (savedCourseId, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['cursos', savedCourseId] });
       void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
-      toast({ title: variables.estado === 'published' ? 'Curso publicado!' : 'Curso submetido para revisão.' });
+      toast({
+        title:
+          variables.estado === 'published' ? 'Curso publicado!' : 'Curso submetido para revisão.',
+      });
       navigate(coursesPath);
     },
     onError: (err: unknown) => {
@@ -146,7 +156,9 @@ export function SovereignCourseBuilder() {
     },
   });
 
-  const firstIncompleteStep = COURSE_READINESS_STEPS.find((step) => !readiness.byStep[step].complete);
+  const firstIncompleteStep = COURSE_READINESS_STEPS.find(
+    (step) => !readiness.byStep[step].complete
+  );
   const completedSteps = cumulativeCompletedReadinessSteps(COURSE_READINESS_STEPS, readiness);
 
   const showIncompleteStep = (step: CursoReadinessStep) => {
@@ -198,10 +210,9 @@ export function SovereignCourseBuilder() {
       toast({ title: 'Guarda primeiro o curso como rascunho.', variant: 'error' });
       return;
     }
-    void handleSubmit(
-      (data) => { estadoMutation.mutate({ estado, data }); },
-      showFormErrors,
-    )();
+    void handleSubmit((data) => {
+      estadoMutation.mutate({ estado, data });
+    }, showFormErrors)();
   };
 
   const submitWithState = (estado: FormValues['estado']) => {
@@ -211,12 +222,19 @@ export function SovereignCourseBuilder() {
   };
 
   if (isEditing && cursoQuery.isLoading) {
-    return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
   return (
-  <>
-    <form onSubmit={(event) => { event.preventDefault(); }}>
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+      }}
+    >
       <RichBuilderShell
         title={isEditing ? 'Editar curso' : 'Criar curso'}
         backTo={coursesPath}
@@ -224,18 +242,12 @@ export function SovereignCourseBuilder() {
         activeStep={activeStep}
         onStepChange={handleStepChange}
         completedSteps={completedSteps}
-        actions={(
-          <span className="rounded-full border border-[var(--chrome-border)] bg-recessed px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-ink-secondary">
-            {!isEditing
-              ? 'Ainda não guardado'
-              : cursoQuery.data?.estado === 'review'
-                ? 'Em revisão'
-                : cursoQuery.data?.estado === 'published'
-                  ? 'Publicado'
-                  : 'Rascunho'}
+        actions={
+          <span className="bg-recessed text-ink-secondary rounded-full border border-[var(--chrome-border)] px-3 py-1.5 text-[10px] font-bold tracking-wider uppercase">
+            {courseEditorialStatusLabel(isEditing, cursoQuery.data?.estado)}
           </span>
-        )}
-        settingsPanel={(
+        }
+        settingsPanel={
           <div className="space-y-8">
             <CourseSettingsPanel
               register={register}
@@ -247,17 +259,27 @@ export function SovereignCourseBuilder() {
             <BuilderActionsBar
               state={cursoQuery.data?.estado ?? 'draft'}
               userRole={user?.role || 'instituicao'}
-              onSaveDraft={() => { submitWithState('draft'); }}
-              onSubmitReview={() => { transitionWhenReady('review'); }}
-              submitReviewLabel={isEditing ? 'Submeter para revisão' : 'Guardar e submeter para revisão'}
-              onPublish={() => { transitionWhenReady('published'); }}
+              onSaveDraft={() => {
+                submitWithState('draft');
+              }}
+              onSubmitReview={() => {
+                transitionWhenReady('review');
+              }}
+              submitReviewLabel={
+                isEditing ? 'Submeter para revisão' : 'Guardar e submeter para revisão'
+              }
+              onPublish={() => {
+                transitionWhenReady('published');
+              }}
               isSubmitting={mutation.isPending || estadoMutation.isPending}
               isReady={readiness.ready}
               pendingRequirements={readiness.issues.length}
-              onResolveRequirements={() => { if (firstIncompleteStep) showIncompleteStep(firstIncompleteStep); }}
+              onResolveRequirements={() => {
+                if (firstIncompleteStep) showIncompleteStep(firstIncompleteStep);
+              }}
             />
           </div>
-        )}
+        }
       >
         <BuilderSection
           value="info"
@@ -267,7 +289,6 @@ export function SovereignCourseBuilder() {
           <CourseBaseInfo control={control} register={register} errors={errors} />
           <CourseStepReadiness step="info" readiness={readiness} />
         </BuilderSection>
-
         <BuilderSection
           value="merit"
           title="Acesso e recomendações"
@@ -282,7 +303,13 @@ export function SovereignCourseBuilder() {
           title="Currículo"
           description="Organiza módulos e itens na ordem em que serão consumidos."
         >
-          <CourseCurriculum register={register} control={control} setValue={setValue} trigger={trigger} modulosArray={modulosArray} />
+          <CourseCurriculum
+            register={register}
+            control={control}
+            setValue={setValue}
+            trigger={trigger}
+            modulosArray={modulosArray}
+          />
           <CourseStepReadiness step="curriculum" readiness={readiness} />
         </BuilderSection>
 
@@ -295,16 +322,21 @@ export function SovereignCourseBuilder() {
             values={{ titulo, area, nivel, modulos }}
             readiness={readiness}
             onResolve={showIncompleteStep}
-            {...((cursoQuery.data?.estado ?? 'draft') === 'draft' ? {
-              submitLabel: isEditing ? 'Submeter para revisão' : 'Guardar e submeter para revisão',
-              onSubmit: () => { transitionWhenReady('review'); },
-              submitDisabled: !readiness.ready || mutation.isPending || estadoMutation.isPending,
-            } : {})}
+            {...((cursoQuery.data?.estado ?? 'draft') === 'draft'
+              ? {
+                  submitLabel: isEditing
+                    ? 'Submeter para revisão'
+                    : 'Guardar e submeter para revisão',
+                  onSubmit: () => {
+                    transitionWhenReady('review');
+                  },
+                  submitDisabled:
+                    !readiness.ready || mutation.isPending || estadoMutation.isPending,
+                }
+              : {})}
           />
         </BuilderSection>
       </RichBuilderShell>
     </form>
-
-    </>
   );
 }

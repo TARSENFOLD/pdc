@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { Curso } from '@pdc/shared';
@@ -30,18 +30,22 @@ const curso: Curso = {
   estado: 'approved',
   rating: 0,
   inscritosCount: 2,
-  modulos: [{
-    id: 'modulo-1',
-    titulo: 'Introdução',
-    ordem: 0,
-    itens: [{
-      id: 'item-1',
-      titulo: 'Bem-vindo',
-      tipo: 'texto',
-      conteudo: 'Abertura do curso',
+  modulos: [
+    {
+      id: 'modulo-1',
+      titulo: 'Introdução',
       ordem: 0,
-    }],
-  }],
+      itens: [
+        {
+          id: 'item-1',
+          titulo: 'Bem-vindo',
+          tipo: 'texto',
+          conteudo: 'Abertura do curso',
+          ordem: 0,
+        },
+      ],
+    },
+  ],
   createdAt: '2026-09-03T00:00:00.000Z',
   updatedAt: '2026-09-03T00:00:00.000Z',
 };
@@ -59,7 +63,7 @@ function renderPage(): ReturnType<typeof render> {
           </Routes>
         </FocusModeProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -73,13 +77,44 @@ describe('CourseWelcomePage', () => {
   it('apresenta uma entrada visual antes do primeiro conteúdo', async () => {
     renderPage();
 
-    expect(await screen.findByRole('heading', { name: 'Fundamentos de Cloud' })).toBeDefined();
-    expect(screen.getByText('Aprende os conceitos essenciais para construir soluções seguras na cloud.')).toBeDefined();
-    expect(screen.getByText('1 módulo')).toBeDefined();
-    expect(screen.getByText('1 aula')).toBeDefined();
+    expect(await screen.findByRole('heading', { name: 'Fundamentos de Cloud' })).toBeVisible();
+    expect(
+      screen.getByText('Aprende os conceitos essenciais para construir soluções seguras na cloud.')
+    ).toBeVisible();
+    expect(screen.getByText('1 módulo')).toBeVisible();
+    expect(screen.getByText('1 aula')).toBeVisible();
 
     fireEvent.click(screen.getByRole('button', { name: 'Começar' }));
-    expect(await screen.findByText('Conteúdo aberto')).toBeDefined();
+    expect(await screen.findByText('Conteúdo aberto')).toBeVisible();
+  });
+
+  it('espera pelo progresso antes de escolher a aula de continuação', async () => {
+    let resolveCourse: ((value: Curso) => void) | undefined;
+    let resolveProgress: ((value: []) => void) | undefined;
+    vi.mocked(cursosApi.getById).mockReturnValueOnce(
+      new Promise<Curso>((resolve) => {
+        resolveCourse = resolve;
+      })
+    );
+    vi.mocked(cursosApi.getProgresso).mockReturnValueOnce(
+      new Promise<[]>((resolve) => {
+        resolveProgress = resolve;
+      })
+    );
+
+    renderPage();
+
+    await act(async () => {
+      resolveCourse?.(curso);
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByRole('heading', { name: 'Fundamentos de Cloud' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Começar' })).not.toBeInTheDocument();
+
+    resolveProgress?.([]);
+
+    expect(await screen.findByRole('button', { name: 'Começar' })).toBeVisible();
   });
 
   it('permite ocultar e restaurar o currículo no desktop', async () => {
@@ -89,9 +124,9 @@ describe('CourseWelcomePage', () => {
     fireEvent.click(hideButton);
 
     const showButton = screen.getByRole('button', { name: 'Mostrar currículo' });
-    expect(showButton).toBeDefined();
+    expect(showButton).toBeVisible();
     fireEvent.click(showButton);
-    expect(screen.getByRole('button', { name: 'Ocultar currículo' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Ocultar currículo' })).toBeVisible();
   });
 
   it('pede inscrição quando o progresso não está disponível', async () => {
@@ -99,9 +134,7 @@ describe('CourseWelcomePage', () => {
 
     renderPage();
 
-    expect(
-      await screen.findByText('Inscreve-te no curso para aceder ao conteúdo.'),
-    ).toBeDefined();
+    expect(await screen.findByText('Inscreve-te no curso para aceder ao conteúdo.')).toBeVisible();
   });
 
   it('apresenta uma falha recuperável quando o serviço de progresso está indisponível', async () => {
@@ -110,8 +143,29 @@ describe('CourseWelcomePage', () => {
     renderPage();
 
     expect(
-      await screen.findByText('Não foi possível carregar o progresso. Tenta novamente.'),
-    ).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeDefined();
+      await screen.findByText('Não foi possível carregar o progresso. Tenta novamente.')
+    ).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findByRole('button', { name: 'Começar' })).toBeVisible();
+    expect(
+      screen.queryByText('Não foi possível carregar o progresso. Tenta novamente.')
+    ).not.toBeInTheDocument();
+  });
+
+  it('permite repetir o carregamento do curso depois de uma falha transitória', async () => {
+    vi.mocked(cursosApi.getById)
+      .mockRejectedValueOnce(new ApiError(503, 'Indisponível'))
+      .mockResolvedValueOnce(curso);
+
+    renderPage();
+
+    expect(
+      await screen.findByText('Não foi possível carregar o curso. Tenta novamente.')
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findByRole('heading', { name: 'Fundamentos de Cloud' })).toBeVisible();
   });
 });

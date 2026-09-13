@@ -12,11 +12,20 @@ const values = {
   visibilidade: 'publico' as const,
   gratuito: true,
   regrasAcesso: {},
-  modulos: [{
-    titulo: 'Módulo inicial',
-    ordem: 1,
-    itens: [{ titulo: 'Aula inicial', tipo: 'texto' as const, conteudo: 'Conteúdo completo.', ordem: 1 }],
-  }],
+  modulos: [
+    {
+      titulo: 'Módulo inicial',
+      ordem: 1,
+      itens: [
+        {
+          titulo: 'Aula inicial',
+          tipo: 'texto' as const,
+          conteudo: 'Conteúdo completo.',
+          ordem: 1,
+        },
+      ],
+    },
+  ],
 };
 
 describe('CourseReviewPanel', () => {
@@ -29,11 +38,12 @@ describe('CourseReviewPanel', () => {
         onResolve={vi.fn()}
         submitLabel="Guardar e submeter para revisão"
         onSubmit={onSubmit}
-      />,
+      />
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Guardar e submeter para revisão' }));
     expect(onSubmit).toHaveBeenCalledOnce();
+    expect(screen.getByText('Tecnologia · Intermédio')).toBeVisible();
   });
 
   it('indica a etapa incompleta e mantém a submissão bloqueada', () => {
@@ -48,11 +58,11 @@ describe('CourseReviewPanel', () => {
         submitLabel="Guardar e submeter para revisão"
         onSubmit={onSubmit}
         submitDisabled
-      />,
+      />
     );
 
     expect(screen.getByText('2/3')).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: 'Corrigir' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Corrigir: Informação básica' }));
     expect(onResolve).toHaveBeenCalledWith('info');
 
     const submitButton = screen.getByRole('button', { name: 'Guardar e submeter para revisão' });

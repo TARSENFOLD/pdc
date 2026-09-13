@@ -115,6 +115,15 @@ describe('R2 multipart service', () => {
     });
   });
 
+  it('trata uma sessão multipart já ausente como cancelada', async () => {
+    const { abortMultipartUpload } = await import('./r2.service.js');
+    s3Mock.send.mockRejectedValueOnce(
+      Object.assign(new Error('NoSuchUpload'), { $metadata: { httpStatusCode: 404 } })
+    );
+
+    await expect(abortMultipartUpload('videos/user/aula.mp4', 'upload-1')).resolves.toBeUndefined();
+  });
+
   it('falha fechado quando o R2 não está configurado', async () => {
     envMock.R2_BUCKET = '';
     const { createMultipartUpload } = await import('./r2.service.js');

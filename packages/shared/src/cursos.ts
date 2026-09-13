@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { AreaVocacionalSchema, EstadoEditorialSchema } from './schemas/enums.js';
 import { inspectCourseModulePlacement } from './cursos-placement.js';
 import { CursoItemImagemSchema } from './cursos-media.js';
+import { CursoNivelSchema } from './cursos-level.js';
 
 export * from './cursos-readiness.js';
 export {
@@ -14,11 +15,7 @@ export type { CursoItemImagem } from './cursos-media.js';
 
 export const CURSO_DESCRICAO_MAX_LENGTH = 2_000;
 
-const OptionalUrlSchema = z.union([
-  z.literal(''),
-  z.string().url(),
-  z.undefined(),
-]);
+const OptionalUrlSchema = z.union([z.literal(''), z.string().url(), z.undefined()]);
 
 const OptionalNullableUrlSchema = z.union([
   z.literal(''),
@@ -71,18 +68,20 @@ export const CursoSchema = z.object({
   inscritosCount: z.number().int().min(0).optional().default(0),
   autorNome: z.string().optional(),
   // Regras de Match Soberano
-  regrasAcesso: z.object({
-    minFluidez: z.number().min(0).max(10).optional(),
-    minResiliencia: z.number().min(0).max(10).optional(),
-    minFoco: z.number().min(0).max(10).optional(),
-    areasCompativeis: z.array(AreaVocacionalSchema).optional(),
-  }).optional(),
+  regrasAcesso: z
+    .object({
+      minFluidez: z.number().min(0).max(10).optional(),
+      minResiliencia: z.number().min(0).max(10).optional(),
+      minFoco: z.number().min(0).max(10).optional(),
+      areasCompativeis: z.array(AreaVocacionalSchema).optional(),
+    })
+    .optional(),
   modulos: z.array(ModuloSchema).optional(),
-  
+
   // Detalhes de Mérito (Diferencial PDC)
   bloqueado: z.boolean().optional(),
   motivoBloqueio: z.string().optional(),
-  
+
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -100,45 +99,52 @@ const CriarCursoItemPayloadSchema = z.object({
   ordem: z.number().int().nonnegative(),
 });
 
-const CriarCursoModuloPayloadSchema = z.object({
-  persistedId: z.string().optional(),
-  titulo: z.string().min(3),
-  ordem: z.number().int().nonnegative(),
-  itens: z.array(CriarCursoItemPayloadSchema),
-}).superRefine((modulo, context) => {
-  const placement = inspectCourseModulePlacement(modulo.itens);
-  placement.duplicateOrderIndexes.forEach((index) => {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['itens', index, 'ordem'],
-      message: 'Cada aula deve ter uma posição única no módulo.',
+const CriarCursoModuloPayloadSchema = z
+  .object({
+    persistedId: z.string().optional(),
+    titulo: z.string().min(3),
+    ordem: z.number().int().nonnegative(),
+    itens: z.array(CriarCursoItemPayloadSchema),
+  })
+  .superRefine((modulo, context) => {
+    const placement = inspectCourseModulePlacement(modulo.itens);
+    placement.duplicateOrderIndexes.forEach((index) => {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['itens', index, 'ordem'],
+        message: 'Cada aula deve ter uma posição única no módulo.',
+      });
     });
+    if (placement.videoIndexes.length > 1) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['itens'],
+        message: 'Cada módulo pode ter no máximo um vídeo.',
+      });
+    }
+    if (placement.misplacedVideoIndex !== undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['itens', placement.misplacedVideoIndex],
+        message: 'O vídeo deve ser o primeiro conteúdo do módulo.',
+      });
+    }
   });
-  if (placement.videoIndexes.length > 1) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['itens'],
-      message: 'Cada módulo pode ter no máximo um vídeo.',
-    });
-  }
-  if (placement.misplacedVideoIndex !== undefined) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['itens', placement.misplacedVideoIndex],
-      message: 'O vídeo deve ser o primeiro conteúdo do módulo.',
-    });
-  }
-});
 
 export const CriarCursoPayloadBaseSchema = z.object({
-  titulo: z.string()
+  titulo: z
+    .string()
     .min(3, 'Adiciona um título com pelo menos 3 caracteres.')
     .max(120, 'O título pode ter no máximo 120 caracteres.'),
-  descricao: z.string()
+  descricao: z
+    .string()
     .min(10, 'Escreve uma descrição com pelo menos 10 caracteres.')
-    .max(CURSO_DESCRICAO_MAX_LENGTH, `A descrição pode ter no máximo ${String(CURSO_DESCRICAO_MAX_LENGTH)} caracteres.`),
+    .max(
+      CURSO_DESCRICAO_MAX_LENGTH,
+      `A descrição pode ter no máximo ${String(CURSO_DESCRICAO_MAX_LENGTH)} caracteres.`
+    ),
   area: AreaVocacionalSchema,
-  nivel: z.enum(['basico', 'medio', 'avancado']),
+  nivel: CursoNivelSchema,
   thumbnailUrl: OptionalUrlSchema,
   capaUrl: OptionalUrlSchema,
   visibilidade: z.enum(['publico', 'privado', 'institucional']).optional(),
@@ -166,7 +172,7 @@ export const CriarCursoPayloadBaseSchema = z.object({
 
 function validateUniqueModuleOrders(
   modulos: readonly { ordem: number }[] | undefined,
-  context: z.RefinementCtx,
+  context: z.RefinementCtx
 ): void {
   const seenOrders = new Set<number>();
   modulos?.forEach((modulo, index) => {
@@ -185,9 +191,12 @@ export const CriarCursoPayloadSchema = CriarCursoPayloadBaseSchema.superRefine((
   validateUniqueModuleOrders(curso.modulos, context);
 });
 
-export const AtualizarCursoPayloadSchema = CriarCursoPayloadBaseSchema.partial().superRefine((curso, context) => {
-  validateUniqueModuleOrders(curso.modulos, context);
-});
+export const AtualizarCursoPayloadSchema = CriarCursoPayloadBaseSchema.omit({ estado: true })
+  .partial()
+  .strict()
+  .superRefine((curso, context) => {
+    validateUniqueModuleOrders(curso.modulos, context);
+  });
 
 export type CriarCursoPayload = z.infer<typeof CriarCursoPayloadSchema>;
 

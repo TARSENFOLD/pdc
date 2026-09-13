@@ -4,17 +4,25 @@ import { CourseItemGallery } from './CourseItemGallery';
 
 describe('CourseItemGallery', () => {
   it('apresenta uma imagem sem controlos de galeria', () => {
-    render(<CourseItemGallery images={[{ url: 'https://cdn.example.com/one.webp', alt: 'Uma sala de aula' }]} />);
+    render(
+      <CourseItemGallery
+        images={[{ url: 'https://cdn.example.com/one.webp', alt: 'Uma sala de aula' }]}
+      />
+    );
 
     expect(screen.getByRole('img', { name: 'Uma sala de aula' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Imagem seguinte' })).toBeNull();
   });
 
   it('apresenta várias imagens numa faixa horizontal navegável', () => {
-    render(<CourseItemGallery images={[
-      { url: 'https://cdn.example.com/one.webp', alt: 'Primeira etapa do projeto' },
-      { url: 'https://cdn.example.com/two.webp', alt: 'Segunda etapa do projeto' },
-    ]} />);
+    render(
+      <CourseItemGallery
+        images={[
+          { url: 'https://cdn.example.com/one.webp', alt: 'Primeira etapa do projeto' },
+          { url: 'https://cdn.example.com/two.webp', alt: 'Segunda etapa do projeto' },
+        ]}
+      />
+    );
 
     expect(screen.getAllByRole('img')).toHaveLength(2);
     const track = screen.getByTestId('course-item-gallery-track');
@@ -27,5 +35,12 @@ describe('CourseItemGallery', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Imagem seguinte' }));
     expect(scrollBy).toHaveBeenLastCalledWith({ left: 850, behavior: 'smooth' });
+  });
+
+  it('não renderiza endereços de imagem inseguros', () => {
+    render(<CourseItemGallery images={[{ url: 'javascript:alert(1)', alt: 'Imagem insegura' }]} />);
+
+    expect(screen.queryByRole('img', { name: 'Imagem insegura' })).toBeNull();
+    expect(screen.getByText(/não têm um endereço seguro disponível/i)).toBeVisible();
   });
 });

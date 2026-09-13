@@ -15,6 +15,10 @@ const storageMock = vi.hoisted(() => ({
 }));
 const fileGuardMock = vi.hoisted(() => ({ validate: vi.fn() }));
 const multipartMock = vi.hoisted(() => ({ create: vi.fn() }));
+const envMock = vi.hoisted(() => ({
+  API_URL: 'http://localhost:3001',
+  NODE_ENV: 'test',
+}));
 
 vi.mock('../strapi/strapi.client.js', () => ({
   strapiGet: strapiMock.get,
@@ -42,7 +46,7 @@ vi.mock('./video-multipart.service.js', () => ({
   videoMultipartService: multipartMock,
 }));
 vi.mock('../../lib/env.js', () => ({
-  env: { API_URL: 'http://localhost:3001' },
+  env: envMock,
 }));
 
 const owner = { id: 'mentor-1', role: 'mentor' as const };
@@ -67,8 +71,56 @@ describe('videoService quick upload', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     storageMock.configured = false;
+    envMock.API_URL = 'http://localhost:3001';
+    envMock.NODE_ENV = 'test';
     fileGuardMock.validate.mockResolvedValue({ ok: true });
     storageMock.upload.mockResolvedValue(undefined);
+  });
+
+  it('does not expose the local direct-upload fallback in production', async () => {
+    envMock.NODE_ENV = 'production';
+    const { videoService } = await import('./video.service.js');
+
+    await expect(
+      videoService.createR2(
+        {
+          mode: 'quick_upload',
+          visibility: 'protected',
+          title: 'Aula privada',
+          filename: 'aula.mp4',
+          mimeType: 'video/mp4',
+          sizeBytes: 1024,
+        },
+        owner
+      )
+    ).rejects.toMatchObject({
+      message: 'Upload de vídeo indisponível: armazenamento R2 não configurado.',
+      status: 503,
+    });
+    expect(strapiMock.post).not.toHaveBeenCalled();
+  });
+
+  it('normalizes the API base URL used by the local direct-upload fallback', async () => {
+    envMock.API_URL = 'http://localhost:3001///';
+    strapiMock.post.mockImplementationOnce((_path: string, payload: Record<string, unknown>) =>
+      Promise.resolve({ data: { id: 1, documentId: 'video-local', ...payload } })
+    );
+    const { videoService } = await import('./video.service.js');
+
+    const created = await videoService.createR2(
+      {
+        mode: 'quick_upload',
+        visibility: 'protected',
+        title: 'Aula privada',
+        filename: 'aula.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: 1024,
+      },
+      owner
+    );
+
+    if (created.uploadMethod === 'multipart') throw new Error('Esperava upload rápido direto');
+    expect(created.uploadUrl).toBe('http://localhost:3001/videos/video-local/content');
   });
 
   it('returns an authenticated direct upload URL when R2 credentials are absent locally', async () => {

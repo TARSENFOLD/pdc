@@ -18,12 +18,22 @@ const defaultValues: CriarCursoPayload = {
   comissao: 0,
   requerValidacaoComite: false,
   regrasAcesso: { minFluidez: 0, minResiliencia: 0, minFoco: 0 },
-  modulos: [{
-    persistedId: 'module-persisted',
-    titulo: 'Introdução',
-    ordem: 1,
-    itens: [{ persistedId: 'item-persisted', titulo: 'Boas-vindas', tipo: 'texto', ordem: 1, conteudo: 'Olá' }],
-  }],
+  modulos: [
+    {
+      persistedId: 'module-persisted',
+      titulo: 'Introdução',
+      ordem: 1,
+      itens: [
+        {
+          persistedId: 'item-persisted',
+          titulo: 'Boas-vindas',
+          tipo: 'texto',
+          ordem: 1,
+          conteudo: 'Olá',
+        },
+      ],
+    },
+  ],
 };
 
 beforeAll(() => {
@@ -52,18 +62,22 @@ function InvalidGalleryHarness(): React.JSX.Element {
     resolver: zodResolver(CriarCursoPayloadSchema),
     defaultValues: {
       ...defaultValues,
-      modulos: [{
-        ...defaultValues.modulos[0],
-        titulo: 'Introdução',
-        ordem: 1,
-        itens: [{
-          titulo: 'Aula ilustrada',
-          tipo: 'texto',
+      modulos: [
+        {
+          ...defaultValues.modulos[0],
+          titulo: 'Introdução',
           ordem: 1,
-          conteudo: 'Conteúdo completo da aula.',
-          imagens: [{ url: 'https://cdn.example.com/imagem.webp', alt: '' }],
-        }],
-      }],
+          itens: [
+            {
+              titulo: 'Aula ilustrada',
+              tipo: 'texto',
+              ordem: 1,
+              conteudo: 'Conteúdo completo da aula.',
+              imagens: [{ url: 'https://cdn.example.com/imagem.webp', alt: '' }],
+            },
+          ],
+        },
+      ],
     },
   });
   const modules = useFieldArray({ control: form.control, name: 'modulos' });
@@ -80,10 +94,14 @@ function InvalidGalleryHarness(): React.JSX.Element {
 
 describe('course curriculum helpers', () => {
   it('reordena e normaliza a ordem sem perder os dados', () => {
-    const reordered = reorderDrafts([
-      { titulo: 'Primeiro', ordem: 1 },
-      { titulo: 'Segundo', ordem: 2 },
-    ], 1, 0);
+    const reordered = reorderDrafts(
+      [
+        { titulo: 'Primeiro', ordem: 1 },
+        { titulo: 'Segundo', ordem: 2 },
+      ],
+      1,
+      0
+    );
 
     expect(reordered).toEqual([
       { titulo: 'Segundo', ordem: 1 },
@@ -108,12 +126,25 @@ describe('course curriculum helpers', () => {
       { titulo: 'Quiz final', tipo: 'quiz', ordem: 3 },
     ]);
 
-    expect(items.map((item) => item.titulo)).toEqual(['Vídeo de abertura', 'Texto inicial', 'Quiz final']);
+    expect(items.map((item) => item.titulo)).toEqual([
+      'Vídeo de abertura',
+      'Texto inicial',
+      'Quiz final',
+    ]);
     expect(items.map((item) => item.ordem)).toEqual([1, 2, 3]);
   });
 });
 
 describe('CourseCurriculum', () => {
+  it('bloqueia a eliminação do último módulo e explica a regra', () => {
+    render(<CurriculumHarness />);
+
+    const deleteButton = screen.getByRole('button', { name: 'Eliminar módulo' });
+    expect(deleteButton).toBeDisabled();
+    expect(screen.getByText(/O curso precisa de pelo menos um módulo/)).toBeVisible();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('adiciona aulas por tipo e duplica módulos pela interface', async () => {
     render(<CurriculumHarness />);
 
@@ -121,7 +152,9 @@ describe('CourseCurriculum', () => {
     expect(screen.getByPlaceholderText(/Nesta aula vais compreender/)).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar aula' }));
     fireEvent.click(screen.getByRole('button', { name: /Vídeo.*Aula em vídeo/ }));
-    await waitFor(() => { expect(screen.queryByRole('dialog')).toBeNull(); });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
     expect(await screen.findByText('1 módulo · 2 aulas')).toBeDefined();
     expect(screen.getByText('Nova aula — Vídeo')).toBeDefined();
     expect(screen.getByPlaceholderText('https://')).toBeDefined();
@@ -146,7 +179,9 @@ describe('CourseCurriculum', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar aula' }));
     fireEvent.click(screen.getByRole('button', { name: /Vídeo.*Aula em vídeo/ }));
-    await waitFor(() => { expect(screen.queryByRole('dialog')).toBeNull(); });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar aula' }));
 
     const unavailableVideo = screen.getByRole('button', { name: /Vídeo.*já tem o seu vídeo/ });
@@ -157,11 +192,15 @@ describe('CourseCurriculum', () => {
     render(<CurriculumHarness />);
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar aula' }));
     fireEvent.click(screen.getByRole('button', { name: /Vídeo.*Aula em vídeo/ }));
-    await waitFor(() => { expect(screen.queryByRole('dialog')).toBeNull(); });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
 
     const transfer = new Map<string, string>();
     const dataTransfer = {
-      setData: (type: string, value: string) => { transfer.set(type, value); },
+      setData: (type: string, value: string) => {
+        transfer.set(type, value);
+      },
       getData: (type: string) => transfer.get(type) ?? '',
     };
     const videoHandle = screen.getByRole('button', { name: 'Arrastar aula 1' });
@@ -172,7 +211,8 @@ describe('CourseCurriculum', () => {
     fireEvent.dragStart(videoHandle, { dataTransfer });
     fireEvent.drop(textCard, { dataTransfer });
 
-    const titles = screen.getAllByText(/^(Nova aula — Vídeo|Boas-vindas)$/)
+    const titles = screen
+      .getAllByText(/^(Nova aula — Vídeo|Boas-vindas)$/)
       .map((element) => element.textContent);
     expect(titles).toEqual(['Nova aula — Vídeo', 'Boas-vindas']);
   });
@@ -180,7 +220,9 @@ describe('CourseCurriculum', () => {
   it('explica junto ao botão porque uma aula com imagem sem descrição não pode ser fechada', async () => {
     render(<InvalidGalleryHarness />);
 
-    expect(screen.getByText('Adiciona uma descrição acessível com pelo menos 3 caracteres.')).toBeDefined();
+    expect(
+      screen.getByText('Adiciona uma descrição acessível com pelo menos 3 caracteres.')
+    ).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Validar e fechar aula' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Descreve a imagem 1 da aula 1.1.');

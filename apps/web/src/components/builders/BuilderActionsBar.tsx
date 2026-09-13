@@ -15,9 +15,9 @@ interface BuilderActionsBarProps {
   onResolveRequirements?: () => void;
 }
 
-export default function BuilderActionsBar({ 
-  isSubmitting, 
-  onSaveDraft, 
+export default function BuilderActionsBar({
+  isSubmitting,
+  onSaveDraft,
   state,
   onSubmitReview,
   submitReviewLabel = 'Submeter para revisão',
@@ -27,19 +27,25 @@ export default function BuilderActionsBar({
   onResolveRequirements,
 }: BuilderActionsBarProps): React.ReactElement {
   const actionsAllowed = isReady !== false;
+  const requirementsId = React.useId();
   return (
-    <div className="space-y-5 rounded-lg border border-[var(--chrome-border)] bg-canvas p-5 shadow-[var(--elevation-1)]">
+    <div className="bg-canvas space-y-5 rounded-lg border border-[var(--chrome-border)] p-5 shadow-[var(--elevation-1)]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-bold text-ink-primary">Estado editorial</p>
-          <p className="mt-1 text-xs leading-5 text-ink-tertiary">Guarda o progresso ou envia para revisão.</p>
+          <p className="text-ink-primary text-sm font-bold">Estado editorial</p>
+          <p className="text-ink-tertiary mt-1 text-xs leading-5">
+            Guarda o progresso ou envia para revisão.
+          </p>
         </div>
-        <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--accent-warning)]" aria-hidden="true" />
+        <span
+          className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--accent-warning)]"
+          aria-hidden="true"
+        />
       </div>
       <div className="space-y-2">
-        <Button 
+        <Button
           type="button"
-          disabled={isSubmitting} 
+          disabled={isSubmitting}
           onClick={onSaveDraft}
           className="h-11 w-full gap-2 rounded-md font-semibold"
         >
@@ -48,12 +54,13 @@ export default function BuilderActionsBar({
         </Button>
 
         {state === 'draft' && onSubmitReview && (
-          <Button 
+          <Button
             type="button"
             variant="outline"
             disabled={isSubmitting || !actionsAllowed}
+            aria-describedby={!actionsAllowed ? requirementsId : undefined}
             onClick={onSubmitReview}
-            className="h-11 w-full gap-2 rounded-md font-semibold text-accent hover:bg-accent/10"
+            className="text-accent hover:bg-accent/10 h-11 w-full gap-2 rounded-md font-semibold"
           >
             <Send size={14} aria-hidden="true" />
             {submitReviewLabel}
@@ -61,31 +68,36 @@ export default function BuilderActionsBar({
         )}
 
         {state === 'approved' && onPublish && (
-          <Button 
+          <Button
             type="button"
             disabled={isSubmitting || !actionsAllowed}
+            aria-describedby={!actionsAllowed ? requirementsId : undefined}
             onClick={onPublish}
-            className="h-11 w-full rounded-sm font-semibold bg-accent text-white"
+            className="bg-accent h-11 w-full rounded-sm font-semibold text-white"
           >
             Publicar Agora
           </Button>
         )}
       </div>
       {isReady === false ? (
-        <div className="rounded-md border border-[var(--accent-warning)]/30 bg-[var(--accent-warning)]/10 p-3">
-          <p className="text-xs font-semibold text-ink-primary">
+        <div
+          id={requirementsId}
+          className="rounded-md border border-[var(--accent-warning)]/30 bg-[var(--accent-warning)]/10 p-3"
+        >
+          <p className="text-ink-primary text-xs font-semibold">
             {pendingRequirements > 0
               ? `${String(pendingRequirements)} ${pendingRequirements === 1 ? 'requisito pendente' : 'requisitos pendentes'}`
               : 'Curso ainda incompleto'}
           </p>
-          <p className="mt-1 text-xs leading-5 text-ink-tertiary">
-            Podes guardar o rascunho, mas só poderás submeter ou publicar depois de completar o essencial.
+          <p className="text-ink-tertiary mt-1 text-xs leading-5">
+            Podes guardar o rascunho, mas só poderás submeter ou publicar depois de completar o
+            essencial.
           </p>
           {onResolveRequirements ? (
             <button
               type="button"
               onClick={onResolveRequirements}
-              className="mt-2 text-xs font-bold uppercase tracking-wider text-accent hover:underline"
+              className="text-accent mt-2 text-xs font-bold tracking-wider uppercase hover:underline"
             >
               Resolver pendências
             </button>

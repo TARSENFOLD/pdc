@@ -105,22 +105,26 @@ describe('videoMultipartService', () => {
   });
 
   it('aborta a sessão R2 quando a criação da metadata falha', async () => {
-    strapiMock.post.mockRejectedValueOnce(Object.assign(new Error('Strapi indisponível'), {
-      status: 503,
-    }));
+    strapiMock.post.mockRejectedValueOnce(
+      Object.assign(new Error('Strapi indisponível'), {
+        status: 503,
+      })
+    );
     const { videoMultipartService } = await import('./video-multipart.service.js');
 
-    await expect(videoMultipartService.create(
-      {
-        mode: 'professional_upload',
-        visibility: 'protected',
-        title: 'Aula longa',
-        filename: 'aula.mp4',
-        mimeType: 'video/mp4',
-        sizeBytes: 600 * 1024 * 1024,
-      },
-      institution
-    )).rejects.toMatchObject({ status: 503 });
+    await expect(
+      videoMultipartService.create(
+        {
+          mode: 'professional_upload',
+          visibility: 'protected',
+          title: 'Aula longa',
+          filename: 'aula.mp4',
+          mimeType: 'video/mp4',
+          sizeBytes: 600 * 1024 * 1024,
+        },
+        institution
+      )
+    ).rejects.toMatchObject({ status: 503 });
 
     expect(storageMock.abort).toHaveBeenCalledWith(
       expect.stringMatching(/^videos\/institution-1\//),
@@ -252,6 +256,28 @@ describe('videoMultipartService', () => {
 
     expect(storageMock.complete).toHaveBeenCalledOnce();
     expect(storageMock.exists).toHaveBeenCalledWith('videos/institution-1/aula.mp4');
+  });
+
+  it('preserva o erro de conclusão quando a verificação do objeto também falha', async () => {
+    strapiMock.get.mockResolvedValue({ data: [videoRecord()] });
+    strapiMock.put.mockResolvedValue({ data: videoRecord({ status: 'processing' }) });
+    storageMock.complete.mockRejectedValueOnce(new Error('conclusão R2 indisponível'));
+    storageMock.exists.mockRejectedValueOnce(new Error('probe R2 indisponível'));
+    const { videoMultipartService } = await import('./video-multipart.service.js');
+
+    await expect(
+      videoMultipartService.complete(
+        'video-professional',
+        {
+          uploadId: 'upload-1',
+          parts: [
+            { partNumber: 1, etag: 'etag-1' },
+            { partNumber: 2, etag: 'etag-2' },
+          ],
+        },
+        institution
+      )
+    ).rejects.toThrow('conclusão R2 indisponível');
   });
 
   it('aborta uma sessão autorizada e persiste o estado de falha', async () => {

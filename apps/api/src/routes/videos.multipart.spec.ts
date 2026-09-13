@@ -8,6 +8,7 @@ const videoMultipartServiceMock = vi.hoisted(() => ({
   complete: vi.fn(),
   abort: vi.fn(),
 }));
+const rateLimitMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../modules/auth/auth.middleware.js', () => ({
   verifyJwt: async (c: Context, next: Next) => {
@@ -32,32 +33,45 @@ vi.mock('../modules/videos/video.service.js', () => ({
 vi.mock('../modules/videos/video-multipart.service.js', () => ({
   videoMultipartService: videoMultipartServiceMock,
 }));
+vi.mock('../middleware/rateLimit.js', () => ({
+  rateLimitContentCreate: rateLimitMock,
+}));
 
 describe('video multipart routes', () => {
   const app = new Hono().route('/videos', videoRoutes);
 
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    rateLimitMock.mockImplementation(async (_context: unknown, next: () => Promise<void>) => {
+      await next();
+    });
+  });
 
   it('creates a signed URL for an authorized part', async () => {
     videoMultipartServiceMock.createPartUrl.mockResolvedValueOnce({
-      uploadUrl: 'https://r2.example.com/part-2', partNumber: 2,
+      uploadUrl: 'https://r2.example.com/part-2',
+      partNumber: 2,
     });
     const payload = { uploadId: 'upload-1', partNumber: 2 };
 
     const res = await app.request('/videos/video-1/multipart/parts', {
-      method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
     });
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({
-      uploadUrl: 'https://r2.example.com/part-2', partNumber: 2,
+      uploadUrl: 'https://r2.example.com/part-2',
+      partNumber: 2,
     });
     expect(videoMultipartServiceMock.createPartUrl).toHaveBeenCalledWith('video-1', payload, user);
+    expect(rateLimitMock).toHaveBeenCalledOnce();
   });
 
   it('maps part URL errors without requesting another operation', async () => {
     videoMultipartServiceMock.createPartUrl.mockRejectedValueOnce(
-      Object.assign(new Error('Parte fora do intervalo.'), { status: 400 }),
+      Object.assign(new Error('Parte fora do intervalo.'), { status: 400 })
     );
 
     const res = await app.request('/videos/video-1/multipart/parts', {
@@ -74,24 +88,32 @@ describe('video multipart routes', () => {
 
   it('completes an authorized upload', async () => {
     const readyVideo = {
-      id: 'video-1', provider: 'r2', mode: 'professional_upload', visibility: 'protected',
-      status: 'ready', ownerId: 'mentor-1', title: 'Aula longa',
+      id: 'video-1',
+      provider: 'r2',
+      mode: 'professional_upload',
+      visibility: 'protected',
+      status: 'ready',
+      ownerId: 'mentor-1',
+      title: 'Aula longa',
     };
     videoMultipartServiceMock.complete.mockResolvedValueOnce(readyVideo);
     const payload = { uploadId: 'upload-1', parts: [{ partNumber: 1, etag: 'etag-1' }] };
 
     const res = await app.request('/videos/video-1/multipart/complete', {
-      method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
     });
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual(readyVideo);
     expect(videoMultipartServiceMock.complete).toHaveBeenCalledWith('video-1', payload, user);
+    expect(rateLimitMock).toHaveBeenCalledOnce();
   });
 
   it('maps completion errors without reporting success', async () => {
     videoMultipartServiceMock.complete.mockRejectedValueOnce(
-      Object.assign(new Error('Sessão multipart inválida.'), { status: 409 }),
+      Object.assign(new Error('Sessão multipart inválida.'), { status: 409 })
     );
     const res = await app.request('/videos/video-1/multipart/complete', {
       method: 'POST',
@@ -108,17 +130,20 @@ describe('video multipart routes', () => {
     const payload = { uploadId: 'upload-1' };
 
     const res = await app.request('/videos/video-1/multipart', {
-      method: 'DELETE', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' },
+      method: 'DELETE',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
     });
 
     expect(res.status).toBe(204);
     expect(await res.text()).toBe('');
     expect(videoMultipartServiceMock.abort).toHaveBeenCalledWith('video-1', payload, user);
+    expect(rateLimitMock).toHaveBeenCalledOnce();
   });
 
   it('maps abort errors without hiding them', async () => {
     videoMultipartServiceMock.abort.mockRejectedValueOnce(
-      Object.assign(new Error('Vídeo não encontrado.'), { status: 404 }),
+      Object.assign(new Error('Vídeo não encontrado.'), { status: 404 })
     );
     const res = await app.request('/videos/video-1/multipart', {
       method: 'DELETE',

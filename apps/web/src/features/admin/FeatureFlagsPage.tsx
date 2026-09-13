@@ -70,7 +70,7 @@ export function FeatureFlagsPage() {
       {flags.map((f) => {
         const overrides = Array.isArray(f.overrides) ? f.overrides.filter(isFlagOverride) : [];
         return (
-        <Card key={f.id.toString()} data-testid={`feature-flag-${f.domain}`} className="p-4 space-y-3">
+        <Card key={f.id.toString()} className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <span className="font-mono font-semibold">{f.domain}</span>

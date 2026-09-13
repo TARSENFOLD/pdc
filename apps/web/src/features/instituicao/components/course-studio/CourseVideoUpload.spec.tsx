@@ -57,6 +57,18 @@ describe('CourseVideoUpload', () => {
     expect(videosApi.uploadQuickR2).not.toHaveBeenCalled();
   });
 
+  it('não confia na extensão MP4 quando o navegador declara outro formato', async () => {
+    render(<CourseVideoUpload title="Aula" onVideoReady={vi.fn()} />);
+
+    chooseFile(new File(['video'], 'aula.mp4', { type: 'video/quicktime' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Seleciona um vídeo no formato MP4.'
+    );
+    expect(videosApi.uploadQuickR2).not.toHaveBeenCalled();
+    expect(videosApi.uploadProfessionalR2).not.toHaveBeenCalled();
+  });
+
   it('normaliza um ficheiro MP4 sem MIME declarado antes do upload', async () => {
     vi.mocked(videosApi.uploadQuickR2).mockResolvedValue({
       id: 'video-sem-mime',

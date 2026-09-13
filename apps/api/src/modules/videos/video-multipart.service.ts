@@ -195,8 +195,9 @@ export const videoMultipartService = {
     }
     const key = `videos/${user.id}/${crypto.randomUUID()}-${safeFilename(payload.filename)}`;
     const uploadId = await createMultipartUpload(key, payload.mimeType);
+    let response: Awaited<ReturnType<typeof strapiPost<VideoRecord>>>;
     try {
-      const response = await strapiPost<VideoRecord>('/videos', {
+      response = await strapiPost<VideoRecord>('/videos', {
         provider: 'r2',
         mode: payload.mode,
         visibility: payload.visibility,
@@ -208,14 +209,6 @@ export const videoMultipartService = {
         mimeType: payload.mimeType,
         sizeBytes: payload.sizeBytes,
       });
-      return ProfessionalR2VideoResponseSchema.parse({
-        video: toVideo(response.data),
-        uploadMethod: 'multipart',
-        key,
-        uploadId,
-        partSizeBytes: VIDEO_MULTIPART_PART_SIZE_BYTES,
-        totalParts,
-      });
     } catch (err) {
       try {
         await abortMultipartUpload(key, uploadId);
@@ -224,6 +217,14 @@ export const videoMultipartService = {
       }
       throw err;
     }
+    return ProfessionalR2VideoResponseSchema.parse({
+      video: toVideo(response.data),
+      uploadMethod: 'multipart',
+      key,
+      uploadId,
+      partSizeBytes: VIDEO_MULTIPART_PART_SIZE_BYTES,
+      totalParts,
+    });
   },
 
   async createPartUrl(
@@ -281,13 +282,13 @@ export const videoMultipartService = {
       });
     }
 
-    let objectCompleted = record.status === 'processing' && await r2ObjectExists(key);
+    let objectCompleted = record.status === 'processing' && (await r2ObjectExists(key));
     if (!objectCompleted) {
       try {
         await completeMultipartUpload(key, payload.uploadId, orderedParts);
         objectCompleted = true;
       } catch (err) {
-        objectCompleted = await r2ObjectExists(key);
+        objectCompleted = await r2ObjectExists(key).catch(() => false);
         if (!objectCompleted) throw err;
         log.warn({ videoId, key }, 'Conclusão multipart reconciliada após resposta ambígua do R2');
       }
@@ -309,7 +310,7 @@ export const videoMultipartService = {
       record: existingRecord,
       ...authorizeSession(existingRecord, payload.uploadId, user),
     };
-    if (record.status === 'processing' && await r2ObjectExists(key)) {
+    if (record.status === 'processing' && (await r2ObjectExists(key))) {
       await persistReadyVideo(record, user, key);
       return;
     }

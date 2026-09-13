@@ -5,6 +5,7 @@ export * from './feed.js';
 export * from './registry/features.js';
 export * from './bootstrap.js';
 export * from './cursos.js';
+export * from './cursos-level.js';
 export * from './simulacoes.js';
 export * from './experiencias.js';
 export * from './telemetry.js';

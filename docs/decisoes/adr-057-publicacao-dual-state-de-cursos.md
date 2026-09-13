@@ -20,8 +20,8 @@ aceite pelo filtro público D-02, que exige `approved`.
 
 Ao publicar um curso aprovado, o BFF executa nesta ordem:
 
-1. atualiza explicitamente `status=draft` para `estado=published`, preservando o estado visível
-   do workflow para o criador;
+1. mantém a entrada com `status=draft` e altera apenas o seu estado editorial para
+   `estado=published`, preservando o estado visível do workflow para o criador;
 2. publica no Strapi um snapshot com `status=published` e `estado=approved`;
 3. se a publicação do snapshot falhar, repõe o estado anterior do draft antes de devolver o erro;
 4. emite `CURSO_PUBLICADO` pelo outbox somente após as duas escritas.

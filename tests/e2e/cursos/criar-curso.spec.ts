@@ -128,69 +128,85 @@ test.describe('Criar Curso', () => {
   test('QA interno guarda e submete um curso novo diretamente para revisão', async ({
     adminPage,
   }) => {
+    let submittedCourseId: string | undefined;
     await withContentSubmissionEnabled(adminPage, async () => {
-      await adminPage.route('**/api/media/upload', async (route) => {
-        await route.fulfill({
-          status: 201,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            id: 'media-course-cover-e2e',
-            url: 'https://images.example.com/curso-submetido-e2e.webp',
-            key: 'courses/curso-submetido-e2e.webp',
-            filename: 'icon-192.png',
-            mimeType: 'image/png',
-            size: 413,
-          }),
+      try {
+        await adminPage.route('**/api/media/upload', async (route) => {
+          await route.fulfill({
+            status: 201,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              id: 'media-course-cover-e2e',
+              url: 'https://images.example.com/curso-submetido-e2e.webp',
+              key: 'courses/curso-submetido-e2e.webp',
+              filename: 'icon-192.png',
+              mimeType: 'image/png',
+              size: 413,
+            }),
+          });
         });
-      });
-      await adminPage.goto('/app/mentor/cursos/criar');
-      await expect(adminPage.locator('form')).toBeVisible({ timeout: 10_000 });
 
-      const title = `Curso submetido E2E ${Date.now()}`;
-      await adminPage.fill('input[name="titulo"]', title);
-      await adminPage.fill(
-        'textarea[name="descricao"]',
-        'Curso completo criado pela interface e submetido diretamente para revisão.'
-      );
-      await adminPage
-        .locator('input[type="file"]')
-        .first()
-        .setInputFiles('apps/web/public/icon-192.png');
-      await expect(adminPage.getByText('Mídia materializada com sucesso')).toBeVisible();
+        await adminPage.goto('/app/mentor/cursos/criar');
+        await expect(adminPage.locator('form')).toBeVisible({ timeout: 10_000 });
 
-      await adminPage.getByRole('button', { name: 'Seguinte' }).click();
-      await expect(adminPage.getByRole('heading', { name: 'Currículo' })).toBeVisible();
-      await adminPage.fill(
-        'textarea[name="modulos.0.itens.0.conteudo"]',
-        'Esta aula apresenta os objetivos, desenvolve o tema com exemplos e termina com um próximo passo.'
-      );
-      await adminPage.getByRole('button', { name: 'Validar e fechar aula' }).click();
-      await expect(adminPage.getByRole('button', { name: 'Editar aula' })).toBeVisible();
+        const title = `Curso submetido E2E ${Date.now()}`;
+        await adminPage.fill('input[name="titulo"]', title);
+        await adminPage.fill(
+          'textarea[name="descricao"]',
+          'Curso completo criado pela interface e submetido diretamente para revisão.'
+        );
+        await adminPage
+          .locator('input[type="file"]')
+          .first()
+          .setInputFiles('apps/web/public/icon-192.png');
+        await expect(adminPage.getByText('Mídia materializada com sucesso')).toBeVisible();
 
-      await adminPage
-        .getByRole('navigation', { name: 'Etapas de criação' })
-        .getByRole('button', { name: '4 Revisão' })
-        .click();
-      const submitButton = adminPage
-        .getByRole('button', { name: 'Guardar e submeter para revisão' })
-        .last();
-      await expect(submitButton).toBeEnabled();
+        await adminPage.getByRole('button', { name: 'Seguinte' }).click();
+        await expect(adminPage.getByRole('heading', { name: 'Currículo' })).toBeVisible();
+        await adminPage.fill(
+          'textarea[name="modulos.0.itens.0.conteudo"]',
+          'Esta aula apresenta os objetivos, desenvolve o tema com exemplos e termina com um próximo passo.'
+        );
+        await adminPage.getByRole('button', { name: 'Validar e fechar aula' }).click();
+        await expect(adminPage.getByRole('button', { name: 'Editar aula' })).toBeVisible();
 
-      const createResponsePromise = adminPage.waitForResponse(
-        (response) => response.url().endsWith('/cursos') && response.request().method() === 'POST'
-      );
-      const submitResponsePromise = adminPage.waitForResponse(
-        (response) =>
-          /\/cursos\/[^/]+\/submeter$/.test(response.url()) &&
-          response.request().method() === 'POST'
-      );
-      await submitButton.click();
+        await adminPage
+          .getByRole('navigation', { name: 'Etapas de criação' })
+          .getByRole('button', { name: '4 Revisão' })
+          .click();
+        const submitButton = adminPage
+          .getByRole('button', { name: 'Guardar e submeter para revisão' })
+          .last();
+        await expect(submitButton).toBeEnabled();
 
-      const createResponse = await createResponsePromise;
-      const submitResponse = await submitResponsePromise;
-      expect(createResponse.status(), await createResponse.text()).toBe(201);
-      expect(submitResponse.status(), await submitResponse.text()).toBe(200);
-      await expect(adminPage).toHaveURL('/app/instituicao/cursos');
+        const createResponsePromise = adminPage.waitForResponse(
+          (response) => response.url().endsWith('/cursos') && response.request().method() === 'POST'
+        );
+        const submitResponsePromise = adminPage.waitForResponse(
+          (response) =>
+            /\/cursos\/[^/]+\/submeter$/.test(response.url()) &&
+            response.request().method() === 'POST'
+        );
+        await submitButton.click();
+
+        const createResponse = await createResponsePromise;
+        const createBody = await createResponse.text();
+        if (createResponse.status() === 201) {
+          submittedCourseId = CreatedCourseSchema.parse(JSON.parse(createBody)).documentId;
+        }
+        const submitResponse = await submitResponsePromise;
+        expect(createResponse.status(), createBody).toBe(201);
+        expect(submitResponse.status(), await submitResponse.text()).toBe(200);
+        await expect(adminPage).toHaveURL('/app/instituicao/cursos');
+      } finally {
+        if (submittedCourseId) {
+          const archiveResponse = await adminPage.request.patch(
+            `/api/cursos/${submittedCourseId}/estado`,
+            { data: { estado: 'archived' } }
+          );
+          expect(archiveResponse.status(), await archiveResponse.text()).toBe(200);
+        }
+      }
     });
   });
 
@@ -201,6 +217,7 @@ test.describe('Criar Curso', () => {
     const title = `Curso consumível E2E ${Date.now()}`;
     const content =
       'Esta aula comprova que o conteúdo criado chega integralmente ao estudante inscrito.';
+    const strapiApiToken = requireStrapiApiToken();
     let enrollment: z.infer<typeof EnrollmentSchema> | undefined;
     const createResponse = await adminPage.request.post('/api/cursos', {
       data: {
@@ -280,15 +297,14 @@ test.describe('Criar Curso', () => {
       const progress = CourseProgressSchema.parse(await progressResponse.json());
       expect(progress).toEqual([expect.objectContaining({ concluido: true })]);
     } finally {
+      let deleteEnrollmentResponse:
+        | Awaited<ReturnType<typeof adminPage.request.delete>>
+        | undefined;
       if (enrollment) {
-        const deleteEnrollmentResponse = await adminPage.request.delete(
+        deleteEnrollmentResponse = await adminPage.request.delete(
           `${STRAPI_URL}/api/inscricoes/${enrollment.documentId}`,
-          { headers: { Authorization: `Bearer ${requireStrapiApiToken()}` } }
+          { headers: { Authorization: `Bearer ${strapiApiToken}` } }
         );
-        expect(
-          [200, 204],
-          await deleteEnrollmentResponse.text()
-        ).toContain(deleteEnrollmentResponse.status());
       }
       const archiveResponse = await adminPage.request.patch(
         `/api/cursos/${created.documentId}/estado`,
@@ -296,6 +312,11 @@ test.describe('Criar Curso', () => {
           data: { estado: 'archived' },
         }
       );
+      if (deleteEnrollmentResponse) {
+        expect([200, 204], await deleteEnrollmentResponse.text()).toContain(
+          deleteEnrollmentResponse.status()
+        );
+      }
       expect(archiveResponse.status(), await archiveResponse.text()).toBe(200);
     }
   });

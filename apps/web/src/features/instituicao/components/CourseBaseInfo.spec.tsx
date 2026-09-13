@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { describe, expect, it } from 'vitest';
-import type { CriarCursoPayload } from '@pdc/shared';
+import { CURSO_DESCRICAO_MAX_LENGTH, type CriarCursoPayload } from '@pdc/shared';
 import { CourseBaseInfo } from './CourseBaseInfo';
 
 function CourseBaseInfoHarness(): React.JSX.Element {
@@ -35,13 +35,11 @@ function CourseBaseInfoErrorHarness(): React.JSX.Element {
     },
   });
 
-  return (
-    <CourseBaseInfo
-      control={form.control}
-      register={form.register}
-      errors={{ descricao: { type: 'manual', message: 'Descrição demasiado curta.' } }}
-    />
-  );
+  const errors: FieldErrors<CriarCursoPayload> = {
+    descricao: { type: 'manual', message: 'Descrição demasiado curta.' },
+  };
+
+  return <CourseBaseInfo control={form.control} register={form.register} errors={errors} />;
 }
 
 describe('CourseBaseInfo', () => {
@@ -60,15 +58,24 @@ describe('CourseBaseInfo', () => {
 
     const preview = screen.getByLabelText('Pré-visualização da descrição no catálogo');
     expect(within(preview).getByText('Introdução ao Produto Digital')).toBeVisible();
-    expect(within(preview).getByText('Aprende a validar uma ideia e lançar uma primeira versão útil.')).toBeVisible();
-    expect(screen.getByText((_, element) => element?.id === 'course-description-count'))
-      .toHaveTextContent(/^62\/2\s000$/);
+    expect(
+      within(preview).getByText('Aprende a validar uma ideia e lançar uma primeira versão útil.')
+    ).toBeVisible();
+    const maxLength = new Intl.NumberFormat('pt-AO')
+      .format(CURSO_DESCRICAO_MAX_LENGTH)
+      .replaceAll('\u00a0', ' ');
+    expect(
+      screen.getByText((_, element) => element?.id === 'course-description-count')
+    ).toHaveTextContent(`62/${maxLength}`);
   });
 
   it('explica o erro da descrição e marca o campo como inválido', () => {
     render(<CourseBaseInfoErrorHarness />);
 
-    expect(screen.getByRole('textbox', { name: 'Descrição do curso' })).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('textbox', { name: 'Descrição do curso' })).toHaveAttribute(
+      'aria-invalid',
+      'true'
+    );
     expect(screen.getByText('Descrição demasiado curta.')).toBeVisible();
     expect(screen.queryByText(/Entre 10 e 2\s000 caracteres\./)).not.toBeInTheDocument();
   });

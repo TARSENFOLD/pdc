@@ -1,3 +1,4 @@
+import type { RefObject } from 'react';
 import type { Curso, ProgressoItem } from '@pdc/shared';
 import { Check, ChevronLeft, Circle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,7 @@ interface CoursePlayerSidebarProps {
   onCollapse: () => void;
   onOpenOverview: () => void;
   onOpenItem: (itemId: string | number) => void;
+  containerRef?: RefObject<HTMLElement>;
 }
 
 function routeId(value: unknown): string {
@@ -29,40 +31,46 @@ export function CoursePlayerSidebar({
   onCollapse,
   onOpenOverview,
   onOpenItem,
+  containerRef,
 }: CoursePlayerSidebarProps): React.JSX.Element {
   const allItems = curso.modulos?.flatMap((module) => module.itens) ?? [];
   const completedCount = countCurrentCompletedItems(
     allItems.map((item) => routeId(item.id)),
-    progresso,
+    progresso
   );
-  const progressPercent = allItems.length > 0
-    ? Math.round((completedCount / allItems.length) * 100)
-    : 0;
+  const progressPercent =
+    allItems.length > 0 ? Math.round((completedCount / allItems.length) * 100) : 0;
 
   return (
     <aside
+      ref={containerRef}
       className={cn(
-        'fixed bottom-0 left-0 top-16 z-40 flex w-[min(88vw,320px)] flex-col border-r border-border bg-recessed shadow-2xl transition-transform lg:sticky lg:top-16 lg:z-20 lg:h-[calc(100vh-4rem)] lg:w-[320px] lg:shrink-0 lg:shadow-none',
+        'border-border bg-recessed fixed top-16 bottom-0 left-0 z-40 flex w-[min(88vw,320px)] flex-col border-r shadow-2xl transition-transform lg:sticky lg:top-16 lg:z-20 lg:h-[calc(100vh-4rem)] lg:w-[320px] lg:shrink-0 lg:shadow-none',
         mobileOpen ? 'visible translate-x-0' : 'invisible -translate-x-full lg:visible',
-        collapsed ? 'lg:hidden' : 'lg:translate-x-0',
+        collapsed ? 'lg:hidden' : 'lg:translate-x-0'
       )}
       aria-label="Navegação do curso"
+      role={mobileOpen ? 'dialog' : undefined}
+      aria-modal={mobileOpen ? true : undefined}
     >
-      <div className="border-b border-border px-5 py-5">
+      <div className="border-border border-b px-5 py-5">
         <div className="flex items-start gap-3">
           <button
             type="button"
             onClick={onOpenOverview}
-            className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="focus-visible:ring-accent min-w-0 flex-1 text-left focus-visible:ring-2 focus-visible:outline-none"
           >
-            <span className="line-clamp-2 font-display text-xl text-ink-primary">{curso.titulo}</span>
-            <span className="mt-1 block text-xs text-ink-tertiary">Página inicial do curso</span>
+            <span className="font-display text-ink-primary line-clamp-2 text-xl">
+              {curso.titulo}
+            </span>
+            <span className="text-ink-tertiary mt-1 block text-xs">Página inicial do curso</span>
           </button>
           <button
+            data-course-sidebar-close
             type="button"
             onClick={onCloseMobile}
             aria-label="Fechar currículo"
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-ink-secondary hover:bg-elevated lg:hidden"
+            className="text-ink-secondary hover:bg-elevated flex min-h-11 min-w-11 items-center justify-center rounded-lg lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
@@ -70,17 +78,22 @@ export function CoursePlayerSidebar({
             type="button"
             onClick={onCollapse}
             aria-label="Ocultar currículo"
-            className="hidden min-h-11 min-w-11 items-center justify-center rounded-lg text-ink-secondary hover:bg-elevated lg:flex"
+            className="text-ink-secondary hover:bg-elevated hidden min-h-11 min-w-11 items-center justify-center rounded-lg lg:flex"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
         </div>
-        <div className="mt-5 flex items-center justify-between text-xs text-ink-secondary">
-          <span>{completedCount} de {allItems.length} concluídos</span>
+        <div className="text-ink-secondary mt-5 flex items-center justify-between text-xs">
+          <span>
+            {completedCount} de {allItems.length} concluídos
+          </span>
           <span>{progressPercent}%</span>
         </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border">
-          <div className="h-full bg-accent transition-all" style={{ width: `${String(progressPercent)}%` }} />
+        <div className="bg-border mt-2 h-1.5 overflow-hidden rounded-full">
+          <div
+            className="bg-accent h-full transition-all"
+            style={{ width: `${String(progressPercent)}%` }}
+          />
         </div>
       </div>
 
@@ -88,30 +101,40 @@ export function CoursePlayerSidebar({
         {curso.modulos?.map((module, moduleIndex) => (
           <section key={module.id} className="mb-5">
             <div className="px-3 pb-2">
-              <p className="text-xs font-semibold text-ink-primary">Módulo {moduleIndex + 1}</p>
-              <p className="mt-1 text-xs text-ink-tertiary">{module.titulo}</p>
+              <p className="text-ink-primary text-xs font-semibold">Módulo {moduleIndex + 1}</p>
+              <p className="text-ink-tertiary mt-1 text-xs">{module.titulo}</p>
             </div>
             <div className="space-y-1">
               {module.itens.map((moduleItem, itemIndex) => {
                 const moduleItemId = routeId(moduleItem.id);
                 const isCurrent = moduleItemId === activeItemId;
-                const isComplete = progresso.some((entry) => entry.itemId === moduleItemId && entry.concluido);
+                const isComplete = progresso.some(
+                  (entry) => entry.itemId === moduleItemId && entry.concluido
+                );
                 return (
                   <button
                     key={moduleItemId}
                     type="button"
-                    onClick={() => { onOpenItem(moduleItem.id); }}
+                    onClick={() => {
+                      onOpenItem(moduleItem.id);
+                    }}
                     className={cn(
-                      'flex min-h-12 w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
-                      isCurrent ? 'bg-accent/10 text-accent' : 'text-ink-secondary hover:bg-elevated hover:text-ink-primary',
+                      'focus-visible:ring-accent flex min-h-12 w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                      isCurrent
+                        ? 'bg-accent/10 text-accent'
+                        : 'text-ink-secondary hover:bg-elevated hover:text-ink-primary'
                     )}
                     aria-current={isCurrent ? 'page' : undefined}
                   >
-                    {isComplete
-                      ? <Check className="mt-0.5 h-4 w-4 shrink-0" />
-                      : <Circle className="mt-0.5 h-4 w-4 shrink-0" />}
+                    {isComplete ? (
+                      <Check className="mt-0.5 h-4 w-4 shrink-0" />
+                    ) : (
+                      <Circle className="mt-0.5 h-4 w-4 shrink-0" />
+                    )}
                     <span>
-                      <span className="block text-xs uppercase text-ink-tertiary">{moduleIndex + 1}.{itemIndex + 1} · {moduleItem.tipo}</span>
+                      <span className="text-ink-tertiary block text-xs uppercase">
+                        {moduleIndex + 1}.{itemIndex + 1} · {moduleItem.tipo}
+                      </span>
                       <span className="mt-0.5 block text-sm font-medium">{moduleItem.titulo}</span>
                     </span>
                   </button>

@@ -12,6 +12,11 @@ import {
 import { featureFlagService } from '../modules/feature-flags/feature-flags.service.js';
 
 const publishWithOutboxMock = vi.hoisted(() => vi.fn().mockResolvedValue({ id: 'evt-1' }));
+const transitionLockMock = vi.hoisted(() => ({
+  acquire: vi.fn(),
+  extend: vi.fn(),
+  release: vi.fn(),
+}));
 const CourseNotReadyResponseSchema = z.object({
   code: z.literal('COURSE_NOT_READY'),
   issues: z.array(CursoReadinessIssueSchema),
@@ -54,6 +59,10 @@ vi.mock('../modules/events/event-bus.js', () => ({
   },
 }));
 
+vi.mock('../lib/distributed-lock.js', () => ({
+  acquireLock: transitionLockMock.acquire,
+}));
+
 vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
   featureFlagService: {
     isEnabled: vi.fn(),
@@ -94,6 +103,14 @@ describe('cursoRoutes E2E contracts', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    transitionLockMock.extend.mockResolvedValue(true);
+    transitionLockMock.release.mockResolvedValue(true);
+    transitionLockMock.acquire.mockResolvedValue({
+      key: 'curso:transition:curso-1',
+      fencingToken: 1,
+      extend: transitionLockMock.extend,
+      release: transitionLockMock.release,
+    });
     vi.mocked(featureFlagService.isEnabled).mockResolvedValue(true);
   });
 
@@ -344,6 +361,52 @@ describe('cursoRoutes E2E contracts', () => {
     );
   });
 
+  it('devolve conflito quando outra transição editorial já detém o lock do curso', async () => {
+    const completeDraft = {
+      id: 'curso-1',
+      documentId: 'doc-curso-1',
+      titulo: 'Curso completo',
+      descricao: 'Curso pronto para a validação editorial.',
+      area: 'ENGENHARIA',
+      nivel: 'medio',
+      thumbnailUrl: 'https://cdn.example.com/capa.webp',
+      autorId: 'mentor-1',
+      estado: 'draft',
+      visibilidade: 'publico',
+      gratuito: true,
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([completeDraft]))
+      .mockResolvedValueOnce(listResponse([completeDraft]))
+      .mockResolvedValueOnce(
+        listResponse([{ id: 'mod-1', documentId: 'doc-mod-1', titulo: 'Fundamentos', ordem: 1 }])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'item-1',
+            documentId: 'doc-item-1',
+            titulo: 'Primeira aula',
+            tipo: 'texto',
+            conteudo: 'Conteúdo completo da primeira aula.',
+            ordem: 1,
+          },
+        ])
+      );
+    transitionLockMock.acquire.mockResolvedValueOnce(null);
+
+    const res = await app.request('/cursos/curso-1/submeter', {
+      method: 'POST',
+      headers: { 'x-test-user': 'mentor-1', 'x-test-role': 'mentor' },
+    });
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: 'Já existe uma transição editorial em curso para este curso.',
+    });
+    expect(strapiPut).not.toHaveBeenCalled();
+  });
+
   it('publica a versão Strapi quando o curso aprovado está completo', async () => {
     const completeApproved = {
       id: 'curso-1',
@@ -409,23 +472,37 @@ describe('cursoRoutes E2E contracts', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(strapiPut).toHaveBeenCalledWith(
-      '/cursos/doc-curso-1',
-      { estado: 'published' },
-      { status: 'draft' }
-    );
-    expect(strapiPut).toHaveBeenCalledWith(
-      '/cursos/doc-curso-1',
-      { estado: 'approved' },
-      { status: 'published' }
-    );
-    const putOrder = vi.mocked(strapiPut).mock.invocationCallOrder;
-    expect(putOrder).toHaveLength(2);
-    expect(putOrder[0]).toBeLessThan(putOrder[1] as number);
+    expect(vi.mocked(strapiPut).mock.calls).toEqual([
+      ['/cursos/doc-curso-1', { estado: 'published' }, { status: 'draft' }],
+      ['/cursos/doc-curso-1', { estado: 'approved' }, { status: 'published' }],
+    ]);
     expect(publishWithOutboxMock).toHaveBeenCalledWith(
       DomainEventName.CURSO_PUBLICADO,
       expect.objectContaining({ cursoId: 'curso-1', autorId: 'mentor-1' })
     );
+    expect(publishWithOutboxMock.mock.invocationCallOrder[0]).toBeGreaterThan(
+      vi.mocked(strapiPut).mock.invocationCallOrder[1] ?? 0
+    );
+  });
+
+  it('encaminha os filtros aceites para a consulta do catálogo público', async () => {
+    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([]));
+
+    const res = await app.request(
+      '/cursos?categoria=TECNOLOGIA&autorId=mentor-1&page=2&pageSize=20&search=cloud'
+    );
+
+    expect(res.status).toBe(200);
+    expect(strapiGet).toHaveBeenCalledWith('/cursos', {
+      populate: 'autor',
+      status: 'published',
+      'filters[estado][$eq]': 'approved',
+      'pagination[page]': '2',
+      'pagination[pageSize]': '20',
+      'filters[titulo][$containsi]': 'cloud',
+      'filters[area][$eq]': 'TECNOLOGIA',
+      'filters[autorId][$eq]': 'mentor-1',
+    });
   });
 
   const payload = {
@@ -669,6 +746,17 @@ describe('cursoRoutes E2E contracts', () => {
       .mockResolvedValueOnce(
         listResponse([
           {
+            id: 'insc-1',
+            documentId: 'doc-insc-1',
+            dataInscricao: '2026-05-15',
+            progressoPercentual: 0,
+            modulosConcluidos: [],
+          },
+        ])
+      )
+      .mockResolvedValueOnce(
+        listResponse([
+          {
             id: 'mod-1',
             titulo: 'M',
             ordem: 1,
@@ -713,12 +801,46 @@ describe('cursoRoutes E2E contracts', () => {
       'filters[$or][0][curso][documentId][$eq]': 'doc-curso-1',
       sort: 'ordem:asc',
       'pagination[pageSize]': '100',
+      'pagination[page]': '1',
     });
     expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.CURSO_ITEM_CONCLUIDO, {
       cursoId: 'doc-curso-1',
       itemId: 'item-1',
       estudanteId: 'user-1',
     });
+  });
+
+  it('não escreve progresso quando outra atualização detém o lock da inscrição', async () => {
+    const enrollment = {
+      id: 'insc-1',
+      documentId: 'doc-insc-1',
+      dataInscricao: '2026-05-15',
+      progressoPercentual: 0,
+      modulosConcluidos: [],
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([approvedCourse]))
+      .mockResolvedValueOnce(listResponse([approvedCourse]))
+      .mockResolvedValueOnce(listResponse([enrollment]))
+      .mockResolvedValueOnce(listResponse([enrollment]));
+    transitionLockMock.acquire.mockResolvedValueOnce(null);
+
+    const res = await app.request('/cursos/curso-1/progresso/item-1', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-role': 'estudante',
+        'x-test-perfil': 'perfil-1',
+      },
+      body: JSON.stringify({ concluido: true }),
+    });
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
+    expect(strapiPut).not.toHaveBeenCalled();
   });
 
   it('sincroniza módulos e itens ao editar curso existente', async () => {
@@ -1044,6 +1166,52 @@ describe('cursoRoutes E2E contracts', () => {
       error: 'Este conteúdo já não está disponível.',
       code: 'CONTENT_NOT_AVAILABLE',
     });
+  });
+
+  it('valida várias inscrições com apenas duas consultas batch de versões dos cursos', async () => {
+    const secondCourse = {
+      ...approvedCourse,
+      id: 'curso-2',
+      documentId: 'doc-curso-2',
+      titulo: 'Segundo curso publicado',
+    };
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            id: 'insc-1',
+            dataInscricao: '2026-08-01',
+            curso: { id: 'curso-1', documentId: 'doc-curso-1' },
+          },
+          {
+            id: 'insc-2',
+            dataInscricao: '2026-08-02',
+            curso: { id: 'curso-2', documentId: 'doc-curso-2' },
+          },
+        ])
+      )
+      .mockResolvedValueOnce(listResponse([approvedCourse, secondCourse]))
+      .mockResolvedValueOnce(listResponse([approvedCourse, secondCourse]));
+
+    const res = await app.request('/cursos/me/inscricoes', {
+      headers: { 'x-test-role': 'estudante', 'x-test-perfil': 'perfil-1' },
+    });
+
+    expect(res.status).toBe(200);
+    expect(strapiGet).toHaveBeenCalledTimes(3);
+    expect(strapiGet).toHaveBeenNthCalledWith(
+      2,
+      '/cursos',
+      expect.objectContaining({
+        'filters[$or][0][documentId][$in]': ['doc-curso-1', 'doc-curso-2'],
+        status: 'draft',
+      })
+    );
+    expect(strapiGet).toHaveBeenNthCalledWith(
+      3,
+      '/cursos',
+      expect.objectContaining({ status: 'published' })
+    );
   });
 
   it('o alias legado /inscrever não contorna a confirmação de publicação', async () => {

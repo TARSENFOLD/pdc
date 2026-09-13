@@ -11,7 +11,7 @@ import {
 import { http } from './http';
 
 async function uploadErrorMessage(response: Response): Promise<string> {
-  if (response.headers.get('content-type')?.includes('application/json')) {
+  if (response.headers.get('content-type')?.toLowerCase().includes('application/json')) {
     const body: unknown = await response.json().catch(() => undefined);
     if (
       typeof body === 'object' &&
@@ -40,9 +40,13 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Falha desconhecida no upload profissional.';
 }
 
+function isTransportFailure(error: unknown): boolean {
+  return error instanceof TypeError;
+}
+
 async function abortMultipartSession(
   session: MultipartSessionIdentity,
-  uploadError: unknown,
+  uploadError: unknown
 ): Promise<void> {
   let cleanupError: unknown;
   for (let attempt = 1; attempt <= MULTIPART_CLEANUP_RETRIES; attempt += 1) {
@@ -55,6 +59,7 @@ async function abortMultipartSession(
       return;
     } catch (error) {
       cleanupError = error;
+      if (attempt < MULTIPART_CLEANUP_RETRIES) await waitForRetry(attempt);
     }
   }
 
@@ -64,11 +69,11 @@ async function abortMultipartSession(
   );
 }
 
-function waitForRetry(attempt: number, signal: AbortSignal): Promise<void> {
+function waitForRetry(attempt: number, signal?: AbortSignal): Promise<void> {
   const jitter = Math.floor(Math.random() * MULTIPART_RETRY_BASE_MS);
   const delay = MULTIPART_RETRY_BASE_MS * 2 ** (attempt - 1) + jitter;
   return new Promise((resolve, reject) => {
-    if (signal.aborted) {
+    if (signal?.aborted) {
       reject(new Error('Upload profissional cancelado.'));
       return;
     }
@@ -77,10 +82,10 @@ function waitForRetry(attempt: number, signal: AbortSignal): Promise<void> {
       reject(new Error('Upload profissional cancelado.'));
     };
     const timeoutId = window.setTimeout(() => {
-      signal.removeEventListener('abort', onAbort);
+      signal?.removeEventListener('abort', onAbort);
       resolve();
     }, delay);
-    signal.addEventListener('abort', onAbort, { once: true });
+    signal?.addEventListener('abort', onAbort, { once: true });
   });
 }
 
@@ -252,7 +257,8 @@ export const videosApi = {
       const completionPayload = { uploadId: created.uploadId, parts: completedParts };
       try {
         return await http.postParsed(completionPath, completionPayload, VideoSchema);
-      } catch {
+      } catch (completionError) {
+        if (!isTransportFailure(completionError)) throw completionError;
         return await http.postParsed(completionPath, completionPayload, VideoSchema);
       }
     } catch (error) {

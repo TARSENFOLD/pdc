@@ -39,4 +39,38 @@ describe('firstCourseFormErrorMessage', () => {
     expect(secondModule.titulo).not.toBe(firstModule.titulo);
     expect(secondModule.itens[0]?.titulo).not.toBe(firstModule.itens[0]?.titulo);
   });
+
+  it('normaliza uma galeria nula do CMS antes de validar e guardar novamente', () => {
+    const curso: Curso = {
+      id: 'curso-1',
+      slug: 'curso-1',
+      titulo: 'Curso com aula',
+      descricao: 'Curso persistido com galeria nula no CMS.',
+      autorId: 'mentor-1',
+      totalHoras: 1,
+      estado: 'draft',
+      rating: 0,
+      inscritosCount: 0,
+      createdAt: '2026-09-08T08:00:00.000Z',
+      updatedAt: '2026-09-08T08:00:00.000Z',
+      modulos: [
+        {
+          id: 'modulo-1',
+          titulo: 'Introdução',
+          ordem: 1,
+          itens: [
+            {
+              id: 'item-1',
+              titulo: 'Aula inicial',
+              tipo: 'texto',
+              ordem: 1,
+              imagens: null,
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(courseToFormValues(curso).modulos[0]?.itens[0]?.imagens).toBeUndefined();
+  });
 });

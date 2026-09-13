@@ -1,4 +1,9 @@
-import { CriarCursoPayloadSchema, type Curso, type CursoReadinessStep } from '@pdc/shared';
+import {
+  CriarCursoPayloadSchema,
+  CursoNivelSchema,
+  type Curso,
+  type CursoReadinessStep,
+} from '@pdc/shared';
 import type { z } from 'zod';
 import { normalizeCourseItems } from './course-curriculum';
 
@@ -40,6 +45,13 @@ export const COURSE_FORM_DEFAULTS: CourseFormValues = {
   ],
 };
 
+export function courseEditorialStatusLabel(isEditing: boolean, state: string | undefined): string {
+  if (!isEditing) return 'Ainda não guardado';
+  if (state === 'review') return 'Em revisão';
+  if (state === 'published') return 'Publicado';
+  return 'Rascunho';
+}
+
 export function courseFieldLabel(field: string): string {
   const labels: Record<string, string> = {
     titulo: 'título',
@@ -80,14 +92,12 @@ function resolveCursoVisibilidade(curso: Curso): CursoVisibilidade {
 }
 
 export function courseToFormValues(curso: Curso): CourseFormValues {
+  const parsedLevel = CursoNivelSchema.safeParse(curso.nivel);
   return {
     titulo: curso.titulo,
     descricao: curso.descricao,
     area: curso.area ?? 'TECNOLOGIA',
-    nivel:
-      curso.nivel === 'basico' || curso.nivel === 'medio' || curso.nivel === 'avancado'
-        ? curso.nivel
-        : 'medio',
+    nivel: parsedLevel.success ? parsedLevel.data : 'medio',
     capaUrl: curso.capaUrl ?? undefined,
     visibilidade: resolveCursoVisibilidade(curso),
     gratuito: curso.gratuito ?? true,

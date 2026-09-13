@@ -65,7 +65,14 @@ export default function BuilderTopStepper({
                         : 'border-border bg-elevated text-ink-tertiary group-hover:border-ink-tertiary'
                   )}
                 >
-                  {isComplete ? <Check size={13} aria-hidden="true" /> : index + 1}
+                  {isComplete ? (
+                    <>
+                      <Check size={13} aria-hidden="true" />
+                      <span className="sr-only">Concluída</span>
+                    </>
+                  ) : (
+                    index + 1
+                  )}
                 </span>
                 <span className="whitespace-nowrap">{step.label}</span>
               </button>

@@ -12,16 +12,8 @@ export const VIDEO_PROFESSIONAL_UPLOAD_MAX_BYTES_BY_ROLE = {
 } as const satisfies Partial<Record<Role, number>>;
 
 export function professionalVideoUploadLimit(role: Role): number | undefined {
-  switch (role) {
-    case 'mentor':
-      return VIDEO_PROFESSIONAL_UPLOAD_MAX_BYTES_BY_ROLE.mentor;
-    case 'instituicao':
-      return VIDEO_PROFESSIONAL_UPLOAD_MAX_BYTES_BY_ROLE.instituicao;
-    case 'super_admin':
-      return VIDEO_PROFESSIONAL_UPLOAD_MAX_BYTES_BY_ROLE.super_admin;
-    default:
-      return undefined;
-  }
+  const limits: Partial<Record<Role, number>> = VIDEO_PROFESSIONAL_UPLOAD_MAX_BYTES_BY_ROLE;
+  return limits[role];
 }
 
 const OptionalUrlSchema = z.union([
@@ -106,22 +98,24 @@ export const CreateExternalVideoPayloadSchema = z.object({
 
 export type CreateExternalVideoPayload = z.infer<typeof CreateExternalVideoPayloadSchema>;
 
-export const CreateR2VideoPayloadSchema = z.object({
-  mode: z.enum(['quick_upload', 'professional_upload']).default('quick_upload'),
-  visibility: VideoVisibilitySchema.default('protected'),
-  title: z.string().min(1).max(180),
-  filename: z.string().min(1),
-  mimeType: z.string().min(1),
-  sizeBytes: z.number().int().positive(),
-}).superRefine((payload, context) => {
-  if (payload.mode === 'quick_upload' && payload.sizeBytes > VIDEO_QUICK_UPLOAD_MAX_BYTES) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['sizeBytes'],
-      message: 'Upload rápido de vídeo limitado a 50MB.',
-    });
-  }
-});
+export const CreateR2VideoPayloadSchema = z
+  .object({
+    mode: z.enum(['quick_upload', 'professional_upload']).default('quick_upload'),
+    visibility: VideoVisibilitySchema.default('protected'),
+    title: z.string().min(1).max(180),
+    filename: z.string().min(1),
+    mimeType: z.string().min(1),
+    sizeBytes: z.number().int().positive(),
+  })
+  .superRefine((payload, context) => {
+    if (payload.mode === 'quick_upload' && payload.sizeBytes > VIDEO_QUICK_UPLOAD_MAX_BYTES) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sizeBytes'],
+        message: 'Upload rápido de vídeo limitado a 50MB.',
+      });
+    }
+  });
 
 export type CreateR2VideoPayload = z.infer<typeof CreateR2VideoPayloadSchema>;
 
@@ -143,7 +137,10 @@ export const ProfessionalR2VideoResponseSchema = z.object({
   uploadMethod: z.literal('multipart'),
   key: z.string(),
   uploadId: z.string().min(1),
-  partSizeBytes: z.number().int().min(5 * 1024 * 1024),
+  partSizeBytes: z
+    .number()
+    .int()
+    .min(5 * 1024 * 1024),
   totalParts: z.number().int().positive().max(VIDEO_MULTIPART_MAX_PARTS),
 });
 
@@ -173,30 +170,36 @@ export const VideoMultipartCompletedPartSchema = z.object({
   etag: z.string().min(1),
 });
 
-export const CompleteVideoMultipartUploadPayloadSchema = z.object({
-  uploadId: z.string().min(1),
-  parts: z.array(VideoMultipartCompletedPartSchema).min(1).max(VIDEO_MULTIPART_MAX_PARTS),
-}).superRefine((payload, context) => {
-  const seen = new Set<number>();
-  payload.parts.forEach((part, index) => {
-    if (seen.has(part.partNumber)) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['parts', index, 'partNumber'],
-        message: 'Cada parte deve aparecer apenas uma vez.',
-      });
-    }
-    seen.add(part.partNumber);
+export const CompleteVideoMultipartUploadPayloadSchema = z
+  .object({
+    uploadId: z.string().min(1),
+    parts: z.array(VideoMultipartCompletedPartSchema).min(1).max(VIDEO_MULTIPART_MAX_PARTS),
+  })
+  .superRefine((payload, context) => {
+    const seen = new Set<number>();
+    payload.parts.forEach((part, index) => {
+      if (seen.has(part.partNumber)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['parts', index, 'partNumber'],
+          message: 'Cada parte deve aparecer apenas uma vez.',
+        });
+      }
+      seen.add(part.partNumber);
+    });
   });
-});
 
-export type CompleteVideoMultipartUploadPayload = z.infer<typeof CompleteVideoMultipartUploadPayloadSchema>;
+export type CompleteVideoMultipartUploadPayload = z.infer<
+  typeof CompleteVideoMultipartUploadPayloadSchema
+>;
 
 export const AbortVideoMultipartUploadPayloadSchema = z.object({
   uploadId: z.string().min(1),
 });
 
-export type AbortVideoMultipartUploadPayload = z.infer<typeof AbortVideoMultipartUploadPayloadSchema>;
+export type AbortVideoMultipartUploadPayload = z.infer<
+  typeof AbortVideoMultipartUploadPayloadSchema
+>;
 
 export const VideoMultipartAbortResponseSchema = z.null();
 

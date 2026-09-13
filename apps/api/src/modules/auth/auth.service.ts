@@ -1,9 +1,26 @@
 import { randomUUID } from 'node:crypto';
-import { ConsentStateSchema, DomainEventName, resolveEstadoMenoridade, type User, type Role } from '@pdc/shared';
-import { strapiDelete, strapiDeleteRaw, strapiGetRaw, strapiPostRaw, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
+import {
+  ConsentStateSchema,
+  DomainEventName,
+  resolveEstadoMenoridade,
+  type User,
+  type Role,
+} from '@pdc/shared';
+import {
+  strapiDelete,
+  strapiDeleteRaw,
+  strapiGetRaw,
+  strapiPostRaw,
+  strapiGet,
+  strapiPost,
+  strapiPut,
+} from '../strapi/strapi.client.js';
 import { getReputacao, getTier } from '../reputation/reputation.service.js';
 import { resolvePerfilAvatar } from '../perfil/perfil-media.js';
-import { buildPerfilComplianceFields, type RegistrationComplianceInput } from './auth.compliance.js';
+import {
+  buildPerfilComplianceFields,
+  type RegistrationComplianceInput,
+} from './auth.compliance.js';
 import { consentService } from '../consent/consent.service.js';
 import { eventBus } from '../events/event-bus.js';
 import {
@@ -16,6 +33,10 @@ import pino from 'pino';
 import { DuplicateEmailError } from './auth.errors.js';
 
 const log = pino({ name: 'auth-service' });
+
+function optionalEntityId(value: unknown): string | undefined {
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : undefined;
+}
 
 async function getAuthenticatedRoleId(): Promise<number | string> {
   const roles = await strapiGetRaw<StrapiUsersPermissionsRolesResponse>('/users-permissions/roles');
@@ -40,7 +61,7 @@ export const authService = {
     email: string,
     password: string,
     nome: string,
-    compliance: RegistrationComplianceInput,
+    compliance: RegistrationComplianceInput
   ): Promise<User> {
     return this.registerWithRole(email, password, nome, 'estudante', {}, compliance);
   },
@@ -51,7 +72,7 @@ export const authService = {
     nome: string,
     role: Role,
     extra: Record<string, unknown>,
-    compliance?: RegistrationComplianceInput,
+    compliance?: RegistrationComplianceInput
   ): Promise<User> {
     const normalizedEmail = email.toLowerCase().trim();
     const existingUsers = await strapiGetRaw<StrapiUser[]>('/users', {
@@ -89,7 +110,9 @@ export const authService = {
           aceiteLegal: compliance.aceiteLegal,
           source: compliance.source,
           ...(compliance.dataNascimento ? { dataNascimento: compliance.dataNascimento } : {}),
-          ...(compliance.consentimentoEncarregado ? { consentimentoEncarregado: compliance.consentimentoEncarregado } : {}),
+          ...(compliance.consentimentoEncarregado
+            ? { consentimentoEncarregado: compliance.consentimentoEncarregado }
+            : {}),
         });
       }
 
@@ -100,11 +123,19 @@ export const authService = {
           role,
         });
       } catch (eventError) {
-        log.error({ eventError, userId }, 'Falha ao publicar PERFIL_CRIADO; registo mantém-se válido');
+        log.error(
+          { eventError, userId },
+          'Falha ao publicar PERFIL_CRIADO; registo mantém-se válido'
+        );
       }
       return user;
     } catch (err) {
-      if (userId) try { await this.rollbackRegistration(userId); } catch (rollbackError) { log.error({ rollbackError, userId }, 'Falha na compensação do registo'); }
+      if (userId)
+        try {
+          await this.rollbackRegistration(userId);
+        } catch (rollbackError) {
+          log.error({ rollbackError, userId }, 'Falha na compensação do registo');
+        }
       throw err;
     }
   },
@@ -120,7 +151,9 @@ export const authService = {
     const errors: unknown[] = [];
     if (perfil?.instituicaoGerida) {
       try {
-        await strapiDelete(`/instituicoes/${perfil.instituicaoGerida.documentId ?? String(perfil.instituicaoGerida.id)}`);
+        await strapiDelete(
+          `/instituicoes/${perfil.instituicaoGerida.documentId ?? String(perfil.instituicaoGerida.id)}`
+        );
       } catch (error) {
         errors.push(error);
         log.error({ error, userId }, 'Falha ao remover instituição durante rollback');
@@ -148,13 +181,12 @@ export const authService = {
 
     const resPerfil = await strapiGet<StrapiPerfilData>('/perfis', {
       'filters[userId][$eq]': id,
-      'populate': ['foto', 'capa', 'conquistas', 'instituicao', 'instituicaoGerida'],
+      populate: ['foto', 'capa', 'conquistas', 'instituicao', 'instituicaoGerida'],
     });
 
     const perfilData = resPerfil.data[0] ?? null;
-    const reputationScore = perfilData?.id === undefined
-      ? 0
-      : await getReputacao(String(perfilData.id));
+    const reputationScore =
+      perfilData?.id === undefined ? 0 : await getReputacao(String(perfilData.id));
 
     return this.mapStrapiUser(user, perfilData, reputationScore);
   },
@@ -163,13 +195,15 @@ export const authService = {
     const normalizedEmail = email.toLowerCase().trim();
     const users = await strapiGetRaw<StrapiUser[]>('/users', {
       'filters[email][$eq]': normalizedEmail,
-      'populate': 'role',
+      populate: 'role',
     });
 
     if (users[0]) {
       if (users[0].confirmed === false) {
         throw Object.assign(
-          new Error('Conta com este email existe mas não está verificada. Use email/password para iniciar sessão.'),
+          new Error(
+            'Conta com este email existe mas não está verificada. Use email/password para iniciar sessão.'
+          ),
           { status: 403 }
         );
       }
@@ -226,14 +260,15 @@ export const authService = {
     const oauthProvider = perfil?.oauthProvider;
     const instituicao = perfil?.instituicaoGerida ?? perfil?.instituicao;
     const consentsResult = ConsentStateSchema.safeParse(perfil?.consents);
-    const estadoMenoridade = perfil?.estadoMenoridade ?? resolveEstadoMenoridade(perfil?.dataNascimento ?? undefined);
+    const estadoMenoridade =
+      perfil?.estadoMenoridade ?? resolveEstadoMenoridade(perfil?.dataNascimento ?? undefined);
     return {
       id: u.id.toString(),
       email: u.email,
       nome: perfil?.nome ?? u.nome ?? u.username,
       role: resolveRole(u.role?.name, perfil?.tipo),
       perfilId: perfil?.id === undefined ? undefined : String(perfil.id),
-      instituicaoId: instituicao?.id === undefined ? undefined : String(instituicao.id),
+      instituicaoId: optionalEntityId(instituicao?.id),
       avatarUrl: resolvePerfilAvatar(perfil?.avatarUrl, perfil?.foto, u.avatar?.url),
       bannerUrl: perfil?.bannerUrl ?? undefined,
       reputacaoTier: getTier(reputationScore),
@@ -246,7 +281,8 @@ export const authService = {
       conquistas: perfil?.conquistas ?? [],
       aprovado: perfil?.aprovado ?? undefined,
       oauthVerified: perfil?.oauthVerified ?? undefined,
-      oauthProvider: oauthProvider === 'google' || oauthProvider === 'linkedin' ? oauthProvider : undefined,
+      oauthProvider:
+        oauthProvider === 'google' || oauthProvider === 'linkedin' ? oauthProvider : undefined,
       onboardingCompleto: perfil?.onboardingCompleto ?? undefined,
       isMinor: estadoMenoridade === 'menor',
       estadoMenoridade,

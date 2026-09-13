@@ -94,6 +94,24 @@ describe('videosApi quick upload', () => {
     ).rejects.toThrow('Armazenamento temporariamente indisponível.');
   });
 
+  it('preserva JSON mesmo quando o servidor usa capitalização diferente no media type', async () => {
+    httpMock.postParsed.mockResolvedValueOnce(quickSession());
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: 'Limite institucional excedido.' }), {
+          status: 413,
+          headers: { 'Content-Type': 'Application/JSON; Charset=UTF-8' },
+        })
+      )
+    );
+    const { videosApi } = await import('./videos');
+
+    await expect(
+      videosApi.uploadQuickR2(new File(['video'], 'aula.mp4', { type: 'video/mp4' }), 'Aula curta')
+    ).rejects.toThrow('Limite institucional excedido.');
+  });
+
   it('usa a mensagem segura quando o upload direto falha sem JSON', async () => {
     httpMock.postParsed.mockResolvedValueOnce(quickSession());
     vi.stubGlobal(
@@ -120,6 +138,19 @@ describe('videosApi professional upload', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('recusa ficheiros pequenos antes de abrir uma sessão multipart', async () => {
+    const { videosApi } = await import('./videos');
+
+    await expect(
+      videosApi.uploadProfessionalR2(
+        new File(['video'], 'aula-curta.mp4', { type: 'video/mp4' }),
+        'Aula curta'
+      )
+    ).rejects.toThrow('upload rápido');
+
+    expect(httpMock.postParsed).not.toHaveBeenCalled();
   });
 
   it('uploads independent parts, reports progress and completes the session', async () => {
@@ -191,7 +222,7 @@ describe('videosApi professional upload', () => {
   });
 
   it('repete a conclusão e limpa a sessão preservando o erro original', async () => {
-    const completionError = new Error('conclusão temporariamente indisponível');
+    const completionError = new TypeError('conclusão temporariamente indisponível');
     httpMock.postParsed
       .mockResolvedValueOnce(professionalSession())
       .mockResolvedValueOnce({ uploadUrl: 'https://r2.example.com/part-1', partNumber: 1 })
@@ -199,9 +230,10 @@ describe('videosApi professional upload', () => {
       .mockRejectedValueOnce(completionError)
       .mockRejectedValueOnce(completionError);
     httpMock.deleteParsed.mockResolvedValueOnce(null);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(null, { status: 200, headers: { etag: 'etag-part' } })
-    ));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(new Response(null, { status: 200, headers: { etag: 'etag-part' } }))
+    );
     const { videosApi } = await import('./videos');
 
     await expect(videosApi.uploadProfessionalR2(largeFile(), 'Aula longa')).rejects.toThrow(
