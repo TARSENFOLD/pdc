@@ -1,5 +1,11 @@
 import { strapiDelete, strapiGet, strapiPost, strapiPut } from '../strapi/strapi.client.js';
-import { Curso, Inscricao, Modulo, type CriarCursoPayload, type ItemModulo, type ProgressoItem, type StrapiPublicationStatus } from '@pdc/shared';
+import {
+  Curso,
+  Inscricao,
+  type CriarCursoPayload,
+  type ProgressoItem,
+  type StrapiPublicationStatus,
+} from '@pdc/shared';
 import { eventBus } from '../events/event-bus.js';
 import { DomainEventName } from '../events/types.js';
 import pino from 'pino';
@@ -7,197 +13,110 @@ import {
   contentRelationIdentityFilters,
   loadContentVersions,
 } from '../conteudo/content-access.repository.js';
+import {
+  entityId,
+  first,
+  listarModulosCurso,
+  listarVersoesCursos,
+  matchesId,
+  normalizeProgress,
+  persistedId,
+  resolveCursoDocumentId,
+  resolveCursoReference,
+  syncCursoItems,
+  toCursoStrapiData,
+  toPublicModulo,
+  type CursoComModulos,
+  type CursoPersisted,
+  type CursoUpdatePayload,
+  type ExistingModulo,
+  type InscricaoStrapi,
+} from './cursos.repository.js';
+import { alterarEstadoCurso } from './curso-publication.service.js';
+import { acquireLock, type LockHandle } from '../../lib/distributed-lock.js';
 
 const log = pino({ name: 'cursos-service' });
+const COURSE_PROGRESS_LOCK_TTL_MS = 30_000;
 
 interface StrapiPerfilRef {
   id: string | number;
 }
 
-interface ExistingModuloItem extends ItemModulo {
-  documentId?: string;
-}
+async function applyProgressUpdate({
+  cursoId,
+  itemId,
+  userId,
+  concluido,
+  inscricao,
+  lock,
+}: {
+  cursoId: string;
+  itemId: string;
+  userId: string;
+  concluido: boolean;
+  inscricao: InscricaoStrapi;
+  lock: LockHandle;
+}): Promise<ProgressoItem> {
+  const current = normalizeProgress(inscricao.modulosConcluidos);
+  const existingItem = current.find((item) => item.itemId === itemId);
+  if (existingItem?.concluido === concluido) return existingItem;
 
-interface ExistingModulo extends Omit<Modulo, 'itens'> {
-  documentId?: string;
-  itens: ExistingModuloItem[];
-}
-
-interface CursoComModulos extends Omit<Curso, 'modulos'> {
-  documentId?: string;
-  thumbnailUrl?: string;
-  modulos?: ExistingModulo[];
-}
-
-interface InscricaoStrapi extends Inscricao {
-  documentId?: string;
-  modulosConcluidos?: unknown;
-}
-
-function first<T>(data: T | T[] | undefined): T | undefined {
-  return Array.isArray(data) ? data[0] : data;
-}
-
-function normalizeProgress(value: unknown): ProgressoItem[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((entry): ProgressoItem[] => {
-    if (typeof entry !== 'object' || entry === null) return [];
-    const raw = entry as Record<string, unknown>;
-    const itemId = raw.itemId;
-    if (typeof itemId !== 'string' && typeof itemId !== 'number') return [];
-    return [{
-      itemId: String(itemId),
-      concluido: raw.concluido === true,
-      ...(typeof raw.dataConclusao === 'string' ? { dataConclusao: raw.dataConclusao } : {}),
-      ...(typeof raw.metadata === 'object' && raw.metadata !== null ? { metadata: raw.metadata as Record<string, unknown> } : {}),
-    }];
-  });
-}
-
-type CursoModuloPayload = CriarCursoPayload['modulos'][number];
-type CursoItemPayload = CursoModuloPayload['itens'][number];
-type CursoBasePayload = Omit<CriarCursoPayload, 'modulos' | 'regrasAcesso' | 'estado'>;
-type CursoBaseUpdatePayload = {
-  [K in keyof CursoBasePayload]?: CursoBasePayload[K] | undefined;
-};
-type CursoPersisted = Curso & { documentId?: string };
-type CursoUpdatePayload = {
-  [K in keyof CriarCursoPayload]?: CriarCursoPayload[K] | undefined;
-};
-
-function persistedId(entity: { id: string | number; documentId?: string }): string {
-  return entity.documentId ?? String(entity.id);
-}
-
-function matchesId(entity: { id: string | number; documentId?: string }, id: string): boolean {
-  return String(entity.id) === id || entity.documentId === id;
-}
-
-function entityId(value: unknown): string {
-  if (typeof value === 'string' || typeof value === 'number') return String(value);
-  throw new Error('Identificador Strapi inválido');
-}
-
-function cursoIdentifierFilters(id: string): Record<string, string> {
-  return {
-    'filters[$or][0][documentId][$eq]': id,
-    'filters[$or][1][slug][$eq]': id,
-    ...(/^\d+$/.test(id) ? { 'filters[$or][2][id][$eq]': id } : {}),
-  };
-}
-
-function toPublicModulo(modulo: ExistingModulo): Modulo {
-  return {
-    ...modulo,
-    id: persistedId(modulo),
-    itens: modulo.itens.map((item) => ({
-      ...item,
-      id: persistedId(item),
-    })),
-  };
-}
-
-async function resolveCursoDocumentId(id: string): Promise<string> {
-  const res = await strapiGet<CursoComModulos>('/cursos', {
-    ...cursoIdentifierFilters(id),
-    'fields[0]': 'id',
-    'fields[1]': 'documentId',
-    'pagination[pageSize]': '1',
-  });
-  const curso = first(res.data);
-  if (!curso) throw Object.assign(new Error('Curso não encontrado'), { status: 404 });
-  return curso.documentId ?? entityId(curso.id);
-}
-
-async function resolveCursoReference(
-  id: string,
-  status?: StrapiPublicationStatus,
-): Promise<CursoComModulos | undefined> {
-  const res = await strapiGet<CursoComModulos>('/cursos', {
-    ...cursoIdentifierFilters(id),
-    populate: 'autor',
-    'pagination[pageSize]': '1',
-    ...(status === undefined ? {} : { status }),
-  });
-  return first(res.data);
-}
-
-async function listarModulosCurso(cursoId: string, cursoDocumentId?: string): Promise<ExistingModulo[]> {
-  const relationDocumentId = cursoDocumentId ?? cursoId;
-  const modulosRes = await strapiGet<Omit<ExistingModulo, 'itens'>>('/modulos', {
-    'filters[$or][0][curso][documentId][$eq]': relationDocumentId,
-    'filters[$or][1][curso][id][$eq]': cursoId,
-    'sort': 'ordem:asc',
-    'pagination[pageSize]': '100',
-  });
-
-  const modulos = await Promise.all(modulosRes.data.map(async (modulo) => {
-    const moduloId = entityId(modulo.id);
-    const moduloDocumentId = modulo.documentId ?? moduloId;
-    const itensRes = await strapiGet<ExistingModuloItem>('/modulo-items', {
-      'filters[$or][0][modulo][documentId][$eq]': moduloDocumentId,
-      'filters[$or][1][modulo][id][$eq]': moduloId,
-      'sort': 'ordem:asc',
-      'pagination[pageSize]': '200',
+  const now = new Date().toISOString();
+  const nextItem: ProgressoItem = concluido
+    ? { itemId, concluido: true, dataConclusao: now }
+    : { itemId, concluido: false };
+  const next = [...current.filter((item) => item.itemId !== itemId), nextItem];
+  const modulos = await listarModulosCurso(cursoId);
+  const totalItems = modulos.reduce((total, modulo) => total + modulo.itens.length, 0);
+  const completedItems = next.filter((item) => item.concluido).length;
+  const progressoPercentual =
+    totalItems > 0 ? Math.min(100, Math.round((completedItems / totalItems) * 100)) : 0;
+  const leaseActive = await lock.extend(COURSE_PROGRESS_LOCK_TTL_MS);
+  if (!leaseActive) {
+    throw Object.assign(new Error('A atualização de progresso perdeu a exclusividade.'), {
+      status: 503,
+      retryable: true,
     });
-    return { ...modulo, itens: itensRes.data };
-  }));
+  }
 
-  return modulos;
-}
+  await strapiPut(`/inscricoes/${persistedId(inscricao)}`, {
+    modulosConcluidos: next,
+    progressoPercentual,
+    ultimaAtividadeEm: now,
+    concluidoEm: progressoPercentual === 100 ? now : null,
+  });
 
-async function syncCursoItems(moduloId: string, existingItems: ExistingModuloItem[], nextItems: CursoItemPayload[]): Promise<void> {
-  await Promise.all(existingItems
-    .filter((item) => !nextItems.some((nextItem) =>
-      nextItem.persistedId ? matchesId(item, nextItem.persistedId) : false))
-    .map((item) => strapiDelete(`/modulo-items/${persistedId(item)}`)));
-
-  for (const item of nextItems) {
-    const body = {
-      titulo: item.titulo,
-      tipo: item.tipo,
-      conteudo: item.conteudo,
-      url: item.url,
-      videoId: item.videoId,
-      ordem: item.ordem,
-      modulo: moduloId,
-    };
-
-    if (item.persistedId) {
-      const existingItem = existingItems.find((candidate) => matchesId(candidate, item.persistedId ?? ''));
-      if (!existingItem) {
-        throw new Error(`Item de módulo com id ${item.persistedId} não encontrado para atualização`);
-      }
-      await strapiPut(`/modulo-items/${persistedId(existingItem)}`, body);
-    } else {
-      await strapiPost<unknown>('/modulo-items', body);
+  if (concluido) {
+    await eventBus.publishWithOutbox(DomainEventName.CURSO_ITEM_CONCLUIDO, {
+      cursoId,
+      itemId,
+      estudanteId: userId,
+    });
+    if (progressoPercentual === 100) {
+      await eventBus.publishWithOutbox(DomainEventName.CURSO_CONCLUIDO, {
+        cursoId,
+        estudanteId: userId,
+      });
     }
   }
-}
 
-function toCursoStrapiData(
-  cursoData: CursoBasePayload | CursoBaseUpdatePayload,
-): Record<string, unknown> {
-  const {
-    capaUrl,
-    comissao: _comissao,
-    requerValidacaoComite: _requerValidacaoComite,
-    ...allowedData
-  } = cursoData;
-
-  return {
-    ...allowedData,
-    ...(capaUrl ? { thumbnailUrl: capaUrl } : {}),
-  };
+  return nextItem;
 }
 
 export const cursosService = {
-  async obterCursoBase(id: string, status?: StrapiPublicationStatus): Promise<CursoComModulos | undefined> {
+  async obterCursoBase(
+    id: string,
+    status?: StrapiPublicationStatus
+  ): Promise<CursoComModulos | undefined> {
     return resolveCursoReference(id, status);
   },
 
   async obterVersoesCurso(id: string) {
     return loadContentVersions((status) => resolveCursoReference(id, status));
+  },
+
+  async obterVersoesCursos(ids: string[]) {
+    return listarVersoesCursos(ids);
   },
 
   async resolvePerfilId(userId: string, jwtPerfilId?: string): Promise<string> {
@@ -212,7 +131,10 @@ export const cursosService = {
     return String(perfilId);
   },
 
-  async obterCursoComModulos(id: string, status?: StrapiPublicationStatus): Promise<Curso | undefined> {
+  async obterCursoComModulos(
+    id: string,
+    status?: StrapiPublicationStatus
+  ): Promise<Curso | undefined> {
     const curso = await resolveCursoReference(id, status);
     if (!curso) return undefined;
     const modulos = await listarModulosCurso(entityId(curso.id), curso.documentId);
@@ -223,20 +145,31 @@ export const cursosService = {
     };
   },
 
-  async criarCursoCompleto(payload: CriarCursoPayload, autorId: string, perfilId: string): Promise<Curso> {
+  async criarCursoCompleto(
+    payload: CriarCursoPayload,
+    autorId: string,
+    perfilId: string
+  ): Promise<Curso> {
     const { modulos, regrasAcesso, estado, ...cursoData } = payload;
     const initialState = estado === 'published' ? 'review' : (estado ?? 'draft');
-    
+
     // 1. Criar o Curso Base no Strapi
-    const res = await strapiPost<CursoPersisted>('/cursos', {
-      ...toCursoStrapiData(cursoData),
-      regrasAcesso,
-      autorId,
-      autor: perfilId,
-      estado: initialState, 
-      slug: payload.titulo.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
-    });
-    
+    const res = await strapiPost<CursoPersisted>(
+      '/cursos',
+      {
+        ...toCursoStrapiData(cursoData),
+        regrasAcesso,
+        autorId,
+        autor: perfilId,
+        estado: initialState,
+        slug: payload.titulo
+          .toLowerCase()
+          .replace(/ /g, '-')
+          .replace(/[^\w-]+/g, ''),
+      },
+      { status: 'draft' }
+    );
+
     const cursoId = entityId(res.data.id);
     const cursoDocumentId = persistedId(res.data);
 
@@ -248,17 +181,19 @@ export const cursosService = {
           ordem: mod.ordem,
           curso: cursoDocumentId,
         });
-        
+
         const moduloId = persistedId(modRes.data);
-        
+
         for (const item of mod.itens) {
           await strapiPost<unknown>('/modulo-items', {
             titulo: item.titulo,
             tipo: item.tipo,
             conteudo: item.conteudo,
             url: item.url,
+            videoId: item.videoId,
+            imagens: item.imagens,
             ordem: item.ordem,
-            modulo: moduloId
+            modulo: moduloId,
           });
         }
       }
@@ -278,19 +213,29 @@ export const cursosService = {
   async atualizarCurso(id: string, payload: CursoUpdatePayload, autorId: string): Promise<Curso> {
     const { modulos, regrasAcesso, estado, ...cursoData } = payload;
     const cursoDocumentId = await resolveCursoDocumentId(id);
-    const resPut = await strapiPut<Curso>(`/cursos/${cursoDocumentId}`, {
-      ...toCursoStrapiData(cursoData),
-      ...(regrasAcesso ? { regrasAcesso } : {}),
-      ...(estado ? { estado } : {}),
-    });
+    const resPut = await strapiPut<Curso>(
+      `/cursos/${cursoDocumentId}`,
+      {
+        ...toCursoStrapiData(cursoData),
+        ...(regrasAcesso ? { regrasAcesso } : {}),
+        ...(estado ? { estado } : {}),
+      },
+      { status: 'draft' }
+    );
 
     if (modulos) {
       const existingModules = await listarModulosCurso(id, cursoDocumentId);
 
-      await Promise.all(existingModules
-        .filter((modulo) => !modulos.some((nextModulo) =>
-          nextModulo.persistedId ? matchesId(modulo, nextModulo.persistedId) : false))
-        .map((modulo) => strapiDelete(`/modulos/${persistedId(modulo)}`)));
+      await Promise.all(
+        existingModules
+          .filter(
+            (modulo) =>
+              !modulos.some((nextModulo) =>
+                nextModulo.persistedId ? matchesId(modulo, nextModulo.persistedId) : false
+              )
+          )
+          .map((modulo) => strapiDelete(`/modulos/${persistedId(modulo)}`))
+      );
 
       for (const modulo of modulos) {
         const body = {
@@ -300,7 +245,9 @@ export const cursosService = {
         };
 
         if (modulo.persistedId) {
-          const existingModule = existingModules.find((item) => matchesId(item, modulo.persistedId ?? ''));
+          const existingModule = existingModules.find((item) =>
+            matchesId(item, modulo.persistedId ?? '')
+          );
           if (!existingModule) {
             throw new Error(`Módulo com id ${modulo.persistedId} não encontrado para atualização`);
           }
@@ -322,36 +269,25 @@ export const cursosService = {
   },
 
   async alterarEstado(id: string, estado: string, autorId: string, curso?: Curso): Promise<void> {
-    const cursoDocumentId = await resolveCursoDocumentId(id);
-    await strapiPut(`/cursos/${cursoDocumentId}`, { estado });
-    if (estado === 'published') {
-      await eventBus.publishWithOutbox(DomainEventName.CURSO_PUBLICADO, {
-        cursoId: id,
-        autorId,
-        titulo: curso?.titulo ?? '',
-        area: curso?.area,
-        regrasAcesso: curso?.regrasAcesso,
-      });
-    }
-    if (estado === 'archived') {
-      await eventBus.publishWithOutbox(DomainEventName.CURSO_ARQUIVADO, {
-        cursoId: id,
-        autorId,
-      });
-    }
+    await alterarEstadoCurso(id, estado, autorId, curso);
   },
 
   async buscarInscricao(cursoId: string, perfilId: string): Promise<InscricaoStrapi | undefined> {
     const res = await strapiGet<InscricaoStrapi>('/inscricoes', {
       'filters[perfil][id][$eq]': perfilId,
       ...contentRelationIdentityFilters('curso', cursoId),
-      'populate': 'curso,perfil',
+      populate: 'curso,perfil',
       'pagination[pageSize]': '1',
     });
     return first(res.data);
   },
 
-  async inscreverUtilizador(cursoId: string, userId: string, perfilId: string, role: string): Promise<Inscricao> {
+  async inscreverUtilizador(
+    cursoId: string,
+    userId: string,
+    perfilId: string,
+    role: string
+  ): Promise<Inscricao> {
     const existing = await this.buscarInscricao(cursoId, perfilId);
     if (existing) return existing;
 
@@ -376,44 +312,44 @@ export const cursosService = {
     return normalizeProgress(inscricao.modulosConcluidos);
   },
 
-  async marcarItem(cursoId: string, itemId: string, perfilId: string, userId: string, concluido: boolean): Promise<ProgressoItem> {
+  async marcarItem(
+    cursoId: string,
+    itemId: string,
+    perfilId: string,
+    userId: string,
+    concluido: boolean
+  ): Promise<ProgressoItem> {
     const inscricao = await this.buscarInscricao(cursoId, perfilId);
     if (!inscricao) throw Object.assign(new Error('Inscrição não encontrada'), { status: 403 });
-
-    const current = normalizeProgress(inscricao.modulosConcluidos);
-    const now = new Date().toISOString();
-    const nextItem: ProgressoItem = concluido
-      ? { itemId, concluido: true, dataConclusao: now }
-      : { itemId, concluido: false };
-    const next = [...current.filter((item) => item.itemId !== itemId), nextItem];
-
-    const modulos = await listarModulosCurso(cursoId);
-    const totalItems = modulos.reduce((total, modulo) => total + modulo.itens.length, 0);
-    const completedItems = next.filter((item) => item.concluido).length;
-    const progressoPercentual = totalItems > 0 ? Math.min(100, Math.round((completedItems / totalItems) * 100)) : 0;
     const inscricaoId = inscricao.documentId ?? inscricao.id;
-
-    await strapiPut(`/inscricoes/${inscricaoId}`, {
-      modulosConcluidos: next,
-      progressoPercentual,
-      ultimaAtividadeEm: now,
-      ...(progressoPercentual === 100 ? { concluidoEm: now } : {}),
-    });
-
-    if (concluido) {
-      await eventBus.publishWithOutbox(DomainEventName.CURSO_ITEM_CONCLUIDO, {
-        cursoId,
-        itemId,
-        estudanteId: userId,
+    const lock = await acquireLock(`inscricao:${inscricaoId}`, COURSE_PROGRESS_LOCK_TTL_MS);
+    if (!lock) {
+      throw Object.assign(new Error('Outra atualização de progresso está em curso.'), {
+        status: 409,
+        retryable: true,
       });
-      if (progressoPercentual === 100) {
-        await eventBus.publishWithOutbox(DomainEventName.CURSO_CONCLUIDO, {
-          cursoId,
-          estudanteId: userId,
-        });
-      }
     }
 
-    return nextItem;
+    try {
+      const latest = await this.buscarInscricao(cursoId, perfilId);
+      if (!latest || persistedId(latest) !== inscricaoId) {
+        throw Object.assign(new Error('Inscrição não encontrada'), { status: 403 });
+      }
+      return await applyProgressUpdate({
+        cursoId,
+        itemId,
+        userId,
+        concluido,
+        inscricao: latest,
+        lock,
+      });
+    } finally {
+      await lock.release().catch((releaseError: unknown) => {
+        log.error(
+          { releaseError, cursoId, inscricaoId },
+          'Falha ao libertar lock de progresso do curso'
+        );
+      });
+    }
   },
 };

@@ -8,6 +8,7 @@ interface CourseSettingsPanelProps {
   watch: UseFormWatch<CriarCursoPayload>;
   setValue: UseFormSetValue<CriarCursoPayload>;
   errors: FieldErrors<CriarCursoPayload>;
+  coverRequired?: boolean;
 }
 
 export function CourseSettingsPanel({
@@ -15,6 +16,7 @@ export function CourseSettingsPanel({
   watch,
   setValue,
   errors,
+  coverRequired = false,
 }: CourseSettingsPanelProps): React.JSX.Element {
   const isFree = watch('gratuito');
   const coverUrl = watch('capaUrl');
@@ -56,6 +58,9 @@ export function CourseSettingsPanel({
         />
         <input type="hidden" {...register('capaUrl')} />
         {errors.capaUrl?.message && <p className="text-xs text-error">{errors.capaUrl.message}</p>}
+        {coverRequired && !coverUrl ? (
+          <p className="text-xs font-medium text-[var(--accent-warning)]">A capa é obrigatória para concluir a informação básica.</p>
+        ) : null}
       </div>
 
       <div className="border-t border-border pt-6">

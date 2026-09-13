@@ -48,6 +48,7 @@ export interface StrapiPerfilData {
   estadoMenoridade?: 'pendente' | 'adulto' | 'menor' | null;
   consentimentoEstado?: 'pendente' | 'completo' | 'requer_reconsentimento' | 'bloqueado' | null;
   consents?: unknown;
+  instituicao?: { id: string | number; documentId?: string } | null;
   instituicaoGerida?: { id: string | number; documentId?: string } | null;
 }
 

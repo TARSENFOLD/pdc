@@ -39,6 +39,7 @@ const PatrocinadorDashboard = React.lazy(() => import('@/pages/dashboard/Patroci
 
 const CursoDetailPage = React.lazy(() => import('@/features/cursos/CursoDetailPage').then(m => ({ default: m.CursoDetailPage })));
 const ItemPlayer = React.lazy(() => import('@/features/cursos/ItemPlayer').then(m => ({ default: m.ItemPlayer })));
+const CourseWelcomePage = React.lazy(() => import('@/features/cursos/CourseWelcomePage').then(m => ({ default: m.CourseWelcomePage })));
 
 const ExperienciaListPage = React.lazy(() => import('@/features/experiencias/ExperienciaListPage').then(m => ({ default: m.ExperienciaListPage })));
 const ExperienciaDetailPage = React.lazy(() => import('@/features/experiencias/ExperienciaDetailPage').then(m => ({ default: m.ExperienciaDetailPage })));
@@ -163,6 +164,7 @@ export const router = createBrowserRouter([
       { path: 'feed-posts/:id', element: <FeedPostDetailPage /> },
       { path: 'cursos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><CursosCatalogoPage /></Suspense> },
       { path: 'cursos/:id', element: <CursoDetailPage /> },
+      { path: 'cursos/:cursoId/interior', element: <CourseWelcomePage /> },
       { path: 'cursos/:cursoId/itens/:itemId', element: <ItemPlayer /> },
 
       { path: 'experiencias', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExperienciasCatalogoPage /></Suspense> },

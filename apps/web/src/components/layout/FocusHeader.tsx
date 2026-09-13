@@ -22,7 +22,7 @@ export default function FocusHeader(): React.JSX.Element {
       data-testid="focus-header"
       className="sticky top-0 z-30 border-b border-border bg-canvas/95 backdrop-blur-md"
     >
-      <div className="mx-auto flex min-h-16 max-w-[1600px] items-center gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex min-h-16 max-w-[1600px] flex-wrap items-center gap-x-3 px-4 sm:flex-nowrap sm:px-6">
         <button
           type="button"
           onClick={goBack}
@@ -31,11 +31,14 @@ export default function FocusHeader(): React.JSX.Element {
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-ink-primary">{title}</h1>
-        {header.progress && <div className="hidden min-w-0 sm:block">{header.progress}</div>}
+        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-ink-primary sm:max-w-52 sm:flex-none">{title}</h1>
+        {header.progress && (
+          <div className="order-last w-full overflow-x-auto border-t border-border py-1 sm:order-none sm:flex sm:min-w-0 sm:flex-1 sm:justify-center sm:border-t-0 sm:py-0">
+            {header.progress}
+          </div>
+        )}
         {header.actions && <div className="flex shrink-0 items-center gap-2">{header.actions}</div>}
       </div>
-      {header.progress && <div className="border-t border-border px-4 py-2 sm:hidden">{header.progress}</div>}
     </header>
   );
 }

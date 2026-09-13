@@ -5,6 +5,7 @@ export * from './feed.js';
 export * from './registry/features.js';
 export * from './bootstrap.js';
 export * from './cursos.js';
+export * from './cursos-level.js';
 export * from './simulacoes.js';
 export * from './experiencias.js';
 export * from './telemetry.js';
@@ -20,6 +21,7 @@ export * from './ecosystem-hook.js';
 export * from './home.js';
 export * from './strapi.js';
 export * from './content-access.js';
+export * from './safe-url.js';
 
 // Schemas Modulares
 export * from './schemas/subscricoes.js';

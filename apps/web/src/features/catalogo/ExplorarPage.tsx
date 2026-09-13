@@ -186,6 +186,7 @@ export default function ExplorarPage(): React.JSX.Element {
                   key={c.id}
                   title={c.titulo}
                   subtitle={c.autorNome}
+                  description={c.descricao}
                   image={c.capaUrl || undefined}
                   href={resolveCatalogHref('curso', inApp ? c.id : c.slug, inApp)}
                   type="curso"

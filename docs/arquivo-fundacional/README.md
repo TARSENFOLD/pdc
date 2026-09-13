@@ -91,6 +91,18 @@ As 13 specs fundadoras do Traycer (~266KB) que originaram as 6 specs `IMPORTANTE
 | [`design-system-completo.md`](09-traycer-specs/design-system-completo.md) | Stack frontend, 5 princípios design, anti-padrões, tokens completos (cores/tipografia/espaçamento/animações), componentes base, padrões de página | `Documentos/Traycer/` (ID: dc2a19a2, 43KB) |
 | [`algoritmos-dados-seguranca.md`](09-traycer-specs/algoritmos-dados-seguranca.md) | Algoritmo ranking/feed (4 fases, 4 feeds), telemetria pipeline, perfil vocacional 6 dimensões, segurança 7 camadas + rate limits, modelo dados Strapi (ERD + migrações), IA/RAG (DeepSeek + pgvector), LTI 1.3 (OIDC + grade passback), SEO/performance Angola | `Documentos/Traycer/` (IDs: 15428b59, 1a81656f, ef76adef, 36c60fa0, 01e25234, 26799a9d, 6f5d9251) |
 
+### 10 — Fontes de Produto (Agosto de 2026)
+
+Documentos integrais fornecidos para preservar a intenção recente do produto,
+acompanhados por uma leitura consolidada que mantém o fluxo de cursos como
+prioridade activa.
+
+| Ficheiro | Conteúdo | Origem |
+|----------|----------|--------|
+| [`README.md`](10-fontes-produto-2026-08/README.md) | Índice, síntese, implicações para criação/consumo e limites de escopo | Ingestão controlada das duas fontes abaixo |
+| [`PDC-visao-produto-2026-08-18.odt`](10-fontes-produto-2026-08/PDC-visao-produto-2026-08-18.odt) | Visão recente do PDC e jornada Explorar → Experimentar → Aprender → Provar → Decidir | Documento fornecido pelo fundador |
+| [`PDC-Digital-Work-Experience-2026-08-19.pdf`](10-fontes-produto-2026-08/PDC-Digital-Work-Experience-2026-08-19.pdf) | Definição e percurso da VWX, parceria, produção, validação e publicação | Documento fornecido pelo fundador |
+
 ---
 
 ## Classificação de Valor
@@ -98,7 +110,7 @@ As 13 specs fundadoras do Traycer (~266KB) que originaram as 6 specs `IMPORTANTE
 | Classificação | Significado | Ficheiros |
 |---------------|-------------|-----------|
 | 🔴 **OURO** | Informação única não duplicada noutro lugar do codebase | visao-produto, efeitos-de-rede, design-soul-elite, programas-vs-projetos, perfis-privacidade, vinculos-logica, moderacao-strapi, diagnostico-alma-vs-drift, plano-refactoring-5-waves, bugs-hotspots-criticos, entitlements-core-trio-analysis, plano-mestre-ondas-1-4, audit-premium-ui-e2e-tickets, specs-ux-por-pagina, algoritmo-decisoes-design, arquitectura-resiliencia-telemetria, design-governanca-doc-is-law, produto-visao-arquitectura, mapa-paginas-features-transversais, design-system-completo, algoritmos-dados-seguranca |
-| 🟡 **REFERÊNCIA** | Histórico/contexto útil para decisões futuras | verificacao-34-tickets, licoes-massacre-design, percurso-adaptativo-ia, canvas-lms-benchmark, instituicoes-funcionalidades, inventario-tickets-w0-w5 |
+| 🟡 **REFERÊNCIA** | Histórico/contexto útil para decisões futuras | verificacao-34-tickets, licoes-massacre-design, percurso-adaptativo-ia, canvas-lms-benchmark, instituicoes-funcionalidades, inventario-tickets-w0-w5, 10-fontes-produto-2026-08/README, PDC-visao-produto-2026-08-18, PDC-Digital-Work-Experience-2026-08-19 |
 
 ---
 
@@ -150,7 +162,9 @@ Para cada ficheiro OURO das fontes externas, onde foi absorvido:
 | `Transferências/PDC/Analyses/` (8 .txt, 5 únicos) | `08-analises-externas/arquitectura-resiliencia-telemetria.md`, `design-governanca-doc-is-law.md` |
 | `Transferências/PDC/Audit & Premium UI End To End/` (30 .md) | `06-engenharia/audit-premium-ui-e2e-tickets.md` |
 | `Documentos/Traycer/` (13 specs UUID + 3 GSD, ~266KB) | `09-traycer-specs/produto-visao-arquitectura.md`, `mapa-paginas-features-transversais.md`, `design-system-completo.md`, `algoritmos-dados-seguranca.md` |
+| `PDC - PR.odt` | `10-fontes-produto-2026-08/PDC-visao-produto-2026-08-18.odt` e síntese no `README.md` da secção |
+| `Transferências/PDC _ Digital Work Experience.pdf` | `10-fontes-produto-2026-08/PDC-Digital-Work-Experience-2026-08-19.pdf` e síntese no `README.md` da secção |
 
 ---
 
-*Criado: Abril 2026 · Fontes: 54 ficheiros `/fv/` + 31 `traycer-epics/` + 14 `Recente/` + 2 `docs/` + 36 `Transferências/PDC/` + 19 `Documentos/Traycer/` (13 specs fundadoras + 3 GSD + 3 duplicatas).*
+*Criado: Abril 2026 · Fontes: 54 ficheiros `/fv/` + 31 `traycer-epics/` + 14 `Recente/` + 2 `docs/` + 36 `Transferências/PDC/` + 19 `Documentos/Traycer/` (13 specs fundadoras + 3 GSD + 3 duplicatas) + 2 fontes de produto de Agosto de 2026.*

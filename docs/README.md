@@ -89,7 +89,8 @@ Se encontrar informações contraditórias, a ordem de precedência é:
 
 ### Referência & Produto
 
-- [📚 Arquivo Fundacional](arquivo-fundacional/README.md) — 28 ficheiros em 9 secções: visão, modelo negócio, RBAC, diagnósticos, UX specs, specs Traycer originais (tokens, rotas, features, algoritmos, segurança)
+- [📚 Arquivo Fundacional](arquivo-fundacional/README.md) — conhecimento organizado por visão, modelo de negócio, RBAC, diagnósticos, UX, engenharia, fontes de produto e specs Traycer originais
+- [🧭 Fontes de Produto — Agosto de 2026](arquivo-fundacional/10-fontes-produto-2026-08/README.md) — originais preservados e síntese orientada ao fluxo de criação e consumo de cursos
 - [🚀 Roadmap Produto Disruptivo](ROADMAP_PRODUTO_DISRUPTIVO.md) — 6 Tiers de melhorias (motor vocacional, perfil, flywheel, UI premium, programas/projectos, docs)
 - [📝 Tickets a Implementar](a_implementar/) — 16 tickets pendentes (A1–E4, H1)
 

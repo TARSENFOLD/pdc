@@ -1,22 +1,30 @@
-import { DeleteObjectCommand, S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+  UploadPartCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { VIDEO_MULTIPART_MAX_PARTS } from '@pdc/shared';
 import { env } from '../../lib/env.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import pino from 'pino';
-
 const log = pino({ name: 'r2-service' });
-
 const LOCAL_UPLOAD_DIR = '/tmp/pdc-uploads';
 const R2_CONNECTION_TIMEOUT_MS = 2_000;
 const R2_REQUEST_TIMEOUT_MS = 5_000;
 const R2_READINESS_CACHE_MS = 30_000;
 const R2_FAILURE_CACHE_MS = 3_000;
-
 export class MediaStorageError extends Error {
   constructor(
     public readonly code: 'MEDIA_STORAGE_MISCONFIGURED' | 'MEDIA_STORAGE_UNAVAILABLE',
-    cause: unknown,
+    cause: unknown
   ) {
     super('Serviço de armazenamento temporariamente indisponível', { cause });
     this.name = 'MediaStorageError';
@@ -24,12 +32,7 @@ export class MediaStorageError extends Error {
 }
 
 export function isR2Configured(): boolean {
-  return !!(
-    env.R2_ACCOUNT_ID
-    && env.R2_ACCESS_KEY_ID
-    && env.R2_SECRET_ACCESS_KEY
-    && env.R2_BUCKET
-  );
+  return !!(env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_BUCKET);
 }
 
 function resolveLocalUploadPath(key: string): string {
@@ -47,7 +50,9 @@ function getS3(): S3Client {
   if (!_s3) {
     const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = env;
     if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
-      throw new Error('R2 não configurado. Defina R2_ACCOUNT_ID, R2_ACCESS_KEY_ID e R2_SECRET_ACCESS_KEY no .env');
+      throw new Error(
+        'R2 não configurado. Defina R2_ACCOUNT_ID, R2_ACCESS_KEY_ID e R2_SECRET_ACCESS_KEY no .env'
+      );
     }
     _s3 = new S3Client({
       region: 'auto',
@@ -69,15 +74,15 @@ function getS3(): S3Client {
 function errorStatus(error: unknown): number | undefined {
   if (typeof error !== 'object' || error === null || !('$metadata' in error)) return undefined;
   const metadata = error.$metadata;
-  if (typeof metadata !== 'object' || metadata === null || !('httpStatusCode' in metadata)) return undefined;
+  if (typeof metadata !== 'object' || metadata === null || !('httpStatusCode' in metadata))
+    return undefined;
   return typeof metadata.httpStatusCode === 'number' ? metadata.httpStatusCode : undefined;
 }
 
 function mediaStorageError(error: unknown): MediaStorageError {
   const status = errorStatus(error);
-  const code = status === 401 || status === 403
-    ? 'MEDIA_STORAGE_MISCONFIGURED'
-    : 'MEDIA_STORAGE_UNAVAILABLE';
+  const code =
+    status === 401 || status === 403 ? 'MEDIA_STORAGE_MISCONFIGURED' : 'MEDIA_STORAGE_UNAVAILABLE';
   return new MediaStorageError(code, error);
 }
 
@@ -87,12 +92,14 @@ let readinessProbe: Promise<boolean> | undefined;
 async function runR2ReadinessProbe(): Promise<boolean> {
   const key = '_health/media-storage-probe';
   try {
-    await getS3().send(new PutObjectCommand({
-      Bucket: env.R2_BUCKET,
-      Key: key,
-      Body: Buffer.alloc(0),
-      ContentType: 'application/octet-stream',
-    }));
+    await getS3().send(
+      new PutObjectCommand({
+        Bucket: env.R2_BUCKET,
+        Key: key,
+        Body: Buffer.alloc(0),
+        ContentType: 'application/octet-stream',
+      })
+    );
     await getS3().send(new DeleteObjectCommand({ Bucket: env.R2_BUCKET, Key: key }));
     readinessCache = { ready: true, expiresAt: Date.now() + R2_READINESS_CACHE_MS };
   } catch (err) {
@@ -140,6 +147,133 @@ export async function generatePresignedReadUrl(
   return getSignedUrl(getS3(), command, { expiresIn: expiresInSeconds });
 }
 
+export async function r2ObjectExists(key: string): Promise<boolean> {
+  requireR2ForMultipart();
+  try {
+    await getS3().send(new HeadObjectCommand({ Bucket: env.R2_BUCKET, Key: key }));
+    return true;
+  } catch (err) {
+    if (errorStatus(err) === 404) return false;
+    if (err instanceof MediaStorageError) throw err;
+    throw mediaStorageError(err);
+  }
+}
+
+export interface CompletedMultipartPart {
+  partNumber: number;
+  etag: string;
+}
+
+function requireR2ForMultipart(): void {
+  if (!isR2Configured()) {
+    throw new MediaStorageError(
+      'MEDIA_STORAGE_MISCONFIGURED',
+      new Error('O upload profissional requer credenciais R2 configuradas.')
+    );
+  }
+}
+
+export async function createMultipartUpload(key: string, mimeType: string): Promise<string> {
+  requireR2ForMultipart();
+  try {
+    const result = await getS3().send(
+      new CreateMultipartUploadCommand({
+        Bucket: env.R2_BUCKET,
+        Key: key,
+        ContentType: mimeType,
+      })
+    );
+    if (!result.UploadId) throw new Error('R2 não devolveu o identificador do upload multipart.');
+    return result.UploadId;
+  } catch (err) {
+    if (err instanceof MediaStorageError) throw err;
+    throw mediaStorageError(err);
+  }
+}
+
+export async function generateMultipartPartUploadUrl(
+  key: string,
+  uploadId: string,
+  partNumber: number,
+  expiresInSeconds = 3600
+): Promise<string> {
+  requireR2ForMultipart();
+  if (!Number.isInteger(partNumber) || partNumber < 1 || partNumber > VIDEO_MULTIPART_MAX_PARTS) {
+    throw new RangeError('Número de parte inválido para upload multipart.');
+  }
+  try {
+    const command = new UploadPartCommand({
+      Bucket: env.R2_BUCKET,
+      Key: key,
+      UploadId: uploadId,
+      PartNumber: partNumber,
+    });
+    return await getSignedUrl(getS3(), command, { expiresIn: expiresInSeconds });
+  } catch (err) {
+    if (err instanceof MediaStorageError) throw err;
+    throw mediaStorageError(err);
+  }
+}
+
+export async function completeMultipartUpload(
+  key: string,
+  uploadId: string,
+  parts: readonly CompletedMultipartPart[]
+): Promise<void> {
+  requireR2ForMultipart();
+  if (parts.length === 0) {
+    throw new RangeError('A conclusão do upload multipart requer pelo menos uma parte.');
+  }
+  if (
+    parts.some(
+      (part) =>
+        !Number.isInteger(part.partNumber) ||
+        part.partNumber < 1 ||
+        part.partNumber > VIDEO_MULTIPART_MAX_PARTS
+    )
+  ) {
+    throw new RangeError('Número de parte inválido para upload multipart.');
+  }
+  const distinctPartNumbers = new Set(parts.map((part) => part.partNumber));
+  if (distinctPartNumbers.size !== parts.length) {
+    throw new RangeError('O upload multipart contém números de parte duplicados.');
+  }
+  try {
+    await getS3().send(
+      new CompleteMultipartUploadCommand({
+        Bucket: env.R2_BUCKET,
+        Key: key,
+        UploadId: uploadId,
+        MultipartUpload: {
+          Parts: [...parts]
+            .sort((left, right) => left.partNumber - right.partNumber)
+            .map((part) => ({ ETag: part.etag, PartNumber: part.partNumber })),
+        },
+      })
+    );
+  } catch (err) {
+    if (err instanceof MediaStorageError) throw err;
+    throw mediaStorageError(err);
+  }
+}
+
+export async function abortMultipartUpload(key: string, uploadId: string): Promise<void> {
+  requireR2ForMultipart();
+  try {
+    await getS3().send(
+      new AbortMultipartUploadCommand({
+        Bucket: env.R2_BUCKET,
+        Key: key,
+        UploadId: uploadId,
+      })
+    );
+  } catch (err) {
+    if (errorStatus(err) === 404) return;
+    if (err instanceof MediaStorageError) throw err;
+    throw mediaStorageError(err);
+  }
+}
+
 export async function uploadToR2(key: string, buffer: Buffer, mimeType: string): Promise<void> {
   if (!isR2Configured()) {
     const localPath = resolveLocalUploadPath(key);
@@ -162,12 +296,12 @@ export async function uploadToR2(key: string, buffer: Buffer, mimeType: string):
     const storageError = mediaStorageError(err);
     const status = errorStatus(err);
     if (
-      storageError.code === 'MEDIA_STORAGE_MISCONFIGURED'
-      || status === undefined
-      || status === 404
-      || status === 408
-      || status === 429
-      || status >= 500
+      storageError.code === 'MEDIA_STORAGE_MISCONFIGURED' ||
+      status === undefined ||
+      status === 404 ||
+      status === 408 ||
+      status === 429 ||
+      status >= 500
     ) {
       readinessCache = { ready: false, expiresAt: Date.now() + R2_FAILURE_CACHE_MS };
     }

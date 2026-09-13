@@ -91,6 +91,7 @@ describe('moderacaoService', () => {
       expect(strapiPut).toHaveBeenCalledWith(
         '/cursos/10',
         expect.objectContaining({ estado: 'approved' }),
+        { status: 'draft' },
       );
       expect(publishWithOutboxMock).toHaveBeenCalledWith(
         DomainEventName.MODERADOR_APROVOU,
@@ -145,6 +146,7 @@ describe('moderacaoService', () => {
           motivoRejeicao: motivo,
           rejeitadoPor: 'mod-1',
         }),
+        { status: 'draft' },
       );
       const strapiPutCall: unknown = vi.mocked(strapiPut).mock.calls[0]?.[1];
       expect(strapiPutCall).toMatchObject({

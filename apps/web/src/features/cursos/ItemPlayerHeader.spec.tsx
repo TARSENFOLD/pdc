@@ -30,7 +30,7 @@ describe('ItemPlayerHeader', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Aula de abertura' })).toBeDefined();
-    expect(screen.getAllByText('2/5')).toHaveLength(2);
+    expect(screen.getByText('2/5')).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: 'Abrir currículo' }));
     fireEvent.click(screen.getByRole('button', { name: 'Concluir' }));

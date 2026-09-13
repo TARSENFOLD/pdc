@@ -40,6 +40,7 @@
     "mimeType": { "type": "string" },
     "thumbnailUrl": { "type": "string" },
     "originalKey": { "type": "string" },
+    "multipartUploadId": { "type": "string" },
     "streamUrl": { "type": "string" },
     "externalUrl": { "type": "string" },
     "chapters": { "type": "json" },

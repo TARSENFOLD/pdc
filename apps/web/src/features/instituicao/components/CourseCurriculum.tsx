@@ -1,220 +1,168 @@
-import { Control, UseFormRegister, UseFieldArrayReturn, useFieldArray, UseFormSetValue } from 'react-hook-form';
-import { Input, Button } from '@/components/ui';
-import { Plus, Trash2, BookOpen, Layers, Link as LinkIcon, FileUp, Video } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState, type DragEvent } from 'react';
+import {
+  useWatch,
+  type Control,
+  type UseFieldArrayReturn,
+  type UseFormRegister,
+  type UseFormSetValue,
+  type UseFormTrigger,
+} from 'react-hook-form';
 import type { CriarCursoPayload } from '@pdc/shared';
-import { SovereignMediaUpload } from './SovereignMediaUpload';
-import { videosApi } from '@/lib/api/videos';
-import { useState } from 'react';
+import { Layers, Plus } from 'lucide-react';
+import { Button } from '@/components/ui';
+import { CourseDeleteDialog } from './course-studio/CourseDeleteDialog';
+import { CourseModuleCard } from './course-studio/CourseModuleCard';
+import { createCourseItem, duplicateCourseModule } from './course-studio/course-curriculum';
 
-interface Props {
+interface CourseCurriculumProps {
   register: UseFormRegister<CriarCursoPayload>;
   control: Control<CriarCursoPayload>;
   setValue: UseFormSetValue<CriarCursoPayload>;
+  trigger: UseFormTrigger<CriarCursoPayload>;
   modulosArray: UseFieldArrayReturn<CriarCursoPayload, 'modulos'>;
 }
 
-function moduloPath(index: number, field: 'titulo') {
-  return ['modulos', index, field].join('.') as `modulos.${number}.${typeof field}`;
-}
-
-function itemPath(index: number, itemIndex: number, field: 'tipo' | 'titulo' | 'conteudo' | 'url' | 'videoId') {
-  return ['modulos', index, 'itens', itemIndex, field].join('.') as `modulos.${number}.itens.${number}.${typeof field}`;
-}
-
-function CourseVideoUpload({
-  title,
-  onVideoReady,
-}: {
-  title: string;
-  onVideoReady: (videoId: string) => void;
-}) {
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function upload(file: File | undefined) {
-    if (!file || isUploading) return;
-    setError(null);
-    setIsUploading(true);
-    try {
-      const video = await videosApi.uploadQuickR2(file, title.trim() || file.name);
-      onVideoReady(video.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha no upload do vídeo');
-    } finally {
-      setIsUploading(false);
-    }
-  }
-
-  return (
-    <label className="block space-y-1">
-      <span className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><Video size={12} /> Vídeo PDC</span>
-      <input
-        type="file"
-        accept="video/mp4"
-        disabled={isUploading}
-        onChange={(event) => { void upload(event.target.files?.[0]); }}
-        className="block w-full text-xs text-ink-secondary file:mr-3 file:min-h-10 file:rounded-sm file:border file:border-border file:bg-canvas file:px-3 file:text-xs file:font-semibold file:text-ink-primary disabled:opacity-60"
-      />
-      {isUploading ? <p className="text-xs text-ink-tertiary">A enviar vídeo...</p> : null}
-      {error ? <p className="text-xs text-error">{error}</p> : null}
-    </label>
-  );
-}
-
-function ModuleItemsEditor({
+export function CourseCurriculum({
   register,
   control,
   setValue,
-  moduleIndex,
-}: {
-  register: UseFormRegister<CriarCursoPayload>;
-  control: Control<CriarCursoPayload>;
-  setValue: UseFormSetValue<CriarCursoPayload>;
-  moduleIndex: number;
-}) {
-  const itemsName = `modulos.${moduleIndex.toString()}.itens` as `modulos.${number}.itens`;
-  const itemsArray = useFieldArray({
-    control,
-    name: itemsName,
-  });
+  trigger,
+  modulosArray,
+}: CourseCurriculumProps): React.JSX.Element {
+  const [deleteModuleIndex, setDeleteModuleIndex] = useState<number | null>(null);
+  const [newModuleIndex, setNewModuleIndex] = useState<number | null>(null);
+  const modules = useWatch({ control, name: 'modulos' }) ?? [];
+  const lessonCount = modules.reduce((total, module) => total + (module.itens?.length ?? 0), 0);
+
+  useEffect(() => {
+    if (newModuleIndex === null) return;
+    document
+      .getElementById(`course-module-${String(newModuleIndex)}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setNewModuleIndex(null);
+  }, [modulosArray.fields.length, newModuleIndex]);
+
+  const replaceModules = (nextModules: typeof modules) => {
+    modulosArray.replace(nextModules.map((module, index) => ({ ...module, ordem: index + 1 })));
+  };
+
+  const moveModuleTo = (sourceIndex: number, targetIndex: number) => {
+    if (
+      sourceIndex === targetIndex ||
+      sourceIndex < 0 ||
+      targetIndex < 0 ||
+      sourceIndex >= modules.length ||
+      targetIndex >= modules.length
+    )
+      return;
+    modulosArray.move(sourceIndex, targetIndex);
+    modules.forEach((_, index) => {
+      setValue(`modulos.${index}.ordem`, index + 1, { shouldDirty: true });
+    });
+  };
+
+  const moveModule = (moduleIndex: number, direction: -1 | 1) => {
+    moveModuleTo(moduleIndex, moduleIndex + direction);
+  };
+
+  const duplicateModule = (moduleIndex: number) => {
+    const source = modules[moduleIndex];
+    if (!source) return;
+    const next = [...modules];
+    next.splice(moduleIndex + 1, 0, duplicateCourseModule(source, moduleIndex + 2));
+    replaceModules(next);
+  };
+
+  const addModule = () => {
+    setNewModuleIndex(modules.length);
+    modulosArray.append({
+      titulo: `Módulo ${String(modules.length + 1)}`,
+      ordem: modules.length + 1,
+      itens: [createCourseItem('texto', 1)],
+    });
+  };
+
+  const dropModule = (event: DragEvent<HTMLElement>, targetIndex: number) => {
+    event.preventDefault();
+    const sourceValue = event.dataTransfer.getData('application/x-pdc-course-module');
+    if (sourceValue === '') return;
+    const sourceIndex = Number(sourceValue);
+    if (!Number.isInteger(sourceIndex)) return;
+    moveModuleTo(sourceIndex, targetIndex);
+  };
 
   return (
-    <div className="space-y-4 border-l border-border pl-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs font-semibold text-ink-secondary">
-          <BookOpen size={14} /> Conteúdos do módulo
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            itemsArray.append({
-              titulo: `Novo Conteúdo ${String(itemsArray.fields.length + 1)}`,
-              tipo: 'texto',
-              ordem: itemsArray.fields.length + 1,
-              conteudo: '',
-            });
-          }}
-          className="gap-2 text-xs"
-        >
-          <Plus size={14} /> Adicionar Item
-        </Button>
+    <section className="space-y-7">
+      <div>
+        <h3 className="text-ink-primary flex items-center gap-2 text-base font-bold">
+          <Layers size={19} className="text-accent" aria-hidden="true" /> Estrutura do curso
+        </h3>
+        <p className="text-ink-secondary mt-2 text-sm leading-6">
+          {modules.length} {modules.length === 1 ? 'módulo' : 'módulos'} · {lessonCount}{' '}
+          {lessonCount === 1 ? 'aula' : 'aulas'}
+        </p>
       </div>
 
-      {itemsArray.fields.map((item, itemIndex) => (
-        <div key={item.id} className="space-y-4 border-t border-border py-5 first:border-t-0">
-          <div className="grid gap-3 md:grid-cols-[140px_1fr_auto]">
-            <select {...register(itemPath(moduleIndex, itemIndex, 'tipo'))} className="min-h-10 rounded-sm border border-border bg-canvas px-3 text-xs text-ink-primary">
-              <option value="video">Vídeo</option>
-              <option value="pdf">PDF</option>
-              <option value="iframe">Iframe</option>
-              <option value="tarefa">Tarefa</option>
-              <option value="quiz">Quiz</option>
-              <option value="texto">Texto</option>
-            </select>
-            <Input className="h-10 bg-canvas text-xs" {...register(itemPath(moduleIndex, itemIndex, 'titulo'))} />
-            <button
-              type="button"
-              onClick={() => { itemsArray.remove(itemIndex); }}
-              className="min-h-10 min-w-10 p-2 text-error hover:bg-error/10"
-              aria-label="Remover item"
-            >
-              <Trash2 size={18} />
-            </button>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            <label className="space-y-1">
-              <span className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><LinkIcon size={12} /> URL ou embed</span>
-              <Input className="h-10 bg-canvas text-xs" {...register(itemPath(moduleIndex, itemIndex, 'url'))} />
-            </label>
-            <label className="space-y-1">
-              <span className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><Video size={12} /> Video ID</span>
-              <Input className="h-10 bg-canvas text-xs" {...register(itemPath(moduleIndex, itemIndex, 'videoId'))} />
-            </label>
-            <div className="space-y-1">
-              <span className="flex items-center gap-2 text-xs font-semibold text-ink-secondary"><FileUp size={12} /> Ficheiro</span>
-              <SovereignMediaUpload
-                accept="image/*,video/mp4,application/pdf"
-                maxSizeMB={50}
-                entityType="generic"
-                onSuccess={(url) => {
-                  setValue(itemPath(moduleIndex, itemIndex, 'url'), url, { shouldDirty: true, shouldValidate: true });
-                }}
-              />
-            </div>
-          </div>
-          <CourseVideoUpload
-            title={item.titulo}
-            onVideoReady={(videoId) => {
-              setValue(itemPath(moduleIndex, itemIndex, 'videoId'), videoId, { shouldDirty: true, shouldValidate: true });
+      <div className="space-y-4">
+        {modulosArray.fields.map((field, moduleIndex) => (
+          <CourseModuleCard
+            key={field.id}
+            moduleIndex={moduleIndex}
+            totalModules={modulosArray.fields.length}
+            control={control}
+            register={register}
+            setValue={setValue}
+            trigger={trigger}
+            onMove={(direction) => {
+              moveModule(moduleIndex, direction);
             }}
+            onDuplicate={() => {
+              duplicateModule(moduleIndex);
+            }}
+            onRequestDelete={() => {
+              setDeleteModuleIndex(moduleIndex);
+            }}
+            onDragStart={(event) => {
+              event.dataTransfer.setData('application/x-pdc-course-module', String(moduleIndex));
+            }}
+            onDrop={(event) => {
+              dropModule(event, moduleIndex);
+            }}
+            initiallyOpen={newModuleIndex === moduleIndex}
           />
+        ))}
+      </div>
 
-          <label className="space-y-1 block">
-            <span className="text-xs font-semibold text-ink-secondary">Texto ou instruções</span>
-            <textarea
-              {...register(itemPath(moduleIndex, itemIndex, 'conteudo'))}
-              className="min-h-28 w-full rounded-sm border border-border bg-canvas px-4 py-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent"
-            />
-          </label>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function CourseCurriculum({ register, control, setValue, modulosArray }: Props) {
-  const { fields: modulos, append: appendModulo, remove: removeModulo } = modulosArray;
-
-  return (
-    <section>
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Layers size={20} className="text-accent" />
-          <h3 className="text-base font-semibold text-ink-primary">Módulos do curso</h3>
-        </div>
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="sm" 
-          onClick={() => { appendModulo({ titulo: `Novo Módulo ${String(modulos.length + 1)}`, ordem: modulos.length + 1, itens: [{ titulo: 'Novo Conteúdo', tipo: 'texto', ordem: 1 }] }); }} 
-          className="gap-2"
-        >
-          <Plus size={16} /> Adicionar Módulo
+      <div className="border-border bg-recessed/30 rounded-lg border border-dashed p-4 text-center">
+        <Button type="button" variant="outline" size="sm" onClick={addModule} className="gap-2">
+          <Plus size={15} aria-hidden="true" /> Adicionar módulo
         </Button>
+        <p className="text-ink-tertiary mt-2 text-xs">
+          O novo módulo será aberto aqui, pronto para editar.
+        </p>
       </div>
 
-      <div className="space-y-6">
-        <AnimatePresence>
-          {modulos.map((modulo, index) => (
-            <motion.div
-              key={modulo.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-            >
-              <section className="group border-b border-border py-7 first:pt-0">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-sm font-semibold text-accent">{index + 1}</div>
-                  <div className="flex-1 space-y-4">
-                    <div className="flex gap-4">
-	                      <Input className="rounded-none border-x-0 border-t-0 bg-transparent focus:border-accent" {...register(moduloPath(index, 'titulo'))} />
-                      <button type="button" onClick={() => { removeModulo(index); }} className="min-h-11 min-w-11 p-2 text-error opacity-70 transition-opacity hover:bg-error/10 group-hover:opacity-100">
-                        <Trash2 size={20} />
-                      </button>
-                    </div>
-                    
-                    <ModuleItemsEditor register={register} control={control} setValue={setValue} moduleIndex={index} />
-                  </div>
-                </div>
-              </section>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+      {modules.length === 1 ? (
+        <p className="text-ink-tertiary text-xs">
+          O curso precisa de pelo menos um módulo. Adiciona outro antes de eliminares este.
+        </p>
+      ) : null}
+
+      <CourseDeleteDialog
+        open={deleteModuleIndex !== null}
+        title="Eliminar este módulo?"
+        description="Todas as aulas dentro do módulo serão removidas deste rascunho. Esta ação só será persistida quando guardares o curso."
+        confirmLabel="Eliminar módulo"
+        onCancel={() => {
+          setDeleteModuleIndex(null);
+        }}
+        onConfirm={() => {
+          if (deleteModuleIndex !== null && modules.length > 1) {
+            replaceModules(modules.filter((_, index) => index !== deleteModuleIndex));
+          }
+          setDeleteModuleIndex(null);
+        }}
+      />
     </section>
   );
 }

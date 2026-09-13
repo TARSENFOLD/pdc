@@ -1829,6 +1829,7 @@ export interface ApiModuloItemModuloItem extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     duracaoMin: Schema.Attribute.Integer;
+    imagens: Schema.Attribute.JSON;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -3065,6 +3066,7 @@ export interface ApiVideoVideo extends Struct.CollectionTypeSchema {
       ['external', 'quick_upload', 'professional_upload']
     > &
       Schema.Attribute.Required;
+    multipartUploadId: Schema.Attribute.String;
     originalKey: Schema.Attribute.String;
     ownerId: Schema.Attribute.String & Schema.Attribute.Required;
     provider: Schema.Attribute.Enumeration<

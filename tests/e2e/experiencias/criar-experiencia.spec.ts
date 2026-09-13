@@ -22,7 +22,7 @@ test.describe('Experiências - Criar Experiência', () => {
     const requestPromise = adminPage.waitForRequest((request) =>
       request.url().endsWith('/experiencias') && request.method() === 'POST',
     );
-    await adminPage.getByRole('button', { name: 'Salvar Rascunho' }).click();
+    await adminPage.getByRole('button', { name: /guardar rascunho/i }).click();
     const validationMessage = adminPage.getByText(/Campos inválidos:/);
     const request = await Promise.race([
       requestPromise,

@@ -29,6 +29,7 @@ describe('focus mode routes', () => {
     '/app/projetos/projeto-1/editar',
     '/app/mentor/cursos/criar',
     '/app/instituicao/simulacoes/sim-1/editar',
+    '/app/cursos/curso-1/interior',
   ])('ativa focus mode para %s', (pathname) => {
     expect(isFocusMode(pathname)).toBe(true);
   });
@@ -82,7 +83,7 @@ describe('FocusHeader', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Título registado' })).toBeDefined();
-    expect(screen.getAllByText('Etapa 2 de 4')).toHaveLength(2);
+    expect(screen.getByText('Etapa 2 de 4')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Guardar' })).toBeDefined();
   });
 

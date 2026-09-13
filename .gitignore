@@ -65,6 +65,7 @@ infra/strapi/.strapi/dist*/
 # Nao versionar / Local
 nao_versionar/
 awesome-design-md/
+tmp/
 test-results/
 playwright-report/
 coverage/

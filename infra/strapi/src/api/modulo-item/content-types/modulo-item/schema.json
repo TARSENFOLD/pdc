@@ -29,6 +29,7 @@
       "target": "api::video.video"
     },
     "videoId": { "type": "string" },
+    "imagens": { "type": "json" },
     "conteudo": { "type": "richtext" },
     "duracaoMin": { "type": "integer" },
     "ordem": { "type": "integer", "default": 0 },

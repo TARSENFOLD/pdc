@@ -66,6 +66,7 @@ export const moderacaoService = {
       'pagination[pageSize]': pageSizeNum.toString(),
       'fields': 'id,titulo,estado,createdAt',
       'populate': 'autor,autorId',
+      ...(tipo === 'curso' ? { status: 'draft' } : {}),
     });
 
     const data = itemsRes.data.map((item) => ({
@@ -96,6 +97,7 @@ export const moderacaoService = {
       'fields[1]': 'documentId',
       'fields[2]': 'estado',
       'pagination[pageSize]': '1',
+      ...(tipo === 'curso' ? { status: 'draft' } : {}),
     });
 
     const item = res.data[0];
@@ -103,9 +105,16 @@ export const moderacaoService = {
       throw Object.assign(new Error('Conteúdo não encontrado'), { status: 404 });
     }
 
-    await strapiPut<unknown>(`/${col}/${String(item.documentId ?? item.id)}`, {
-      estado: 'approved',
-    });
+    const approvalPayload = { estado: 'approved' };
+    if (tipo === 'curso') {
+      await strapiPut<unknown>(
+        `/${col}/${String(item.documentId ?? item.id)}`,
+        approvalPayload,
+        { status: 'draft' },
+      );
+    } else {
+      await strapiPut<unknown>(`/${col}/${String(item.documentId ?? item.id)}`, approvalPayload);
+    }
 
     const event = await eventBus.publishWithOutbox(DomainEventName.MODERADOR_APROVOU, {
       targetType: tipo,
@@ -133,6 +142,7 @@ export const moderacaoService = {
       'fields[1]': 'documentId',
       'fields[2]': 'estado',
       'pagination[pageSize]': '1',
+      ...(tipo === 'curso' ? { status: 'draft' } : {}),
     });
 
     const item = res.data[0];
@@ -140,12 +150,21 @@ export const moderacaoService = {
       throw Object.assign(new Error('Conteúdo não encontrado'), { status: 404 });
     }
 
-    await strapiPut<unknown>(`/${col}/${String(item.documentId ?? item.id)}`, {
+    const rejectionPayload = {
       estado: 'draft',
       motivoRejeicao: motivo,
       rejeitadoEm: new Date().toISOString(),
       rejeitadoPor: aprovadorUserId,
-    });
+    };
+    if (tipo === 'curso') {
+      await strapiPut<unknown>(
+        `/${col}/${String(item.documentId ?? item.id)}`,
+        rejectionPayload,
+        { status: 'draft' },
+      );
+    } else {
+      await strapiPut<unknown>(`/${col}/${String(item.documentId ?? item.id)}`, rejectionPayload);
+    }
 
     const event = await eventBus.publishWithOutbox(DomainEventName.CONTEUDO_REJEITADO, {
       targetType: tipo,

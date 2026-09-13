@@ -216,10 +216,7 @@ export function CriarExperienciaPage() {
     <>
       <RichBuilderShell
         title={isEditMode ? 'Editar experiência' : 'Criar experiência'}
-        description={isEditMode
-          ? 'Actualiza os dados da tua experiência curricular.'
-          : 'Apresenta o curso, o mercado, as pessoas e a vida na instituição de forma clara.'
-        }
+        backTo="/app/instituicao/experiencias"
         steps={[
           { id: 'identidade', label: 'Dados principais', description: 'Identidade e contexto' },
           { id: 'estrutura', label: 'Storytelling', description: 'Seções da experiência' },
