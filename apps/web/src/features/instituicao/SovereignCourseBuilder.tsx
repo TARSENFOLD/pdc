@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   avaliarProntidaoCurso,
   CriarCursoPayloadSchema,
+  type CursoMeu,
   type CursoReadinessStep,
+  type Pagination,
 } from '@pdc/shared';
 import { useForm, useFieldArray, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,6 +40,39 @@ import {
   type CourseFormValues,
 } from './components/course-studio/course-builder-config';
 type FormValues = CourseFormValues;
+
+interface CreatorCoursesCache {
+  data: CursoMeu[];
+  pagination: Pagination;
+}
+
+function cacheSavedCourse(
+  current: CreatorCoursesCache | undefined,
+  savedCourse: CursoMeu,
+  isNewCourse: boolean
+): CreatorCoursesCache | undefined {
+  const normalizedCourse = { ...savedCourse, id: String(savedCourse.id) };
+  const previousData = current?.data ?? [];
+  const existed = previousData.some((course) => String(course.id) === normalizedCourse.id);
+  if (!isNewCourse && !existed) return current;
+  const pageSize = current?.pagination.pageSize ?? 25;
+  const data = [
+    normalizedCourse,
+    ...previousData.filter((course) => String(course.id) !== normalizedCourse.id),
+  ].slice(0, pageSize);
+  const total = (current?.pagination.total ?? 0) + (isNewCourse && !existed ? 1 : 0);
+
+  return {
+    data,
+    pagination: {
+      page: 1,
+      pageSize,
+      total,
+      pageCount: Math.max(1, Math.ceil(total / pageSize)),
+    },
+  };
+}
+
 export function SovereignCourseBuilder() {
   const navigate = useNavigate();
   const { id: cursoId } = useParams<{ id: string }>();
@@ -104,10 +139,22 @@ export function SovereignCourseBuilder() {
   const mutation = useMutation({
     mutationFn: (data: FormValues) =>
       isEditing && cursoId ? cursosApi.update(cursoId, data) : cursosApi.create(data),
-    onSuccess: () => {
+    onSuccess: (savedCourse) => {
+      const savedCourseId = String(savedCourse.id);
+      queryClient.setQueryData<CreatorCoursesCache>(
+        ['cursos', 'meus'],
+        (current) => cacheSavedCourse(current, savedCourse, !isEditing)
+      );
       void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
-      toast({ title: 'Curso guardado com sucesso.' });
-      navigate(coursesPath);
+      if (isEditing && cursoId) {
+        void queryClient.invalidateQueries({ queryKey: ['cursos', cursoId] });
+      } else {
+        navigate(`${coursesPath}/${savedCourseId}/editar`, { replace: true });
+      }
+      toast({
+        title: 'Rascunho guardado.',
+        description: 'Podes continuar a editar o curso.',
+      });
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : 'Erro desconhecido';
