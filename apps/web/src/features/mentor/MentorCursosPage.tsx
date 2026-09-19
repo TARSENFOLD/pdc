@@ -14,9 +14,10 @@ export function MentorCursosPage() {
     ? '/app/instituicao/cursos'
     : '/app/mentor/cursos';
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['cursos', 'meus'],
     queryFn: () => cursosApi.getMeus(),
+    refetchOnMount: 'always',
   });
 
   const estadoMutation = useMutation({
@@ -40,6 +41,25 @@ export function MentorCursosPage() {
     );
   }
 
+  if (isError && !data) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-ink-primary font-sora">Os Meus Cursos</h1>
+        </div>
+        <Card className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-ink-primary mb-2 font-semibold">Não foi possível carregar os cursos.</p>
+          <p className="text-ink-tertiary mb-4 text-sm">
+            O conteúdo guardado não foi apagado. Tenta atualizar a listagem.
+          </p>
+          <Button variant="secondary" onClick={() => { void refetch(); }}>
+            Tentar novamente
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   const cursos = data?.data ?? [];
 
   return (
@@ -53,6 +73,17 @@ export function MentorCursosPage() {
           </Link>
         </Button>
       </div>
+
+      {isError ? (
+        <Card className="flex flex-wrap items-center justify-between gap-3 border-[var(--accent-warning)]/30 p-4">
+          <p className="text-ink-secondary text-sm">
+            Não foi possível atualizar a listagem. Os cursos já carregados continuam disponíveis.
+          </p>
+          <Button variant="secondary" size="sm" onClick={() => { void refetch(); }}>
+            Tentar atualizar novamente
+          </Button>
+        </Card>
+      ) : null}
 
       {cursos.length === 0 ? (
         <Card className="flex flex-col items-center justify-center py-12 text-center">
