@@ -13,6 +13,7 @@ const toastMock = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/api/cursos', () => ({
   cursosApi: {
     getById: vi.fn(),
+    getPreviewById: vi.fn(),
     getProgresso: vi.fn(),
     inscrever: vi.fn(),
   },
@@ -50,8 +51,51 @@ describe('CursoDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(cursosApi.getById).mockResolvedValue(curso);
+    vi.mocked(cursosApi.getPreviewById).mockResolvedValue({ ...curso, estado: 'review' });
     vi.mocked(cursosApi.getProgresso).mockResolvedValue([]);
     vi.mocked(ratingsApi.getStats).mockResolvedValue({ media: 0, total: 0, userRating: null });
+  });
+
+  it('abre a versão não publicada em modo de pré-visualização sem pedir inscrição', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/app/cursos/curso-1?preview=true']}>
+          <Routes>
+            <Route path="/app/cursos/:id" element={<CursoDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText('Pré-visualização do criador.')).toBeInTheDocument();
+    expect(cursosApi.getPreviewById).toHaveBeenCalledWith('curso-1');
+    expect(cursosApi.getById).not.toHaveBeenCalled();
+    expect(cursosApi.getProgresso).not.toHaveBeenCalled();
+    expect(ratingsApi.getStats).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Iniciar Percurso Soberano' })).toBeNull();
+  });
+
+  it('mostra o erro da pré-visualização sem iniciar pedidos de consumo', async () => {
+    vi.mocked(cursosApi.getPreviewById).mockRejectedValueOnce(
+      new ApiError(404, 'Curso não encontrado')
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/app/cursos/curso-1?preview=true']}>
+          <Routes>
+            <Route path="/app/cursos/:id" element={<CursoDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(await screen.findByText('Erro ao carregar o curso')).toBeInTheDocument();
+    expect(cursosApi.getProgresso).not.toHaveBeenCalled();
+    expect(ratingsApi.getStats).not.toHaveBeenCalled();
   });
 
   it('não anuncia aptidão ou certificado sem contrato autoritativo', async () => {

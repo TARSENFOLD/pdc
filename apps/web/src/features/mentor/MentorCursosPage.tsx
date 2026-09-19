@@ -87,9 +87,11 @@ export function MentorCursosPage() {
                     </Link>
                   </Button>
                   <Button asChild variant="secondary" size="sm" className="flex-1">
-                    <Link to={`/app/cursos/${curso.id}`}>
+                    <Link
+                      to={`/app/cursos/${curso.id}${curso.estado === 'published' ? '' : '?preview=true'}`}
+                    >
                       <Eye className="mr-2 h-3 w-3" />
-                      Ver
+                      {curso.estado === 'published' ? 'Ver' : 'Pré-visualizar'}
                     </Link>
                   </Button>
                   {curso.estado === 'draft' && (
