@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Navigate, Link } from 'react-router-dom';
+import { useParams, Navigate, Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Button, Spinner, Badge, EmptyState, Card } from '@/components/ui';
@@ -17,6 +17,8 @@ import { ApiError } from '@/lib/api/http';
 
 export function CursoDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const previewRequested = searchParams.get('preview') === 'true';
   const qc = useQueryClient();
   const { track } = useTelemetry();
   const [showPayInfo, setShowPayInfo] = useState(false);
@@ -30,15 +32,16 @@ export function CursoDetailPage() {
     isLoading,
     isError,
   } = useQuery<Curso>({
-    queryKey: ['cursos', id ?? ''],
-    queryFn: () => cursosApi.getById(id ?? ''),
+    queryKey: ['cursos', id ?? '', previewRequested ? 'preview' : 'public'],
+    queryFn: () =>
+      previewRequested ? cursosApi.getPreviewById(id ?? '') : cursosApi.getById(id ?? ''),
     enabled: !!id,
   });
 
   const progressoQuery = useQuery<ProgressoItem[]>({
     queryKey: ['cursos', id ?? '', 'progresso'],
     queryFn: () => cursosApi.getProgresso(id ?? ''),
-    enabled: !!id,
+    enabled: !!id && !previewRequested,
     retry: false,
   });
   const progresso = progressoQuery.data ?? [];
@@ -46,7 +49,7 @@ export function CursoDetailPage() {
   const { data: ratingStats } = useQuery({
     queryKey: ['curso', id ?? '', 'ratings'],
     queryFn: () => ratingsApi.getStats('curso', id ?? ''),
-    enabled: !!id,
+    enabled: !!id && !previewRequested,
   });
 
   const inscricaoMutation = useMutation({
@@ -117,6 +120,12 @@ export function CursoDetailPage() {
 
   return (
     <div className="animate-in fade-in mx-auto max-w-5xl space-y-12 pb-32 duration-700">
+      {previewRequested ? (
+        <div className="border-accent/30 bg-accent/5 text-ink-secondary rounded-2xl border px-5 py-4 text-sm">
+          <strong className="text-ink-primary">Pré-visualização do criador.</strong> Estás a ver a
+          versão ainda não publicada deste curso.
+        </div>
+      ) : null}
       {/* Header Imersivo */}
       <div className="border-ink-tertiary/10 bg-recessed relative h-64 w-full overflow-hidden rounded-[40px] border shadow-2xl">
         {curso.capaUrl ? (
@@ -272,7 +281,15 @@ export function CursoDetailPage() {
                 </div>
               ) : (
                 <AnimatePresence mode="wait">
-                  {showPayInfo ? (
+                  {previewRequested ? (
+                    <div className="border-accent/20 bg-accent/5 rounded-2xl border p-5 text-center">
+                      <p className="text-ink-primary text-sm font-bold">Modo de pré-visualização</p>
+                      <p className="text-ink-secondary mt-2 text-xs leading-relaxed">
+                        Inscrição, progresso e avaliação ficam indisponíveis enquanto o curso não
+                        for publicado.
+                      </p>
+                    </div>
+                  ) : showPayInfo ? (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -362,22 +379,24 @@ export function CursoDetailPage() {
                     </div>
                   </div>
                 ) : null}
-                <div className="border-ink-tertiary/10 space-y-2 border-t pt-4">
-                  <span className="text-ink-tertiary text-[10px] font-black uppercase">
-                    Avaliação
-                  </span>
-                  <RatingStars
-                    targetType="curso"
-                    targetId={id}
-                    stats={ratingStats}
-                    readOnly={!isEnrolled || progressoPercentual < 30}
-                  />
-                  {isEnrolled && progressoPercentual < 30 ? (
-                    <p className="text-ink-tertiary text-[10px]">
-                      Completa pelo menos 30% para avaliar.
-                    </p>
-                  ) : null}
-                </div>
+                {!previewRequested ? (
+                  <div className="border-ink-tertiary/10 space-y-2 border-t pt-4">
+                    <span className="text-ink-tertiary text-[10px] font-black uppercase">
+                      Avaliação
+                    </span>
+                    <RatingStars
+                      targetType="curso"
+                      targetId={id}
+                      stats={ratingStats}
+                      readOnly={!isEnrolled || progressoPercentual < 30}
+                    />
+                    {isEnrolled && progressoPercentual < 30 ? (
+                      <p className="text-ink-tertiary text-[10px]">
+                        Completa pelo menos 30% para avaliar.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </div>
           </Card>
