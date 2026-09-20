@@ -2,7 +2,7 @@
 // Strategies: NetworkOnly (API), CacheFirst (assets), StaleWhileRevalidate (fonts/manifest)
 // Background sync for offline telemetry queue via IndexedDB
 
-const CACHE_VERSION = 'pdc-v2.3';
+const CACHE_VERSION = 'pdc-v2.4';
 const CACHES = {
   static: `pdc-static-${CACHE_VERSION}`,
   assets: `pdc-assets-${CACHE_VERSION}`,
@@ -134,8 +134,8 @@ function parsePushPayload(data) {
       title,
       options: {
         body,
-        icon: typeof payload.icon === 'string' ? payload.icon : '/icons/icon-192.png',
-        badge: typeof payload.badge === 'string' ? payload.badge : '/icons/icon-192.png',
+        icon: typeof payload.icon === 'string' ? payload.icon : '/icon-192.png',
+        badge: typeof payload.badge === 'string' ? payload.badge : '/icon-192.png',
         tag: typeof payload.tag === 'string' ? payload.tag : undefined,
         data: { ...(isRecord(payload.data) ? payload.data : {}), url },
       },
