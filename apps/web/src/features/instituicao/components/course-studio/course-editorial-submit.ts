@@ -1,8 +1,8 @@
-import type { CriarCursoPayload, CursoMeu } from '@pdc/shared';
+import type { AtualizarCursoPayload, CriarCursoPayload, CursoMeu } from '@pdc/shared';
 
 interface CourseEditorialApi {
   create: (payload: CriarCursoPayload) => Promise<CursoMeu>;
-  update: (id: string, payload: Partial<CriarCursoPayload>) => Promise<CursoMeu>;
+  update: (id: string, payload: AtualizarCursoPayload) => Promise<CursoMeu>;
   updateEstado: (id: string, estado: 'review') => Promise<{ success: boolean }>;
 }
 
@@ -24,6 +24,11 @@ export class CourseDraftSubmissionError extends Error {
   }
 }
 
+export function toCourseUpdatePayload(payload: CriarCursoPayload): AtualizarCursoPayload {
+  const { estado: _editorialState, ...updatePayload } = payload;
+  return updatePayload;
+}
+
 export async function saveAndSubmitCourse({
   api,
   payload,
@@ -31,7 +36,7 @@ export async function saveAndSubmitCourse({
 }: SaveAndSubmitCourseOptions): Promise<string> {
   let draftId = courseId;
   if (draftId) {
-    await api.update(draftId, { ...payload, estado: 'draft' });
+    await api.update(draftId, toCourseUpdatePayload(payload));
   } else {
     const created = await api.create({ ...payload, estado: 'draft' });
     draftId = created.documentId ?? created.id;

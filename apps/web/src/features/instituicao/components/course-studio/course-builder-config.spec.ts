@@ -73,4 +73,23 @@ describe('firstCourseFormErrorMessage', () => {
 
     expect(courseToFormValues(curso).modulos[0]?.itens[0]?.imagens).toBeUndefined();
   });
+
+  it('não mistura o estado editorial com os campos editáveis do formulário', () => {
+    const curso: Curso = {
+      id: 'curso-1',
+      slug: 'curso-1',
+      titulo: 'Curso em revisão',
+      descricao: 'Curso que já foi submetido para revisão.',
+      autorId: 'mentor-1',
+      totalHoras: 1,
+      estado: 'review',
+      rating: 0,
+      inscritosCount: 0,
+      createdAt: '2026-09-08T08:00:00.000Z',
+      updatedAt: '2026-09-08T08:00:00.000Z',
+      modulos: [],
+    };
+
+    expect(courseToFormValues(curso)).not.toHaveProperty('estado');
+  });
 });

@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { CriarCursoPayload, CursoMeu } from '@pdc/shared';
-import { CourseDraftSubmissionError, saveAndSubmitCourse } from './course-editorial-submit';
+import {
+  CourseDraftSubmissionError,
+  saveAndSubmitCourse,
+  toCourseUpdatePayload,
+} from './course-editorial-submit';
 
 const payload: CriarCursoPayload = {
   titulo: 'Curso pronto',
@@ -8,11 +12,13 @@ const payload: CriarCursoPayload = {
   area: 'TECNOLOGIA',
   nivel: 'medio',
   regrasAcesso: {},
-  modulos: [{
-    titulo: 'Módulo inicial',
-    ordem: 1,
-    itens: [{ titulo: 'Primeira aula', tipo: 'texto', conteudo: 'Conteúdo completo.', ordem: 1 }],
-  }],
+  modulos: [
+    {
+      titulo: 'Módulo inicial',
+      ordem: 1,
+      itens: [{ titulo: 'Primeira aula', tipo: 'texto', conteudo: 'Conteúdo completo.', ordem: 1 }],
+    },
+  ],
 };
 
 function courseResponse(): CursoMeu {
@@ -37,6 +43,10 @@ function apiMock() {
 }
 
 describe('saveAndSubmitCourse', () => {
+  it('remove o estado editorial antes de atualizar os campos do curso', () => {
+    expect(toCourseUpdatePayload({ ...payload, estado: 'review' })).toEqual(payload);
+  });
+
   it('cria o rascunho novo e submete usando o documentId estável', async () => {
     const api = apiMock();
 
@@ -49,8 +59,10 @@ describe('saveAndSubmitCourse', () => {
   it('guarda o curso existente antes de o submeter', async () => {
     const api = apiMock();
 
-    await expect(saveAndSubmitCourse({ api, payload, courseId: 'existing-id' })).resolves.toBe('existing-id');
-    expect(api.update).toHaveBeenCalledWith('existing-id', { ...payload, estado: 'draft' });
+    await expect(saveAndSubmitCourse({ api, payload, courseId: 'existing-id' })).resolves.toBe(
+      'existing-id'
+    );
+    expect(api.update).toHaveBeenCalledWith('existing-id', payload);
     expect(api.create).not.toHaveBeenCalled();
     expect(api.updateEstado).toHaveBeenCalledWith('existing-id', 'review');
   });

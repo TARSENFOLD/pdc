@@ -8,7 +8,6 @@ import type { z } from 'zod';
 import { normalizeCourseItems } from './course-curriculum';
 
 export type CourseFormValues = z.infer<typeof CriarCursoPayloadSchema>;
-type EditableCursoState = NonNullable<CourseFormValues['estado']>;
 type CursoVisibilidade = NonNullable<CourseFormValues['visibilidade']>;
 
 export const COURSE_BUILDER_STEPS = [
@@ -80,10 +79,6 @@ export function firstCourseFormErrorMessage(value: unknown): string | undefined 
   return undefined;
 }
 
-function toEditableState(state: string | undefined): EditableCursoState | undefined {
-  return state === 'draft' || state === 'review' || state === 'published' ? state : undefined;
-}
-
 function resolveCursoVisibilidade(curso: Curso): CursoVisibilidade {
   const value = curso.visibilidade;
   return value === 'publico' || value === 'privado' || value === 'institucional'
@@ -105,7 +100,6 @@ export function courseToFormValues(curso: Curso): CourseFormValues {
     moeda: curso.moeda ?? 'AOA',
     comissao: 0,
     requerValidacaoComite: false,
-    estado: toEditableState(curso.estado),
     regrasAcesso: {
       minFluidez: curso.regrasAcesso?.minFluidez ?? 0,
       minResiliencia: curso.regrasAcesso?.minResiliencia ?? 0,

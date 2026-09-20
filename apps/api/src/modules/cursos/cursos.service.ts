@@ -211,14 +211,13 @@ export const cursosService = {
   },
 
   async atualizarCurso(id: string, payload: CursoUpdatePayload, autorId: string): Promise<Curso> {
-    const { modulos, regrasAcesso, estado, ...cursoData } = payload;
+    const { modulos, regrasAcesso, ...cursoData } = payload;
     const cursoDocumentId = await resolveCursoDocumentId(id);
     const resPut = await strapiPut<Curso>(
       `/cursos/${cursoDocumentId}`,
       {
         ...toCursoStrapiData(cursoData),
         ...(regrasAcesso ? { regrasAcesso } : {}),
-        ...(estado ? { estado } : {}),
       },
       { status: 'draft' }
     );
