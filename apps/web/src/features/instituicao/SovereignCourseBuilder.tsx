@@ -28,6 +28,7 @@ import {
 import {
   CourseDraftSubmissionError,
   saveAndSubmitCourse,
+  toCourseUpdatePayload,
 } from './components/course-studio/course-editorial-submit';
 import {
   COURSE_BUILDER_STEPS,
@@ -138,12 +139,13 @@ export function SovereignCourseBuilder() {
 
   const mutation = useMutation({
     mutationFn: (data: FormValues) =>
-      isEditing && cursoId ? cursosApi.update(cursoId, data) : cursosApi.create(data),
+      isEditing && cursoId
+        ? cursosApi.update(cursoId, toCourseUpdatePayload(data))
+        : cursosApi.create({ ...data, estado: 'draft' }),
     onSuccess: (savedCourse) => {
       const savedCourseId = String(savedCourse.id);
-      queryClient.setQueryData<CreatorCoursesCache>(
-        ['cursos', 'meus'],
-        (current) => cacheSavedCourse(current, savedCourse, !isEditing)
+      queryClient.setQueryData<CreatorCoursesCache>(['cursos', 'meus'], (current) =>
+        cacheSavedCourse(current, savedCourse, !isEditing)
       );
       void queryClient.invalidateQueries({ queryKey: ['cursos', 'meus'] });
       if (isEditing && cursoId) {
@@ -176,7 +178,7 @@ export function SovereignCourseBuilder() {
         });
       }
       if (!cursoId) throw new Error('Guarda primeiro o curso como rascunho.');
-      await cursosApi.update(cursoId, data);
+      await cursosApi.update(cursoId, toCourseUpdatePayload(data));
       await cursosApi.updateEstado(cursoId, estado);
       return cursoId;
     },
@@ -262,9 +264,9 @@ export function SovereignCourseBuilder() {
     }, showFormErrors)();
   };
 
-  const submitWithState = (estado: FormValues['estado']) => {
+  const saveDraft = () => {
     void handleSubmit((data) => {
-      mutation.mutate({ ...data, estado });
+      mutation.mutate(data);
     }, showFormErrors)();
   };
 
@@ -307,7 +309,7 @@ export function SovereignCourseBuilder() {
               state={cursoQuery.data?.estado ?? 'draft'}
               userRole={user?.role || 'instituicao'}
               onSaveDraft={() => {
-                submitWithState('draft');
+                saveDraft();
               }}
               onSubmitReview={() => {
                 transitionWhenReady('review');

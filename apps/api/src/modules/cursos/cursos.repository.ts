@@ -1,4 +1,5 @@
 import type {
+  AtualizarCursoPayload,
   CriarCursoPayload,
   Curso,
   Inscricao,
@@ -40,9 +41,7 @@ type CursoBaseUpdatePayload = {
   [K in keyof CursoBasePayload]?: CursoBasePayload[K] | undefined;
 };
 export type CursoPersisted = Curso & { documentId?: string };
-export type CursoUpdatePayload = {
-  [K in keyof CriarCursoPayload]?: CriarCursoPayload[K] | undefined;
-};
+export type CursoUpdatePayload = AtualizarCursoPayload;
 
 export function first<T>(data: T | T[] | undefined): T | undefined {
   return Array.isArray(data) ? data[0] : data;

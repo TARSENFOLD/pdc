@@ -199,6 +199,7 @@ export const AtualizarCursoPayloadSchema = CriarCursoPayloadBaseSchema.omit({ es
   });
 
 export type CriarCursoPayload = z.infer<typeof CriarCursoPayloadSchema>;
+export type AtualizarCursoPayload = z.infer<typeof AtualizarCursoPayloadSchema>;
 
 export const CursoMeuSchema = z.object({
   id: z.string(),

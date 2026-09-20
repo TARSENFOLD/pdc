@@ -6,6 +6,7 @@ import type {
   InscricaoComCurso,
   ProgressoItem, 
   CriarCursoPayload, 
+  AtualizarCursoPayload,
   CursoMeu, 
   Pagination 
 } from '@pdc/shared';
@@ -40,10 +41,10 @@ export const cursosApi = {
   create: (payload: CriarCursoPayload) =>
     http.post<CursoMeu>('/cursos', payload),
 
-  editar: (id: string, payload: Partial<CriarCursoPayload>) =>
+  editar: (id: string, payload: AtualizarCursoPayload) =>
     http.put<CursoMeu>(`/cursos/${id}`, payload),
 
-  update: (id: string, payload: Partial<CriarCursoPayload>) =>
+  update: (id: string, payload: AtualizarCursoPayload) =>
     http.put<CursoMeu>(`/cursos/${id}`, payload),
 
   inscrever: (cursoId: string) => 
