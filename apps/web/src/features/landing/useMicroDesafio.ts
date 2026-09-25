@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSocket } from '../../lib/realtime/useSocket';
 import { telemetriaService } from '../../lib/telemetria/telemetria.service';
+import { createUuid } from '../../lib/uuid';
 import {
   type Area, type MicroDesafioState, type PerguntaData,
   detectarArea, PERGUNTAS_FALLBACK,
@@ -19,7 +20,7 @@ export function useMicroDesafio() {
   const sessionId = useMemo(() => {
     const stored = sessionStorage.getItem('pdc_session_id');
     if (stored) return stored;
-    const id = crypto.randomUUID();
+    const id = createUuid();
     sessionStorage.setItem('pdc_session_id', id);
     return id;
   }, []);
