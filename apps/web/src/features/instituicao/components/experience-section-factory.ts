@@ -1,7 +1,8 @@
 import type { ExperienciaItem, ExperienciaSecao } from '@pdc/shared';
+import { createUuid } from '@/lib/uuid';
 
 function newItem(ordem: number): ExperienciaItem {
-  return { id: crypto.randomUUID(), tipo: 'texto', ordem, titulo: 'Novo conteúdo', conteudo: '' };
+  return { id: createUuid(), tipo: 'texto', ordem, titulo: 'Novo conteúdo', conteudo: '' };
 }
 
 export function newExperienceSection(
@@ -10,7 +11,7 @@ export function newExperienceSection(
   titulo: string,
 ): ExperienciaSecao {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     titulo,
     tipo,
     ordem,
