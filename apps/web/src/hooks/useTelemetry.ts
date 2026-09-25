@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { TelemetriaTipo, TelemetriaEvento } from '@pdc/shared';
 import { telemetriaService } from '../lib/telemetria/telemetria.service.js';
 import { useBootstrap } from '../lib/bootstrap/bootstrap-context.js';
+import { createUuid } from '../lib/uuid';
 
 const BUFFER_LIMIT = 10;
 const FLUSH_INTERVAL = 30000;
@@ -39,7 +40,7 @@ export function useTelemetry() {
 
   const track = useCallback((tipo: TelemetriaTipo, payload: Record<string, unknown> = {}) => {
     const event: TelemetriaEvento = {
-      eventId: crypto.randomUUID(),
+      eventId: createUuid(),
       tipo,
       payload: {
         ...payload,
