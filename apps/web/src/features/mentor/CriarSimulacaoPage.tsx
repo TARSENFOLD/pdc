@@ -11,6 +11,7 @@ import { BuilderShell, BuilderSection, BuilderUploadZone, BuilderActionsBar } fr
 import { cn } from '@/lib/utils';
 import { Globe } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
+import { createUuid } from '@/lib/uuid';
 
 const CRITERIOS = [
   { id: 'fluidez', label: 'Fluidez \u03D5', desc: 'Métrica de velocidade e precisão cognitiva.' },
@@ -212,7 +213,7 @@ export function CriarSimulacaoPage() {
               <p className="text-[10px] font-black text-ink-tertiary uppercase tracking-widest">Materiais e Documentação</p>
               <BuilderUploadZone onUploadComplete={(urls) => {
                 if (urls.length > 0) {
-                  materiaisArray.append({ id: crypto.randomUUID(), label: 'Novo Material', url: urls[0] ?? '' });
+                  materiaisArray.append({ id: createUuid(), label: 'Novo Material', url: urls[0] ?? '' });
                 }
               }} />
               {materiaisArray.fields.map((field, index) => (

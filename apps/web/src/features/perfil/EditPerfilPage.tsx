@@ -18,6 +18,7 @@ import {
   type HistoricoProfissional, type FormacaoAcademica,
 } from '@pdc/shared';
 import { cn } from '@/lib/utils';
+import { createUuid } from '@/lib/uuid';
 
 const SPRING = { type: 'spring' as const, stiffness: 220, damping: 28 };
 
@@ -205,7 +206,7 @@ function ExperienciaForm({
       return;
     }
     onSave({
-      id: form.id ?? crypto.randomUUID(),
+      id: form.id ?? createUuid(),
       cargo: form.cargo,
       empresa: form.empresa,
       inicio: form.inicio,
@@ -269,7 +270,7 @@ function EducacaoForm({
       return;
     }
     onSave({
-      id: form.id ?? crypto.randomUUID(),
+      id: form.id ?? createUuid(),
       grau: form.grau,
       instituicao: form.instituicao,
       area: form.area,

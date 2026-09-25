@@ -1,5 +1,6 @@
 import { TelemetriaEventoSchema, type TelemetriaEvento, type TelemetriaTipo } from '@pdc/shared';
 import { precisionTime } from '@/lib/utils/time';
+import { createUuid } from '@/lib/uuid';
 
 /**
  * Cria um evento de telemetria válido conforme o schema oficial.
@@ -7,7 +8,7 @@ import { precisionTime } from '@/lib/utils/time';
  */
 export function createTelemetryStub(overrides: Partial<TelemetriaEvento> = {}): TelemetriaEvento {
   const stub: TelemetriaEvento = {
-    eventId: crypto.randomUUID(),
+    eventId: createUuid(),
     tipo: 'session.started' as TelemetriaTipo,
     payload: {},
     timestamp: new Date().toISOString(),
