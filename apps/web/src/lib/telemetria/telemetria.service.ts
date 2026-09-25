@@ -1,6 +1,7 @@
 import { http } from '../api/http.js';
 import type { TelemetriaTipo, TelemetriaEvento, TelemetriaSummary } from '@pdc/shared';
 import { z } from 'zod';
+import { createUuid } from '../uuid';
 
 // Re-export shared types so existing consumers keep working
 export type { TelemetriaTipo, TelemetriaEvento } from '@pdc/shared';
@@ -11,7 +12,7 @@ const EDGE_URL = (import.meta.env.VITE_EDGE_URL as string | undefined) ?? 'http:
 const getSessionId = () => {
   let id = sessionStorage.getItem('pdc:telemetry:sessionId');
   if (!id) {
-    id = crypto.randomUUID();
+    id = createUuid();
     sessionStorage.setItem('pdc:telemetry:sessionId', id);
   }
   return id;
@@ -77,7 +78,7 @@ const updateCircuitState = (state: Partial<CircuitState>) => {
 
 export const telemetriaService = {
   registarEvento: async (tipo: TelemetriaTipo, payload: Record<string, unknown>, token?: string) => {
-    const eventId = crypto.randomUUID();
+    const eventId = createUuid();
     const timestamp = new Date().toISOString();
     
     const eventParams = {
