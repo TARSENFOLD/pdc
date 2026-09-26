@@ -4,6 +4,20 @@
 
 ## Current Status
 
+**Correção de navegação de cursos (2026-09-26, Caixa A — Spec 04 § Cursos):**
+`/app/cursos` é o catálogo global. As antigas entradas `/app/mentor/cursos`
+e `/app/instituicao/cursos` redirecionam para esse catálogo; criar/editar mantêm
+os seus endereços. `/app/{mentor|instituicao}/meus-cursos` reúne as vistas
+“Criados por mim” e “A frequentar”, usando as APIs editoriais e de inscrições
+existentes. O estúdio volta à vista de criação após submissão/publicação;
+guardar rascunho mantém a edição. Typecheck de todos os workspaces e 205 testes
+shared passaram. Navegação validada com Playwright/Chromium para mentor e
+instituição (desktop e 390 px, APIs simuladas); imagens inspecionadas.
+Na suíte web, 326 testes passaram e um teste existente de CourseWelcomePage
+excedeu o tempo de espera; os seis testes desse ficheiro passaram na repetição
+isolada. CodeRabbit apontou uma melhoria de retenção de dados em caso de erro,
+aplicada com teste de regressão. Publicação e verificação autenticada em produção pendentes.
+
 **Incidente 2026-07-17:** Upstash atingiu novamente `500001/500000` pedidos por
 uso agregado de telemetria Edge, cache, rate limit, locks e idempotência, e
 bloqueou login/registo porque OTP, challenges e refresh tokens partilhavam essa

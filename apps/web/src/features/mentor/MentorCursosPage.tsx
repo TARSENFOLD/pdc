@@ -6,13 +6,12 @@ import { cursosApi } from '@/lib/api/cursos';
 import { toast } from '@/hooks/useToast';
 import { Plus, Edit2, Eye, Send, Globe } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
+import { getCourseCreatorPaths } from '@/features/cursos/course-routes';
 
-export function MentorCursosPage() {
+export function MentorCursosPage({ embedded = false }: { embedded?: boolean }) {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const routeBase = user?.role === 'instituicao'
-    ? '/app/instituicao/cursos'
-    : '/app/mentor/cursos';
+  const routeBase = getCourseCreatorPaths(user?.role).editor;
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['cursos', 'meus'],
@@ -34,7 +33,7 @@ export function MentorCursosPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-ink-primary font-sora">Os Meus Cursos</h1>
+          {!embedded && <h1 className="text-2xl font-bold text-ink-primary font-sora">Os Meus Cursos</h1>}
         </div>
         <CardGridSkeleton />
       </div>
@@ -45,7 +44,7 @@ export function MentorCursosPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-ink-primary font-sora">Os Meus Cursos</h1>
+          {!embedded && <h1 className="text-2xl font-bold text-ink-primary font-sora">Os Meus Cursos</h1>}
         </div>
         <Card className="flex flex-col items-center justify-center py-12 text-center">
           <p className="text-ink-primary mb-2 font-semibold">Não foi possível carregar os cursos.</p>
@@ -64,8 +63,8 @@ export function MentorCursosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-ink-primary font-sora">Os Meus Cursos</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        {embedded ? <h2 className="text-lg font-semibold text-ink-primary">Criados por mim</h2> : <h1 className="text-2xl font-bold text-ink-primary font-sora">Os Meus Cursos</h1>}
         <Button asChild>
           <Link to={`${routeBase}/criar`}>
             <Plus className="mr-2 h-4 w-4" />

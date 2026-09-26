@@ -45,12 +45,16 @@ export function getNavCommands(role: Role | undefined): NavCommand[] {
     ],
     mentor: [
       { label: 'Dashboard Mentor', to: '/app/dashboard/mentor' },
+      { label: 'Catálogo de cursos', to: '/app/cursos' },
+      { label: 'Meus cursos', to: '/app/mentor/meus-cursos' },
+      { label: 'Criar Curso', to: '/app/mentor/cursos/criar' },
       { label: 'Criar Simulação', to: '/app/mentor/simulacoes/criar' },
       { label: 'Mentorias', to: '/app/mentorias' },
     ],
     instituicao: [
       { label: 'Dashboard Instituição', to: '/app/dashboard/instituicao' },
-      { label: 'Gerir Cursos', to: '/app/instituicao/cursos' },
+      { label: 'Catálogo de cursos', to: '/app/cursos' },
+      { label: 'Meus cursos', to: '/app/instituicao/meus-cursos' },
       { label: 'Criar Curso', to: '/app/instituicao/cursos/criar' },
       { label: 'Gerir Simulações', to: '/app/instituicao/simulacoes' },
       { label: 'Criar Simulação', to: '/app/instituicao/simulacoes/criar' },
@@ -64,6 +68,8 @@ export function getNavCommands(role: Role | undefined): NavCommand[] {
     ],
     super_admin: [
       { label: 'Dashboard Admin', to: '/app/dashboard/admin' },
+      { label: 'Catálogo de cursos', to: '/app/cursos' },
+      { label: 'Meus cursos', to: '/app/instituicao/meus-cursos' },
       { label: 'Feature Flags', to: '/app/admin/feature-flags' },
       { label: 'Pesos do Feed', to: '/app/admin/feed-weights' },
       { label: 'LTI Plataformas', to: '/app/admin/lti' },

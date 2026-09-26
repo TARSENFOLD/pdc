@@ -94,7 +94,9 @@ describe('Sidebar Render by Role', () => {
     expect(mentorBtn).toBeDefined();
     
     mentorBtn.click();
-    expect(await screen.findByText(/Gestão de Cursos/i)).toBeDefined();
+    expect(await screen.findByRole('link', { name: 'Meus Cursos' })).toHaveAttribute('href', '/app/mentor/meus-cursos');
+    (await screen.findByText(/^Explorar$/i)).click();
+    expect(await screen.findByRole('link', { name: 'Catálogo de cursos' })).toHaveAttribute('href', '/app/cursos');
     
     // Não deve ver itens exclusivos de estudante
     expect(screen.queryByText(/Relatório Vocacional/i)).toBeNull();

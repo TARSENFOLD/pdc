@@ -11,6 +11,10 @@ describe('command palette routes', () => {
 
   it.each([
     ['mentor', 'Criar Simulação', '/app/mentor/simulacoes/criar'],
+    ['mentor', 'Catálogo de cursos', '/app/cursos'],
+    ['mentor', 'Meus cursos', '/app/mentor/meus-cursos'],
+    ['instituicao', 'Meus cursos', '/app/instituicao/meus-cursos'],
+    ['super_admin', 'Meus cursos', '/app/instituicao/meus-cursos'],
     ['estudante', 'Certificados', '/app/certificados'],
     ['instituicao', 'Perfil institucional', '/app/instituicao/perfil/identidade'],
     ['super_admin', 'LTI Plataformas', '/app/admin/lti'],

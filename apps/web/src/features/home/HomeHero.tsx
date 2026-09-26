@@ -32,7 +32,7 @@ const JOURNEY_ESTUDANTE: JourneyStep[] = [
 const JOURNEY_MENTOR: JourneyStep[] = [
   { label: 'Simulações',   desc: 'Gerir tarefas',    to: '/app/mentor/simulacoes',     icon: FlaskConical, accent: true },
   { label: 'Programas',    desc: 'Acompanhar',        to: '/app/instituicao/programas', icon: GraduationCap },
-  { label: 'Cursos',       desc: 'Conteúdos',         to: '/app/mentor/cursos',         icon: BookOpen },
+  { label: 'Meus cursos',  desc: 'Aprender e criar',   to: '/app/mentor/meus-cursos',    icon: BookOpen },
   { label: 'Explorar',     desc: 'Descobrir',         to: '/app/explorar',              icon: Compass },
   { label: 'Dashboard',    desc: 'Visão geral',       to: '/app/dashboard/mentor',      icon: BarChart2 },
 ];
@@ -42,7 +42,7 @@ const JOURNEY_BY_ROLE: Partial<Record<Role, JourneyStep[]>> = {
   mentor:      JOURNEY_MENTOR,
   instituicao: [
     { label: 'Programas',  desc: 'Gerir programas',  to: '/app/instituicao/programas', icon: GraduationCap, accent: true },
-    { label: 'Cursos',     desc: 'Conteúdos',        to: '/app/mentor/cursos',         icon: BookOpen },
+    { label: 'Meus cursos', desc: 'Aprender e criar',  to: '/app/instituicao/meus-cursos', icon: BookOpen },
     { label: 'Experiências', desc: 'Publicar conteúdo', to: '/app/instituicao/experiencias', icon: Compass },
     { label: 'Relatórios', desc: 'Visão geral',      to: '/app/dashboard/instituicao', icon: BarChart2 },
     { label: 'Simulações', desc: 'Gerir tarefas',    to: '/app/mentor/simulacoes',     icon: FlaskConical },
