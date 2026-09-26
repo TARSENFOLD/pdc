@@ -5,8 +5,10 @@ import { Card, Button, Table, Spinner, type Column } from '@/components/ui';
 import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
 import type { ExperienciaMinha } from '@pdc/shared';
 import { AlertCircle, Plus, RefreshCw } from 'lucide-react';
+import { useAuth } from '@/lib/auth/auth-context';
 
 export function InstituicaoExperienciasPage() {
+  const { user } = useAuth();
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['experiencias', 'minhas'],
     queryFn: () => experienciasApi.getMinhas(),
@@ -63,7 +65,7 @@ export function InstituicaoExperienciasPage() {
             <Link to={`/app/instituicao/editar-experiencia/${exp.id}`}>Editar</Link>
           </Button>
           <Button asChild size="sm" variant="secondary">
-            <Link to={`/app/experiencias/${exp.id}`}>Ver</Link>
+            <Link to={`/app/experiencias/${exp.id}?preview=1`}>Pré-visualizar</Link>
           </Button>
         </div>
       )
@@ -86,6 +88,7 @@ export function InstituicaoExperienciasPage() {
       </div>
 
       <Card>
+        {user?.role === 'super_admin' && <div className="p-4"><Button asChild variant="outline"><Link to="/app/instituicao/criar-experiencia?tipo=vwx">Criar VWX</Link></Button></div>}
         {experiencias.length === 0 ? (
           <div className="flex h-40 flex-col items-center justify-center gap-4 text-center">
             <p className="text-muted-foreground">Ainda não criou nenhuma experiência.</p>

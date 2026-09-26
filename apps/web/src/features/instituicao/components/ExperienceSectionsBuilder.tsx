@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useFieldArray, type Control, type UseFormRegister, type UseFormSetValue, type UseFormWatch } from 'react-hook-form';
 import { ArrowLeft, ChevronDown, ChevronUp, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { CriarExperienciaPayload, ExperienciaItem, ExperienciaSecao } from '@pdc/shared';
+import { VWX_SECTION_TYPES, VWX_SECTION_LABELS } from '@pdc/shared';
 import { Button, Input, Select } from '@/components/ui';
 import { BuilderUploadZone } from '@/components/builders';
 import { newExperienceItem, newExperienceSection } from './experience-section-factory';
@@ -74,6 +75,11 @@ function MediaPreview({ item, url, onRemove }: { item: ExperienciaItem; url: str
 }
 
 export function ExperienceSectionsBuilder({ control, register, watch, setValue, onEditingChange }: Props) {
+  const vwx = watch('tipoExperiencia') === 'vwx';
+  const sectionTypes = vwx ? [
+    ...VWX_SECTION_TYPES.map((value) => ({ value, label: VWX_SECTION_LABELS[value] })),
+    ...SECTION_TYPES.filter((option) => ['materiais', 'faq', 'personalizado'].includes(option.value)),
+  ] : SECTION_TYPES;
   const sections = useFieldArray({ control, name: 'secoes', keyName: 'fieldKey' });
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [newType, setNewType] = useState<ExperienciaSecao['tipo']>('personalizado');
@@ -99,7 +105,7 @@ export function ExperienceSectionsBuilder({ control, register, watch, setValue, 
     return (
       <div className="border border-dashed border-border p-10 text-center">
         <p className="text-sm text-ink-secondary">Ainda não existem módulos.</p>
-        <Button type="button" className="mt-4" onClick={() => { sections.append(newExperienceSection('boas_vindas', 0, 'Boas-vindas')); }}>Criar primeiro módulo</Button>
+        <Button type="button" className="mt-4" onClick={() => { sections.append(newExperienceSection(vwx ? 'contexto' : 'boas_vindas', 0, vwx ? 'Contexto profissional' : 'Boas-vindas')); }}>Criar primeira secção</Button>
       </div>
     );
   }
@@ -117,7 +123,7 @@ export function ExperienceSectionsBuilder({ control, register, watch, setValue, 
                 </span>
                 <div className="min-w-0">
                   <p className="text-xs font-bold uppercase text-accent">
-                    {SECTION_TYPES.find((option) => option.value === sectionData.tipo)?.label}
+                    {sectionTypes.find((option) => option.value === sectionData.tipo)?.label}
                   </p>
                   <h3 className="mt-1 text-lg font-bold text-ink-primary">{sectionData.titulo}</h3>
                   <p className="mt-1 text-sm text-ink-secondary">
@@ -138,13 +144,13 @@ export function ExperienceSectionsBuilder({ control, register, watch, setValue, 
 
         <div className="grid gap-3 border-t border-border pt-7 sm:grid-cols-[minmax(0,280px)_auto] sm:items-end">
           <Select label="Tipo do novo módulo" value={newType} onChange={(event) => { setNewType(event.target.value as ExperienciaSecao['tipo']); }}>
-            {SECTION_TYPES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            {sectionTypes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </Select>
           <Button
             type="button"
             className="sm:w-fit"
             onClick={() => {
-              const label = SECTION_TYPES.find((option) => option.value === newType)?.label ?? 'Novo módulo';
+              const label = sectionTypes.find((option) => option.value === newType)?.label ?? 'Nova secção';
               sections.append(newExperienceSection(newType, sections.fields.length, label));
               setActiveIndex(sections.fields.length);
             }}
@@ -179,7 +185,7 @@ export function ExperienceSectionsBuilder({ control, register, watch, setValue, 
 
         <div className="mt-8 grid gap-5 md:grid-cols-[200px_1fr]">
           <Select label="Tipo" {...register(`${currentSectionPath}.tipo`)}>
-            {SECTION_TYPES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            {sectionTypes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </Select>
           <Input label="Título" {...register(`${currentSectionPath}.titulo`)} />
         </div>
@@ -201,7 +207,12 @@ export function ExperienceSectionsBuilder({ control, register, watch, setValue, 
                   <Input label="Título" {...register(`${currentItemPath}.titulo`)} />
                   <Button type="button" variant="ghost" size="sm" className="self-end text-accent-danger" onClick={() => { setValue(`${currentSectionPath}.itens`, items.filter((_, index) => index !== itemIndex).map((current, ordem) => ({ ...current, ordem })), { shouldDirty: true }); }}><Trash2 size={16} /></Button>
                 </div>
-                <textarea {...register(`${currentItemPath}.conteudo`)} placeholder="Conteúdo, descrição ou URL externa" className="mt-3 min-h-28 w-full border border-border bg-recessed p-3 text-sm outline-none focus:border-accent" />
+                <textarea aria-label="Conteúdo" {...register(`${currentItemPath}.conteudo`)} placeholder="Conteúdo, descrição ou URL externa" className="mt-3 min-h-28 w-full border border-border bg-recessed p-3 text-sm outline-none focus:border-accent" />
+                {item.tipo === 'cta' && <div className="grid gap-3">
+                  <Input label="Texto do botão" {...register(`${currentItemPath}.cta.label`)} />
+                  <Input label="Destino do botão" {...register(`${currentItemPath}.cta.url`)} />
+                </div>}
+                {['video', 'audio', 'imagem', 'galeria', 'pdf', 'link', 'iframe'].includes(item.tipo) && <Input label="URL do conteúdo" {...register(`${currentItemPath}.mediaUrl`, { setValueAs: (value: string) => value.trim() || undefined })} />}
                 <div>
                   <p className="mb-3 text-xs font-bold uppercase text-ink-tertiary">Mídia</p>
                   {watch(`${currentItemPath}.mediaUrl`) ? (

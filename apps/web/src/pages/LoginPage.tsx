@@ -33,7 +33,9 @@ export default function LoginPage() {
   const { login, user, isLoading: isAuthLoading } = useAuth();
   const { track } = useTelemetry();
   const navigate = useNavigate();
-  const from = '/app';
+  const experienceReturn = searchParams.get('redirect');
+  const from = experienceReturn && /^\/app\/experiencias\/[a-zA-Z0-9_-]+$/.test(experienceReturn)
+    ? experienceReturn : '/app';
   const oauthError = searchParams.get('error');
 
   const handleWarpComplete = useCallback(() => {

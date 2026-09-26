@@ -1,10 +1,11 @@
-const MURAL_MIN_VIDEOS = 3;
+import { validateExperiencePublication } from './publication-validation';
 
 export default {
   async beforeCreate(event: { params: { data: Record<string, unknown> } }): Promise<void> {
     const { data } = event.params;
     // Invariant: gratuito is always true — block any attempt to set false
     data.gratuito = true;
+    validateExperiencePublication(data);
   },
 
   async beforeUpdate(event: { params: { data: Record<string, unknown>; where: { id?: string | number } } }): Promise<void> {
@@ -29,24 +30,6 @@ export default {
     const current = typeof currentEntity === 'object' && currentEntity !== null ? currentEntity : null;
     if (!current) return;
 
-    const merged = { ...current, ...data };
-    const missing: string[] = [];
-
-    if (!merged.painelRealidade) {
-      missing.push('painelRealidade');
-    }
-
-    const mural = Array.isArray(merged.muralVozes) ? merged.muralVozes : undefined;
-    if (!mural || mural.length < MURAL_MIN_VIDEOS) {
-      missing.push(`muralVozes (mínimo ${MURAL_MIN_VIDEOS} depoimentos)`);
-    }
-
-    if (!merged.guiaInstitucional) {
-      missing.push('guiaInstitucional');
-    }
-
-    if (missing.length > 0) {
-      throw new Error(`Experiência bloqueada: painéis obrigatórios em falta: ${missing.join(', ')}`);
-    }
+    validateExperiencePublication({ ...current, ...data });
   },
 };

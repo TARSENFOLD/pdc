@@ -34,6 +34,12 @@ const EXPERIENCE = {
 } satisfies Experiencia;
 
 describe('ExperienceStoryPanels', () => {
+  it('não mostra painéis legados vazios ao lado de módulos preenchidos', () => {
+    const { container } = render(<ExperienceStoryPanels experience={{ ...EXPERIENCE,
+      painelRealidade: {}, muralVozes: [], guiaInstitucional: {},
+    }} />);
+    expect(container.textContent).toBe('');
+  });
   it('renderiza os três painéis e o cartão de empregador', () => {
     render(<ExperienceStoryPanels experience={EXPERIENCE} />);
 

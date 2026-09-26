@@ -1195,14 +1195,12 @@ export interface ApiExperienciaParticipanteExperienciaParticipante
     draftAndPublish: false;
   };
   attributes: {
+    concluidoEm: Schema.Attribute.DateTime;
     createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
+    entrega: Schema.Attribute.Text;
     estudanteId: Schema.Attribute.String & Schema.Attribute.Required;
-    experiencia: Schema.Attribute.Relation<
-      'manyToOne',
-      'api::experiencia.experiencia'
-    >;
+    experiencia: Schema.Attribute.Relation<'manyToOne', 'api::experiencia.experiencia'>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -1210,9 +1208,10 @@ export interface ApiExperienciaParticipanteExperienciaParticipante
     > &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
+    reflexao: Schema.Attribute.Text;
+    secoesConcluidas: Schema.Attribute.JSON;
     updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
   };
 }
 
@@ -1247,36 +1246,28 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
       ]
     >;
     autor: Schema.Attribute.Relation<'manyToOne', 'api::perfil.perfil'>;
+    capaUrl: Schema.Attribute.String;
     createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
     curso: Schema.Attribute.Relation<'manyToOne', 'api::curso.curso'>;
     dataFim: Schema.Attribute.DateTime;
     dataInicio: Schema.Attribute.DateTime;
     descricao: Schema.Attribute.Text;
     duracaoEstimada: Schema.Attribute.Integer;
     estado: Schema.Attribute.Enumeration<
-      ['draft', 'review', 'approved', 'published', 'archived']
+      ['draft', 'review', 'approved', 'published', 'rejected', 'archived']
     > &
       Schema.Attribute.DefaultTo<'draft'>;
     gradeDestaque: Schema.Attribute.JSON;
     gratuito: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     guiaInstitucional: Schema.Attribute.JSON;
-    instituicao: Schema.Attribute.Relation<
-      'manyToOne',
-      'api::instituicao.instituicao'
-    >;
+    instituicao: Schema.Attribute.Relation<'manyToOne', 'api::instituicao.instituicao'>;
     isDemo: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizacao: Schema.Attribute.String;
-    localizations: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::experiencia.experiencia'
-    > &
+    localizations: Schema.Attribute.Relation<'oneToMany', 'api::experiencia.experiencia'> &
       Schema.Attribute.Private;
-    modalidade: Schema.Attribute.Enumeration<
-      ['presencial', 'online', 'hibrido']
-    >;
+    modalidade: Schema.Attribute.Enumeration<['presencial', 'online', 'hibrido']>;
     motivoRejeicao: Schema.Attribute.String &
       Schema.Attribute.SetMinMaxLength<{
         maxLength: 500;
@@ -1294,17 +1285,17 @@ export interface ApiExperienciaExperiencia extends Struct.CollectionTypeSchema {
     slug: Schema.Attribute.UID<'titulo'> & Schema.Attribute.Unique;
     tags: Schema.Attribute.JSON;
     telemetriaConfig: Schema.Attribute.JSON;
+    tipoExperiencia: Schema.Attribute.Enumeration<['institucional', 'vwx']> &
+      Schema.Attribute.DefaultTo<'institucional'>;
     titulo: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> & Schema.Attribute.Private;
     vagas: Schema.Attribute.Integer;
-    validadoAcademicamente: Schema.Attribute.Boolean &
-      Schema.Attribute.DefaultTo<false>;
-    visibilidade: Schema.Attribute.Enumeration<
-      ['publico', 'privado', 'institucional']
-    > &
+    validadoAcademicamente: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    visibilidade: Schema.Attribute.Enumeration<['publico', 'privado', 'institucional']> &
       Schema.Attribute.DefaultTo<'publico'>;
+    vwx: Schema.Attribute.JSON;
+    vwxValidacao: Schema.Attribute.JSON;
   };
 }
 

@@ -24,7 +24,7 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
 interface BaseFilters { page?: number; pageSize?: number; search?: string; area?: string }
 interface CursoFiltersPublic extends BaseFilters { nivel?: string; gratuito?: boolean }
 interface SimulacaoFiltersPublic extends BaseFilters { tipo?: string; nivel?: string }
-interface ExperienciaFiltersPublic extends BaseFilters { nivel?: string; modalidade?: string }
+interface ExperienciaFiltersPublic extends BaseFilters { nivel?: string; modalidade?: string; tipoExperiencia?: 'institucional' | 'vwx' }
 interface InstituicaoFiltersPublic extends BaseFilters { tipo?: string; regiao?: string }
 interface ExplorarParams extends Omit<BaseFilters, 'area'> { tipo?: ExplorarItemTipo; area?: AreaVocacional }
 interface PessoaFiltersPublic extends BaseFilters { role?: Extract<Role, 'estudante' | 'mentor'> }

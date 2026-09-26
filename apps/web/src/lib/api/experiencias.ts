@@ -7,6 +7,8 @@ import {
   type PaginationParams,
   type InstituicaoStats,
   type MutationResult,
+  type ProgressoExperienciaPayload,
+  type ParticipacaoExperiencia,
 } from '@pdc/shared';
 
 export const experienciasApi = {
@@ -22,7 +24,7 @@ export const experienciasApi = {
     http.get<Experiencia>(`/experiencias/${id}`),
 
   getMineById: (id: string) =>
-    http.get<Experiencia>(`/experiencias/minhas/${id}`),
+    http.get<ExperienciaMinha>(`/experiencias/minhas/${id}`),
 
   getBySlug: (slug: string) =>
     http.get<Experiencia>(`/experiencias/slug/${slug}`),
@@ -48,5 +50,11 @@ export const experienciasApi = {
       : http.patch<{ success: boolean }>(`/experiencias/${id}/estado`, { estado }),
 
   inscrever: (id: string) =>
-    http.post<{ id: string | number }>(`/experiencias/${id}/inscrever`, {}),
+    http.post<ParticipacaoExperiencia>(`/experiencias/${id}/inscrever`, {}),
+  participacao: (id: string) =>
+    http.get<{ participacao: ParticipacaoExperiencia | null; experiencia?: Experiencia }>(`/experiencias/${id}/participacao`),
+  progresso: (id: string, payload: ProgressoExperienciaPayload) =>
+    http.put<ParticipacaoExperiencia>(`/experiencias/${id}/progresso`, payload),
+  validarParceiro: (id: string, payload: { responsavel: string; referencia: string }) =>
+    http.post<{ success: boolean }>(`/experiencias/${id}/validacao-parceiro`, payload),
 };

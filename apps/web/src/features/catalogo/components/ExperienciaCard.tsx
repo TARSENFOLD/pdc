@@ -71,6 +71,7 @@ export function ExperienciaCard({ experiencia: exp, href }: ExperienciaCardProps
 
       {/* Body */}
       <div className="p-4 space-y-3">
+        <p className="text-xs font-semibold text-ink-secondary">{exp.tipoExperiencia === 'vwx' ? 'VWX · Prática profissional' : 'Experiência · Formação'}</p>
         {/* Área badge */}
         {areaLabel && (
           <span className="inline-block text-[10px] font-semibold uppercase tracking-wide text-accent bg-accent/10 px-2 py-0.5 rounded-sm">

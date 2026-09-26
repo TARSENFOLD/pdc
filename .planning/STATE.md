@@ -4,6 +4,21 @@
 
 ## Current Status
 
+**Experiências e VWX (2026-09-26, Caixa C — ADR-058):** trabalho isolado na
+branch `codex/experiencias-vwx-e2e`, baseada em `fab199e`. Catálogo e builder
+partilhados, com contratos e secções separados por tipo. Fluxo real de
+rascunho → revisão → aprovação → publicação; VWX exige validação do parceiro
+e tem participação, progresso, entregável e reflexão privados. Compatibilidade
+dos rascunhos legados preservada. Os 18 testes de navegador de Experiências
+passaram com Strapi/PostgreSQL/Redis locais reais, incluindo upload de capa,
+outbox, publicação, participação, retoma e conclusão VWX. Contratos API: 71 testes;
+shared: 205; lifecycle Strapi: 9. Na suíte web geral, 332 passaram e um teste de
+vídeo excedeu 5 s; os 13 testes desse ficheiro passaram na repetição isolada.
+Revisão CodeRabbit originou correções de recuperação de rascunhos, identificador
+de avaliações e compatibilidade de dados. Evidência e checklist de release em
+`docs/qa/experiencias-vwx-2026-09-26.md`. Ainda **não publicado em produção**;
+flags, R2 e conteúdo real precisam de verificação no ambiente de destino.
+
 **Correção de navegação de cursos (2026-09-26, Caixa A — Spec 04 § Cursos):**
 `/app/cursos` é o catálogo global. As antigas entradas `/app/mentor/cursos`
 e `/app/instituicao/cursos` redirecionam para esse catálogo; criar/editar mantêm

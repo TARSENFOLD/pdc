@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { EstadoEditorialSchema, AreaVocacionalSchema, ModalidadeSchema } from './schemas/enums.js';
+import { TipoExperienciaSchema, VwxSchema, VwxValidacaoSchema, VWX_SECTION_TYPES } from './experiencias-variants.js';
+export * from './experiencias-variants.js';
 
 // ─── 3 Painéis Canónicos (G3 Spec 04 §3.1) ─────────────────────────────────────────
 
@@ -55,6 +57,7 @@ export type MuralVozesItem = z.infer<typeof MuralVozesItemSchema>;
 export type GuiaInstitucional = z.infer<typeof GuiaInstitucionalSchema>;
 
 export const ExperienciaSecaoTipoSchema = z.enum([
+  ...VWX_SECTION_TYPES,
   'boas_vindas',
   'ano_fase',
   'depoimentos',
@@ -116,6 +119,8 @@ export type ExperienciaItem = z.infer<typeof ExperienciaItemSchema>;
 
 export const ExperienciaSchema = z.object({
   id: z.string(),
+  tipoExperiencia: TipoExperienciaSchema.optional(),
+  vwx: VwxSchema.nullable().optional(),
   slug: z.string(),
   titulo: z.string(),
   descricao: z.string(),
@@ -124,7 +129,7 @@ export const ExperienciaSchema = z.object({
   area: AreaVocacionalSchema.optional().nullable(),
   nivel: z.enum(['basico', 'medio', 'avancado']).optional().nullable(),
   modalidade: ModalidadeSchema.optional().nullable(),
-  estado: EstadoEditorialSchema.optional().default('draft'),
+  estado: z.union([EstadoEditorialSchema, z.literal('archived')]).optional().default('draft'),
   validadoAcademicamente: z.boolean().default(false),
   vagas: z.number().int().optional().nullable(),
   duracaoEstimada: z.number().int().optional().nullable(), // horas — espelha curso.duracaoEstimada
@@ -154,6 +159,7 @@ export type Experiencia = z.infer<typeof ExperienciaSchema>;
 export type ExperienciaPublica = Experiencia; // Alias Spec 04
 
 export const ExperienciaMinhaSchema = ExperienciaSchema.extend({
+  vwxValidacao: VwxValidacaoSchema.nullable().optional(),
   inscricoesCount: z.number().optional(),
 });
 export type ExperienciaMinha = z.infer<typeof ExperienciaMinhaSchema>;
@@ -161,6 +167,9 @@ export type ExperienciaMinha = z.infer<typeof ExperienciaMinhaSchema>;
 // ─── Payload de Criação (G3-T2) ──────────────────────────────────────────────
 
 export const CriarExperienciaPayloadSchema = z.object({
+  tipoExperiencia: TipoExperienciaSchema.optional(),
+  vwx: VwxSchema.optional(),
+  capaUrl: z.string().url().optional(),
   titulo: z.string().min(3).max(200),
   descricao: z.string().min(10),
   area: AreaVocacionalSchema,

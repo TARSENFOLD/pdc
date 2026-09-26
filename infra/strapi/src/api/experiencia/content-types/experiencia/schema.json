@@ -10,6 +10,10 @@
     "draftAndPublish": true
   },
   "attributes": {
+    "tipoExperiencia": { "type": "enumeration", "enum": ["institucional", "vwx"], "default": "institucional" },
+    "vwx": { "type": "json" },
+    "vwxValidacao": { "type": "json" },
+    "capaUrl": { "type": "string" },
     "slug": { "type": "uid", "targetField": "titulo", "unique": true },
     "titulo": { "type": "string", "required": true },
     "descricao": { "type": "text" },
@@ -28,7 +32,7 @@
     },
     "estado": {
       "type": "enumeration",
-      "enum": ["draft", "review", "approved", "published", "archived"],
+      "enum": ["draft", "review", "approved", "published", "rejected", "archived"],
       "default": "draft"
     },
     "visibilidade": {
