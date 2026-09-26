@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { createMemoryRouter, Link, RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CursoMeu, Pagination } from '@pdc/shared';
 import { cursosApi } from '@/lib/api/cursos';
@@ -23,8 +23,9 @@ vi.mock('@/lib/auth/auth-context', () => ({
 vi.mock('@/hooks/useToast', () => ({ toast: vi.fn() }));
 
 vi.mock('@/components/builders', () => ({
-  RichBuilderShell: ({ children, settingsPanel }: { children: ReactNode; settingsPanel: ReactNode }) => (
+  RichBuilderShell: ({ children, settingsPanel, backTo }: { children: ReactNode; settingsPanel: ReactNode; backTo: string }) => (
     <div>
+      <Link to={backTo}>Voltar aos meus cursos</Link>
       {settingsPanel}
       {children}
     </div>
@@ -96,6 +97,8 @@ describe('SovereignCourseBuilder', () => {
         <RouterProvider router={router} />
       </QueryClientProvider>
     );
+
+    expect(screen.getByRole('link', { name: 'Voltar aos meus cursos' })).toHaveAttribute('href', '/app/instituicao/meus-cursos');
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Título do curso' }), {
       target: { value: 'Curso guardado' },

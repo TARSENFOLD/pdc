@@ -114,6 +114,8 @@ export default function TopBar({ onOpenMobileMenu }: TopBarProps): React.JSX.Ele
 }
 
 function getPageTitle(pathname: string): string {
+  if (pathname.endsWith('/meus-cursos')) return 'Meus cursos';
+  if (pathname === '/app/cursos') return 'Catálogo de cursos';
   const segments = pathname.split('/').filter(Boolean);
   const current = segments[1] ?? 'home';
   const titles: Record<string, string> = {

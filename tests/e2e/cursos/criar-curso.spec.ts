@@ -197,7 +197,7 @@ test.describe('Criar Curso', () => {
         const submitResponse = await submitResponsePromise;
         expect(createResponse.status(), createBody).toBe(201);
         expect(submitResponse.status(), await submitResponse.text()).toBe(200);
-        await expect(adminPage).toHaveURL('/app/instituicao/cursos');
+        await expect(adminPage).toHaveURL('/app/instituicao/meus-cursos');
       } finally {
         if (submittedCourseId) {
           const archiveResponse = await adminPage.request.patch(
@@ -350,7 +350,7 @@ test.describe('Criar Curso', () => {
   });
 
   test('mentor sees curso list', async ({ mentorPage }) => {
-    await mentorPage.goto('/app/mentor/cursos');
+    await mentorPage.goto('/app/mentor/meus-cursos');
     await expect(mentorPage.locator('h1, h2')).toBeVisible({ timeout: 10_000 });
   });
 

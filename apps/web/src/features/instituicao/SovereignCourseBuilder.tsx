@@ -21,6 +21,7 @@ import { RichBuilderShell, BuilderSection, BuilderActionsBar } from '@/component
 import { useAuth } from '@/lib/auth/auth-context';
 import { Spinner } from '@/components/ui';
 import { CourseStepReadiness } from './components/CourseStepReadiness';
+import { getCourseCreatorPaths } from '@/features/cursos/course-routes';
 import {
   cumulativeCompletedReadinessSteps,
   findBlockingReadinessStep,
@@ -80,7 +81,7 @@ export function SovereignCourseBuilder() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isEditing = Boolean(cursoId);
-  const coursesPath = user?.role === 'mentor' ? '/app/mentor/cursos' : '/app/instituicao/cursos';
+  const coursePaths = getCourseCreatorPaths(user?.role);
   const [activeStep, setActiveStep] = useState<string>('info');
   const form = useForm<FormValues>({
     resolver: zodResolver(CriarCursoPayloadSchema),
@@ -151,7 +152,7 @@ export function SovereignCourseBuilder() {
       if (isEditing && cursoId) {
         void queryClient.invalidateQueries({ queryKey: ['cursos', cursoId] });
       } else {
-        navigate(`${coursesPath}/${savedCourseId}/editar`, { replace: true });
+        navigate(`${coursePaths.editor}/${savedCourseId}/editar`, { replace: true });
       }
       toast({
         title: 'Rascunho guardado.',
@@ -189,12 +190,12 @@ export function SovereignCourseBuilder() {
         title:
           variables.estado === 'published' ? 'Curso publicado!' : 'Curso submetido para revisão.',
       });
-      navigate(coursesPath);
+      navigate(coursePaths.library);
     },
     onError: (err: unknown) => {
       if (err instanceof CourseDraftSubmissionError) {
         toast({ title: err.message, description: err.reason, variant: 'error' });
-        navigate(`${coursesPath}/${err.draftId}/editar`);
+        navigate(`${coursePaths.editor}/${err.draftId}/editar`);
         return;
       }
       toast({
@@ -286,7 +287,7 @@ export function SovereignCourseBuilder() {
     >
       <RichBuilderShell
         title={isEditing ? 'Editar curso' : 'Criar curso'}
-        backTo={coursesPath}
+        backTo={coursePaths.library}
         steps={COURSE_BUILDER_STEPS.map((step) => ({ ...step }))}
         activeStep={activeStep}
         onStepChange={handleStepChange}

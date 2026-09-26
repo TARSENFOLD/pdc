@@ -61,6 +61,7 @@ export const SIDEBAR_CONFIG: SidebarItem[] = [
   {
     type: 'group', slug: 'explorar', icon: Building2, roles: ALL_ROLES, domain: 'HUB_EXPLORE',
     children: [
+      { type: 'leaf', slug: 'catalogo_cursos', to: '/app/cursos', icon: BookOpen, roles: ['mentor', 'instituicao', 'super_admin'] },
       { type: 'leaf', slug: 'projetos', to: '/app/projetos', icon: Rocket, roles: ALL_ROLES },
       { type: 'leaf', slug: 'experiencias', to: '/app/experiencias', icon: MapPin, roles: ['estudante'] },
       { type: 'leaf', slug: 'programas', to: '/app/programas', icon: GraduationCap, roles: ['estudante'] },
@@ -87,14 +88,14 @@ export const SIDEBAR_CONFIG: SidebarItem[] = [
   {
     type: 'group', slug: 'estudio_mentor', icon: PenSquare, roles: ['mentor'], domain: 'HUB_MENTOR',
     children: [
-      { type: 'leaf', slug: 'gestao_cursos', to: '/app/mentor/cursos', icon: BookOpen, roles: ['mentor'] },
+      { type: 'leaf', slug: 'meus_cursos', to: '/app/mentor/meus-cursos', icon: BookOpen, roles: ['mentor'] },
       { type: 'leaf', slug: 'laboratorios', to: '/app/mentor/simulacoes', icon: FlaskConical, roles: ['mentor'] },
     ],
   },
   {
     type: 'group', slug: 'gestao_institucional', icon: Building2, roles: ['instituicao'], domain: 'HUB_INSTITUTION',
     children: [
-      { type: 'leaf', slug: 'cursos', to: '/app/instituicao/cursos', icon: BookOpen, roles: ['instituicao'] },
+      { type: 'leaf', slug: 'meus_cursos', to: '/app/instituicao/meus-cursos', icon: BookOpen, roles: ['instituicao'] },
       { type: 'leaf', slug: 'simulacoes', to: '/app/instituicao/simulacoes', icon: FlaskConical, roles: ['instituicao'] },
       { type: 'leaf', slug: 'experiencias', to: '/app/instituicao/experiencias', icon: MapPin, roles: ['instituicao'] },
       { type: 'leaf', slug: 'programas', to: '/app/instituicao/programas', icon: GraduationCap, roles: ['instituicao'] },
@@ -107,6 +108,7 @@ export const SIDEBAR_CONFIG: SidebarItem[] = [
   {
     type: 'group', slug: 'autoridade', icon: Shield, roles: ['moderador', 'super_admin', 'comite_cientifico'],
     children: [
+      { type: 'leaf', slug: 'meus_cursos', to: '/app/instituicao/meus-cursos', icon: BookOpen, roles: ['super_admin'] },
       { type: 'leaf', slug: 'auditoria_cientifica', to: '/app/comite/validacao', icon: Microscope, roles: ['comite_cientifico', 'super_admin'] },
       { type: 'leaf', slug: 'fila_aprovacoes', to: '/app/moderacao/aprovacoes', icon: CheckCircle, roles: ['moderador', 'super_admin'] },
       { type: 'leaf', slug: 'painel_admin', to: '/app/admin/stats', icon: Settings, roles: ['super_admin'] },

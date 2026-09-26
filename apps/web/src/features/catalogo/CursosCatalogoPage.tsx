@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import type React from 'react';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
@@ -9,6 +9,9 @@ import ContentCard from '@/components/catalogo/ContentCard';
 import { resolveCatalogHref } from '@/components/catalogo/catalogoLinks';
 import { Users, Clock, BookOpen } from 'lucide-react';
 import type { CursoPublico } from '@pdc/shared';
+import { useAuth } from '@/lib/auth/auth-context';
+import { Button } from '@/components/ui';
+import { canCreateCourses, getCourseLibraryPath } from '@/features/cursos/course-routes';
 
 const AREAS = [
   { value: 'SAUDE', label: 'Saúde' },
@@ -22,6 +25,7 @@ const AREAS = [
 const SITE_ORIGIN = typeof window !== 'undefined' ? window.location.origin : 'https://usepdc.com';
 
 export default function CursosCatalogoPage(): React.JSX.Element {
+  const { user } = useAuth();
   const [sp, setSp] = useSearchParams();
   const location = useLocation();
   const area = sp.get('area') ?? '';
@@ -51,11 +55,18 @@ export default function CursosCatalogoPage(): React.JSX.Element {
       />
 
       <div className="max-w-7xl mx-auto space-y-8">
-        <header>
-          <h1 className="text-2xl font-bold text-ink-primary">Cursos</h1>
-          <p className="mt-1 text-sm text-ink-secondary">
-            Percursos certificados por especialistas e instituições de prestígio.
-          </p>
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-ink-primary">Catálogo de cursos</h1>
+            <p className="mt-1 text-sm text-ink-secondary">
+              Percursos certificados por especialistas e instituições de prestígio.
+            </p>
+          </div>
+          {inApp && (user?.role === 'estudante' || canCreateCourses(user?.role)) && (
+            <Button asChild variant="secondary">
+              <Link to={getCourseLibraryPath(user?.role)}>Meus cursos</Link>
+            </Button>
+          )}
         </header>
 
         <CatalogoGridShell

@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { cursosApi } from '@/lib/api/cursos';
-import { Spinner, Badge } from '@/components/ui';
+import { Spinner, Badge, Button } from '@/components/ui';
 import type { InscricaoComCurso } from '@pdc/shared';
 
-export function MeusCursosPage() {
-  const { data, isLoading } = useQuery({
+export function MeusCursosPage({ embedded = false }: { embedded?: boolean }) {
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['cursos', 'me', 'inscricoes'],
     queryFn: () => cursosApi.getMinhasInscricoes(),
   });
@@ -14,9 +14,22 @@ export function MeusCursosPage() {
 
   if (isLoading) return <div className="flex h-64 items-center justify-center"><Spinner size="lg" /></div>;
 
+  if (isError && !data) return (
+    <div role="alert" className="space-y-4 rounded-xl border border-[var(--card-border)] bg-elevated p-6">
+      <p className="text-ink-secondary">Não foi possível carregar os cursos em que estás inscrito.</p>
+      <Button variant="secondary" onClick={() => { void refetch(); }}>Tentar novamente</Button>
+    </div>
+  );
+
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-ink-primary font-sora">Os Meus Cursos</h1>
+      {!embedded && <h1 className="mb-6 text-2xl font-bold text-ink-primary font-sora">Os Meus Cursos</h1>}
+      {isError && (
+        <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--card-border)] bg-elevated p-4">
+          <p className="text-sm text-ink-secondary">Não foi possível atualizar. O progresso apresentado pode estar desatualizado.</p>
+          <Button variant="secondary" onClick={() => { void refetch(); }}>Tentar novamente</Button>
+        </div>
+      )}
       {inscricoes.length === 0 ? (
         <div className="rounded-2xl border border-ink-tertiary/10 bg-elevated p-8 text-center">
           <p className="text-ink-secondary">Ainda não estás inscrito em nenhum curso.</p>

@@ -97,13 +97,12 @@ const EstudantesVinculadosPage = React.lazy(() => import('@/features/instituicao
 const PropostasPage = React.lazy(() => import('@/features/instituicao/PropostasPage').then(m => ({ default: m.PropostasPage })));
 const RelatoriosInstituicaoPage = React.lazy(() => import('@/features/instituicao/RelatoriosInstituicaoPage').then(m => ({ default: m.RelatoriosInstituicaoPage })));
 
-const MeusCursosPage = React.lazy(() => import('@/features/estudante/MeusCursosPage').then(m => ({ default: m.MeusCursosPage })));
+const CourseLibraryPage = React.lazy(() => import('@/features/cursos/CourseLibraryPage').then(m => ({ default: m.CourseLibraryPage })));
 const MeusProgramasPage = React.lazy(() => import('@/features/estudante/MeusProgramasPage').then(m => ({ default: m.MeusProgramasPage })));
 const GuardadosPage = React.lazy(() => import('@/features/estudante/GuardadosPage').then(m => ({ default: m.GuardadosPage })));
 const CertificadosPage = React.lazy(() => import('@/features/estudante/CertificadosPage').then(m => ({ default: m.CertificadosPage })));
 const RankingPage = React.lazy(() => import('@/features/estudante/RankingPage').then(m => ({ default: m.RankingPage })));
 
-const MentorCursosPage = React.lazy(() => import('@/features/mentor/MentorCursosPage').then(m => ({ default: m.MentorCursosPage })));
 const MentorSimulacoesPage = React.lazy(() => import('@/features/mentor/MentorSimulacoesPage').then(m => ({ default: m.MentorSimulacoesPage })));
 const CriarSimulacaoPage = React.lazy(() => import('@/features/mentor/CriarSimulacaoPage').then(m => ({ default: m.CriarSimulacaoPage })));
 const UploadConteudoPage = React.lazy(() => import('@/features/mentor/UploadConteudoPage').then(m => ({ default: m.UploadConteudoPage })));
@@ -195,18 +194,20 @@ export const router = createBrowserRouter([
       { path: 'conquistas/criar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ConquistaManualComposer /></Suspense> },
 
       // Estudante
-      { path: 'meus-cursos', element: <RoleGuard allowed={['estudante']}><MeusCursosPage /></RoleGuard> },
+      { path: 'meus-cursos', element: <RoleGuard allowed={['estudante', 'mentor', 'instituicao', 'super_admin']}><CourseLibraryPage /></RoleGuard> },
       { path: 'meus-programas', element: <RoleGuard allowed={['estudante']}><MeusProgramasPage /></RoleGuard> },
       { path: 'guardados', element: <RoleGuard allowed={['estudante']}><GuardadosPage /></RoleGuard> },
       { path: 'certificados', element: <RoleGuard allowed={['estudante']}><CertificadosPage /></RoleGuard> },
       { path: 'ranking', element: <RoleGuard allowed={['estudante', 'mentor', 'instituicao', 'super_admin']}><RankingPage /></RoleGuard> },
 
       // Mentor
-      { path: 'mentor/cursos', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><MentorCursosPage /></RoleGuard> },
+      { path: 'mentor/cursos', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><Navigate to="/app/cursos" replace /></RoleGuard> },
+      { path: 'mentor/meus-cursos', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CourseLibraryPage /></RoleGuard> },
       { path: 'mentor/cursos/criar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CreatorStudioBoundary><SovereignCourseBuilder /></CreatorStudioBoundary></RoleGuard> },
       { path: 'mentor/cursos/:id/editar', element: <RoleGuard allowed={['mentor', 'instituicao', 'super_admin']}><CreatorStudioBoundary><SovereignCourseBuilder /></CreatorStudioBoundary></RoleGuard> },
       { path: 'instituicao/cursos/criar', element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><SovereignCourseBuilder /></CreatorStudioBoundary></RoleGuard> },
-      { path: 'instituicao/cursos', element: <RoleGuard allowed={['instituicao', 'super_admin']}><MentorCursosPage /></RoleGuard> },
+      { path: 'instituicao/cursos', element: <RoleGuard allowed={['instituicao', 'super_admin']}><Navigate to="/app/cursos" replace /></RoleGuard> },
+      { path: 'instituicao/meus-cursos', element: <RoleGuard allowed={['instituicao', 'super_admin']}><CourseLibraryPage /></RoleGuard> },
       { path: 'instituicao/cursos/:id/editar', element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><SovereignCourseBuilder /></CreatorStudioBoundary></RoleGuard> },
       { path: 'instituicao/simulacoes', element: <RoleGuard allowed={['instituicao', 'super_admin']}><MentorSimulacoesPage /></RoleGuard> },
       { path: 'instituicao/simulacoes/criar', element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><CriarSimulacaoPage /></CreatorStudioBoundary></RoleGuard> },
