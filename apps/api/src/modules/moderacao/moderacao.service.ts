@@ -65,12 +65,12 @@ export const moderacaoService = {
       'pagination[page]': pageNum.toString(),
       'pagination[pageSize]': pageSizeNum.toString(),
       'fields': 'id,titulo,estado,createdAt',
-      'populate': 'autor,autorId',
-      ...(tipo === 'curso' ? { status: 'draft' } : {}),
+      'populate': tipo === 'experiencia' ? 'autor' : 'autor,autorId',
+      ...(tipo === 'curso' || tipo === 'experiencia' ? { status: 'draft' } : {}),
     });
 
     const data = itemsRes.data.map((item) => ({
-      id: item.id,
+      id: tipo === 'experiencia' ? item.documentId ?? item.id : item.id,
       titulo: item.titulo,
       autorNome: item.autor?.nome ?? item.autorId?.nome ?? 'Desconhecido',
       submittedAt: item.createdAt,

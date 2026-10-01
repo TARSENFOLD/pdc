@@ -11,6 +11,7 @@ import { ExperienceStoryPanels } from './ExperienceStoryPanels';
 import { ExperienceContent } from './ExperienceContent';
 import { VwxParticipation } from './VwxParticipation';
 import { ExperienceInteractions } from './ExperienceInteractions';
+import { ExperienceCurriculum } from './ExperienceCurriculum';
 
 export function ExperienciaDetailPage() {
   const { id = '' } = useParams();
@@ -52,7 +53,12 @@ export function ExperienciaDetailPage() {
     return (
       <main className="mx-auto max-w-3xl space-y-4 p-8">
         <h1 className="text-2xl font-bold">Conteúdo indisponível</h1>
-        <p>Não foi possível abrir esta experiência.</p>
+        <p role="alert">
+          {content.isError
+            ? (getErrorBody(content.error)?.error ??
+              'Não foi possível carregar o conteúdo. Tenta novamente.')
+            : 'Não foi possível abrir esta experiência.'}
+        </p>
         <Button
           onClick={() => {
             void content.refetch();
@@ -142,14 +148,7 @@ export function ExperienciaDetailPage() {
       </header>
       {!vwx && <ExperienceStoryPanels experience={exp} />}
       <ExperienceContent sections={exp.secoes ?? []} />
-      {!exp.secoes?.length &&
-        exp.gradeDestaque?.map((item) => (
-          <section key={item.disciplina} className="space-y-3">
-            <h2 className="text-xl font-semibold">{item.disciplina}</h2>
-            <p>{item.descricao}</p>
-            <p>{item.relevanciaMercado}</p>
-          </section>
-        ))}
+      {!exp.secoes?.length && <ExperienceCurriculum experience={exp} preview={preview} />}
       {vwx && member && !preview && (
         <VwxParticipation key={member.id} experience={exp} participation={member} />
       )}

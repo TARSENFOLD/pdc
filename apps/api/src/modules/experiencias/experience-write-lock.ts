@@ -4,6 +4,7 @@ import { acquireLock } from '../../lib/distributed-lock.js';
 import { CONTENT_ACCESS_ERRORS } from '../conteudo/content-access.service.js';
 import { persistedEntityId } from '../strapi/strapi-entity.js';
 import { findExperience } from './experience.service.js';
+import { releaseExperienceLock } from './experience-recovery.js';
 
 // All editorial writes share the document identity, including slug/numeric aliases.
 // Handlers re-read content after acquiring the lock, so an edit cannot race
@@ -18,7 +19,7 @@ export const experienceWriteLock = createMiddleware<{ Variables: AuthVariables }
     try {
       await next();
     } finally {
-      await lock.release();
+      await releaseExperienceLock(lock);
     }
   }
 );

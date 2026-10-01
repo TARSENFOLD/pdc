@@ -41,6 +41,12 @@ describe('moderacaoService', () => {
   });
 
   describe('listarPendentes', () => {
+    it('lists experience drafts using the stable document identity and valid author relation', async () => {
+      vi.mocked(strapiGet).mockResolvedValue(listResponse([{ id: 7, documentId: 'exp-doc', titulo: 'Experiência' }]));
+      const result = await moderacaoService.listarPendentes('experiencia');
+      expect(result.data[0]?.id).toBe('exp-doc');
+      expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({ status: 'draft', populate: 'autor' }));
+    });
     it('returns pending cursos in review state', async () => {
       vi.mocked(strapiGet).mockResolvedValue(
         listResponse([

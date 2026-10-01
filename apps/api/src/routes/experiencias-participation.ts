@@ -28,6 +28,10 @@ import {
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
 import { acquireLock } from '../lib/distributed-lock.js';
+import {
+  ensureParticipationEvent,
+  releaseExperienceLock,
+} from '../modules/experiencias/experience-recovery.js';
 
 export const experienciaParticipationRoutes = new Hono<{ Variables: AuthVariables }>();
 type ParticipationRecord = Partial<Omit<ParticipacaoExperiencia, 'id'>> & {
@@ -62,6 +66,19 @@ experienciaParticipationRoutes.get(
     const experience = await publicExperience(c.req.param('id') ?? '');
     if (!experience) return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
     const participation = await findParticipation(persistedEntityId(experience), c.get('user').id);
+    if (participation) {
+      const id = persistedEntityId(experience);
+      const userId = c.get('user').id;
+      const lock = await acquireLock(`experiencia:participacao:${id}:${userId}`, 60000);
+      if (lock)
+        try {
+          await ensureParticipationEvent(id, userId, persistedEntityId(participation));
+          if (participation.concluidoEm)
+            await ensureParticipationEvent(id, userId, persistedEntityId(participation), true);
+        } finally {
+          await releaseExperienceLock(lock);
+        }
+    }
     return c.json({
       participacao: participation ? dto(participation) : null,
       experiencia: participation ? experienceDto(experience) : undefined,
@@ -104,13 +121,15 @@ experienciaParticipationRoutes.post(
     ) {
       return c.json(CONTENT_ACCESS_ERRORS.content_not_found, 404);
     }
-    if (previous) return c.json(dto(previous));
     const id = persistedEntityId(published);
     const lock = await acquireLock(`experiencia:participacao:${id}:${userId}`, 60000);
     if (!lock) return c.json({ error: 'Participação em processamento. Tenta novamente.' }, 409);
     try {
       const existing = await findParticipation(id, userId);
-      if (existing) return c.json(dto(existing));
+      if (existing) {
+        await ensureParticipationEvent(id, userId, persistedEntityId(existing));
+        return c.json(dto(existing));
+      }
       const res = await strapiPost<ParticipationRecord>('/experiencia-participantes', {
         estudanteId: userId,
         experiencia: id,
@@ -118,13 +137,10 @@ experienciaParticipationRoutes.post(
         entrega: '',
         reflexao: '',
       });
-      await eventBus.publishWithOutbox(DomainEventName.EXPERIENCIA_PARTICIPACAO, {
-        experienciaId: id,
-        estudanteId: userId,
-      });
+      await ensureParticipationEvent(id, userId, persistedEntityId(res.data));
       return c.json(dto(res.data), 201);
     } finally {
-      await lock.release();
+      await releaseExperienceLock(lock);
     }
   }
 );
@@ -146,9 +162,20 @@ experienciaParticipationRoutes.put(
     try {
       const participation = await findParticipation(id, userId);
       if (!participation) return c.json({ error: 'Inicia a VWX antes de guardar progresso.' }, 403);
-      if (participation.concluidoEm)
-        return c.json({ error: 'Esta participação já foi concluída.' }, 409);
       const body = c.req.valid('json');
+      if (participation.concluidoEm) {
+        await ensureParticipationEvent(id, userId, persistedEntityId(participation), true);
+        const saved = dto(participation);
+        if (
+          body.concluir &&
+          body.entrega === saved.entrega &&
+          body.reflexao === saved.reflexao &&
+          JSON.stringify([...new Set(body.secoesConcluidas)].sort()) ===
+            JSON.stringify([...saved.secoesConcluidas].sort())
+        )
+          return c.json(saved);
+        return c.json({ error: 'Esta participação já foi concluída.' }, 409);
+      }
       const sections = experience.secoes ?? [];
       const ids = new Set(sections.map((s) => s.id));
       if (body.secoesConcluidas.some((section) => !ids.has(section)))
@@ -174,14 +201,17 @@ experienciaParticipationRoutes.put(
           ...(body.concluir ? { concluidoEm: new Date().toISOString() } : {}),
         }
       );
-      await eventBus.publishWithOutbox(DomainEventName.EXPERIENCIA_PROGRESSO, {
-        experienciaId: id,
-        estudanteId: userId,
-        concluido: body.concluir,
-      });
+      if (body.concluir)
+        await ensureParticipationEvent(id, userId, persistedEntityId(participation), true);
+      else
+        await eventBus.publishWithOutbox(DomainEventName.EXPERIENCIA_PROGRESSO, {
+          experienciaId: id,
+          estudanteId: userId,
+          concluido: body.concluir,
+        });
       return c.json(dto(result.data));
     } finally {
-      await lock.release();
+      await releaseExperienceLock(lock);
     }
   }
 );

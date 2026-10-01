@@ -34,7 +34,10 @@ experienciaEditorialRoutes.post(
       return c.json({ error: 'VWX não encontrada.' }, 404);
     const issues = readinessIssues(existing);
     if (issues.length)
-      return c.json({ error: 'Completa a VWX antes de registar a validação.', issues }, 422);
+      return c.json(
+        { error: `Completa a VWX antes de registar a validação. ${issues.join('; ')}`, issues },
+        422
+      );
     const vwxValidacao = {
       ...c.req.valid('json'),
       registadoEm: new Date().toISOString(),
@@ -65,6 +68,7 @@ for (const path of ['/:id/submeter', '/:id/estado'] as const) {
     zValidator(
       'json',
       z.object({
+        motivo: z.string().trim().min(10).max(500).optional(),
         estado: z
           .enum(['draft', 'review', 'approved', 'published', 'rejected', 'archived'])
           .optional(),
@@ -87,7 +91,10 @@ for (const path of ['/:id/submeter', '/:id/estado'] as const) {
         published: ['archived', 'draft'],
         archived: ['draft'],
       };
-      if (!transitions[existing.estado]?.includes(target)) {
+      const published =
+        target === 'archived' ? await findExperience(c.req.param('id'), 'published') : undefined;
+      const canArchiveLive = !!published && ['approved', 'published'].includes(published.estado);
+      if (!transitions[existing.estado]?.includes(target) && !canArchiveLive) {
         return c.json({ error: `Transição inválida de ${existing.estado} para ${target}.` }, 409);
       }
       const allowed =
@@ -110,7 +117,10 @@ for (const path of ['/:id/submeter', '/:id/estado'] as const) {
       if (['review', 'approved', 'published'].includes(target)) {
         const issues = readinessIssues(existing);
         if (issues.length)
-          return c.json({ error: 'Completa o conteúdo antes de avançar.', issues }, 422);
+          return c.json(
+            { error: `Completa o conteúdo antes de avançar. ${issues.join('; ')}`, issues },
+            422
+          );
       }
       if (target === 'published' && existing.tipoExperiencia === 'vwx' && !existing.vwxValidacao) {
         return c.json(
@@ -127,7 +137,15 @@ for (const path of ['/:id/submeter', '/:id/estado'] as const) {
           titulo: existing.titulo,
         });
       } else {
-        await strapiPut(`/experiencias/${id}`, { estado: target }, { status: 'draft' });
+        const motivo = c.req.valid('json').motivo;
+        await strapiPut(
+          `/experiencias/${id}`,
+          {
+            estado: target,
+            ...(target === 'rejected' ? { motivoRejeicao: motivo ?? null } : {}),
+          },
+          { status: 'draft' }
+        );
         if (target === 'archived')
           await strapiPut(`/experiencias/${id}`, { estado: target }, { status: 'published' });
         await eventBus.publishWithOutbox(DomainEventName.EXPERIENCIA_ATUALIZADA, {

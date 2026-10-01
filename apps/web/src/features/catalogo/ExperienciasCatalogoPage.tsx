@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import type React from 'react';
+import { useEffect, useState, type JSX } from 'react';
 import type { ExperienciaPublica } from '@pdc/shared';
 import { catalogoApi } from '@/lib/api/catalogo';
 import { SEOHead } from '@/components/layout/SEOHead';
@@ -18,12 +18,17 @@ import {
 
 // ─── Página Principal ─────────────────────────────────────────────────────────
 
-export default function ExperienciasCatalogoPage(): React.JSX.Element {
+export default function ExperienciasCatalogoPage(): JSX.Element {
   const [sp, setSp] = useSearchParams();
   const { isAuthenticated } = useAuth();
 
   const area = sp.get('area') ?? '';
   const search = sp.get('q') ?? '';
+  const [settledSearch, setSettledSearch] = useState(search);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettledSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
   const nivel = sp.get('nivel') ?? '';
   const modalidade = sp.get('modalidade') ?? '';
   const tipo = sp.get('tipo');
@@ -32,12 +37,20 @@ export default function ExperienciasCatalogoPage(): React.JSX.Element {
   const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['catalogo-experiencias', area, search, nivel, modalidade, page, tipoExperiencia],
+    queryKey: [
+      'catalogo-experiencias',
+      area,
+      settledSearch,
+      nivel,
+      modalidade,
+      page,
+      tipoExperiencia,
+    ],
     queryFn: () =>
       catalogoApi.getExperiencias({
         ...(tipoExperiencia ? { tipoExperiencia } : {}),
         ...(area ? { area } : {}),
-        ...(search ? { search } : {}),
+        ...(settledSearch ? { search: settledSearch } : {}),
         ...(nivel ? { nivel } : {}),
         ...(modalidade ? { modalidade } : {}),
         page,
@@ -59,6 +72,7 @@ export default function ExperienciasCatalogoPage(): React.JSX.Element {
   }
 
   function clearFilters() {
+    setSettledSearch('');
     setSp(new URLSearchParams());
   }
 

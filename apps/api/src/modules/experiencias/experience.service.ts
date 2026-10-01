@@ -21,6 +21,7 @@ export type ExperienceRecord = Omit<Experiencia, 'id' | 'instituicao' | 'slug' |
   descricao: string | null;
   id: string | number;
   documentId?: string;
+  motivoRejeicao?: string | null;
   autor?: { id?: string | number; userId?: string };
   instituicao?: { id: string | number; documentId?: string; nome: string; logoUrl?: string } | null;
   vwxValidacao?: z.infer<typeof VwxValidacaoSchema> | null;

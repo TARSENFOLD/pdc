@@ -276,7 +276,8 @@ catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
     // Enriquecer cada experiência com ratingAvg em paralelo
     const enriched = await Promise.all(
       visible.map(async (d) => {
-        const ratingAvg = await fetchRatingAvg(d.documentId ?? sid(d.id));
+        const current = await fetchRatingAvg(d.documentId ?? sid(d.id));
+        const ratingAvg = current ?? (d.documentId ? await fetchRatingAvg(sid(d.id)) : null);
         return mapExp(d, ratingAvg);
       })
     );

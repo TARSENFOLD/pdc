@@ -32,6 +32,10 @@ const vwx = {
 };
 
 test('drafts may be incomplete', () => assert.doesNotThrow(() => validate({ estado: 'draft' })));
+test('archiving withdraws a live version even with an incomplete working draft', () =>
+  assert.doesNotThrow(() =>
+    validate({ estado: 'archived', publishedAt: new Date().toISOString() })
+  ));
 test('modular experiences do not require legacy panels', () =>
   assert.doesNotThrow(() => validate(experience)));
 test('all six institutional groups need content', () =>

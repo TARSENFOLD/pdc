@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { app, list, record, request, resetMocks } from './experiencias-vwx.test-support.js';
 import { strapiGet, strapiPut } from '../modules/strapi/strapi.client.js';
-import { readinessIssues, type ExperienceRecord } from '../modules/experiencias/experience.service.js';
+import { readinessIssues, experienceDto, type ExperienceRecord } from '../modules/experiencias/experience.service.js';
 
 const legacy: ExperienceRecord = {
   id: 20,
@@ -22,6 +22,11 @@ const legacy: ExperienceRecord = {
 
 describe('Experiências — compatibilidade da validação editorial', () => {
   beforeEach(resetMocks);
+  it('normaliza rascunhos antigos sem slug ou descrição, mas exige descrição para publicação', () => {
+    const incomplete = { ...record, slug: null, descricao: null };
+    expect(experienceDto(incomplete)).toMatchObject({ slug: 'doc-vwx', descricao: '' });
+    expect(readinessIssues(incomplete)).toContain('Preencher título e descrição.');
+  });
 
   it.each([undefined, []])('aceita os três painéis legados sem secções (%j)', (secoes) => {
     expect(readinessIssues({ ...legacy, secoes })).toEqual([]);

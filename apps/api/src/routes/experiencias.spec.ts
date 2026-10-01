@@ -26,7 +26,8 @@ function countResponse(total: number): StrapiListResponse<{ id: string }> {
   };
 }
 
-vi.mock('../modules/strapi/strapi.client.js', () => ({
+vi.mock('../modules/strapi/strapi.client.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../modules/strapi/strapi.client.js')>()),
   strapiGet: vi.fn(),
   strapiPost: vi.fn(),
   strapiPut: vi.fn(),
@@ -36,7 +37,14 @@ vi.mock('../modules/events/event-bus.js', () => ({
   eventBus: { publishWithOutbox: publishWithOutboxMock },
 }));
 vi.mock('../lib/distributed-lock.js', () => ({
-  acquireLock: vi.fn(() => Promise.resolve({ release: () => Promise.resolve(true), extend: () => Promise.resolve(true), fencingToken: 1, key: 'test' })),
+  acquireLock: vi.fn(() =>
+    Promise.resolve({
+      release: () => Promise.resolve(true),
+      extend: () => Promise.resolve(true),
+      fencingToken: 1,
+      key: 'test',
+    })
+  ),
 }));
 
 vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
@@ -46,11 +54,15 @@ vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
 }));
 
 vi.mock('../middleware/requireApproved.js', () => ({
-  requireApproved: () => async (_c: Context, next: Next) => { await next(); },
+  requireApproved: () => async (_c: Context, next: Next) => {
+    await next();
+  },
 }));
 
 vi.mock('../middleware/rateLimit.js', () => ({
-  rateLimitContentCreate: async (_c: Context, next: Next) => { await next(); },
+  rateLimitContentCreate: async (_c: Context, next: Next) => {
+    await next();
+  },
 }));
 
 vi.mock('../modules/auth/auth.middleware.js', () => ({
@@ -99,7 +111,15 @@ describe('experienciaRoutes E2E contracts', () => {
     ordem,
     obrigatoria: true,
     visibilidade: 'publico',
-    itens: [{ id: `item-${String(ordem)}`, tipo: 'texto', ordem: 0, titulo: 'Conteúdo verificado', conteudo: 'Informação verificada sobre esta formação.' }],
+    itens: [
+      {
+        id: `item-${String(ordem)}`,
+        tipo: 'texto',
+        ordem: 0,
+        titulo: 'Conteúdo verificado',
+        conteudo: 'Informação verificada sobre esta formação.',
+      },
+    ],
   }));
 
   const expPublicada = {
@@ -123,24 +143,29 @@ describe('experienciaRoutes E2E contracts', () => {
     const res = await app.request('/experiencias');
 
     expect(res.status).toBe(200);
-    const body = await res.json() as { data: unknown[] };
+    const body = (await res.json()) as { data: unknown[] };
     expect(body.data).toHaveLength(1);
     // Verifica que o filtro de estado público é aplicado
-    expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      status: 'published',
-      'filters[estado][$eq]': 'approved',
-    }));
+    expect(strapiGet).toHaveBeenCalledWith(
+      '/experiencias',
+      expect.objectContaining({
+        status: 'published',
+        'filters[estado][$eq]': 'approved',
+      })
+    );
   });
 
   it('remove VWX do catálogo público quando o flag está desligado', async () => {
     vi.mocked(featureFlagService.isEnabled).mockResolvedValue(false);
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([
-      { ...expPublicada, id: 'exp-institucional', tipoExperiencia: 'institucional' },
-      { ...expPublicada, id: 'exp-vwx', tipoExperiencia: 'vwx' },
-    ]));
+    vi.mocked(strapiGet).mockResolvedValueOnce(
+      listResponse([
+        { ...expPublicada, id: 'exp-institucional', tipoExperiencia: 'institucional' },
+        { ...expPublicada, id: 'exp-vwx', tipoExperiencia: 'vwx' },
+      ])
+    );
 
     const res = await app.request('/experiencias');
-    const body = await res.json() as { data: Array<{ id: string }> };
+    const body = (await res.json()) as { data: Array<{ id: string }> };
 
     expect(res.status).toBe(200);
     expect(body.data.map((item) => item.id)).toEqual(['exp-institucional']);
@@ -157,10 +182,13 @@ describe('experienciaRoutes E2E contracts', () => {
 
     expect(res.status).toBe(200);
     // Garante que drafts não são expostos: filtro de estado é aplicado
-    expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      'filters[$or][0][documentId][$eq]': 'exp-1',
-      status: 'published',
-    }));
+    expect(strapiGet).toHaveBeenCalledWith(
+      '/experiencias',
+      expect.objectContaining({
+        'filters[$or][0][documentId][$eq]': 'exp-1',
+        status: 'published',
+      })
+    );
   });
 
   it('GET /:id retorna 404 para experiência draft', async () => {
@@ -188,10 +216,13 @@ describe('experienciaRoutes E2E contracts', () => {
     const res = await app.request('/experiencias/doc-vwx');
 
     expect(res.status).toBe(404);
-    expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      'filters[$or][0][documentId][$eq]': 'doc-vwx',
-      status: 'published',
-    }));
+    expect(strapiGet).toHaveBeenCalledWith(
+      '/experiencias',
+      expect.objectContaining({
+        'filters[$or][0][documentId][$eq]': 'doc-vwx',
+        status: 'published',
+      })
+    );
   });
 
   // ─── GET /minhas — protegido ──────────────────────────────────────────────
@@ -213,9 +244,12 @@ describe('experienciaRoutes E2E contracts', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      'filters[autor][userId][$eq]': 'inst-1',
-    }));
+    expect(strapiGet).toHaveBeenCalledWith(
+      '/experiencias',
+      expect.objectContaining({
+        'filters[autor][userId][$eq]': 'inst-1',
+      })
+    );
   });
 
   it('GET /stats devolve apenas contagens autoritativas de conteúdos, inscrições e participações', async () => {
@@ -284,55 +318,63 @@ describe('experienciaRoutes E2E contracts', () => {
     ['programas', 3],
     ['inscricoes', 4],
     ['participacoes', 5],
-  ] as const)(
-    'GET /stats rejeita total inválido vindo de %s',
-    async (_source, invalidIndex) => {
-      const responses = [2, 3, 1, 4, 5, 6].map(countResponse);
-      responses[invalidIndex] = countResponse(-1);
-      for (const response of responses) {
-        vi.mocked(strapiGet).mockResolvedValueOnce(response);
-      }
+  ] as const)('GET /stats rejeita total inválido vindo de %s', async (_source, invalidIndex) => {
+    const responses = [2, 3, 1, 4, 5, 6].map(countResponse);
+    responses[invalidIndex] = countResponse(-1);
+    for (const response of responses) {
+      vi.mocked(strapiGet).mockResolvedValueOnce(response);
+    }
 
-      const res = await app.request('/experiencias/stats', {
-        headers: { 'x-test-user': 'inst-1', 'x-test-role': 'instituicao' },
-      });
+    const res = await app.request('/experiencias/stats', {
+      headers: { 'x-test-user': 'inst-1', 'x-test-role': 'instituicao' },
+    });
 
-      expect(res.status).toBe(503);
-      await expect(res.json()).resolves.toEqual({
-        error: 'O serviço de conteúdos está temporariamente indisponível.',
-        code: 'DEPENDENCY_UNAVAILABLE',
-      });
-    },
-  );
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({
+      error: 'O serviço de conteúdos está temporariamente indisponível.',
+      code: 'DEPENDENCY_UNAVAILABLE',
+    });
+  });
 
   it('GET /minhas/:id permite ao autor reabrir um draft para edição', async () => {
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
-      ...expPublicada,
-      id: 'exp-draft',
-      estado: 'draft',
-    }]));
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(
+        listResponse([
+          {
+            ...expPublicada,
+            id: 'exp-draft',
+            estado: 'draft',
+          },
+        ])
+      )
+      .mockResolvedValueOnce(listResponse([]));
 
     const res = await app.request('/experiencias/minhas/exp-draft', {
       headers: { 'x-test-user': 'inst-1', 'x-test-role': 'instituicao' },
     });
 
     expect(res.status).toBe(200);
-    expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      'filters[$or][0][documentId][$eq]': 'exp-draft',
-      status: 'draft',
-      populate: 'autor,instituicao',
-    }));
+    expect(strapiGet).toHaveBeenCalledWith(
+      '/experiencias',
+      expect.objectContaining({
+        'filters[$or][0][documentId][$eq]': 'exp-draft',
+        status: 'draft',
+        populate: 'autor,instituicao',
+      })
+    );
   });
 
   // ─── POST / — criação protegida ───────────────────────────────────────────
 
   it('POST / cria experiência como draft e dispara evento G15', async () => {
     vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([]));
-    vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({
-      ...expPublicada,
-      id: 41,
-      estado: 'draft',
-    }));
+    vi.mocked(strapiPost).mockResolvedValueOnce(
+      singleResponse({
+        ...expPublicada,
+        id: 41,
+        estado: 'draft',
+      })
+    );
 
     const payload = {
       titulo: expPublicada.titulo,
@@ -354,30 +396,40 @@ describe('experienciaRoutes E2E contracts', () => {
     });
 
     expect(res.status).toBe(201);
-    expect(strapiPost).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      estado: 'draft',
-      autor: 'inst-1',
-    }), { status: 'draft' });
+    expect(strapiPost).toHaveBeenCalledWith(
+      '/experiencias',
+      expect.objectContaining({
+        estado: 'draft',
+        autor: 'inst-1',
+      }),
+      { status: 'draft' }
+    );
     expect(publishWithOutboxMock).toHaveBeenCalledWith(
       DomainEventName.EXPERIENCIA_CRIADA,
-      expect.objectContaining({ experienciaId: '41', autorId: 'inst-1' }),
+      expect.objectContaining({ experienciaId: '41', autorId: 'inst-1' })
     );
-    const responseBody = await res.json() as { id: string };
+    const responseBody = (await res.json()) as { id: string };
     expect(responseBody.id).toBe('41');
   });
 
   it('POST / cria rascunho independente sem sobrescrever outro com o mesmo título', async () => {
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([{
-      ...expPublicada,
-      id: 41,
-      documentId: 'draft-document',
-      estado: 'draft',
-    }]));
-    vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({
-      ...expPublicada,
-      id: 41,
-      estado: 'draft',
-    }));
+    vi.mocked(strapiGet).mockResolvedValueOnce(
+      listResponse([
+        {
+          ...expPublicada,
+          id: 41,
+          documentId: 'draft-document',
+          estado: 'draft',
+        },
+      ])
+    );
+    vi.mocked(strapiPost).mockResolvedValueOnce(
+      singleResponse({
+        ...expPublicada,
+        id: 41,
+        estado: 'draft',
+      })
+    );
 
     const res = await app.request('/experiencias', {
       method: 'POST',
@@ -398,13 +450,17 @@ describe('experienciaRoutes E2E contracts', () => {
 
     expect(res.status).toBe(201);
     expect(strapiPut).not.toHaveBeenCalled();
-    expect(strapiPost).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      estado: 'draft',
-      autor: 'inst-1',
-    }), { status: 'draft' });
+    expect(strapiPost).toHaveBeenCalledWith(
+      '/experiencias',
+      expect.objectContaining({
+        estado: 'draft',
+        autor: 'inst-1',
+      }),
+      { status: 'draft' }
+    );
     expect(publishWithOutboxMock).toHaveBeenCalledWith(
       DomainEventName.EXPERIENCIA_CRIADA,
-      expect.objectContaining({ experienciaId: '41' }),
+      expect.objectContaining({ experienciaId: '41' })
     );
   });
 
@@ -420,11 +476,15 @@ describe('experienciaRoutes E2E contracts', () => {
   });
 
   it('PATCH /:id/estado bloqueia revisão sem estrutura editorial mínima', async () => {
-    vi.mocked(strapiGet).mockResolvedValue(listResponse([{
-      ...expPublicada,
-      estado: 'draft',
-      secoes: [],
-    }]));
+    vi.mocked(strapiGet).mockResolvedValue(
+      listResponse([
+        {
+          ...expPublicada,
+          estado: 'draft',
+          secoes: [],
+        },
+      ])
+    );
 
     const res = await app.request('/experiencias/exp-1/estado', {
       method: 'PATCH',
@@ -449,6 +509,7 @@ describe('experienciaRoutes E2E contracts', () => {
       .mockResolvedValueOnce(listResponse([expPublicada]))
       // 2. sem duplicado
       .mockResolvedValueOnce(listResponse([]))
+      .mockResolvedValueOnce(listResponse([]))
       .mockResolvedValueOnce(listResponse([]));
 
     vi.mocked(strapiPost).mockResolvedValueOnce(singleResponse({ id: 'part-1' }));
@@ -463,11 +524,14 @@ describe('experienciaRoutes E2E contracts', () => {
     expect(strapiPost).toHaveBeenCalledWith('/experiencia-participantes', {
       estudanteId: 'estudante-1',
       experiencia: 'exp-1',
-      secoesConcluidas: [], entrega: '', reflexao: '',
+      secoesConcluidas: [],
+      entrega: '',
+      reflexao: '',
     });
     expect(publishWithOutboxMock).toHaveBeenCalledWith(
       DomainEventName.EXPERIENCIA_PARTICIPACAO,
       { experienciaId: 'exp-1', estudanteId: 'estudante-1' },
+      expect.any(String)
     );
   });
 
@@ -475,7 +539,9 @@ describe('experienciaRoutes E2E contracts', () => {
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(listResponse([expPublicada]))
       .mockResolvedValueOnce(listResponse([expPublicada]))
-      .mockResolvedValueOnce(listResponse([{ id: 'part-existing', estudanteId: 'estudante-1' }]));
+      .mockResolvedValueOnce(listResponse([{ id: 'part-existing', estudanteId: 'estudante-1' }]))
+      .mockResolvedValueOnce(listResponse([{ id: 'part-existing', estudanteId: 'estudante-1' }]))
+      .mockResolvedValueOnce(listResponse([{ id: 'existing-event' }]));
 
     const res = await app.request('/experiencias/exp-1/inscrever', {
       method: 'POST',
@@ -521,7 +587,7 @@ describe('experienciaRoutes E2E contracts', () => {
         code: 'CONTENT_NOT_FOUND',
       });
       expect(strapiPost).not.toHaveBeenCalled();
-    },
+    }
   );
 
   it('preview VWX não cria participação e a rota learner devolve PREVIEW_ONLY', async () => {
@@ -531,7 +597,9 @@ describe('experienciaRoutes E2E contracts', () => {
       tipoExperiencia: 'vwx' as const,
       autor: { id: 'author-profile', userId: 'author-1' },
     };
-    vi.mocked(strapiGet).mockResolvedValueOnce(listResponse([draft]));
+    vi.mocked(strapiGet)
+      .mockResolvedValueOnce(listResponse([draft]))
+      .mockResolvedValueOnce(listResponse([]));
 
     const preview = await app.request('/experiencias/minhas/exp-1', {
       headers: { 'x-test-user': 'author-1', 'x-test-role': 'mentor' },
@@ -596,7 +664,9 @@ describe('experienciaRoutes E2E contracts', () => {
 
   it('PUT /:id atualiza a experiência da própria instituição', async () => {
     vi.mocked(strapiGet).mockResolvedValue(listResponse([expPublicada]));
-    vi.mocked(strapiPut).mockResolvedValueOnce(singleResponse({ ...expPublicada, titulo: 'Novo Título' }));
+    vi.mocked(strapiPut).mockResolvedValueOnce(
+      singleResponse({ ...expPublicada, titulo: 'Novo Título' })
+    );
 
     const res = await app.request('/experiencias/exp-1', {
       method: 'PUT',
@@ -610,10 +680,17 @@ describe('experienciaRoutes E2E contracts', () => {
 
     expect(res.status).toBe(200);
     // BUG-012: verifica que usa filtro (não endpoint single-entity que retorna objeto não-array)
-    expect(strapiGet).toHaveBeenCalledWith('/experiencias', expect.objectContaining({
-      'filters[$or][0][documentId][$eq]': 'exp-1',
-    }));
-    expect(strapiPut).toHaveBeenCalledWith('/experiencias/exp-1', { titulo: 'Novo Título', estado: 'draft', vwxValidacao: null }, { status: 'draft' });
+    expect(strapiGet).toHaveBeenCalledWith(
+      '/experiencias',
+      expect.objectContaining({
+        'filters[$or][0][documentId][$eq]': 'exp-1',
+      })
+    );
+    expect(strapiPut).toHaveBeenCalledWith(
+      '/experiencias/exp-1',
+      { titulo: 'Novo Título', estado: 'draft', vwxValidacao: null },
+      { status: 'draft' }
+    );
   });
 
   it('PUT /:id rejeita instituição que não é dona com 403', async () => {
@@ -636,10 +713,14 @@ describe('experienciaRoutes E2E contracts', () => {
   // ─── PATCH /:id/estado — transições de estado ─────────────────────────────
 
   it('PATCH /:id/estado permite instituição submeter para revisão', async () => {
-    vi.mocked(strapiGet).mockResolvedValue(listResponse([{
-      ...expPublicada,
-      estado: 'draft',
-    }]));
+    vi.mocked(strapiGet).mockResolvedValue(
+      listResponse([
+        {
+          ...expPublicada,
+          estado: 'draft',
+        },
+      ])
+    );
     vi.mocked(strapiPut).mockResolvedValueOnce(singleResponse({ id: 'exp-1' }));
 
     const res = await app.request('/experiencias/exp-1/estado', {
@@ -653,15 +734,26 @@ describe('experienciaRoutes E2E contracts', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(strapiPut).toHaveBeenCalledWith('/experiencias/exp-1', { estado: 'review' }, { status: 'draft' });
-    expect(publishWithOutboxMock).toHaveBeenCalledWith(DomainEventName.EXPERIENCIA_ATUALIZADA, expect.objectContaining({ experienciaId: 'exp-1' }));
+    expect(strapiPut).toHaveBeenCalledWith(
+      '/experiencias/exp-1',
+      { estado: 'review' },
+      { status: 'draft' }
+    );
+    expect(publishWithOutboxMock).toHaveBeenCalledWith(
+      DomainEventName.EXPERIENCIA_ATUALIZADA,
+      expect.objectContaining({ experienciaId: 'exp-1' })
+    );
   });
 
   it('PATCH /:id/estado bloqueia instituição de publicar diretamente', async () => {
-    vi.mocked(strapiGet).mockResolvedValue(listResponse([{
-      ...expPublicada,
-      estado: 'draft',
-    }]));
+    vi.mocked(strapiGet).mockResolvedValue(
+      listResponse([
+        {
+          ...expPublicada,
+          estado: 'draft',
+        },
+      ])
+    );
 
     const res = await app.request('/experiencias/exp-1/estado', {
       method: 'PATCH',
@@ -678,10 +770,14 @@ describe('experienciaRoutes E2E contracts', () => {
   });
 
   it('PATCH /:id/estado dispara evento quando publicado', async () => {
-    vi.mocked(strapiGet).mockResolvedValue(listResponse([{
-      ...expPublicada,
-      estado: 'approved',
-    }]));
+    vi.mocked(strapiGet).mockResolvedValue(
+      listResponse([
+        {
+          ...expPublicada,
+          estado: 'approved',
+        },
+      ])
+    );
     vi.mocked(strapiPut).mockResolvedValueOnce(singleResponse({ id: 'exp-1' }));
 
     const res = await app.request('/experiencias/exp-1/estado', {
@@ -697,7 +793,7 @@ describe('experienciaRoutes E2E contracts', () => {
     expect(res.status).toBe(200);
     expect(publishWithOutboxMock).toHaveBeenCalledWith(
       DomainEventName.EXPERIENCIA_PUBLICADA,
-      expect.objectContaining({ experienciaId: 'exp-1' }),
+      expect.objectContaining({ experienciaId: 'exp-1' })
     );
   });
 });

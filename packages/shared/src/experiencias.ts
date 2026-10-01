@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PaginationSchema } from './schemas/admin.js';
 import { EstadoEditorialSchema, AreaVocacionalSchema, ModalidadeSchema } from './schemas/enums.js';
 import { TipoExperienciaSchema, VwxSchema, VwxValidacaoSchema, VWX_SECTION_TYPES } from './experiencias-variants.js';
 export * from './experiencias-variants.js';
@@ -159,10 +160,29 @@ export type Experiencia = z.infer<typeof ExperienciaSchema>;
 export type ExperienciaPublica = Experiencia; // Alias Spec 04
 
 export const ExperienciaMinhaSchema = ExperienciaSchema.extend({
+  motivoRejeicao: z.string().nullable().optional(),
+  hasPublishedVersion: z.boolean().optional(),
   vwxValidacao: VwxValidacaoSchema.nullable().optional(),
   inscricoesCount: z.number().optional(),
 });
 export type ExperienciaMinha = z.infer<typeof ExperienciaMinhaSchema>;
+export const ExperienciasMinhasResponseSchema = z.object({
+  data: z.array(ExperienciaMinhaSchema),
+  pagination: PaginationSchema,
+});
+
+const ExperienciaFilaItemSchema = z.object({
+  id: z.union([z.string(), z.number()]).transform(String),
+  titulo: z.string(),
+  autorNome: z.string(),
+  submittedAt: z.string(),
+  tipo: z.literal('experiencia'),
+});
+export const ExperienciasFilaResponseSchema = z.union([
+  z.object({ data: z.array(ExperienciaFilaItemSchema), pagination: PaginationSchema }),
+  z.object({ data: z.array(ExperienciaFilaItemSchema), meta: PaginationSchema })
+    .transform(({ data, meta }) => ({ data, pagination: meta })),
+]);
 
 // ─── Payload de Criação (G3-T2) ──────────────────────────────────────────────
 

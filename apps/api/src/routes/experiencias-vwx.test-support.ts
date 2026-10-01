@@ -4,14 +4,21 @@ import { VWX_SECTION_TYPES, type CriarExperienciaPayload } from '@pdc/shared';
 import { experienciaRoutes } from './experiencias.js';
 import { strapiGet, strapiPut, strapiPost } from '../modules/strapi/strapi.client.js';
 import type { ExperienceRecord } from '../modules/experiencias/experience.service.js';
+const publishWithOutboxMock = vi.hoisted(() =>
+  vi.fn<(_name: string, _payload: unknown, _id?: string) => Promise<{ id: string }>>(() =>
+    Promise.resolve({ id: 'event' })
+  )
+);
+export { publishWithOutboxMock };
 
-vi.mock('../modules/strapi/strapi.client.js', () => ({
+vi.mock('../modules/strapi/strapi.client.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../modules/strapi/strapi.client.js')>()),
   strapiGet: vi.fn(),
   strapiPut: vi.fn(),
   strapiPost: vi.fn(),
 }));
 vi.mock('../modules/events/event-bus.js', () => ({
-  eventBus: { publishWithOutbox: vi.fn(() => Promise.resolve({ id: 'event' })) },
+  eventBus: { publishWithOutbox: publishWithOutboxMock },
 }));
 vi.mock('../modules/feature-flags/feature-flags.service.js', () => ({
   featureFlagService: { isEnabled: vi.fn(() => Promise.resolve(true)) },
@@ -95,6 +102,7 @@ export function request(path: string, body: unknown, role = 'super_admin', metho
 }
 
 export function resetMocks() {
+  vi.clearAllMocks();
   vi.mocked(strapiGet).mockReset();
   vi.mocked(strapiPut).mockReset();
   vi.mocked(strapiPost).mockReset();

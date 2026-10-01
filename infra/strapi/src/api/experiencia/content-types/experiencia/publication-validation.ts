@@ -37,6 +37,8 @@ function hasContent(value: unknown): boolean {
 }
 
 export function validateExperiencePublication(data: Record<string, unknown>): void {
+  // Archiving must also withdraw a live version when its working draft is incomplete.
+  if (data.estado === 'archived') return;
   if (!['review', 'approved', 'published'].includes(String(data.estado)) && !data.publishedAt)
     return;
   const vwx = data.tipoExperiencia === 'vwx';

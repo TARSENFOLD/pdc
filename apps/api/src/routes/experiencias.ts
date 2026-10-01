@@ -2,12 +2,18 @@ import { Hono } from 'hono';
 import pino from 'pino';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { HTTPException } from 'hono/http-exception';
 import { CriarExperienciaPayloadSchema, TipoExperienciaSchema } from '@pdc/shared';
 import { verifyJwt, type AuthVariables } from '../modules/auth/auth.middleware.js';
 import { checkRole } from '../modules/auth/rbac.middleware.js';
 import { requireApproved } from '../middleware/requireApproved.js';
 import { rateLimitContentCreate } from '../middleware/rateLimit.js';
-import { strapiGet, strapiPost, strapiPut } from '../modules/strapi/strapi.client.js';
+import {
+  strapiGet,
+  strapiPost,
+  strapiPut,
+  StrapiHttpError,
+} from '../modules/strapi/strapi.client.js';
 import { persistedEntityId } from '../modules/strapi/strapi-entity.js';
 import { eventBus } from '../modules/events/event-bus.js';
 import { DomainEventName } from '../modules/events/types.js';
@@ -48,7 +54,27 @@ const query = z.object({
 });
 
 experienciaRoutes.onError((err, c) => {
+  if (err instanceof HTTPException) return err.getResponse();
   log.error({ err }, 'Falha no percurso da experiência');
+  if (err instanceof StrapiHttpError && [400, 422].includes(err.status)) {
+    const body = z.object({ error: z.object({ message: z.string() }) }).safeParse(err.body);
+    return c.json(
+      {
+        error: body.success
+          ? body.data.error.message
+          : 'O conteúdo não cumpre os requisitos de validação.',
+      },
+      422
+    );
+  }
+  if (err instanceof z.ZodError)
+    return c.json(
+      {
+        error: 'Este conteúdo contém dados inválidos. Contacta o responsável pelo conteúdo.',
+        code: 'CONTENT_INVALID',
+      },
+      422
+    );
   return c.json(CONTENT_ACCESS_ERRORS.dependency_unavailable, 503);
 });
 
@@ -67,17 +93,25 @@ experienciaRoutes.get('/', zValidator('query', query), async (c) => {
   return c.json(toPaginatedResponse({ ...res, data: visible.map(publicExperienceDto) }));
 });
 
-experienciaRoutes.get('/minhas', verifyJwt, checkRole([...creators]), async (c) => {
-  const user = c.get('user');
-  const res = await strapiGet<ExperienceRecord>('/experiencias', {
-    ...(user.role === 'super_admin' ? {} : { 'filters[autor][userId][$eq]': user.id }),
-    status: 'draft',
-    populate: 'autor,instituicao',
-    sort: 'updatedAt:desc',
-    'pagination[pageSize]': '100',
-  });
-  return c.json(toPaginatedResponse({ ...res, data: res.data.map(experienceDto) }));
-});
+experienciaRoutes.get(
+  '/minhas',
+  verifyJwt,
+  checkRole([...creators]),
+  zValidator('query', query),
+  async (c) => {
+    const user = c.get('user');
+    const q = c.req.valid('query');
+    const res = await strapiGet<ExperienceRecord>('/experiencias', {
+      ...(user.role === 'super_admin' ? {} : { 'filters[autor][userId][$eq]': user.id }),
+      status: 'draft',
+      populate: 'autor,instituicao',
+      sort: 'updatedAt:desc',
+      'pagination[page]': String(q.page),
+      'pagination[pageSize]': String(q.pageSize),
+    });
+    return c.json(toPaginatedResponse({ ...res, data: res.data.map(experienceDto) }));
+  }
+);
 
 experienciaRoutes.get(
   '/minhas/:id',
@@ -96,7 +130,13 @@ experienciaRoutes.get(
     ) {
       return c.json({ error: 'Autoridade insuficiente' }, 403);
     }
-    return c.json({ ...experienceDto(existing), vwxValidacao: existing.vwxValidacao });
+    const published = await findExperience(c.req.param('id'), 'published');
+    return c.json({
+      ...experienceDto(existing),
+      vwxValidacao: existing.vwxValidacao,
+      motivoRejeicao: existing.motivoRejeicao,
+      hasPublishedVersion: !!published && ['approved', 'published'].includes(published.estado),
+    });
   }
 );
 

@@ -94,6 +94,7 @@ describe('Sidebar Render by Role', () => {
     expect(mentorBtn).toBeDefined();
     
     mentorBtn.click();
+    expect(await screen.findByRole('link', { name: 'Experiências' })).toHaveAttribute('href', '/app/instituicao/experiencias');
     expect(await screen.findByRole('link', { name: 'Meus Cursos' })).toHaveAttribute('href', '/app/mentor/meus-cursos');
     (await screen.findByText(/^Explorar$/i)).click();
     expect(await screen.findByRole('link', { name: 'Catálogo de cursos' })).toHaveAttribute('href', '/app/cursos');
@@ -108,6 +109,7 @@ describe('Sidebar Render by Role', () => {
     expect(adminBtn).toBeDefined();
     
     adminBtn.click();
+    expect(await screen.findByRole('link', { name: 'Experiências' })).toHaveAttribute('href', '/app/instituicao/experiencias');
     expect(await screen.findByText(/Painel Admin/i)).toBeDefined();
   });
 });

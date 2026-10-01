@@ -110,27 +110,21 @@ export function ExperienceStoryPanels({
             <p className="text-accent text-xs font-semibold uppercase">Mural de vozes</p>
             <h2 className="font-display text-ink-primary mt-3 text-2xl">Quem já viveu conta</h2>
           </div>
-          {voices.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              {voices.map((voice, index) => (
-                <blockquote
-                  key={`${voice.autor}-${String(index)}`}
-                  className="border-border border-t pt-5"
-                >
-                  <Quote size={20} className="text-accent" />
-                  <p className="text-ink-primary mt-4 text-base leading-7">{voice.depoimento}</p>
-                  <footer className="mt-5 text-sm">
-                    <p className="text-ink-primary font-semibold">{voice.autor}</p>
-                    <p className="text-ink-secondary">{voice.cargo || voice.tipo}</p>
-                  </footer>
-                </blockquote>
-              ))}
-            </div>
-          ) : (
-            <p className="text-ink-secondary text-sm">
-              A instituição ainda não publicou depoimentos.
-            </p>
-          )}
+          <div className="grid gap-6 md:grid-cols-2">
+            {voices.map((voice, index) => (
+              <blockquote
+                key={`${voice.autor}-${String(index)}`}
+                className="border-border border-t pt-5"
+              >
+                <Quote size={20} className="text-accent" />
+                <p className="text-ink-primary mt-4 text-base leading-7">{voice.depoimento}</p>
+                <footer className="mt-5 text-sm">
+                  <p className="text-ink-primary font-semibold">{voice.autor}</p>
+                  <p className="text-ink-secondary">{voice.cargo || voice.tipo}</p>
+                </footer>
+              </blockquote>
+            ))}
+          </div>
         </section>
       )}
 

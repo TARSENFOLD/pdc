@@ -38,6 +38,32 @@ npx playwright test -c playwright.experiencias.config.ts tests/e2e/experiencias 
 
 ## Resultados locais
 
+### Atualização de robustez — 2026-10-01
+
+- Suítes completas: API 1085/1085, shared 205/205, web 338/338.
+- Lifecycle Strapi: 10/10, incluindo arquivo de publicação com rascunho incompleto.
+- E2E Chromium: 18/18; repetição dos dois ciclos reais com mentor criador e
+  administrador revisor separado: 2/2, incluindo rejeição, nova submissão,
+  publicação, edição, arquivo e percurso VWX completo.
+- Typecheck, lint dos workspaces e build web passaram.
+- Recuperação de participação e conclusão usa identidade de evento estável e
+  confirmação de persistência no outbox. Reabrir/repetir recupera uma gravação
+  cujo evento falhou; falha ao libertar o lock não transforma sucesso em erro.
+- Arquivo considera a versão pública mesmo depois de editar o rascunho;
+  paginação das criações, erros explícitos, pesquisa com debounce, avaliações
+  acessíveis e telemetria curricular foram cobertos/corrigidos.
+- Navegação de mentores/admin, fila editorial, motivo de devolução e leitura
+  pelo criador confirmados numa nova execução completa: 18/18. Capturas de
+  Experiência/VWX a 390 px inspecionadas, sem overflow horizontal.
+- Regressões finais: 25 testes API, 20 UI de navegação/editorial e 3 contratos
+  da fila passaram. Quatro observações adicionais do CodeRabbit foram tratadas:
+  preview para revisores, contrato validado da fila, sincronização do teste e
+  limpeza do motivo anterior quando uma nova rejeição não fornece motivo.
+- Guia autónomo: `docs/guia-utilizador/experiencias-vwx.md`.
+  Conteúdo real continua fora do escopo; não houve escrita na base de produção.
+
+### Primeira passagem — 2026-09-26
+
 - 18 testes Playwright/Chromium passaram (8 de preparação/autenticação e 10 dos percursos).
 - 71 testes dos contratos API de Experiências/VWX e catálogo passaram.
 - 205 testes shared e 9 de validação editorial Strapi passaram.

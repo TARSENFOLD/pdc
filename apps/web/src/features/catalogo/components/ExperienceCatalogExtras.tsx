@@ -152,10 +152,12 @@ export function StarRatingWidget({ expId }: { expId: string }) {
       title={`Tua avaliação: ${String(stats.userRating ?? 'Sem avaliação')}`}
     >
       {[1, 2, 3, 4, 5].map((star) => (
-        <Star
+        <button
           key={star}
-          size={14}
-          className={`cursor-pointer transition-colors ${
+          type="button"
+          aria-label={`Avaliar com ${star} ${star === 1 ? 'estrela' : 'estrelas'}`}
+          disabled={ratingMutation.isPending}
+          className={`focus-visible:outline-accent flex min-h-11 min-w-11 items-center justify-center rounded transition-colors focus-visible:outline-2 ${
             star <= (hover || stats.userRating || 0)
               ? 'text-warning fill-warning'
               : 'text-ink-tertiary/40'
@@ -169,7 +171,9 @@ export function StarRatingWidget({ expId }: { expId: string }) {
           onClick={() => {
             ratingMutation.mutate(star);
           }}
-        />
+        >
+          <Star size={14} aria-hidden="true" />
+        </button>
       ))}
     </div>
   );

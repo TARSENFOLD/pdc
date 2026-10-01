@@ -1,5 +1,5 @@
 import { test, expect } from '../../helpers/fixtures';
-import type { Page } from '@playwright/test';
+import { request as playwrightRequest, type Page } from '@playwright/test';
 import { z } from 'zod';
 import path from 'node:path';
 
@@ -27,7 +27,11 @@ test.describe('Experiências e VWX — ciclo real', () => {
       });
       expect(response).toBeOK();
       const flags = flagsSchema.parse(await response.json()).data;
-      for (const domain of ['content_submission_enabled', 'vwx_catalog_enabled']) {
+      for (const domain of [
+        'content_submission_enabled',
+        'vwx_catalog_enabled',
+        'external_creator_onboarding_enabled',
+      ]) {
         const flag = flags.find((value) => value.domain === domain);
         expect(flag, domain).toBeDefined();
         if (!flag) throw new Error(`Flag ausente: ${domain}`);
@@ -58,9 +62,18 @@ test.describe('Experiências e VWX — ciclo real', () => {
     }
   });
 
-  async function createAndPublish(page: Page, vwx: boolean) {
+  async function createAndPublish(page: Page, vwx: boolean, reviewer: Page = page) {
     const title = `${vwx ? 'VWX' : 'Experiência'} E2E ${Date.now()}`;
-    await page.goto(`/app/instituicao/criar-experiencia${vwx ? '?tipo=vwx' : ''}`);
+    await page.goto('/app/home');
+    await page
+      .getByRole('button', {
+        name: vwx ? /^(Autoridade|Authority)$/ : /^(Estúdio Mentor|Mentor Studio)$/,
+      })
+      .click();
+    await page.locator('a[href="/app/instituicao/experiencias"]').click();
+    await page
+      .getByRole('link', { name: vwx ? 'Criar VWX' : 'Criar Experiência', exact: true })
+      .click();
     await page.locator('input[name="titulo"]').fill(title);
     await page
       .getByLabel('Descrição narrativa')
@@ -118,8 +131,12 @@ test.describe('Experiências e VWX — ciclo real', () => {
       .parse(await draft.json());
     expect(await page.request.get(stored.capaUrl)).toBeOK();
     expect(stored.tipoExperiencia).toBe(vwx ? 'vwx' : 'institucional');
-    const privateResponse = await page.request.get(`${API}/experiencias/${stored.slug}`);
-    expect(privateResponse.status()).toBe(404);
+    const anonymous = await playwrightRequest.newContext();
+    try {
+      expect((await anonymous.get(`${API}/experiencias/${stored.slug}`)).status()).toBe(404);
+    } finally {
+      await anonymous.dispose();
+    }
     if (vwx) {
       await page.getByRole('button', { name: /Validação do parceiro/ }).click();
       await page.getByLabel('Responsável pela validação').fill('Responsável E2E');
@@ -130,8 +147,35 @@ test.describe('Experiências e VWX — ciclo real', () => {
       await expect(page.getByText('Validação registada por Responsável E2E.')).toBeVisible();
     }
     await page.getByRole('button', { name: 'Submeter para revisão' }).click();
-    await expect(page.getByRole('button', { name: 'Aprovar conteúdo' })).toBeVisible();
-    await page.getByRole('button', { name: 'Aprovar conteúdo' }).click();
+    if (reviewer !== page) {
+      await expect(page.getByRole('button', { name: 'Aprovar conteúdo' })).toHaveCount(0);
+      await reviewer.goto('/app/moderacao/aprovacoes');
+      await reviewer.getByRole('tab', { name: 'Experiencias', exact: true }).click();
+      await reviewer
+        .getByRole('row')
+        .filter({ hasText: title })
+        .getByRole('link', { name: 'Rever conteúdo' })
+        .click();
+      await reviewer
+        .getByLabel('Motivo da devolução')
+        .fill('Acrescenta exemplos concretos às etapas antes de publicar.');
+      await reviewer.getByRole('button', { name: 'Devolver para correção' }).click();
+      await expect(reviewer.getByText('Estado: rejected', { exact: true })).toBeVisible();
+      await page.reload();
+      await expect(page.getByText('Estado: rejected', { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(
+          'Correção pedida: Acrescenta exemplos concretos às etapas antes de publicar.'
+        )
+      ).toBeVisible();
+      await page.getByRole('button', { name: 'Submeter para revisão' }).click();
+      await expect(page.getByText('Estado: review', { exact: true })).toBeVisible();
+      await reviewer.reload();
+    }
+    await expect(reviewer.getByRole('button', { name: 'Aprovar conteúdo' })).toBeVisible();
+    await reviewer.getByRole('button', { name: 'Aprovar conteúdo' }).click();
+    await expect(reviewer.getByText('Estado: approved', { exact: true })).toBeVisible();
+    if (reviewer !== page) await page.reload();
     await page.getByRole('button', { name: 'Publicar agora' }).click();
     await expect(page.getByRole('link', { name: 'Abrir página pública' })).toBeVisible();
     const outbox = await page.request.get(
@@ -148,11 +192,12 @@ test.describe('Experiências e VWX — ciclo real', () => {
     return { id, title, ...stored };
   }
 
-  test('Experiência: criar, guardar, reabrir, publicar, descobrir por slug e participar', async ({
+  test('Experiência: criador externo, revisão separada, correção, publicação e participação', async ({
     adminPage,
+    mentorPage,
     alunoPage,
   }, info) => {
-    const content = await createAndPublish(adminPage, false);
+    const content = await createAndPublish(mentorPage, false, adminPage);
     await alunoPage.goto(`/experiencias?tipo=institucional&q=${encodeURIComponent(content.title)}`);
     await alunoPage.getByRole('link', { name: `Ver experiência: ${content.title}` }).click();
     await expect(alunoPage.getByRole('heading', { name: content.title })).toBeVisible();
@@ -170,6 +215,13 @@ test.describe('Experiências e VWX — ciclo real', () => {
       await alunoPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     ).toBe(true);
     await alunoPage.screenshot({ path: info.outputPath('experiencia-mobile.png'), fullPage: true });
+    await mentorPage.goto(`/app/instituicao/editar-experiencia/${content.id}`);
+    await mentorPage.locator('input[name="titulo"]').fill(`${content.title} revisto`);
+    await mentorPage.getByRole('button', { name: 'Guardar rascunho', exact: true }).click();
+    await expect(mentorPage.getByText('Estado: draft', { exact: true })).toBeVisible();
+    await mentorPage.getByRole('button', { name: 'Arquivar publicação' }).click();
+    await expect(mentorPage.getByText('Estado: archived', { exact: true })).toBeVisible();
+    expect((await alunoPage.request.get(`${API}/experiencias/${content.slug}`)).status()).toBe(404);
   });
 
   test('VWX: percurso completo, entrega privada, retoma e conclusão', async ({
@@ -199,7 +251,7 @@ test.describe('Experiências e VWX — ciclo real', () => {
     );
     const other = await mentorPage.request.get(`${API}/experiencias/${content.id}/participacao`);
     expect(other).toBeOK();
-    expect(await other.json()).toMatchObject({ participacao: null });
+    expect(await other.json()).toEqual({ participacao: null });
     for (const checkbox of await panel.getByRole('checkbox').all()) await checkbox.check();
     await panel
       .getByLabel('Reflexão final')

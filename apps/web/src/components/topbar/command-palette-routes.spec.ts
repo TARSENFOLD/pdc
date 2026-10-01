@@ -10,6 +10,12 @@ describe('command palette routes', () => {
   });
 
   it.each([
+    ['mentor', 'Gerir Experiências', '/app/instituicao/experiencias'],
+    ['instituicao', 'Gerir Experiências', '/app/instituicao/experiencias'],
+    ['super_admin', 'Gerir Experiências', '/app/instituicao/experiencias'],
+    ['mentor', 'Criar Experiência', '/app/instituicao/criar-experiencia'],
+    ['super_admin', 'Criar Experiência', '/app/instituicao/criar-experiencia'],
+    ['estudante', 'Experiências', '/app/experiencias'],
     ['mentor', 'Criar Simulação', '/app/mentor/simulacoes/criar'],
     ['mentor', 'Catálogo de cursos', '/app/cursos'],
     ['mentor', 'Meus cursos', '/app/mentor/meus-cursos'],

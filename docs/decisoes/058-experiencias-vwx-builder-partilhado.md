@@ -47,6 +47,12 @@ Partilhar persistência não altera esta distinção de produto.
   recuperado, incluindo empregadores antes guardados como strings. A recuperação
   aceita campos incompletos; guardar no servidor mantém a validação integral.
 - As avaliações passam a usar o mesmo documentId estável do catálogo e do detalhe.
+- Inscrição e conclusão reconstituem eventos em falta ao repetir ou reabrir a
+  participação, com identidade estável e verificação do outbox persistente.
+- Arquivar retira a versão pública mesmo quando existe um rascunho posterior
+  incompleto. A retirada não exige completar novamente o conteúdo.
+- A fila editorial consulta os rascunhos de Experiências e encaminha a revisão
+  para o editor; mentores e administradores encontram a gestão nos seus menus.
 
 ## Validação
 

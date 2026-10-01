@@ -1,20 +1,21 @@
-import { app, payload, record, list, request, resetMocks } from './experiencias-vwx.test-support.js';
+import {
+  app,
+  payload,
+  record,
+  list,
+  request,
+  resetMocks,
+} from './experiencias-vwx.test-support.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { strapiGet, strapiPut, strapiPost } from '../modules/strapi/strapi.client.js';
 import { acquireLock } from '../lib/distributed-lock.js';
 import {
   variantIssues,
   readinessIssues,
-  experienceDto,
 } from '../modules/experiencias/experience.service.js';
 beforeEach(resetMocks);
 
 describe('Separação dos tipos e privacidade VWX', () => {
-  it('normaliza rascunhos antigos sem slug ou descrição, mas exige descrição para publicação', () => {
-    const legacy = { ...record, slug: null, descricao: null };
-    expect(experienceDto(legacy)).toMatchObject({ slug: 'doc-vwx', descricao: '' });
-    expect(readinessIssues(legacy)).toContain('Preencher título e descrição.');
-  });
   it('não escreve quando o lock editorial está ocupado', async () => {
     vi.mocked(strapiGet).mockResolvedValue(list([record]));
     vi.mocked(acquireLock).mockResolvedValueOnce(null);
@@ -31,7 +32,8 @@ describe('Separação dos tipos e privacidade VWX', () => {
     vi.mocked(strapiGet)
       .mockResolvedValueOnce(list([record]))
       .mockResolvedValueOnce(list([record]))
-      .mockResolvedValueOnce(list([...participations]));
+      .mockResolvedValueOnce(list([...participations]))
+      .mockResolvedValueOnce(list([{ id: 'persisted-event' }]));
     expect(
       (await request('/doc-vwx/progresso', { secoesConcluidas: [] }, 'estudante', 'PUT')).status
     ).toBe(status);

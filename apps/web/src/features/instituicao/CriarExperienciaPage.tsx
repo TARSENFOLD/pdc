@@ -97,14 +97,14 @@ export function CriarExperienciaPage() {
       }
     )();
   }
-  function transition(estado: string) {
+  function transition(estado: string, motivo?: string) {
     if (!id) return;
     if (isDirty) {
       setMessage('Guarda as alterações antes de mudar o estado. Uma edição requer nova revisão.');
       return;
     }
     void run(async () => {
-      await experienciasApi.updateEstado(id, estado);
+      await experienciasApi.updateEstado(id, estado, motivo);
       await refresh();
     });
   }
@@ -156,6 +156,8 @@ export function CriarExperienciaPage() {
           message={message}
           busy={busy}
           canApprove={user?.role === 'super_admin'}
+          hasPublishedVersion={existing.data?.hasPublishedVersion}
+          rejectionReason={existing.data?.motivoRejeicao}
           id={id}
           slug={existing.data?.slug}
           save={save}
