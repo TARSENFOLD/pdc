@@ -13,6 +13,7 @@ import { type StrapiListResponse } from '../modules/strapi/strapi.types.js';
 import { applyPublicCatalogStateFilter } from './publication-state.js';
 import { vocacionalService } from '../modules/vocacional/vocacional.service.js';
 import {
+  applyExperienceVariantFilter,
   filterVwxExperiences,
   isVwxCatalogEnabled,
 } from '../modules/feature-flags/vwx-catalog-gate.js';
@@ -45,6 +46,8 @@ interface StrapiSimulacao {
 }
 
 interface StrapiExperiencia {
+  documentId?: string;
+  instituicao?: { id: string | number; nome: string };
   id: string | number; slug: string; titulo: string; descricao: string;
   capaUrl?: string; area?: string; nivel?: string;
   instituicaoNome?: string; dataInicio?: string; gratuito?: boolean;
@@ -129,14 +132,16 @@ async function fetchRatingAvg(targetId: string): Promise<number | null> {
 
 function mapExp(d: StrapiExperiencia, ratingAvg?: number | null): ExperienciaPublica {
   return {
-    id: sid(d.id), 
+    id: d.documentId ?? sid(d.id),
+    tipoExperiencia: d.tipoExperiencia ?? 'institucional',
     slug: d.slug, 
     titulo: d.titulo, 
     descricao: d.descricao,
     capaUrl: d.capaUrl, 
     area: parseOptional(AreaVocacionalSchema, d.area),
     nivel: parseOptional(NivelSchema, d.nivel),
-    instituicao: d.instituicaoNome ? { id: '', nome: d.instituicaoNome } : undefined, 
+    instituicao: d.instituicao ? { id: sid(d.instituicao.id), nome: d.instituicao.nome }
+      : d.instituicaoNome ? { id: '', nome: d.instituicaoNome } : undefined,
     dataInicio: d.dataInicio,
     gratuito: true,
     validadoAcademicamente: d.validadoAcademicamente ?? false,
@@ -246,6 +251,8 @@ catalogoRoutes.get('/simulacoes/:slug', async (c) => {
 // ─── Experiências ─────────────────────────────────────────────────────────────
 
 const expQ = pgQ.extend({
+  tipoExperiencia: z.enum(['institucional', 'vwx']).optional(),
+  search: z.string().max(200).optional(),
   area: AreaVocacionalSchema.optional(),
   nivel: z.string().optional(),
   modalidade: ModalidadeSchema.optional(),
@@ -259,14 +266,18 @@ catalogoRoutes.get('/experiencias', zValidator('query', expQ), async (c) => {
   if (q.area) p['filters[area][$eq]'] = q.area;
   if (q.nivel) p['filters[nivel][$eq]'] = q.nivel;
   if (q.modalidade) p['filters[modalidade][$eq]'] = q.modalidade;
+  if (q.search) p['filters[titulo][$containsi]'] = q.search;
+  p.populate = 'instituicao';
   
   try {
+    await applyExperienceVariantFilter(p, q.tipoExperiencia);
     const res = await strapiGet<StrapiExperiencia>('/experiencias', p);
     const visible = filterVwxExperiences(res.data, await isVwxCatalogEnabled());
     // Enriquecer cada experiência com ratingAvg em paralelo
     const enriched = await Promise.all(
       visible.map(async (d) => {
-        const ratingAvg = await fetchRatingAvg(sid(d.id));
+        const current = await fetchRatingAvg(d.documentId ?? sid(d.id));
+        const ratingAvg = current ?? (d.documentId ? await fetchRatingAvg(sid(d.id)) : null);
         return mapExp(d, ratingAvg);
       })
     );

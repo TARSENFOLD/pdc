@@ -1,5 +1,8 @@
 import { z } from 'zod';
+import { PaginationSchema } from './schemas/admin.js';
 import { EstadoEditorialSchema, AreaVocacionalSchema, ModalidadeSchema } from './schemas/enums.js';
+import { TipoExperienciaSchema, VwxSchema, VwxValidacaoSchema, VWX_SECTION_TYPES } from './experiencias-variants.js';
+export * from './experiencias-variants.js';
 
 // ─── 3 Painéis Canónicos (G3 Spec 04 §3.1) ─────────────────────────────────────────
 
@@ -55,6 +58,7 @@ export type MuralVozesItem = z.infer<typeof MuralVozesItemSchema>;
 export type GuiaInstitucional = z.infer<typeof GuiaInstitucionalSchema>;
 
 export const ExperienciaSecaoTipoSchema = z.enum([
+  ...VWX_SECTION_TYPES,
   'boas_vindas',
   'ano_fase',
   'depoimentos',
@@ -116,6 +120,8 @@ export type ExperienciaItem = z.infer<typeof ExperienciaItemSchema>;
 
 export const ExperienciaSchema = z.object({
   id: z.string(),
+  tipoExperiencia: TipoExperienciaSchema.optional(),
+  vwx: VwxSchema.nullable().optional(),
   slug: z.string(),
   titulo: z.string(),
   descricao: z.string(),
@@ -124,7 +130,7 @@ export const ExperienciaSchema = z.object({
   area: AreaVocacionalSchema.optional().nullable(),
   nivel: z.enum(['basico', 'medio', 'avancado']).optional().nullable(),
   modalidade: ModalidadeSchema.optional().nullable(),
-  estado: EstadoEditorialSchema.optional().default('draft'),
+  estado: z.union([EstadoEditorialSchema, z.literal('archived')]).optional().default('draft'),
   validadoAcademicamente: z.boolean().default(false),
   vagas: z.number().int().optional().nullable(),
   duracaoEstimada: z.number().int().optional().nullable(), // horas — espelha curso.duracaoEstimada
@@ -154,13 +160,36 @@ export type Experiencia = z.infer<typeof ExperienciaSchema>;
 export type ExperienciaPublica = Experiencia; // Alias Spec 04
 
 export const ExperienciaMinhaSchema = ExperienciaSchema.extend({
+  motivoRejeicao: z.string().nullable().optional(),
+  hasPublishedVersion: z.boolean().optional(),
+  vwxValidacao: VwxValidacaoSchema.nullable().optional(),
   inscricoesCount: z.number().optional(),
 });
 export type ExperienciaMinha = z.infer<typeof ExperienciaMinhaSchema>;
+export const ExperienciasMinhasResponseSchema = z.object({
+  data: z.array(ExperienciaMinhaSchema),
+  pagination: PaginationSchema,
+});
+
+const ExperienciaFilaItemSchema = z.object({
+  id: z.union([z.string(), z.number()]).transform(String),
+  titulo: z.string(),
+  autorNome: z.string(),
+  submittedAt: z.string(),
+  tipo: z.literal('experiencia'),
+});
+export const ExperienciasFilaResponseSchema = z.union([
+  z.object({ data: z.array(ExperienciaFilaItemSchema), pagination: PaginationSchema }),
+  z.object({ data: z.array(ExperienciaFilaItemSchema), meta: PaginationSchema })
+    .transform(({ data, meta }) => ({ data, pagination: meta })),
+]);
 
 // ─── Payload de Criação (G3-T2) ──────────────────────────────────────────────
 
 export const CriarExperienciaPayloadSchema = z.object({
+  tipoExperiencia: TipoExperienciaSchema.optional(),
+  vwx: VwxSchema.optional(),
+  capaUrl: z.string().url().optional(),
   titulo: z.string().min(3).max(200),
   descricao: z.string().min(10),
   area: AreaVocacionalSchema,

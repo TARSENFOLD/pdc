@@ -1,4 +1,4 @@
-import type { ExperienciaItem, ExperienciaSecao } from '@pdc/shared';
+import { VWX_SECTION_TYPES, type ExperienciaItem, type ExperienciaSecao } from '@pdc/shared';
 import { createUuid } from '@/lib/uuid';
 
 function newItem(ordem: number): ExperienciaItem {
@@ -15,7 +15,7 @@ export function newExperienceSection(
     titulo,
     tipo,
     ordem,
-    obrigatoria: ['boas_vindas', 'realidade', 'depoimentos', 'infraestrutura', 'proximos_passos'].includes(tipo),
+    obrigatoria: ['boas_vindas', 'realidade', 'depoimentos', 'infraestrutura', 'proximos_passos', ...VWX_SECTION_TYPES].includes(tipo),
     visibilidade: 'publico',
     descricao: '',
     itens: [newItem(0)],

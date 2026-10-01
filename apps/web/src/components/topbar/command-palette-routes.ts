@@ -38,12 +38,16 @@ export function getNavCommands(role: Role | undefined): NavCommand[] {
 
   const byRole: Record<Role, NavCommand[]> = {
     estudante: [
+      { label: 'Experiências', to: '/app/experiencias' },
       { label: 'Dashboard Estudante', to: '/app/dashboard/estudante' },
       { label: 'Cursos', to: '/app/cursos' },
       { label: 'Certificados', to: '/app/certificados' },
       { label: 'Ranking', to: '/app/ranking' },
     ],
     mentor: [
+      { label: 'Catálogo de experiências', to: '/app/experiencias' },
+      { label: 'Gerir Experiências', to: '/app/instituicao/experiencias' },
+      { label: 'Criar Experiência', to: '/app/instituicao/criar-experiencia' },
       { label: 'Dashboard Mentor', to: '/app/dashboard/mentor' },
       { label: 'Catálogo de cursos', to: '/app/cursos' },
       { label: 'Meus cursos', to: '/app/mentor/meus-cursos' },
@@ -52,6 +56,8 @@ export function getNavCommands(role: Role | undefined): NavCommand[] {
       { label: 'Mentorias', to: '/app/mentorias' },
     ],
     instituicao: [
+      { label: 'Catálogo de experiências', to: '/app/experiencias' },
+      { label: 'Gerir Experiências', to: '/app/instituicao/experiencias' },
       { label: 'Dashboard Instituição', to: '/app/dashboard/instituicao' },
       { label: 'Catálogo de cursos', to: '/app/cursos' },
       { label: 'Meus cursos', to: '/app/instituicao/meus-cursos' },
@@ -67,6 +73,9 @@ export function getNavCommands(role: Role | undefined): NavCommand[] {
       { label: 'Denúncias', to: '/app/moderacao/denuncias' },
     ],
     super_admin: [
+      { label: 'Catálogo de experiências', to: '/app/experiencias' },
+      { label: 'Gerir Experiências', to: '/app/instituicao/experiencias' },
+      { label: 'Criar Experiência', to: '/app/instituicao/criar-experiencia' },
       { label: 'Dashboard Admin', to: '/app/dashboard/admin' },
       { label: 'Catálogo de cursos', to: '/app/cursos' },
       { label: 'Meus cursos', to: '/app/instituicao/meus-cursos' },

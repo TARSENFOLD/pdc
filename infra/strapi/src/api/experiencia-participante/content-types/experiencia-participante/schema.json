@@ -10,6 +10,10 @@
     "draftAndPublish": false
   },
   "attributes": {
+    "secoesConcluidas": { "type": "json" },
+    "entrega": { "type": "text" },
+    "reflexao": { "type": "text" },
+    "concluidoEm": { "type": "datetime" },
     "estudanteId": { "type": "string", "required": true },
     "experiencia": {
       "type": "relation",

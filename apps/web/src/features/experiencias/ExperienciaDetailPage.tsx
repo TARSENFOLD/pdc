@@ -1,246 +1,157 @@
-import { useParams, Navigate, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { experienciasApi } from '@/lib/api/experiencias';
-import { likeApi, bookmarkApi, ratingsApi } from '@/lib/api/interactions';
-import { Spinner, Badge, LikeButton, BookmarkButton, RatingStars, Card, Button, EmptyState } from '@/components/ui';
-import { EditorialStateBadge } from '@/components/ui/EditorialStateBadge';
-import { SEOHead } from '@/components/layout/SEOHead';
-import {
-  Building2,
-  Calendar,
-  BookOpen,
-  ChevronRight,
-  AlertCircle
-} from 'lucide-react';
-import { motion } from 'motion/react';
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { APPLE_SPRING } from '@/lib/animations';
-import { useTelemetry } from '@/hooks/useTelemetry';
 import { useAuth } from '@/lib/auth/auth-context';
-import { toast } from '@/hooks/useToast';
-import type { Experiencia } from '@pdc/shared';
-import type { ExperienciaItem, ExperienciaSecao } from '@pdc/shared';
+import { useTelemetry } from '@/hooks/useTelemetry';
+import { SEOHead } from '@/components/layout/SEOHead';
+import { Spinner, Button } from '@/components/ui';
+import { getErrorBody } from '@/lib/api/http';
 import { ExperienceStoryPanels } from './ExperienceStoryPanels';
-
-function ExperienceItemView({ item }: { item: ExperienciaItem }) {
-  if ((item.tipo === 'imagem' || item.tipo === 'galeria') && item.mediaUrl) {
-    return <img src={item.mediaUrl} alt={item.titulo} className="max-h-[560px] w-full object-cover" />;
-  }
-  if (item.tipo === 'video' && item.mediaUrl) {
-    return <video src={item.mediaUrl} controls className="max-h-[560px] w-full bg-black" />;
-  }
-  if (item.tipo === 'audio' && item.mediaUrl) {
-    return <audio src={item.mediaUrl} controls className="w-full" />;
-  }
-  if (item.tipo === 'pdf' && (item.arquivoUrl ?? item.mediaUrl)) {
-    return <a href={item.arquivoUrl ?? item.mediaUrl} target="_blank" rel="noreferrer" className="text-sm font-semibold text-accent underline">Abrir documento</a>;
-  }
-  if (item.tipo === 'cta' && item.cta) {
-    return <a href={item.cta.url} className="inline-flex bg-accent px-5 py-3 text-sm font-bold text-white">{item.cta.label}</a>;
-  }
-  return item.conteudo ? <p className="whitespace-pre-wrap text-base leading-7 text-ink-secondary">{item.conteudo}</p> : null;
-}
-
-function ExperienceSectionView({ section, index }: { section: ExperienciaSecao; index: number }) {
-  return (
-    <section id={section.id} className="border-t border-border py-10">
-      <div className="grid gap-8 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <span className="text-xs font-bold text-accent">{String(index + 1).padStart(2, '0')}</span>
-          <p className="mt-2 text-xs uppercase text-ink-tertiary">{section.tipo.replaceAll('_', ' ')}</p>
-        </div>
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold text-ink-primary">{section.titulo}</h2>
-            {section.descricao && <p className="mt-2 text-sm leading-6 text-ink-secondary">{section.descricao}</p>}
-          </div>
-          {section.itens.sort((a, b) => a.ordem - b.ordem).map((item) => (
-            <article key={item.id} className="space-y-3">
-              <h3 className="text-lg font-semibold text-ink-primary">{item.titulo}</h3>
-              <ExperienceItemView item={item} />
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Sub-component: Curriculum Section ──────────────────────────────────────────
-
-function CurriculumSection({ discipline, index, onDwell }: { 
-  discipline: { disciplina: string; descricao: string; relevanciaMercado: string }; index: number; onDwell: (id: string, ms: number) => void 
-}) {
-  const startRef = useRef(Date.now());
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  useEffect(() => {
-    if (isExpanded) {
-      startRef.current = Date.now();
-    } else {
-      const ms = Date.now() - startRef.current;
-      if (ms > 1000) onDwell(discipline.disciplina, ms);
-    }
-  }, [isExpanded, discipline.disciplina, onDwell]);
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ ...APPLE_SPRING, delay: index * 0.05 }}>
-      <Card 
-        className={`p-5 cursor-pointer border-white/5 ${isExpanded ? 'bg-accent/[0.03] border-accent/20' : 'bg-recessed'}`}
-        onClick={() => { setIsExpanded(!isExpanded); }}
-      >
-        <div className="flex items-center justify-between">
-           <div className="flex items-center gap-4">
-              <div className="h-8 w-8 rounded-lg bg-accent/5 flex items-center justify-center text-accent text-[10px] font-black">
-                {(index + 1).toString().padStart(2, '0')}
-              </div>
-              <h4 className="font-bold text-ink-primary">{discipline.disciplina}</h4>
-           </div>
-           <ChevronRight size={16} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-        </div>
-        {isExpanded && (
-          <div className="pt-4 space-y-3">
-            <p className="text-sm text-ink-secondary leading-relaxed">{discipline.descricao}</p>
-            <p className="text-[10px] font-bold text-accent uppercase tracking-widest">Relevância: {discipline.relevanciaMercado}</p>
-          </div>
-        )}
-      </Card>
-    </motion.div>
-  );
-}
-
-// ─── Main Page Component ──────────────────────────────────────────────────────────
+import { ExperienceContent } from './ExperienceContent';
+import { VwxParticipation } from './VwxParticipation';
+import { ExperienceInteractions } from './ExperienceInteractions';
+import { ExperienceCurriculum } from './ExperienceCurriculum';
 
 export function ExperienciaDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const { track } = useTelemetry();
+  const { id = '' } = useParams();
+  const [params] = useSearchParams();
+  const preview = params.get('preview') === '1';
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-  
-  const { data: exp, isLoading, isError } = useQuery<Experiencia>({
-    queryKey: ['experiencias', id ?? ''],
-    queryFn: () => experienciasApi.getById(id ?? ''),
+  const { track } = useTelemetry();
+  const cache = useQueryClient();
+  const content = useQuery({
+    queryKey: ['experiencias', preview ? 'preview' : 'public', id],
+    queryFn: () => (preview ? experienciasApi.getMineById(id) : experienciasApi.getById(id)),
     enabled: !!id,
   });
-
-  const { data: likeStatus } = useQuery({
-    queryKey: ['experiencia', id, 'likes'],
-    queryFn: () => likeApi.getStatus('experiencia', id ?? ''),
-    enabled: !!id,
+  const participation = useQuery({
+    queryKey: ['experiencias', 'participacao', id],
+    queryFn: () => experienciasApi.participacao(id),
+    enabled: isAuthenticated && !preview && !!content.data,
   });
-
-  const { data: ratingStats } = useQuery({
-    queryKey: ['experiencia', id, 'ratings'],
-    queryFn: () => ratingsApi.getStats('experiencia', id ?? ''),
-    enabled: !!id,
-  });
-
-  const { data: bookmarks } = useQuery({
-    queryKey: ['bookmarks'],
-    queryFn: () => bookmarkApi.list(),
-  });
-  const isBookmarked = bookmarks?.data.some(b => b.targetType === 'experiencia' && b.targetId === id) ?? false;
-
-  useEffect(() => {
-    if (exp) {
-      track('experiencia.visualizada', { experienceId: id, titulo: exp.titulo });
-    }
-  }, [exp, id, track]);
-
-  const handleDisciplineDwell = useCallback((discId: string, ms: number) => {
-    track('experiencia.timeline_click', { experienceId: id, discipline: discId, dwellTime: ms });
-  }, [id, track]);
-
-  // BUG-009: botão "Inscrever Agora" não tinha handler nem mutação
-  const inscricaoMutation = useMutation({
-    mutationFn: () => experienciasApi.inscrever(id ?? ''),
+  const join = useMutation({
+    mutationFn: () => experienciasApi.inscrever(id),
     onSuccess: () => {
-      toast({ title: 'Inscrição realizada com sucesso!' });
+      void cache.invalidateQueries({ queryKey: ['experiencias', 'participacao'] });
     },
-    onError: () => toast({ title: 'Falha ao inscrever. Tenta novamente.', variant: 'error' }),
   });
-
-  const handleInscrever = () => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-    inscricaoMutation.mutate();
-  };
-
-  if (!id) return <Navigate to="/explorar" replace />;
-  if (isLoading) return <div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>;
-  // BUG-010: "Oráculo" é copy interna banida pela CLAUDE.md § 6
-  if (isError || !exp) return <div className="p-20 text-center"><EmptyState icon={AlertCircle} variant="error" title="Não encontrado" description="Esta experiência curricular não foi encontrada." /></div>;
-
-  const orderedSections = [...(exp.secoes ?? [])].sort((a, b) => a.ordem - b.ordem);
-
+  const exp = participation.data?.experiencia ?? content.data;
+  const experienceId = exp?.id;
+  const experienceTitle = exp?.titulo;
+  useEffect(() => {
+    if (experienceId && !preview)
+      track('experiencia.visualizada', { experienceId, titulo: experienceTitle });
+  }, [experienceId, experienceTitle, preview, track]);
+  if (content.isLoading)
+    return (
+      <div className="flex min-h-64 items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  if (!exp)
+    return (
+      <main className="mx-auto max-w-3xl space-y-4 p-8">
+        <h1 className="text-2xl font-bold">Conteúdo indisponível</h1>
+        <p role="alert">
+          {content.isError
+            ? (getErrorBody(content.error)?.error ??
+              'Não foi possível carregar o conteúdo. Tenta novamente.')
+            : 'Não foi possível abrir esta experiência.'}
+        </p>
+        <Button
+          onClick={() => {
+            void content.refetch();
+          }}
+        >
+          Tentar novamente
+        </Button>
+        <Link to="/experiencias">Voltar ao catálogo</Link>
+      </main>
+    );
+  const vwx = exp.tipoExperiencia === 'vwx';
+  const member = participation.data?.participacao;
   return (
-    <div className="mx-auto max-w-6xl space-y-12 px-5 pb-20 animate-in fade-in duration-1000">
+    <main className="mx-auto max-w-6xl space-y-8 px-5 py-8 pb-20">
       <SEOHead title={`${exp.titulo} | PDC`} description={exp.descricao} />
-
-      <section className="relative min-h-[360px] overflow-hidden border-b border-border bg-recessed">
-         {exp.capaUrl && <img src={exp.capaUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
-         <div className="absolute inset-0 bg-black/55" />
-         <div className="relative flex min-h-[360px] max-w-4xl flex-col justify-end space-y-4 p-8 md:p-12">
-            <div className="flex items-center gap-2">
-              <Badge className="w-fit border-accent/30 bg-black/40 text-accent uppercase text-[9px] font-black">Experiência Curricular</Badge>
-              <EditorialStateBadge state={exp.estado} />
+      <Link to="/experiencias" className="text-accent inline-flex min-h-11 items-center">
+        Voltar ao catálogo
+      </Link>
+      {preview && (
+        <p role="status" className="border-border rounded-lg border p-4">
+          Pré-visualização privada · {exp.estado}
+        </p>
+      )}
+      <header className="border-border bg-elevated overflow-hidden rounded-xl border">
+        {exp.capaUrl && <img src={exp.capaUrl} alt="" className="max-h-96 w-full object-cover" />}
+        <div className="space-y-4 p-6 md:p-10">
+          <p className="text-accent text-xs font-semibold tracking-wide uppercase">
+            {vwx ? 'VWX · Digital Work Experience' : 'Experiência · Explorar formação'}
+          </p>
+          <h1 className="text-3xl font-bold md:text-5xl">{exp.titulo}</h1>
+          <p className="text-ink-secondary max-w-3xl leading-7 whitespace-pre-wrap">
+            {exp.descricao}
+          </p>
+          <p className="text-ink-secondary text-sm">
+            {exp.instituicao?.nome ?? exp.vwx?.entidade}
+            {exp.duracaoEstimada ? ` · ${exp.duracaoEstimada}h` : ''} · Gratuito
+          </p>
+          {vwx && exp.vwx && (
+            <p className="text-sm">
+              <strong>{exp.vwx.profissao}</strong> · {exp.vwx.objetivo}
+            </p>
+          )}
+          {!preview && (
+            <div className="flex flex-wrap items-center gap-3">
+              {!isAuthenticated ? (
+                <Button asChild>
+                  <Link to={`/login?redirect=${encodeURIComponent(`/app/experiencias/${exp.id}`)}`}>
+                    {vwx ? 'Entrar para iniciar VWX' : 'Entrar para participar'}
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  disabled={join.isPending || participation.isLoading || !!member}
+                  onClick={() => join.mutate()}
+                >
+                  {member
+                    ? vwx
+                      ? 'VWX iniciada'
+                      : 'Já estás a participar'
+                    : vwx
+                      ? 'Iniciar VWX'
+                      : 'Participar'}
+                </Button>
+              )}
+              {isAuthenticated && <ExperienceInteractions id={exp.id} />}
             </div>
-            <h1 className="font-display text-4xl leading-tight text-white md:text-5xl">{exp.titulo}</h1>
-            <p className="max-w-2xl text-base leading-7 text-white/80">{exp.descricao}</p>
-            <div className="flex items-center gap-4 pt-4">
-               <RatingStars targetType="experiencia" targetId={id} stats={ratingStats} />
-               <LikeButton targetType="experiencia" targetId={id} initialCount={likeStatus?.count} initialLiked={likeStatus?.liked} />
-               <BookmarkButton targetType="experiencia" targetId={id} initialBookmarked={isBookmarked} />
-            </div>
-         </div>
-      </section>
-
-      <ExperienceStoryPanels experience={exp} />
-
-      {orderedSections.length > 0 ? (
-        <div>
-          {orderedSections.map((section, index) => (
-            <ExperienceSectionView key={section.id} section={section} index={index} />
-          ))}
+          )}
+          {join.isError && (
+            <p role="alert" className="text-accent-danger">
+              {getErrorBody(join.error)?.error ?? 'Não foi possível iniciar a participação.'}
+            </p>
+          )}
+          {participation.isError && (
+            <p role="alert">
+              Não foi possível consultar a tua participação.{' '}
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  void participation.refetch();
+                }}
+              >
+                Tentar novamente
+              </Button>
+            </p>
+          )}
         </div>
-      ) : <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-         <div className="lg:col-span-2 space-y-8">
-            <h3 className="text-2xl font-black text-ink-primary tracking-tight flex items-center gap-3">
-              <BookOpen className="text-accent" /> Grade Curricular
-            </h3>
-            <div className="grid grid-cols-1 gap-3">
-               {exp.gradeDestaque?.map((disc, i: number) => (
-                 <CurriculumSection key={i} index={i} discipline={disc} onDwell={handleDisciplineDwell} />
-               ))}
-            </div>
-            <p className="text-ink-secondary leading-relaxed">{exp.descricao}</p>
-         </div>
-
-         <aside className="space-y-6">
-            <Card className="space-y-6 border-accent/20 bg-recessed p-8">
-               <div className="space-y-4">
-                   <div className="flex items-center gap-3">
-                      <Building2 size={20} className="text-accent" />
-                      <p className="text-sm font-bold">{exp.instituicao?.nome || 'Instituição Parceira'}</p>
-                   </div>
-                  <div className="flex items-center gap-3">
-                     <Calendar size={20} className="text-accent" />
-                     <p className="text-sm font-bold">{exp.dataInicio ? new Date(exp.dataInicio).toLocaleDateString('pt-AO') : 'Data a anunciar'}</p>
-                  </div>
-               </div>
-               {/* BUG-009: onClick e estado de loading adicionados */}
-               <Button
-                 className="h-14 w-full bg-accent text-xs font-black uppercase text-white"
-                 onClick={handleInscrever}
-                 disabled={inscricaoMutation.isPending || inscricaoMutation.isSuccess}
-               >
-                 {inscricaoMutation.isPending ? 'A inscrever...' : inscricaoMutation.isSuccess ? 'Inscrito' : 'Inscrever Agora'}
-               </Button>
-            </Card>
-         </aside>
-      </div>}
-    </div>
+      </header>
+      {!vwx && <ExperienceStoryPanels experience={exp} />}
+      <ExperienceContent sections={exp.secoes ?? []} />
+      {!exp.secoes?.length && <ExperienceCurriculum experience={exp} preview={preview} />}
+      {vwx && member && !preview && (
+        <VwxParticipation key={member.id} experience={exp} participation={member} />
+      )}
+    </main>
   );
 }

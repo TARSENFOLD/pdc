@@ -41,7 +41,6 @@ const CursoDetailPage = React.lazy(() => import('@/features/cursos/CursoDetailPa
 const ItemPlayer = React.lazy(() => import('@/features/cursos/ItemPlayer').then(m => ({ default: m.ItemPlayer })));
 const CourseWelcomePage = React.lazy(() => import('@/features/cursos/CourseWelcomePage').then(m => ({ default: m.CourseWelcomePage })));
 
-const ExperienciaListPage = React.lazy(() => import('@/features/experiencias/ExperienciaListPage').then(m => ({ default: m.ExperienciaListPage })));
 const ExperienciaDetailPage = React.lazy(() => import('@/features/experiencias/ExperienciaDetailPage').then(m => ({ default: m.ExperienciaDetailPage })));
 const ExperienciasCatalogoPage = React.lazy(() => import('@/features/catalogo/ExperienciasCatalogoPage'));
 
@@ -263,15 +262,15 @@ export const router = createBrowserRouter([
       // Instituição
       {
         path: 'instituicao/experiencias',
-        element: <RoleGuard allowed={['instituicao', 'super_admin']}><InstituicaoExperienciasPage /></RoleGuard>
+        element: <RoleGuard allowed={['instituicao', 'mentor', 'super_admin']}><InstituicaoExperienciasPage /></RoleGuard>
       },
       {
         path: 'instituicao/editar-experiencia/:id',
-        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><CriarExperienciaPage /></CreatorStudioBoundary></RoleGuard>
+        element: <RoleGuard allowed={['instituicao', 'mentor', 'super_admin']}><CreatorStudioBoundary><CriarExperienciaPage /></CreatorStudioBoundary></RoleGuard>
       },
       {
         path: 'instituicao/criar-experiencia',
-        element: <RoleGuard allowed={['instituicao', 'super_admin']}><CreatorStudioBoundary><CriarExperienciaPage /></CreatorStudioBoundary></RoleGuard>
+        element: <RoleGuard allowed={['instituicao', 'mentor', 'super_admin']}><CreatorStudioBoundary><CriarExperienciaPage /></CreatorStudioBoundary></RoleGuard>
       },
       {
         path: 'instituicao/programas',
@@ -361,7 +360,7 @@ export const router = createBrowserRouter([
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/projetos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoListPage /></Suspense> },
   { path: '/projetos/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ProjetoDetailPage /></Suspense> },
-  { path: '/experiencias', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExperienciaListPage /></Suspense> },
+  { path: '/experiencias', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExperienciasCatalogoPage /></Suspense> },
   { path: '/experiencias/:id', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExperienciaDetailPage /></Suspense> },
   { path: '/explorar', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><ExplorarPage /></Suspense> },
   { path: '/cursos', element: <Suspense fallback={<div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>}><CursosCatalogoPage /></Suspense> },

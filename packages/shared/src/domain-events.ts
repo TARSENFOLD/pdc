@@ -30,6 +30,8 @@ export enum DomainEventName {
   EXPERIENCIA_PUBLICADA = 'experiencia.publicada',
   EXPERIENCIA_VISUALIZADA = 'experiencia.visualizada',
   EXPERIENCIA_PARTICIPACAO = 'experiencia.participacao',
+  EXPERIENCIA_ATUALIZADA = 'experiencia.atualizada',
+  EXPERIENCIA_PROGRESSO = 'experiencia.progresso',
   EXPERIENCIA_QA_RESPONDIDA = 'experiencia.qa.respondida',
 
   // --- Programa ---
@@ -225,6 +227,8 @@ export const EventPayloadSchemas: Record<string, z.ZodTypeAny> = {
   [DomainEventName.EXPERIENCIA_PUBLICADA]: ContentPublishSchema.extend({ experienciaId: z.string() }),
   [DomainEventName.EXPERIENCIA_VISUALIZADA]: BaseInteractionSchema.extend({ experienciaId: z.string() }),
   [DomainEventName.EXPERIENCIA_PARTICIPACAO]: z.object({ experienciaId: z.string(), estudanteId: z.string() }),
+  [DomainEventName.EXPERIENCIA_ATUALIZADA]: ContentPublishSchema.extend({ experienciaId: z.string() }),
+  [DomainEventName.EXPERIENCIA_PROGRESSO]: z.object({ experienciaId: z.string(), estudanteId: z.string(), concluido: z.boolean() }),
   [DomainEventName.EXPERIENCIA_QA_RESPONDIDA]: z.object({ experienciaId: z.string(), perguntaId: z.string(), autorId: z.string() }),
 
   // --- Programa ---

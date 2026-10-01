@@ -3,6 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Spinner, Table, Tabs, TabsList, TabsTrigger, TabsContent, Button, Modal, ModalHeader, ModalTitle, ModalFooter } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
 import { http } from '@/lib/api/http';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/lib/auth/auth-context';
+import { ExperienciasFilaResponseSchema } from '@pdc/shared';
 
 type TipoFila = 'curso' | 'simulacao' | 'experiencia';
 
@@ -25,6 +28,7 @@ interface FilaResponse {
 }
 
 export function FilaAprovacaoPage() {
+  const { user } = useAuth();
   const [tipoAtual, setTipoAtual] = useState<TipoFila>('curso');
   const [page, setPage] = useState(1);
   const [isRejeitarOpen, setIsRejeitarOpen] = useState(false);
@@ -33,15 +37,20 @@ export function FilaAprovacaoPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['moderacao', 'fila', tipoAtual, page],
-    queryFn: () =>
-      http.get<FilaResponse>(`/moderacao/fila?tipo=${tipoAtual}&page=${page.toString()}&pageSize=10`),
+    queryFn: async () => {
+      const url = `/moderacao/fila?tipo=${tipoAtual}&page=${page.toString()}&pageSize=10`;
+      return tipoAtual === 'experiencia'
+        ? http.getParsed(url, ExperienciasFilaResponseSchema)
+        : http.get<FilaResponse>(url);
+    },
   });
 
   const aprovarMutation = useMutation({
-    mutationFn: (item: ItemFila) =>
-      http.put<{ success: boolean }>(`/moderacao/${item.tipo}/${item.id}/aprovar`, {}),
+    mutationFn: (item: ItemFila) => item.tipo === 'experiencia'
+      ? http.patch<{ success: boolean }>(`/experiencias/${item.id}/estado`, { estado: 'approved' })
+      : http.put<{ success: boolean }>(`/moderacao/${item.tipo}/${item.id}/aprovar`, {}),
     onSuccess: () => {
       toast({ title: 'Aprovado', description: 'O item foi aprovado com sucesso.' });
       void queryClient.invalidateQueries({ queryKey: ['moderacao', 'fila'] });
@@ -55,6 +64,9 @@ export function FilaAprovacaoPage() {
     mutationFn: () => {
       if (!selectedItem || motivo.length < 10) {
         throw new Error('Motivo invalido');
+      }
+      if (selectedItem.tipo === 'experiencia') {
+        return http.patch<{ success: boolean }>(`/experiencias/${selectedItem.id}/estado`, { estado: 'rejected', motivo });
       }
       return http.put<{ success: boolean }>(
         `/moderacao/${selectedItem.tipo}/${selectedItem.id}/rejeitar`,
@@ -98,6 +110,11 @@ export function FilaAprovacaoPage() {
       header: 'Acoes',
       accessor: (item: ItemFila) => (
         <div className="flex gap-2">
+          {item.tipo === 'experiencia' && (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={user?.role === 'super_admin' ? `/app/instituicao/editar-experiencia/${item.id}` : `/app/experiencias/${item.id}?preview=1`}>Rever conteúdo</Link>
+            </Button>
+          )}
           <Button
             variant="primary"
             size="sm"
@@ -148,6 +165,11 @@ export function FilaAprovacaoPage() {
           {isLoading ? (
             <div className="flex justify-center py-20">
               <Spinner size="lg" />
+            </div>
+          ) : error && tipoAtual === 'experiencia' ? (
+            <div role="alert" className="space-y-3 py-12 text-center">
+              <p>Não foi possível carregar as experiências em revisão.</p>
+              <Button onClick={() => { void refetch(); }}>Tentar novamente</Button>
             </div>
           ) : (data?.data ?? []).length === 0 ? (
             <div className="text-center py-12">
