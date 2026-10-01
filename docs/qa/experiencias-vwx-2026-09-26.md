@@ -57,8 +57,25 @@ npx playwright test -c playwright.experiencias.config.ts tests/e2e/experiencias 
 
 ## Antes de abrir aos utilizadores
 
+### Correção aprovada em 2026-10-01 — validação de rascunhos legados
+
+- Caixa A: o BFF passa a aplicar as regras legadas já preservadas pelo Strapi
+  e pelos ADR-037/058 quando a Experiência institucional não tem secções.
+- Mantém título, descrição, painel de realidade, pelo menos três depoimentos
+  e guia institucional obrigatórios; VWX continua a exigir as sete etapas.
+- Texto, media, ficheiro e URL de CTA em branco não contam como conteúdo.
+- Regressão reproduzida antes da correção: 8 dos 20 novos testes falhavam.
+  Depois: 20/20 novos testes, 89/89 testes API selecionados e 9/9 testes Strapi
+  passaram; lint e typecheck da API passaram. Não foi repetido o E2E de navegador
+  nesta correção. Sem escrita em produção.
+- O fundador esclareceu que não existe conteúdo real a importar nesta fase:
+  o objetivo de entrega é a robustez e autonomia do fluxo para futuros criadores.
+
+### Gates de publicação do sistema
+
 - Rever e integrar a branch; publicar BFF, web e schema Strapi em conjunto.
 - Confirmar as flags de acesso e de catálogo pretendidas no ambiente de destino.
 - Validar upload/leitura no R2 do ambiente de destino.
-- Publicar o conteúdo real de Experiências e registar a evidência real do parceiro VWX.
 - Repetir o percurso autenticado no domínio público. Testes locais não são deploy.
+- Conteúdos reais serão adicionados depois; cada VWX continua a exigir evidência
+  real de aprovação do parceiro antes da publicação do respetivo conteúdo.

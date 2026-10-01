@@ -112,6 +112,18 @@ export function variantIssues(
 
 export function readinessIssues(value: ExperienceRecord): string[] {
   const sections = value.secoes ?? [];
+  const hasText = (text: unknown) => typeof text === 'string' && text.trim().length > 0;
+  // ADR-037/058: records without modular sections retain the legacy panel rules.
+  // Keep these checks aligned with Strapi's validateExperiencePublication.
+  if (value.tipoExperiencia !== 'vwx' && sections.length === 0) {
+    const issues: string[] = [];
+    if (!value.painelRealidade) issues.push('Completar conteúdo: painelRealidade');
+    if (!Array.isArray(value.muralVozes) || value.muralVozes.length < 3)
+      issues.push('Completar conteúdo: muralVozes (mínimo 3 depoimentos)');
+    if (!value.guiaInstitucional) issues.push('Completar conteúdo: guiaInstitucional');
+    if (![value.titulo, value.descricao].every(hasText)) issues.push('Preencher título e descrição.');
+    return issues;
+  }
   const groups: readonly (readonly string[])[] =
     value.tipoExperiencia === 'vwx'
       ? VWX_SECTION_TYPES.map((type) => [type])
@@ -130,12 +142,11 @@ export function readinessIssues(value: ExperienceRecord): string[] {
           (s) =>
             group.includes(s.tipo) &&
             s.itens.some(
-              (item) => item.conteudo?.trim() || item.mediaUrl || item.arquivoUrl || item.cta
+              (item) => [item.conteudo, item.mediaUrl, item.arquivoUrl, item.cta?.url].some(hasText)
             )
         )
     )
     .map((group) => `Completar conteúdo: ${group.join(' / ')}`);
-  const hasText = (text: unknown) => typeof text === 'string' && text.trim().length > 0;
   if (![value.titulo, value.descricao].every(hasText)) issues.push('Preencher título e descrição.');
   if (
     value.tipoExperiencia === 'vwx' &&
